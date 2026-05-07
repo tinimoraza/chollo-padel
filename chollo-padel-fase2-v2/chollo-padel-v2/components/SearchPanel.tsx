@@ -13,7 +13,11 @@ const CONDITIONS = [
   { label: 'DADO TODO',   value: 'has_given_it_all' },
 ]
 
-export default function SearchPanel() {
+interface SearchPanelProps {
+  onOpenModal?: (query?: string) => void
+}
+
+export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const [query, setQuery] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [minPrice, setMinPrice] = useState('')
