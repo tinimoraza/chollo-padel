@@ -55,7 +55,7 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
       calcStats(data.items || [])
 
       // DEBUG TEMPORAL - borrar después
-      const uniqueConditions = [...new Set((data.items || []).map((i: any) => i.condition))]
+      const uniqueConditions = Array.from(new Set((data.items || []).map((i: any) => i.condition)))
       console.log('CONDITIONS EN RESULTADOS:', uniqueConditions)
 
     } catch {
