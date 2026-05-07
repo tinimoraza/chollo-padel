@@ -2,24 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchWallapop } from '@/lib/wallapop'
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
+  const searchParams = req.nextUrl.searchParams
   const q = searchParams.get('q')
-  const maxPrice = searchParams.get('max_price')
-  const minPrice = searchParams.get('min_price')
+  const maxPriceRaw = searchParams.get('max_price')
+  const minPriceRaw = searchParams.get('min_price')
+  const conditionsRaw = searchParams.get('conditions')
 
   if (!q) {
-    return NextResponse.json({ error: 'Falta el parámetro q' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing query param q' }, { status: 400 })
   }
 
-  try {
-    const items = await searchWallapop(
-      q,
-      maxPrice ? parseInt(maxPrice) : undefined,
-      minPrice ? parseInt(minPrice) : undefined
-    )
-    return NextResponse.json({ items, total: items.length })
-  } catch (err) {
-    console.error('Search error:', err)
-    return NextResponse.json({ error: 'Error buscando en Wallapop' }, { status: 500 })
-  }
+  const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : undefined
+  const minPrice = minPriceRaw ? Number(minPriceRaw) : undefined
+  const conditions = conditionsRaw
+    ? conditionsRaw.split(',').filter(Boolean)
+    : undefined
+
+  const results = await searchWallapop(q, maxPrice, minPrice, conditions)
+
+  return NextResponse.json(results)
 }
