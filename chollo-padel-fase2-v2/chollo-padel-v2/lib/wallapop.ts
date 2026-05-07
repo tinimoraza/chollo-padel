@@ -9,6 +9,9 @@ export interface WallapopItem {
   condition: string;
   location: string;
   city: string;
+  platform: string;
+  img: string | null;
+  date: string;
 }
 
 export type PalaItem = WallapopItem;
@@ -45,6 +48,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     return data.map((item: any) => {
       const cityName = item.location?.city ?? item.city?.city ?? '';
       const allImages = (item.images ?? []).map((img: any) => img.urls?.medium ?? img.urls?.small ?? '');
+      const firstImg = allImages[0] ?? null;
       const price = item.price?.amount ?? item.price ?? 0;
 
       return {
@@ -54,10 +58,13 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
         price,
         currency: item.price?.currency ?? 'EUR',
         images: allImages,
+        img: firstImg,
         url: `https://es.wallapop.com/item/${item.id}`,
         condition: item.condition ?? '',
         location: cityName,
         city: cityName,
+        platform: 'wallapop',
+        date: item.creation_date ?? new Date().toISOString(),
       };
     });
   } catch (err) {
