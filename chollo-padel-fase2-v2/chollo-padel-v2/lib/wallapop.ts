@@ -16,13 +16,33 @@ export interface WallapopItem {
 
 export type PalaItem = WallapopItem;
 
+function buildWallapopUrl(item: any): string {
+  // El actor devuelve web_slug o webSlug con el formato correcto: "titulo-del-item-{id}"
+  const slug = item.web_slug ?? item.webSlug ?? item.slug ?? null;
+  if (slug) {
+    return `https://es.wallapop.com/item/${slug}`;
+  }
+  // Fallback: construir slug desde el título + id
+  const titleSlug = (item.title ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // eliminar acentos
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+  const id = item.id ?? '';
+  if (titleSlug && id) {
+    return `https://es.wallapop.com/item/${titleSlug}-${id}`;
+  }
+  return `https://es.wallapop.com/item/${id}`;
+}
+
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   try {
     const input: any = {
       keywords: query,
       maxResults: 0,
     };
-
     if (maxPrice) input.maxPrice = maxPrice;
     if (minPrice) input.minPrice = minPrice;
 
@@ -45,6 +65,18 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     const data = await res.json();
     console.log(`Apify devolvió ${data.length} items para "${query}"`);
 
+    // Log del primer item para debug (puedes quitarlo cuando funcione)
+    if (data.length > 0) {
+      console.log('SAMPLE ITEM KEYS:', Object.keys(data[0]));
+      console.log('SAMPLE ITEM URL FIELDS:', {
+        web_slug: data[0].web_slug,
+        webSlug: data[0].webSlug,
+        slug: data[0].slug,
+        url: data[0].url,
+        id: data[0].id,
+      });
+    }
+
     return data.map((item: any) => {
       const cityName = item.location?.city ?? item.city?.city ?? '';
       const allImages = (item.images ?? []).map((img: any) => img.urls?.medium ?? img.urls?.small ?? '');
@@ -59,7 +91,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
         currency: item.price?.currency ?? 'EUR',
         images: allImages,
         img: firstImg,
-        url: `https://es.wallapop.com/item/${item.id}`,
+        url: buildWallapopUrl(item),
         condition: item.condition ?? '',
         location: cityName,
         city: cityName,
