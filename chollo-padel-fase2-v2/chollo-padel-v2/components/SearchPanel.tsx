@@ -13,6 +13,60 @@ const CONDITIONS = [
   { label: 'DADO TODO',   value: 'has_given_it_all' },
 ]
 
+function formatDate(dateStr: string) {
+  if (!dateStr) return ''
+  try {
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch {
+    return ''
+  }
+}
+
+function Card({ item }: { item: WallapopItem }) {
+  const isChollo = item.price > 0 && item.price < 80
+
+  return (
+    
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block border rounded-xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
+    >
+      <div className="relative">
+        {item.img && (
+          <img
+            src={item.img}
+            alt={item.title}
+            className="w-full h-48 object-cover"
+          />
+        )}
+        {isChollo && (
+          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+            🔥 CHOLLO
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <p className="font-semibold text-sm line-clamp-2 text-gray-800">{item.title}</p>
+        <p className="text-lg font-bold text-green-600 mt-1">{item.price} €</p>
+        <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
+          <span>{item.city}</span>
+          {item.date && <span>{formatDate(item.date)}</span>}
+        </div>
+        {item.condition && (
+          <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+            {item.condition}
+          </span>
+        )}
+      </div>
+    </a>
+  )
+}
+
 interface SearchPanelProps {
   onOpenModal?: (query?: string) => void
 }
@@ -56,60 +110,6 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     } finally {
       setLoading(false)
     }
-  }
-
-  function formatDate(dateStr: string) {
-    if (!dateStr) return ''
-    try {
-      return new Date(dateStr).toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    } catch {
-      return ''
-    }
-  }
-
-  function Card({ item }: { item: WallapopItem }) {
-    const isChollo = item.price > 0 && item.price < 80
-
-    return (
-      <a
-        href={item.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block border rounded-xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
-      >
-        <div className="relative">
-          {item.img && (
-            <img
-              src={item.img}
-              alt={item.title}
-              className="w-full h-48 object-cover"
-            />
-          )}
-          {isChollo && (
-            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              🔥 CHOLLO
-            </span>
-          )}
-        </div>
-        <div className="p-3">
-          <p className="font-semibold text-sm line-clamp-2 text-gray-800">{item.title}</p>
-          <p className="text-lg font-bold text-green-600 mt-1">{item.price} €</p>
-          <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
-            <span>{item.city}</span>
-            {item.date && <span>{formatDate(item.date)}</span>}
-          </div>
-          {item.condition && (
-            <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-              {item.condition}
-            </span>
-          )}
-        </div>
-      </a>
-    )
   }
 
   return (
