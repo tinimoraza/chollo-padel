@@ -54,7 +54,13 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
 
   function filtered() {
     let items = [...results]
-    if (condFilter) items = items.filter(i => i.condition.toLowerCase().includes(condFilter))
+    if (condFilter) {
+      const condTerms = condFilter.split('|')
+      items = items.filter(i => {
+        const cond = i.condition?.toLowerCase().replace(/\s+/g, '_') ?? ''
+        return condTerms.some(t => cond.includes(t))
+      })
+    }
     if (srcFilter !== 'all') items = items.filter(i => i.platform === srcFilter)
     if (sort === 'price_asc') items.sort((a, b) => a.price - b.price)
     else if (sort === 'price_desc') items.sort((a, b) => b.price - a.price)
@@ -99,7 +105,12 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
 
         <div style={styles.chips}>
           <span style={styles.chipLabel}>Estado:</span>
-          {[['', 'TODOS'], ['nuevo', 'NUEVO'], ['buen', 'BUEN ESTADO'], ['aceptable', 'ACEPTABLE']].map(([val, label]) => (
+          {([
+            ['', 'TODOS'],
+            ['nuevo|sin_abrir|new|sinabrir', 'NUEVO'],
+            ['buen|como_nuevo|comonuevo|good', 'BUEN ESTADO'],
+            ['aceptable|fair|acceptable', 'ACEPTABLE'],
+          ] as [string, string][]).map(([val, label]) => (
             <button
               key={val}
               style={{ ...styles.chip, ...(condFilter === val ? styles.chipOn : {}) }}
@@ -107,7 +118,7 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
             >{label}</button>
           ))}
           <span style={{ ...styles.chipLabel, marginLeft: 16 }}>Plataforma:</span>
-          {[['all', 'TODAS'], ['wallapop', 'WALLAPOP'], ['vinted', 'VINTED']].map(([val, label]) => (
+          {([['all', 'TODAS'], ['wallapop', 'WALLAPOP'], ['vinted', 'VINTED']] as [string, string][]).map(([val, label]) => (
             <button
               key={val}
               style={{ ...styles.chip, ...(srcFilter === val ? styles.chipOn : {}) }}
@@ -162,16 +173,14 @@ function StatPill({ label, value, color }: { label: string; value: any; color: s
 function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
   const isChollo = item.price > 0 && item.price < 80
   const condLow = item.condition?.toLowerCase() ?? ''
-  const isNuevo = condLow.includes('nuevo')
+  const isNuevo = condLow.includes('nuevo') || condLow.includes('sin_abrir') || condLow.includes('new')
   const platColor = item.platform === 'wallapop' ? '#13C1AC' : '#09B1BA'
 
   function formatDate(dateStr: string) {
     if (!dateStr) return null
     const d = new Date(dateStr)
     if (isNaN(d.getTime())) return null
-    // Si es de hoy, mostrar "Hoy"
-    const today = new Date()
-    const diffDays = Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    const diffDays = Math.floor((new Date().getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
     if (diffDays === 0) return 'Hoy'
     if (diffDays === 1) return 'Ayer'
     if (diffDays < 7) return `Hace ${diffDays} días`
