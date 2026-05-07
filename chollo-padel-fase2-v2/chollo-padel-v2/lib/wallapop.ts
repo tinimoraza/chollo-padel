@@ -44,7 +44,7 @@ export async function searchWallapop(
     if (minPrice) input.minPrice = minPrice
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/fayoussef~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,23 +61,18 @@ export async function searchWallapop(
     const data = await res.json()
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
-    // DEBUG — ver estructura real (borrar después)
+    // DEBUG — ver item completo (borrar después)
     if (data.length > 0) {
-      const sample = data[0]
-      console.log('ITEM RAW KEYS:', Object.keys(sample))
-      console.log('ITEM RAW condition:', sample.condition)
-      console.log('ITEM RAW state:', sample.state)
-      console.log('ITEM RAW status:', sample.status)
+      console.log('ITEM COMPLETO:', JSON.stringify(data[0], null, 2))
     }
 
     return data.map((item: any) => {
-      const cityName = item.location?.city ?? item.city?.city ?? item.city ?? ''
+      const cityName = item.location?.city ?? item.city?.city ?? ''
       const allImages = (item.images ?? []).map((img: any) =>
-        typeof img === 'string' ? img : img.urls?.medium ?? img.urls?.small ?? ''
+        img.urls?.medium ?? img.urls?.small ?? ''
       )
       const firstImg = allImages[0] ?? null
       const price = item.price?.amount ?? item.price ?? 0
-      const condition = item.condition ?? item.state ?? item.status ?? ''
 
       return {
         id: item.id ?? '',
@@ -88,11 +83,11 @@ export async function searchWallapop(
         images: allImages,
         img: firstImg,
         url: buildWallapopUrl(item),
-        condition,
+        condition: item.condition ?? item.state ?? item.status ?? '',
         location: cityName,
         city: cityName,
         platform: 'wallapop',
-        date: item.creation_date ?? item.created_at ?? item.modification_date ?? item.published_at ?? item.createdAt ?? '',
+        date: item.creation_date ?? item.created_at ?? item.modified_at ?? item.modification_date ?? item.published_at ?? item.createdAt ?? '',
       }
     })
   } catch (err) {
