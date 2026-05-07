@@ -1,0 +1,119 @@
+'use client'
+import { useState } from 'react'
+
+export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: string; onClose: () => void }) {
+  const [query, setQuery] = useState(prefillQuery)
+  const [maxPrice, setMaxPrice] = useState('')
+  const [condition, setCondition] = useState('')
+  const [platform, setPlatform] = useState('all')
+  const [email, setEmail] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  async function saveAlert() {
+    if (!query.trim() || !email.trim()) {
+      setError('El nombre de búsqueda y el email son obligatorios')
+      return
+    }
+    setSaving(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: query.trim(),
+          max_price: maxPrice ? parseInt(maxPrice) : null,
+          condition: condition || null,
+          platform,
+          email: email.trim(),
+        }),
+      })
+
+      if (!res.ok) throw new Error('Error guardando')
+      setSaved(true)
+      setTimeout(onClose, 1800)
+    } catch {
+      setError('Error al guardar. Inténtalo de nuevo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={styles.modal}>
+        <div style={styles.title}>NUEVA ALERTA</div>
+        <p style={styles.subtitle}>Te avisamos por email cuando aparezcan chollos que encajen</p>
+
+        {saved ? (
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ fontSize: 48 }}>✅</div>
+            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: '#C8FF00' }}>¡ALERTA GUARDADA!</div>
+          </div>
+        ) : (
+          <>
+            <Field label="Qué buscas *">
+              <input style={styles.input} value={query} onChange={e => setQuery(e.target.value)} placeholder="Ej: Bullpadel Hack 03" />
+            </Field>
+            <Field label="Tu email *">
+              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" />
+            </Field>
+            <Field label="Precio máximo (€)">
+              <input style={styles.input} type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="Sin límite" />
+            </Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label="Estado">
+                <select style={styles.input} value={condition} onChange={e => setCondition(e.target.value)}>
+                  <option value="">Cualquiera</option>
+                  <option value="nuevo">Nuevo</option>
+                  <option value="buen">Buen estado</option>
+                  <option value="aceptable">Aceptable</option>
+                </select>
+              </Field>
+              <Field label="Plataforma">
+                <select style={styles.input} value={platform} onChange={e => setPlatform(e.target.value)}>
+                  <option value="all">Ambas</option>
+                  <option value="wallapop">Wallapop</option>
+                  <option value="vinted">Vinted</option>
+                </select>
+              </Field>
+            </div>
+
+            {error && <div style={styles.errorMsg}>{error}</div>}
+
+            <div style={styles.actions}>
+              <button style={styles.btnCancel} onClick={onClose}>CANCELAR</button>
+              <button style={styles.btnSave} onClick={saveAlert} disabled={saving}>
+                {saving ? 'GUARDANDO...' : 'GUARDAR →'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: '#111', border: '1px solid rgba(255,255,255,0.1)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' },
+  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6 },
+  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 24 },
+  input: { width: '100%', background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif' },
+  actions: { display: 'flex', gap: 12, marginTop: 24 },
+  btnCancel: { flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer' },
+  btnSave: { flex: 2, background: '#C8FF00', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' },
+  errorMsg: { background: 'rgba(255,95,31,0.15)', border: '1px solid rgba(255,95,31,0.3)', color: '#FF5F1F', padding: '10px 14px', fontSize: 12, marginTop: 8 },
+}
