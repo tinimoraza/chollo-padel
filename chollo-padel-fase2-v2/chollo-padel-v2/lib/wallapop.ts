@@ -22,6 +22,9 @@ export interface WallapopItem {
   location: string;
 }
 
+// Alias para compatibilidad con cron y otros archivos
+export type PalaItem = WallapopItem;
+
 function parseItems(rawItems: any[]): WallapopItem[] {
   return rawItems.map((item: any) => ({
     id: item.id ?? '',
@@ -55,7 +58,6 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
   try {
     const res = await fetch(`${WALLAPOP_SEARCH_URL}?${params.toString()}`, {
       headers: HEADERS,
-      // next.js: no cachear para tener resultados frescos
       cache: 'no-store',
     });
 
@@ -66,7 +68,6 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
 
     const data = await res.json();
 
-    // La API puede devolver los items en distintas rutas según versión
     const rawItems =
       data?.search_objects ??
       data?.data?.search_objects ??
