@@ -8,6 +8,14 @@ interface PalaItem {
 
 interface Stats { total: number; best: number | null; avg: number | null; chollos: number }
 
+// Valores exactos que usa la API de Wallapop
+const CONDITIONS: [string, string][] = [
+  ['', 'TODOS'],
+  ['new', 'NUEVO'],
+  ['good', 'BUEN ESTADO'],
+  ['fair', 'ACEPTABLE'],
+]
+
 export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) => void }) {
   const [query, setQuery] = useState('')
   const [minPrice, setMinPrice] = useState('')
@@ -20,7 +28,7 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
   const [searched, setSearched] = useState(false)
   const [stats, setStats] = useState<Stats>({ total: 0, best: null, avg: null, chollos: 0 })
 
-  async function doSearch(q?: string) {
+  async function doSearch(q?: string, cond?: string) {
     const term = q ?? query
     if (!term.trim()) return
     setQuery(term)
@@ -31,6 +39,9 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
       const params = new URLSearchParams({ q: term })
       if (minPrice) params.append('min_price', minPrice)
       if (maxPrice) params.append('max_price', maxPrice)
+      const activeCond = cond !== undefined ? cond : condFilter
+      if (activeCond) params.append('condition', activeCond)
+
       const res = await fetch(`/api/search?${params}`)
       const data = await res.json()
       setResults(data.items || [])
@@ -52,15 +63,13 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
     })
   }
 
+  function handleCondChange(val: string) {
+    setCondFilter(val)
+    if (searched) doSearch(query, val)
+  }
+
   function filtered() {
     let items = [...results]
-    if (condFilter) {
-      const condTerms = condFilter.split('|')
-      items = items.filter(i => {
-        const cond = i.condition?.toLowerCase().replace(/\s+/g, '_') ?? ''
-        return condTerms.some(t => cond.includes(t))
-      })
-    }
     if (srcFilter !== 'all') items = items.filter(i => i.platform === srcFilter)
     if (sort === 'price_asc') items.sort((a, b) => a.price - b.price)
     else if (sort === 'price_desc') items.sort((a, b) => b.price - a.price)
@@ -105,16 +114,11 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
 
         <div style={styles.chips}>
           <span style={styles.chipLabel}>Estado:</span>
-          {([
-            ['', 'TODOS'],
-            ['nuevo|sin_abrir|new|sinabrir', 'NUEVO'],
-            ['buen|como_nuevo|comonuevo|good', 'BUEN ESTADO'],
-            ['aceptable|fair|acceptable', 'ACEPTABLE'],
-          ] as [string, string][]).map(([val, label]) => (
+          {CONDITIONS.map(([val, label]) => (
             <button
               key={val}
               style={{ ...styles.chip, ...(condFilter === val ? styles.chipOn : {}) }}
-              onClick={() => setCondFilter(val)}
+              onClick={() => handleCondChange(val)}
             >{label}</button>
           ))}
           <span style={{ ...styles.chipLabel, marginLeft: 16 }}>Plataforma:</span>
@@ -173,7 +177,7 @@ function StatPill({ label, value, color }: { label: string; value: any; color: s
 function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
   const isChollo = item.price > 0 && item.price < 80
   const condLow = item.condition?.toLowerCase() ?? ''
-  const isNuevo = condLow.includes('nuevo') || condLow.includes('sin_abrir') || condLow.includes('new')
+  const isNuevo = condLow.includes('new') || condLow.includes('nuevo')
   const platColor = item.platform === 'wallapop' ? '#13C1AC' : '#09B1BA'
 
   function formatDate(dateStr: string) {
