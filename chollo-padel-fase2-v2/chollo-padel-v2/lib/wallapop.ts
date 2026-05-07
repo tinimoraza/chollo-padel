@@ -24,15 +24,14 @@ export async function searchWallapop(
 ): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      keyword: query,
+      search_keyword: query,
       max_pages: 3,
     }
     if (maxPrice) input.max_price = maxPrice
     if (minPrice) input.min_price = minPrice
-    if (conditions && conditions.length > 0) input.condition = conditions
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/cptauad~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +50,7 @@ export async function searchWallapop(
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
     return data.map((item: any) => {
-      // 🔍 LOG TEMPORAL — item completo para ver todos los campos
+      // 🔍 LOG TEMPORAL — borrar una vez sepamos los campos reales
       console.log('ITEM RAW COMPLETO:', JSON.stringify(item))
 
       return {
@@ -60,14 +59,14 @@ export async function searchWallapop(
         description: item.description ?? '',
         price: item.price ?? 0,
         currency: item.currency ?? 'EUR',
-        images: item.image ? [item.image] : [],
-        img: item.image ?? null,
-        url: item.url ?? '',
+        images: item.images?.[0] ? [item.images[0]] : [],
+        img: item.images?.[0] ?? item.image ?? null,
+        url: item.url ?? item.web_slug ?? '',
         condition: item.condition ?? '',
-        location: item.location?.city ?? '',
-        city: item.location?.city ?? '',
+        location: item.location?.city ?? item.city ?? '',
+        city: item.location?.city ?? item.city ?? '',
         platform: 'wallapop',
-        date: item.published_at ?? '',
+        date: item.creation_date ?? item.published_at ?? item.createdAt ?? '',
       }
     })
   } catch (err) {
