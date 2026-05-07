@@ -27,7 +27,6 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
     setSearched(true)
 
     try {
-      // Llamamos a nuestra propia API (no hay CORS, corre en el servidor)
       const params = new URLSearchParams({ q: term })
       if (maxPrice) params.append('max_price', maxPrice)
       const res = await fetch(`/api/search?${params}`)
@@ -65,7 +64,6 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
 
   return (
     <main style={styles.main}>
-      {/* Barra de búsqueda */}
       <div style={styles.searchBar}>
         <div style={styles.searchRow}>
           <input
@@ -88,7 +86,6 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
           </button>
         </div>
 
-        {/* Chips de filtro */}
         <div style={styles.chips}>
           <span style={styles.chipLabel}>Estado:</span>
           {[['', 'TODOS'], ['nuevo', 'NUEVO'], ['buen', 'BUEN ESTADO'], ['aceptable', 'ACEPTABLE']].map(([val, label]) => (
@@ -108,7 +105,6 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
           ))}
         </div>
 
-        {/* Stats */}
         {searched && (
           <div style={styles.statsRow}>
             <StatPill label="Resultados" value={stats.total || '—'} color="#C8FF00" />
@@ -119,7 +115,6 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
         )}
       </div>
 
-      {/* Resultados */}
       <div style={styles.resultsArea}>
         {loading && <Loader />}
         {!loading && !searched && <EmptyState emoji="🎾" title="LISTA PARA CAZAR" sub="Busca por marca, modelo o cualquier término" />}
@@ -155,7 +150,7 @@ function StatPill({ label, value, color }: { label: string; value: any; color: s
 
 function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
   const isChollo = item.price > 0 && item.price < 80
-  const condLow = item.condition.toLowerCase()
+  const condLow = item.condition?.toLowerCase() ?? ''
   const isNuevo = condLow.includes('nuevo')
   const platColor = item.platform === 'wallapop' ? '#13C1AC' : '#09B1BA'
 
@@ -172,7 +167,7 @@ function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
       <div style={styles.cardBody}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: platColor, display: 'inline-block' }} />
-          <span style={{ fontSize: 11, color: platColor, fontWeight: 700, letterSpacing: 1 }}>{item.platform.toUpperCase()}</span>
+          <span style={{ fontSize: 11, color: platColor, fontWeight: 700, letterSpacing: 1 }}>{item.platform?.toUpperCase()}</span>
         </div>
         <div style={styles.cardTitle}>{item.title}</div>
         <div style={styles.cardBottom}>
@@ -180,6 +175,7 @@ function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
           <span style={styles.condChip}>{item.condition}</span>
         </div>
         {item.city && <div style={styles.cardCity}>📍 {item.city}</div>}
+        {item.date && <div style={styles.cardCity}>🕐 {new Date(item.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>}
       </div>
     </a>
   )
