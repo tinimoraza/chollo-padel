@@ -16,7 +16,7 @@ export type PalaItem = WallapopItem;
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      searchString: query,
+      keyword: query,
       maxItems: 10,
     };
 
@@ -24,7 +24,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     if (minPrice) input.minPrice = minPrice;
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/seretalabs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,9 +44,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
 
     return data.map((item: any) => {
       const cityName = item.location?.city ?? item.city?.city ?? '';
-      const imageUrl = item.images?.[0]?.urls?.medium ?? item.images?.[0]?.urls?.small ?? '';
       const allImages = (item.images ?? []).map((img: any) => img.urls?.medium ?? img.urls?.small ?? '');
-      const itemUrl = `https://es.wallapop.com/item/${item.id}`;
       const price = item.price?.amount ?? item.price ?? 0;
 
       return {
@@ -56,7 +54,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
         price,
         currency: item.price?.currency ?? 'EUR',
         images: allImages,
-        url: itemUrl,
+        url: `https://es.wallapop.com/item/${item.id}`,
         condition: item.condition ?? '',
         location: cityName,
         city: cityName,
