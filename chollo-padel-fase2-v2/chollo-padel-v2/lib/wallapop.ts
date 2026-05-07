@@ -23,8 +23,6 @@ export async function searchWallapop(
   conditions?: string[]
 ): Promise<WallapopItem[]> {
   try {
-    // Si hay conditions hacemos una llamada por cada una en paralelo
-    // Si no hay conditions hacemos una sola llamada sin filtro
     const conditionList =
       conditions && conditions.length > 0 ? conditions : [undefined]
 
@@ -59,28 +57,33 @@ export async function searchWallapop(
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
 
-        return data.map((item: any) => ({
-          id: item.id ?? '',
-          title: item.title ?? '',
-          description: item.description ?? '',
-          price: item.price ?? 0,
-          currency: item.currency ?? 'EUR',
-          images: item.images?.[0]?.urls?.medium ? [item.images[0].urls.medium] : [],
-          img: item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null,
-          url: item.productUrl ?? `https://es.wallapop.com/item/${item.webSlug}` ?? '',
-          // Asignamos la condition que usamos como filtro — todos los resultados la tienen
-          condition: condition ?? '',
-          location: item.location?.city ?? '',
-          city: item.location?.city ?? '',
-          platform: 'wallapop',
-          date: item.createdAt
-            ? new Date(item.createdAt).toISOString()
-            : '',
-        }))
+        return data.map((item: any) => {
+          const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
+          const url = item.productUrl
+            ? String(item.productUrl)
+            : `https://es.wallapop.com/item/${item.webSlug ?? item.id}`
+
+          return {
+            id: item.id ?? '',
+            title: item.title ?? '',
+            description: item.description ?? '',
+            price: item.price ?? 0,
+            currency: item.currency ?? 'EUR',
+            images: img ? [img] : [],
+            img,
+            url,
+            condition: condition ?? '',
+            location: item.location?.city ?? '',
+            city: item.location?.city ?? '',
+            platform: 'wallapop',
+            date: item.createdAt
+              ? new Date(item.createdAt).toISOString()
+              : '',
+          }
+        })
       })
     )
 
-    // Aplanar y deduplicar por id
     const seen = new Set<string>()
     return results
       .flat()
