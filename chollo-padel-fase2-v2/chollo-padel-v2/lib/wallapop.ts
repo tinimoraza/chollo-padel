@@ -50,21 +50,35 @@ export async function searchWallapop(
     const data = await res.json()
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
-    return data.map((item: any) => ({
-      id: item.id ?? '',
-      title: item.title ?? '',
-      description: item.description ?? '',
-      price: item.price ?? 0,
-      currency: item.currency ?? 'EUR',
-      images: item.image ? [item.image] : [],
-      img: item.image ?? null,
-      url: item.url ?? '',
-      condition: item.condition ?? '',
-      location: item.location?.city ?? '',
-      city: item.location?.city ?? '',
-      platform: 'wallapop',
-      date: item.published_at ?? '',
-    }))
+    return data.map((item: any) => {
+      // 🔍 LOG TEMPORAL — borrar una vez sepamos los valores reales
+      console.log('ITEM RAW:', JSON.stringify({
+        condition: item.condition,
+        published_at: item.published_at,
+        date: item.date,
+        createdAt: item.createdAt,
+        creation_date: item.creation_date,
+        modification_date: item.modification_date,
+        status: item.status,
+        state: item.state,
+      }))
+
+      return {
+        id: item.id ?? '',
+        title: item.title ?? '',
+        description: item.description ?? '',
+        price: item.price ?? 0,
+        currency: item.currency ?? 'EUR',
+        images: item.image ? [item.image] : [],
+        img: item.image ?? null,
+        url: item.url ?? '',
+        condition: item.condition ?? '',
+        location: item.location?.city ?? '',
+        city: item.location?.city ?? '',
+        platform: 'wallapop',
+        date: item.published_at ?? '',
+      }
+    })
   } catch (err) {
     console.error('Error en searchWallapop:', err)
     return []
