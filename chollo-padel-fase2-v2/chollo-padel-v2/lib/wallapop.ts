@@ -17,14 +17,14 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
   try {
     const input: any = {
       searchString: query,
-      maxItems: 40,
+      maxItems: 10,
     };
 
     if (maxPrice) input.maxPrice = maxPrice;
     if (minPrice) input.minPrice = minPrice;
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/seretalabs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=60`,
+      `https://api.apify.com/v2/acts/seretalabs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
