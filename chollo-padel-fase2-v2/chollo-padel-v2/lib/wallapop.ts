@@ -16,15 +16,6 @@ export interface WallapopItem {
 
 export type PalaItem = WallapopItem
 
-const CONDITION_MAP: Record<string, string> = {
-  un_opened: 'un_opened',
-  new: 'new',
-  as_good_as_new: 'as_good_as_new',
-  good: 'good',
-  fair: 'fair',
-  has_given_it_all: 'has_given_it_all',
-}
-
 export async function searchWallapop(
   query: string,
   maxPrice?: number,
@@ -32,93 +23,72 @@ export async function searchWallapop(
   conditions?: string[]
 ): Promise<WallapopItem[]> {
   try {
-    const allItems: WallapopItem[] = []
-
-    // Si hay conditions, hacemos una llamada por cada una y combinamos
-    // Si no hay conditions, hacemos una sola llamada sin filtro
+    // Si hay conditions hacemos una llamada por cada una en paralelo
+    // Si no hay conditions hacemos una sola llamada sin filtro
     const conditionList =
       conditions && conditions.length > 0 ? conditions : [undefined]
 
-    await Promise.all(
+    const results = await Promise.all(
       conditionList.map(async (condition) => {
-        const params = new URLSearchParams({
-          keywords: query,
-          language: 'es_ES',
-          filters_source: 'quick_filters',
-          order_by: 'newest',
-        })
+        const input: any = {
+          keyword: query,
+          maxResults: 120,
+          orderBy: 'newest',
+        }
 
-        if (maxPrice !== undefined) params.set('max_sale_price', String(maxPrice))
-        if (minPrice !== undefined) params.set('min_sale_price', String(minPrice))
-        if (condition) params.set('condition', condition)
+        if (maxPrice !== undefined) input.maxPrice = maxPrice
+        if (minPrice !== undefined) input.minPrice = minPrice
+        if (condition) input.condition = condition
 
-        const url = `https://api.wallapop.com/api/v3/general/search?${params.toString()}`
-
-        const res = await fetch(url, {
-          headers: {
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'es-ES,es;q=0.9',
-            'User-Agent':
-              'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
-            'X-AppVersion': '67900',
-            'X-DeviceOS': '0',
-          },
-          cache: 'no-store',
-        })
+        const res = await fetch(
+          `https://api.apify.com/v2/acts/alvaraaz~wallapop-product-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(input),
+            cache: 'no-store',
+          }
+        )
 
         if (!res.ok) {
-          console.error(`Wallapop API error ${res.status} para condition=${condition}`)
-          return
+          const errText = await res.text()
+          console.error(`Apify error ${res.status} para condition=${condition}:`, errText)
+          return []
         }
 
         const data = await res.json()
+        console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
 
-        // 🔍 LOG TEMPORAL — ver estructura del primer item
-        if (data?.search_objects?.[0]) {
-          console.log('PRIMER ITEM WALLAPOP:', JSON.stringify(data.search_objects[0], null, 2))
-        }
-
-        const items: WallapopItem[] = (data?.search_objects ?? []).map((item: any) => {
-          const img =
-            item.main_image_url ??
-            item.images?.[0]?.urls?.medium ??
-            item.images?.[0]?.urls?.small ??
-            null
-
-          const url = item.web_slug
-            ? `https://es.wallapop.com/item/${item.web_slug}`
-            : `https://es.wallapop.com/item/${item.id}`
-
-          return {
-            id: item.id ?? '',
-            title: item.title ?? '',
-            description: item.description ?? '',
-            price: item.sale_price ?? item.price ?? 0,
-            currency: item.currency ?? 'EUR',
-            images: img ? [img] : [],
-            img,
-            url,
-            condition: item.condition ?? '',
-            location: item.location?.city ?? '',
-            city: item.location?.city ?? '',
-            platform: 'wallapop',
-            date: item.creation_date
-              ? new Date(item.creation_date * 1000).toISOString()
-              : '',
-          }
-        })
-
-        allItems.push(...items)
+        return data.map((item: any) => ({
+          id: item.id ?? '',
+          title: item.title ?? '',
+          description: item.description ?? '',
+          price: item.price ?? 0,
+          currency: item.currency ?? 'EUR',
+          images: item.images?.[0]?.urls?.medium ? [item.images[0].urls.medium] : [],
+          img: item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null,
+          url: item.productUrl ?? `https://es.wallapop.com/item/${item.webSlug}` ?? '',
+          // Asignamos la condition que usamos como filtro — todos los resultados la tienen
+          condition: condition ?? '',
+          location: item.location?.city ?? '',
+          city: item.location?.city ?? '',
+          platform: 'wallapop',
+          date: item.createdAt
+            ? new Date(item.createdAt).toISOString()
+            : '',
+        }))
       })
     )
 
-    // Deduplicar por id en caso de llamadas múltiples
+    // Aplanar y deduplicar por id
     const seen = new Set<string>()
-    return allItems.filter((item) => {
-      if (seen.has(item.id)) return false
-      seen.add(item.id)
-      return true
-    })
+    return results
+      .flat()
+      .filter((item) => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
   } catch (err) {
     console.error('Error en searchWallapop:', err)
     return []
