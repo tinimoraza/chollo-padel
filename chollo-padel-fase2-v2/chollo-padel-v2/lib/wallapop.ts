@@ -20,7 +20,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
   try {
     const input: any = {
       keywords: query,
-      maxResults: 10,
+      maxResults: 0,
     };
 
     if (maxPrice) input.maxPrice = maxPrice;
@@ -64,7 +64,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
         location: cityName,
         city: cityName,
         platform: 'wallapop',
-        date: item.creation_date ?? new Date().toISOString(),
+        date: item.creation_date ?? item.modification_date ?? '',
       };
     });
   } catch (err) {
