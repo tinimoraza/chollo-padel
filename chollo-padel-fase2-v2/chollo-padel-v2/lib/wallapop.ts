@@ -20,23 +20,28 @@ export interface WallapopItem {
   url: string;
   condition: string;
   location: string;
+  city: string;
 }
 
 // Alias para compatibilidad con cron y otros archivos
 export type PalaItem = WallapopItem;
 
 function parseItems(rawItems: any[]): WallapopItem[] {
-  return rawItems.map((item: any) => ({
-    id: item.id ?? '',
-    title: item.title ?? '',
-    description: item.description ?? '',
-    price: item.price?.amount ?? item.sale_price ?? 0,
-    currency: item.price?.currency ?? 'EUR',
-    images: item.images?.map((img: any) => img.urls?.medium ?? img.original ?? '') ?? [],
-    url: `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
-    condition: item.condition ?? '',
-    location: item.location?.city ?? item.location?.country_code ?? '',
-  }));
+  return rawItems.map((item: any) => {
+    const city = item.location?.city ?? item.location?.country_code ?? '';
+    return {
+      id: item.id ?? '',
+      title: item.title ?? '',
+      description: item.description ?? '',
+      price: item.price?.amount ?? item.sale_price ?? 0,
+      currency: item.price?.currency ?? 'EUR',
+      images: item.images?.map((img: any) => img.urls?.medium ?? img.original ?? '') ?? [],
+      url: `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
+      condition: item.condition ?? '',
+      location: city,
+      city: city,
+    };
+  });
 }
 
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
