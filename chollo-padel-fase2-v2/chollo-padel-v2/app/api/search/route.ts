@@ -6,7 +6,6 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get('q')
   const maxPrice = searchParams.get('max_price')
   const minPrice = searchParams.get('min_price')
-  const condition = searchParams.get('condition')
 
   if (!q) {
     return NextResponse.json({ error: 'Falta el parámetro q' }, { status: 400 })
@@ -16,8 +15,7 @@ export async function GET(req: NextRequest) {
     const items = await searchWallapop(
       q,
       maxPrice ? parseInt(maxPrice) : undefined,
-      minPrice ? parseInt(minPrice) : undefined,
-      condition ?? undefined
+      minPrice ? parseInt(minPrice) : undefined
     )
     return NextResponse.json({ items, total: items.length })
   } catch (err) {
