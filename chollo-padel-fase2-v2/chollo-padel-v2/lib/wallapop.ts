@@ -1,64 +1,81 @@
-export interface PalaItem {
-  id: string
-  title: string
-  price: number
-  city: string
-  condition: string
-  platform: 'wallapop' | 'vinted'
-  url: string
-  img: string | null
-  date: string
+const WALLAPOP_SEARCH_URL = 'https://api.wallapop.com/api/v3/general/search';
+
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'es-ES,es;q=0.9',
+  'Origin': 'https://es.wallapop.com',
+  'Referer': 'https://es.wallapop.com/',
+  'DeviceOS': '0',
+  'X-AppVersion': '75800',
+};
+
+export interface WallapopItem {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  images: string[];
+  url: string;
+  condition: string;
+  location: string;
 }
 
-export async function searchWallapop(
-  keywords: string,
-  maxPrice?: number
-): Promise<PalaItem[]> {
+function parseItems(rawItems: any[]): WallapopItem[] {
+  return rawItems.map((item: any) => ({
+    id: item.id ?? '',
+    title: item.title ?? '',
+    description: item.description ?? '',
+    price: item.price?.amount ?? item.sale_price ?? 0,
+    currency: item.price?.currency ?? 'EUR',
+    images: item.images?.map((img: any) => img.urls?.medium ?? img.original ?? '') ?? [],
+    url: `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
+    condition: item.condition ?? '',
+    location: item.location?.city ?? item.location?.country_code ?? '',
+  }));
+}
+
+export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   const params = new URLSearchParams({
-    source: 'web',
-    keywords,
+    keywords: query,
+    filters_source: 'quick_filters',
+    order_by: 'newest',
+    start: '0',
+    items_count: '40',
     latitude: '40.4168',
     longitude: '-3.7038',
-    distance: '500000',
-    category_ids: '17467',
     country_code: 'ES',
     language: 'es_ES',
-    filters_source: 'quick_filters',
-  })
+  });
 
-  if (maxPrice) params.append('max_sale_price', String(maxPrice * 100))
+  if (maxPrice) params.set('max_sale_price', String(maxPrice));
+  if (minPrice) params.set('min_sale_price', String(minPrice));
 
-  const res = await fetch(
-    `https://api.wallapop.com/api/v3/general/search?${params}`,
-    {
-      headers: {
-        Accept: 'application/json',
-        'Accept-Language': 'es-ES,es;q=0.9',
-        DeviceOS: '0',
-        Origin: 'https://es.wallapop.com',
-        Referer: 'https://es.wallapop.com/',
-        'X-DeviceOS': '0',
-      },
-      next: { revalidate: 300 }, // cache 5 min en Next.js
+  try {
+    const res = await fetch(`${WALLAPOP_SEARCH_URL}?${params.toString()}`, {
+      headers: HEADERS,
+      // next.js: no cachear para tener resultados frescos
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      console.error(`Wallapop respondió con status ${res.status}`);
+      return [];
     }
-  )
 
-  if (!res.ok) throw new Error(`Wallapop API error: ${res.status}`)
+    const data = await res.json();
 
-  const data = await res.json()
-  const items = (data?.search_objects || []) as any[]
+    // La API puede devolver los items en distintas rutas según versión
+    const rawItems =
+      data?.search_objects ??
+      data?.data?.search_objects ??
+      data?.items ??
+      [];
 
-  return items.map((item) => ({
-    id: item.id,
-    title: item.content?.title || 'Sin título',
-    price:
-      Math.round((item.content?.price?.amount || 0) / 100) ||
-      Math.round(item.content?.price?.amount || 0),
-    city: item.location?.city || '',
-    condition: item.content?.condition || '',
-    platform: 'wallapop',
-    url: `https://es.wallapop.com/item/${item.web_slug || item.id}`,
-    img: item.content?.images?.[0]?.urls?.medium || null,
-    date: item.content?.modified_date || '',
-  }))
+    return parseItems(rawItems);
+  } catch (err) {
+    console.error('Error llamando a Wallapop:', err);
+    return [];
+  }
 }
