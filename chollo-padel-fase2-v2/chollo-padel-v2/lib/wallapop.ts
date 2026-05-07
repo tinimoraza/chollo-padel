@@ -34,8 +34,7 @@ function buildWallapopUrl(item: any): string {
 export async function searchWallapop(
   query: string,
   maxPrice?: number,
-  minPrice?: number,
-  condition?: string
+  minPrice?: number
 ): Promise<WallapopItem[]> {
   try {
     const input: any = {
@@ -44,7 +43,6 @@ export async function searchWallapop(
     }
     if (maxPrice) input.maxPrice = maxPrice
     if (minPrice) input.minPrice = minPrice
-    if (condition) input.condition = condition
 
     const res = await fetch(
       `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
