@@ -40,6 +40,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     }
 
     const data = await res.json();
+    console.log('Apify respuesta raw:', JSON.stringify(data.slice(0, 1)));
     console.log(`Apify devolvió ${data.length} items para "${query}"`);
 
     return data.map((item: any) => ({
