@@ -51,17 +51,32 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
 
   const wallapopUrl = `${WALLAPOP_SEARCH_URL}?${params.toString()}`;
 
-  const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${process.env.SCRAPINGBEE_API_KEY}&url=${encodeURIComponent(wallapopUrl)}&render_js=false&return_page_source=true`;
+  const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${process.env.SCRAPINGBEE_API_KEY}&url=${encodeURIComponent(wallapopUrl)}&render_js=false&custom_google=false&return_page_source=false`;
 
   try {
-    const res = await fetch(scrapingBeeUrl, { cache: 'no-store' });
+    const res = await fetch(scrapingBeeUrl, {
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
     if (!res.ok) {
-      console.error(`ScrapingBee error: ${res.status}`);
+      const errText = await res.text();
+      console.error(`ScrapingBee error ${res.status}:`, errText);
       return [];
     }
 
-    const data = await res.json();
+    // ScrapingBee devuelve el body de la respuesta original como texto
+    const text = await res.text();
+
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error('No se pudo parsear la respuesta de ScrapingBee:', text.slice(0, 300));
+      return [];
+    }
 
     const rawItems =
       data?.search_objects ??
@@ -69,6 +84,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
       data?.items ??
       [];
 
+    console.log(`Wallapop devolvió ${rawItems.length} items para "${query}"`);
     return parseItems(rawItems);
   } catch (err) {
     console.error('Error en searchWallapop:', err);
