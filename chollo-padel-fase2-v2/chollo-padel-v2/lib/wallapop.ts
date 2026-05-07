@@ -16,7 +16,7 @@ export type PalaItem = WallapopItem;
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      searchString: query,
+      keyword: query,
       maxItems: 10,
     };
 
@@ -24,7 +24,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     if (minPrice) input.minPrice = minPrice;
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/seretalabs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,20 +40,20 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     }
 
     const data = await res.json();
-    console.log('Apify respuesta raw:', JSON.stringify(data.slice(0, 1)));
+    console.log('Raw:', JSON.stringify(data.slice(0, 1)));
     console.log(`Apify devolvió ${data.length} items para "${query}"`);
 
     return data.map((item: any) => ({
-      id: item.id ?? item.itemId ?? '',
-      title: item.title ?? item.name ?? '',
+      id: item.id ?? '',
+      title: item.title ?? '',
       description: item.description ?? '',
-      price: item.price ?? item.salePrice ?? 0,
+      price: item.price ?? item.sale_price ?? 0,
       currency: 'EUR',
-      images: item.images ?? item.photos ?? [],
-      url: item.url ?? item.link ?? '',
+      images: item.images ?? [],
+      url: item.url ?? '',
       condition: item.condition ?? '',
-      location: item.location ?? item.city ?? '',
-      city: item.city ?? item.location ?? '',
+      location: item.location ?? '',
+      city: item.location ?? '',
     }));
   } catch (err) {
     console.error('Error en searchWallapop:', err);
