@@ -44,7 +44,7 @@ export async function searchWallapop(
     if (minPrice) input.minPrice = minPrice
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/ivanvs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/fayoussef~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,7 +61,7 @@ export async function searchWallapop(
     const data = await res.json()
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
-    // DEBUG — ver estructura real del nuevo actor (borrar después)
+    // DEBUG — ver estructura real (borrar después)
     if (data.length > 0) {
       const sample = data[0]
       console.log('ITEM RAW KEYS:', Object.keys(sample))
