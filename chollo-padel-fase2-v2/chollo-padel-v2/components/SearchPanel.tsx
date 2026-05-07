@@ -53,6 +53,11 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
       const data = await res.json()
       setResults(data.items || [])
       calcStats(data.items || [])
+
+      // DEBUG TEMPORAL - borrar después
+      const uniqueConditions = [...new Set((data.items || []).map((i: any) => i.condition))]
+      console.log('CONDITIONS EN RESULTADOS:', uniqueConditions)
+
     } catch {
       setResults([])
     } finally {
