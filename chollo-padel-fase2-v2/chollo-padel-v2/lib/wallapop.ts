@@ -24,14 +24,14 @@ export async function searchWallapop(
 ): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      search_keyword: query,
+      keyword: query,
       max_pages: 3,
     }
     if (maxPrice) input.max_price = maxPrice
     if (minPrice) input.min_price = minPrice
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/cptauad~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,26 +49,26 @@ export async function searchWallapop(
     const data = await res.json()
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
-    return data.map((item: any) => {
-      // 🔍 LOG TEMPORAL — borrar una vez sepamos los campos reales
-      console.log('ITEM RAW COMPLETO:', JSON.stringify(item))
+    // 🔍 LOG TEMPORAL — item completo del primer resultado para ver todos los campos
+    if (data.length > 0) {
+      console.log('PRIMER ITEM COMPLETO:', JSON.stringify(data[0], null, 2))
+    }
 
-      return {
-        id: item.id ?? '',
-        title: item.title ?? '',
-        description: item.description ?? '',
-        price: item.price ?? 0,
-        currency: item.currency ?? 'EUR',
-        images: item.images?.[0] ? [item.images[0]] : [],
-        img: item.images?.[0] ?? item.image ?? null,
-        url: item.url ?? item.web_slug ?? '',
-        condition: item.condition ?? '',
-        location: item.location?.city ?? item.city ?? '',
-        city: item.location?.city ?? item.city ?? '',
-        platform: 'wallapop',
-        date: item.creation_date ?? item.published_at ?? item.createdAt ?? '',
-      }
-    })
+    return data.map((item: any) => ({
+      id: item.id ?? '',
+      title: item.title ?? '',
+      description: item.description ?? '',
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      images: item.image ? [item.image] : [],
+      img: item.image ?? null,
+      url: item.url ?? '',
+      condition: item.condition ?? '',
+      location: item.location?.city ?? item.city ?? item.location ?? '',
+      city: item.location?.city ?? item.city ?? item.location ?? '',
+      platform: 'wallapop',
+      date: item.published_at ?? item.created_at ?? item.date ?? '',
+    }))
   } catch (err) {
     console.error('Error en searchWallapop:', err)
     return []
