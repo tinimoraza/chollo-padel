@@ -51,17 +51,8 @@ export async function searchWallapop(
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
     return data.map((item: any) => {
-      // 🔍 LOG TEMPORAL — borrar una vez sepamos los valores reales
-      console.log('ITEM RAW:', JSON.stringify({
-        condition: item.condition,
-        published_at: item.published_at,
-        date: item.date,
-        createdAt: item.createdAt,
-        creation_date: item.creation_date,
-        modification_date: item.modification_date,
-        status: item.status,
-        state: item.state,
-      }))
+      // 🔍 LOG TEMPORAL — item completo para ver todos los campos
+      console.log('ITEM RAW COMPLETO:', JSON.stringify(item))
 
       return {
         id: item.id ?? '',
