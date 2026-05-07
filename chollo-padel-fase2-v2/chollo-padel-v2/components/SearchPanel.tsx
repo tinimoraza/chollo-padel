@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { WallapopItem } from '@/lib/wallapop'
 
 const CONDITIONS = [
-  { label: 'SIN ABRIR',   value: 'un_opened' },
-  { label: 'EN CAJA',     value: 'in_box' },
-  { label: 'NUEVO',       value: 'new' },
-  { label: 'COMO NUEVO',  value: 'as_good_as_new' },
+  { label: 'SIN ABRIR', value: 'un_opened' },
+  { label: 'EN CAJA', value: 'in_box' },
+  { label: 'NUEVO', value: 'new' },
+  { label: 'COMO NUEVO', value: 'as_good_as_new' },
   { label: 'BUEN ESTADO', value: 'good' },
-  { label: 'ACEPTABLE',   value: 'fair' },
-  { label: 'DADO TODO',   value: 'has_given_it_all' },
+  { label: 'ACEPTABLE', value: 'fair' },
+  { label: 'DADO TODO', value: 'has_given_it_all' },
 ]
 
 function formatDate(dateStr: string) {
@@ -30,7 +30,7 @@ function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
 
   return (
-    
+    <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
@@ -50,13 +50,20 @@ function Card({ item }: { item: WallapopItem }) {
           </span>
         )}
       </div>
+
       <div className="p-3">
-        <p className="font-semibold text-sm line-clamp-2 text-gray-800">{item.title}</p>
-        <p className="text-lg font-bold text-green-600 mt-1">{item.price} €</p>
+        <p className="font-semibold text-sm line-clamp-2 text-gray-800">
+          {item.title}
+        </p>
+        <p className="text-lg font-bold text-green-600 mt-1">
+          {item.price} €
+        </p>
+
         <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
           <span>{item.city}</span>
           {item.date && <span>{formatDate(item.date)}</span>}
         </div>
+
         {item.condition && (
           <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
             {item.condition}
@@ -165,9 +172,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       </div>
 
       {/* Error */}
-      {error && (
-        <p className="text-red-500 text-sm mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
       {/* Resultados */}
       {results.length > 0 && (
@@ -184,7 +189,9 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       </div>
 
       {!loading && results.length === 0 && query && (
-        <p className="text-center text-gray-400 mt-12">Sin resultados para "{query}"</p>
+        <p className="text-center text-gray-400 mt-12">
+          Sin resultados para "{query}"
+        </p>
       )}
     </div>
   )
