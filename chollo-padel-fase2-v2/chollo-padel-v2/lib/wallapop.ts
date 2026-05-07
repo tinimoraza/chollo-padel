@@ -13,7 +13,6 @@ export interface WallapopItem {
   img: string | null
   date: string
 }
-
 export type PalaItem = WallapopItem
 
 function buildWallapopUrl(item: any): string {
@@ -53,7 +52,6 @@ export async function searchWallapop(
         cache: 'no-store',
       }
     )
-
     if (!res.ok) {
       const errText = await res.text()
       console.error(`Apify error ${res.status}:`, errText)
@@ -63,11 +61,32 @@ export async function searchWallapop(
     const data = await res.json()
     console.log(`Apify devolvió ${data.length} items para "${query}"`)
 
+    // DEBUG — ver estructura real de un item (borrar después)
+    if (data.length > 0) {
+      const sample = data[0]
+      console.log('ITEM RAW KEYS:', Object.keys(sample))
+      console.log('ITEM RAW condition:', sample.condition)
+      console.log('ITEM RAW state:', sample.state)
+      console.log('ITEM RAW status:', sample.status)
+      console.log('ITEM RAW item_state:', sample.item_state)
+      console.log('ITEM RAW flags:', JSON.stringify(sample.flags))
+      console.log('ITEM RAW extra_info:', JSON.stringify(sample.extra_info))
+    }
+
     return data.map((item: any) => {
       const cityName = item.location?.city ?? item.city?.city ?? ''
       const allImages = (item.images ?? []).map((img: any) => img.urls?.medium ?? img.urls?.small ?? '')
       const firstImg = allImages[0] ?? null
       const price = item.price?.amount ?? item.price ?? 0
+
+      // Intentamos varios campos posibles para condition
+      const condition =
+        item.condition ??
+        item.state ??
+        item.status ??
+        item.item_state ??
+        item.flags?.pending_moderation ??
+        ''
 
       return {
         id: item.id ?? '',
@@ -78,7 +97,7 @@ export async function searchWallapop(
         images: allImages,
         img: firstImg,
         url: buildWallapopUrl(item),
-        condition: item.condition ?? '',
+        condition,
         location: cityName,
         city: cityName,
         platform: 'wallapop',
