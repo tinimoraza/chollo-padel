@@ -1,24 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { searchWallapop } from '@/lib/wallapop'
 
-export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams
-  const q = searchParams.get('q')
-  const maxPriceRaw = searchParams.get('max_price')
-  const minPriceRaw = searchParams.get('min_price')
-  const conditionsRaw = searchParams.get('conditions')
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
 
-  if (!q) {
-    return NextResponse.json({ error: 'Missing query param q' }, { status: 400 })
-  }
+  const q = (searchParams.get('q') ?? '').trim()
+  if (!q) return NextResponse.json([])
 
-  const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : undefined
-  const minPrice = minPriceRaw ? Number(minPriceRaw) : undefined
-  const conditions = conditionsRaw
-    ? conditionsRaw.split(',').filter(Boolean)
-    : undefined
+  const maxRaw = searchParams.get('max_price')
+  const minRaw = searchParams.get('min_price')
 
-  const results = await searchWallapop(q, maxPrice, minPrice, conditions)
+  const maxPrice = maxRaw ? Number(maxRaw) : undefined
+  const minPrice = minRaw ? Number(minRaw) : undefined
 
-  return NextResponse.json(results)
+  // Frontend manda: conditions=good,fair,as_good_as_new
+  const conditionsRaw = (searchParams.get('conditions') ?? '').trim()
+  const conditions =
+    conditionsRaw.length > 0
+      ? conditionsRaw.split(',').map(s => s.trim()).filter(Boolean)
+      : undefined
+
+  const data = await searchWallapop(
+    q,
+    Number.isFinite(maxPrice as number) ? maxPrice : undefined,
+    Number.isFinite(minPrice as number) ? minPrice : undefined,
+    conditions
+  )
+
+  return NextResponse.json(data)
 }
