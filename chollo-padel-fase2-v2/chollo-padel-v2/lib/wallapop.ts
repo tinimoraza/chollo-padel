@@ -16,7 +16,7 @@ export type PalaItem = WallapopItem;
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      keyword: query,
+      searchString: query,
       maxItems: 10,
     };
 
@@ -24,7 +24,7 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     if (minPrice) input.minPrice = minPrice;
 
     const res = await fetch(
-      `https://api.apify.com/v2/acts/data_alchemist~wallapop-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
+      `https://api.apify.com/v2/acts/seretalabs~wallapop-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,21 +40,28 @@ export async function searchWallapop(query: string, maxPrice?: number, minPrice?
     }
 
     const data = await res.json();
-    console.log('Raw:', JSON.stringify(data.slice(0, 1)));
     console.log(`Apify devolvió ${data.length} items para "${query}"`);
 
-    return data.map((item: any) => ({
-      id: item.id ?? '',
-      title: item.title ?? '',
-      description: item.description ?? '',
-      price: item.price ?? item.sale_price ?? 0,
-      currency: 'EUR',
-      images: item.images ?? [],
-      url: item.url ?? '',
-      condition: item.condition ?? '',
-      location: item.location ?? '',
-      city: item.location ?? '',
-    }));
+    return data.map((item: any) => {
+      const cityName = item.location?.city ?? item.city?.city ?? '';
+      const imageUrl = item.images?.[0]?.urls?.medium ?? item.images?.[0]?.urls?.small ?? '';
+      const allImages = (item.images ?? []).map((img: any) => img.urls?.medium ?? img.urls?.small ?? '');
+      const itemUrl = `https://es.wallapop.com/item/${item.id}`;
+      const price = item.price?.amount ?? item.price ?? 0;
+
+      return {
+        id: item.id ?? '',
+        title: item.title ?? '',
+        description: item.description ?? '',
+        price,
+        currency: item.price?.currency ?? 'EUR',
+        images: allImages,
+        url: itemUrl,
+        condition: item.condition ?? '',
+        location: cityName,
+        city: cityName,
+      };
+    });
   } catch (err) {
     console.error('Error en searchWallapop:', err);
     return [];
