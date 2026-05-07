@@ -13,6 +13,16 @@ const CONDITIONS = [
   { label: 'DADO TODO', value: 'has_given_it_all' },
 ]
 
+const CONDITION_LABEL: Record<string, string> = {
+  un_opened: 'SIN ABRIR',
+  in_box: 'EN CAJA',
+  new: 'NUEVO',
+  as_good_as_new: 'COMO NUEVO',
+  good: 'BUEN ESTADO',
+  fair: 'ACEPTABLE',
+  has_given_it_all: 'DADO TODO',
+}
+
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
   try {
@@ -26,6 +36,11 @@ function formatDate(dateStr: string) {
   }
 }
 
+function prettyCondition(value?: string) {
+  if (!value) return ''
+  return CONDITION_LABEL[value] ?? value
+}
+
 function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
 
@@ -34,39 +49,49 @@ function Card({ item }: { item: WallapopItem }) {
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block border rounded-xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
+      className="group block overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 hover:border-lime-400/60 hover:shadow-[0_0_0_1px_rgba(163,230,53,0.20)] transition"
     >
       <div className="relative">
-        {item.img && (
+        {item.img ? (
           <img
             src={item.img}
             alt={item.title}
-            className="w-full h-48 object-cover"
+            className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            loading="lazy"
           />
+        ) : (
+          <div className="h-44 w-full bg-zinc-900" />
         )}
+
         {isChollo && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-            🔥 CHOLLO
+          <span className="absolute left-2 top-2 rounded bg-orange-500 px-2 py-1 text-[10px] font-extrabold tracking-wide text-black">
+            CHOLLO
           </span>
         )}
+
+        <span className="absolute left-2 bottom-2 rounded bg-zinc-900/80 px-2 py-1 text-[10px] font-semibold tracking-wide text-lime-300 border border-zinc-700">
+          WALLAPOP
+        </span>
       </div>
 
       <div className="p-3">
-        <p className="font-semibold text-sm line-clamp-2 text-gray-800">
+        <p className="line-clamp-2 text-sm font-semibold text-zinc-100">
           {item.title}
         </p>
-        <p className="text-lg font-bold text-green-600 mt-1">
-          {item.price} €
-        </p>
 
-        <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
-          <span>{item.city}</span>
-          {item.date && <span>{formatDate(item.date)}</span>}
+        <div className="mt-2 flex items-end justify-between">
+          <p className="text-xl font-extrabold text-lime-400">
+            {item.price}€
+          </p>
+          <div className="text-right text-[11px] text-zinc-400">
+            <div>{item.city || item.location}</div>
+            {item.date && <div>{formatDate(item.date)}</div>}
+          </div>
         </div>
 
         {item.condition && (
-          <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-            {item.condition}
+          <span className="mt-2 inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-semibold text-zinc-200">
+            {prettyCondition(item.condition)}
           </span>
         )}
       </div>
@@ -120,79 +145,92 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      {/* Buscador */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && doSearch()}
-          placeholder="Buscar pala, marca, modelo..."
-          className="flex-1 border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <input
-          type="number"
-          value={minPrice}
-          onChange={e => setMinPrice(e.target.value)}
-          placeholder="Mín €"
-          className="w-24 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <input
-          type="number"
-          value={maxPrice}
-          onChange={e => setMaxPrice(e.target.value)}
-          placeholder="Máx €"
-          className="w-24 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <button
-          onClick={doSearch}
-          disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {loading ? 'Buscando...' : 'Buscar'}
-        </button>
-      </div>
+    <div className="min-h-screen bg-black text-white">
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        {/* Buscador */}
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && doSearch()}
+            placeholder="Buscar pala, marca, modelo..."
+            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+          />
 
-      {/* Filtros de estado */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {CONDITIONS.map(c => (
+          <input
+            type="number"
+            value={minPrice}
+            onChange={e => setMinPrice(e.target.value)}
+            placeholder="Mín €"
+            className="w-28 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+          />
+
+          <input
+            type="number"
+            value={maxPrice}
+            onChange={e => setMaxPrice(e.target.value)}
+            placeholder="Máx €"
+            className="w-28 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+          />
+
           <button
-            key={c.value}
-            onClick={() => toggleCondition(c.value)}
-            className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
-              selectedConditions.includes(c.value)
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
-            }`}
+            onClick={doSearch}
+            disabled={loading}
+            className="rounded-lg bg-lime-400 px-6 py-2 text-sm font-extrabold tracking-wide text-black hover:bg-lime-300 disabled:opacity-50"
           >
-            {c.label}
+            {loading ? 'BUSCANDO…' : 'BUSCAR →'}
           </button>
-        ))}
+        </div>
+
+        {/* Filtros de estado */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {CONDITIONS.map(c => {
+            const active = selectedConditions.includes(c.value)
+            return (
+              <button
+                key={c.value}
+                onClick={() => toggleCondition(c.value)}
+                className={[
+                  'rounded border px-3 py-1 text-[11px] font-extrabold tracking-wide transition',
+                  active
+                    ? 'border-lime-400 bg-lime-400 text-black'
+                    : 'border-zinc-800 bg-zinc-950 text-zinc-200 hover:border-lime-400/60',
+                ].join(' ')}
+              >
+                {c.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Error */}
+        {error && (
+          <p className="mb-4 text-sm font-semibold text-red-400">
+            {error}
+          </p>
+        )}
+
+        {/* Resultados */}
+        {results.length > 0 && (
+          <p className="mb-4 text-sm text-zinc-400">
+            {results.length} resultado{results.length !== 1 ? 's' : ''}
+            {selectedConditions.length > 0 && ' (filtrados por estado)'}
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+          {results.map(item => (
+            <Card key={item.id} item={item} />
+          ))}
+        </div>
+
+        {!loading && results.length === 0 && query && (
+          <p className="mt-12 text-center text-zinc-500">
+            Sin resultados para "{query}"
+          </p>
+        )}
       </div>
-
-      {/* Error */}
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-      {/* Resultados */}
-      {results.length > 0 && (
-        <p className="text-sm text-gray-500 mb-4">
-          {results.length} resultado{results.length !== 1 ? 's' : ''}
-          {selectedConditions.length > 0 && ' (filtrados por estado)'}
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {results.map(item => (
-          <Card key={item.id} item={item} />
-        ))}
-      </div>
-
-      {!loading && results.length === 0 && query && (
-        <p className="text-center text-gray-400 mt-12">
-          Sin resultados para "{query}"
-        </p>
-      )}
     </div>
   )
 }
