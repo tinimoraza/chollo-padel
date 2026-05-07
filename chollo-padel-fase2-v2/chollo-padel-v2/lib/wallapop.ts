@@ -16,7 +16,7 @@ export type PalaItem = WallapopItem;
 export async function searchWallapop(query: string, maxPrice?: number, minPrice?: number): Promise<WallapopItem[]> {
   try {
     const input: any = {
-      searchTerm: query,
+      searchString: query,
       maxItems: 40,
     };
 
