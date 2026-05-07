@@ -10,6 +10,7 @@ interface Stats { total: number; best: number | null; avg: number | null; chollo
 
 export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) => void }) {
   const [query, setQuery] = useState('')
+  const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [condFilter, setCondFilter] = useState('')
   const [srcFilter, setSrcFilter] = useState('all')
@@ -28,6 +29,7 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
 
     try {
       const params = new URLSearchParams({ q: term })
+      if (minPrice) params.append('min_price', minPrice)
       if (maxPrice) params.append('max_price', maxPrice)
       const res = await fetch(`/api/search?${params}`)
       const data = await res.json()
@@ -73,6 +75,15 @@ export default function SearchPanel({ onOpenModal }: { onOpenModal: (q: string) 
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && doSearch()}
           />
+          <input
+            style={styles.priceInput}
+            type="number"
+            placeholder="Mín €"
+            value={minPrice}
+            onChange={e => setMinPrice(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && doSearch()}
+          />
+          <span style={styles.priceSep}>—</span>
           <input
             style={styles.priceInput}
             type="number"
@@ -154,6 +165,21 @@ function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
   const isNuevo = condLow.includes('nuevo')
   const platColor = item.platform === 'wallapop' ? '#13C1AC' : '#09B1BA'
 
+  function formatDate(dateStr: string) {
+    if (!dateStr) return null
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return null
+    // Si es de hoy, mostrar "Hoy"
+    const today = new Date()
+    const diffDays = Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Hoy'
+    if (diffDays === 1) return 'Ayer'
+    if (diffDays < 7) return `Hace ${diffDays} días`
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const dateLabel = formatDate(item.date)
+
   return (
     <a href={item.url} target="_blank" rel="noopener" style={styles.card}>
       {isChollo && <div style={styles.badgeChollo}>🔥 CHOLLO</div>}
@@ -174,8 +200,10 @@ function Card({ item, onAlert }: { item: PalaItem; onAlert: () => void }) {
           <span style={styles.cardPrice}>{item.price}€</span>
           <span style={styles.condChip}>{item.condition}</span>
         </div>
-        {item.city && <div style={styles.cardCity}>📍 {item.city}</div>}
-        {item.date && <div style={styles.cardCity}>🕐 {new Date(item.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>}
+        <div style={styles.cardMeta}>
+          {item.city && <span>📍 {item.city}</span>}
+          {dateLabel && <span>🕐 {dateLabel}</span>}
+        </div>
       </div>
     </a>
   )
@@ -203,10 +231,11 @@ function EmptyState({ emoji, title, sub }: { emoji: string; title: string; sub: 
 const styles: Record<string, React.CSSProperties> = {
   main: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   searchBar: { background: '#0F0F0F', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 },
-  searchRow: { display: 'flex', gap: 8 },
+  searchRow: { display: 'flex', gap: 8, alignItems: 'center' },
   qInput: { flex: 1, background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 16px', fontSize: 15, outline: 'none', fontFamily: 'Barlow, sans-serif' },
-  priceInput: { width: 100, background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 16px', fontSize: 15, outline: 'none', fontFamily: 'Barlow, sans-serif' },
-  btnSearch: { background: '#C8FF00', color: '#000', border: 'none', padding: '0 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' },
+  priceInput: { width: 90, background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 16px', fontSize: 15, outline: 'none', fontFamily: 'Barlow, sans-serif' },
+  priceSep: { color: 'rgba(255,255,255,0.3)', fontSize: 14, userSelect: 'none' },
+  btnSearch: { background: '#C8FF00', color: '#000', border: 'none', padding: '0 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', height: 46 },
   chips: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   chipLabel: { fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, fontFamily: 'Barlow Condensed, sans-serif' },
   chip: { background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: '4px 12px', fontSize: 11, letterSpacing: 1, cursor: 'pointer', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 600 },
@@ -226,5 +255,5 @@ const styles: Record<string, React.CSSProperties> = {
   cardBottom: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   cardPrice: { fontSize: 26, fontWeight: 700, color: '#C8FF00', fontFamily: 'Bebas Neue, sans-serif' },
   condChip: { fontSize: 10, padding: '3px 8px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 },
-  cardCity: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
+  cardMeta: { display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4, fontSize: 11, color: 'rgba(255,255,255,0.35)' },
 }
