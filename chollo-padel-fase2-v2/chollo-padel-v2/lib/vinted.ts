@@ -14,12 +14,11 @@ export interface VintedItem {
   date: string
 }
 
-// Mapeo de estados normalizados → status_ids de Vinted
 const CONDITION_MAP: Record<string, string[]> = {
-  new:          ['6', '1'], // Nuevo con etiqueta + Nuevo sin etiqueta
-  as_good_as_new: ['2'],   // Muy buen estado
-  good:         ['3'],     // Buen estado
-  fair:         ['4'],     // Satisfactorio
+  new:            ['6', '1'],
+  as_good_as_new: ['2'],
+  good:           ['3'],
+  fair:           ['4'],
 }
 
 async function getVintedToken(): Promise<{ cookie: string; token: string } | null> {
@@ -47,7 +46,6 @@ async function getVintedToken(): Promise<{ cookie: string; token: string } | nul
       .find((c) => c.startsWith('access_token_web=') && c.length > 'access_token_web='.length + 5)
 
     const token = tokenEntry?.split('=').slice(1).join('=')
-
     if (!token) return null
     return { cookie, token }
   } catch (err) {
@@ -71,7 +69,6 @@ export async function searchVinted(
 
     const { cookie, token } = auth
 
-    // Traducir condiciones normalizadas a status_ids de Vinted
     const statusIds: string[] = []
     if (conditions && conditions.length > 0) {
       for (const c of conditions) {
@@ -123,7 +120,13 @@ export async function searchVinted(
       })
       .map((item) => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
+
+        // Fecha desde el timestamp de la foto
+        const ts = item.photo?.high_resolution?.timestamp
+        const date = ts ? new Date(ts * 1000).toISOString() : ''
+
         const price = parseFloat(item.price?.amount ?? '0')
+
         return {
           id: String(item.id),
           title: item.title ?? '',
@@ -134,10 +137,10 @@ export async function searchVinted(
           img,
           url: item.url ?? `https://www.vinted.es/items/${item.id}`,
           condition: item.status ?? '',
-          location: '',
-          city: '',
+          location: 'Europa',
+          city: 'Europa',
           platform: 'vinted',
-          date: '',
+          date,
         }
       })
   } catch (err) {
