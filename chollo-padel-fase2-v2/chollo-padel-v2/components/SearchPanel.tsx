@@ -172,6 +172,14 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       setResults(data)
       setSearched(true)
       saveToHistory(q.trim())
+
+      // Registrar en Supabase
+      fetch('/api/searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q.trim() }),
+      }).catch(() => {})
+
     } catch (err) {
       setError('Error al buscar. Inténtalo de nuevo.')
       console.error(err)
