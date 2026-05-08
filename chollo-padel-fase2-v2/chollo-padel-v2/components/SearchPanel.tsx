@@ -67,7 +67,7 @@ function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
   const isVinted = item.platform === 'vinted'
   return (
-    
+    <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
