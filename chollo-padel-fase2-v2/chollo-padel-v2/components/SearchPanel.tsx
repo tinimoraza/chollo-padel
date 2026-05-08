@@ -16,10 +16,8 @@ const CONDITION_LABEL: Record<string, string> = {
   as_good_as_new: 'COMO NUEVO',
   good:           'BUEN ESTADO',
   fair:           'ACEPTABLE',
-  // Wallapop legacy (por si llegan de la API)
   un_opened:      'SIN ABRIR',
   has_given_it_all: 'DADO TODO',
-  // Vinted (por si llegan en español)
   'Nuevo con etiqueta': 'NUEVO',
   'Nuevo sin etiqueta': 'NUEVO',
   'Muy bueno':    'COMO NUEVO',
@@ -69,7 +67,15 @@ function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
   const isVinted = item.platform === 'vinted'
   return (
-    <a href={item.url} target="_blank" rel="noopener noreferrer" style={styles.card}>
+    
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...styles.card,
+        borderLeft: isVinted ? '3px solid #09B1BA' : '3px solid #C8FF00',
+      }}
+    >
       <div style={{ position: 'relative' }}>
         {item.img
           ? <img src={item.img} alt={item.title} style={styles.cardImg} loading="lazy" />
@@ -169,7 +175,6 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   function togglePlatform(value: string) {
     setSelectedPlatforms(prev => {
       if (prev.includes(value)) {
-        // No dejar desactivar las dos a la vez
         if (prev.length === 1) return prev
         return prev.filter(p => p !== value)
       }
