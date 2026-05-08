@@ -82,7 +82,10 @@ export async function searchWallapop(
         if (seen.has(item.id)) return false
         seen.add(item.id)
         const titleLower = item.title.toLowerCase()
-        return words.every(w => titleLower.includes(w))
+        if (!words.every(w => titleLower.includes(w))) return false
+        if (minPrice !== undefined && item.price < minPrice) return false
+        if (maxPrice !== undefined && item.price > maxPrice) return false
+        return true
       })
   } catch (err) {
     console.error('Error en searchWallapop:', err)
