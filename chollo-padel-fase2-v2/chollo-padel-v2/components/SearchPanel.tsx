@@ -68,7 +68,7 @@ function Card({ item }: { item: WallapopItem }) {
   const isVinted = item.platform === 'vinted'
   const borderColor = isVinted ? '#09B1BA' : '#C8FF00'
   return (
-    
+    <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
