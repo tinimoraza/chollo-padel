@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { WallapopItem } from '@/lib/wallapop'
 
 const CONDITIONS = [
@@ -20,6 +20,12 @@ const CONDITION_LABEL: Record<string, string> = {
   fair: 'ACEPTABLE',
   has_given_it_all: 'DADO TODO',
 }
+
+const SORT_OPTIONS = [
+  { label: 'MÁS RECIENTES', value: 'date_desc' },
+  { label: 'PRECIO: MENOR A MAYOR', value: 'price_asc' },
+  { label: 'PRECIO: MAYOR A MENOR', value: 'price_desc' },
+]
 
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
@@ -68,8 +74,10 @@ interface SearchPanelProps {
 
 export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const [query, setQuery] = useState('')
+  const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [selectedConditions, setSelectedConditions] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState('date_desc')
   const [results, setResults] = useState<WallapopItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -77,7 +85,6 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 
   function toggleCondition(value: string) {
     if (value === '') {
-      // TODOS → limpia selección
       setSelectedConditions([])
       return
     }
@@ -95,6 +102,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 
     try {
       const params = new URLSearchParams({ q: query.trim() })
+      if (minPrice) params.set('min_price', minPrice)
       if (maxPrice) params.set('max_price', maxPrice)
       if (selectedConditions.length > 0) params.set('conditions', selectedConditions.join(','))
 
@@ -110,6 +118,18 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       setLoading(false)
     }
   }
+
+  const sortedResults = useMemo(() => {
+    const arr = [...results]
+    if (sortBy === 'price_asc') return arr.sort((a, b) => a.price - b.price)
+    if (sortBy === 'price_desc') return arr.sort((a, b) => b.price - a.price)
+    // date_desc: más recientes primero
+    return arr.sort((a, b) => {
+      if (!a.date) return 1
+      if (!b.date) return -1
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    })
+  }, [results, sortBy])
 
   const chollos = results.filter(r => r.price > 0 && r.price < 80)
   const bestPrice = results.length > 0 ? Math.min(...results.map(r => r.price)) : null
@@ -129,10 +149,17 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
         />
         <input
           type="number"
+          value={minPrice}
+          onChange={e => setMinPrice(e.target.value)}
+          placeholder="Mín €"
+          style={{ ...styles.input, width: 90, flex: 'none' }}
+        />
+        <input
+          type="number"
           value={maxPrice}
           onChange={e => setMaxPrice(e.target.value)}
           placeholder="Máx €"
-          style={{ ...styles.input, width: 100, flex: 'none' }}
+          style={{ ...styles.input, width: 90, flex: 'none' }}
         />
         <button onClick={doSearch} disabled={loading} style={styles.btnSearch}>
           {loading ? 'BUSCANDO…' : 'BUSCAR →'}
@@ -185,16 +212,27 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       {/* Error */}
       {error && <p style={{ color: '#FF5F1F', fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
-      {/* Contador */}
+      {/* Contador + Ordenar */}
       {searched && results.length > 0 && (
-        <p style={styles.resultCount}>
-          {results.length} resultado{results.length !== 1 ? 's' : ''} · "{query.toUpperCase()}"
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <p style={styles.resultCount}>
+            {results.length} resultado{results.length !== 1 ? 's' : ''} · "{query.toUpperCase()}"
+          </p>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={styles.sortSelect}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       )}
 
       {/* Grid */}
       <div style={styles.grid}>
-        {results.map(item => <Card key={item.id} item={item} />)}
+        {sortedResults.map(item => <Card key={item.id} item={item} />)}
       </div>
 
       {/* Sin resultados */}
@@ -238,7 +276,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statValue: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 2, color: '#C8FF00', lineHeight: 1 },
   statLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
-  resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginBottom: 16 },
+  resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', margin: 0 },
+  sortSelect: {
+    background: '#111', border: '1px solid rgba(255,255,255,0.12)',
+    color: 'rgba(255,255,255,0.7)', padding: '6px 12px',
+    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
+    fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', outline: 'none',
+  },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
   card: {
     background: '#111', border: '1px solid rgba(255,255,255,0.07)',
