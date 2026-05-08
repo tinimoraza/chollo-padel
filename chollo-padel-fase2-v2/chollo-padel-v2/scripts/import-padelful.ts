@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // necesita service role, no anon key
+  process.env.SUPABASE_SECRET_KEY! // necesita service role, no anon key
 )
 
 const BASE_URL = 'https://padelful.com/api/v1/rackets'
