@@ -74,13 +74,15 @@ export async function searchWallapop(
         })
       })
     )
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     const seen = new Set<string>()
     return results
       .flat()
       .filter((item) => {
         if (seen.has(item.id)) return false
         seen.add(item.id)
-        return true
+        const titleLower = item.title.toLowerCase()
+        return words.every(w => titleLower.includes(w))
       })
   } catch (err) {
     console.error('Error en searchWallapop:', err)
