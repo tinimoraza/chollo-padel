@@ -5,7 +5,6 @@ import { WallapopItem } from '@/lib/wallapop'
 
 const CONDITIONS = [
   { label: 'SIN ABRIR', value: 'un_opened' },
-  { label: 'EN CAJA', value: 'in_box' },
   { label: 'NUEVO', value: 'new' },
   { label: 'COMO NUEVO', value: 'as_good_as_new' },
   { label: 'BUEN ESTADO', value: 'good' },
@@ -15,7 +14,6 @@ const CONDITIONS = [
 
 const CONDITION_LABEL: Record<string, string> = {
   un_opened: 'SIN ABRIR',
-  in_box: 'EN CAJA',
   new: 'NUEVO',
   as_good_as_new: 'COMO NUEVO',
   good: 'BUEN ESTADO',
@@ -45,7 +43,7 @@ function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
 
   return (
-    <a
+    
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
