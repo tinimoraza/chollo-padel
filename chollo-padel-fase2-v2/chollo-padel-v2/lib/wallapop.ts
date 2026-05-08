@@ -13,9 +13,7 @@ export interface WallapopItem {
   img: string | null
   date: string
 }
-
 export type PalaItem = WallapopItem
-
 export async function searchWallapop(
   query: string,
   maxPrice?: number,
@@ -25,19 +23,16 @@ export async function searchWallapop(
   try {
     const conditionList =
       conditions && conditions.length > 0 ? conditions : [undefined]
-
     const results = await Promise.all(
       conditionList.map(async (condition) => {
         const input: any = {
           keyword: query,
           maxResults: 120,
-          orderBy: 'newest',
+          orderBy: 'most_relevance',
         }
-
         if (maxPrice !== undefined) input.maxPrice = maxPrice
         if (minPrice !== undefined) input.minPrice = minPrice
         if (condition) input.condition = condition
-
         const res = await fetch(
           `https://api.apify.com/v2/acts/alvaraaz~wallapop-product-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
           {
@@ -47,22 +42,18 @@ export async function searchWallapop(
             cache: 'no-store',
           }
         )
-
         if (!res.ok) {
           const errText = await res.text()
           console.error(`Apify error ${res.status} para condition=${condition}:`, errText)
           return []
         }
-
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
-
         return data.map((item: any) => {
           const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
           const url = item.productUrl
             ? String(item.productUrl)
             : `https://es.wallapop.com/item/${item.webSlug ?? item.id}`
-
           return {
             id: item.id ?? '',
             title: item.title ?? '',
@@ -83,7 +74,6 @@ export async function searchWallapop(
         })
       })
     )
-
     const seen = new Set<string>()
     return results
       .flat()
