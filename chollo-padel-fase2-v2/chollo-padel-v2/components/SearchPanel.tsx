@@ -66,14 +66,15 @@ function prettyCondition(value?: string) {
 function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
   const isVinted = item.platform === 'vinted'
+  const borderColor = isVinted ? '#09B1BA' : '#C8FF00'
   return (
-    <a
+    
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
       style={{
         ...styles.card,
-        borderLeft: isVinted ? '3px solid #09B1BA' : '3px solid #C8FF00',
+        border: `1px solid ${borderColor}`,
       }}
     >
       <div style={{ position: 'relative' }}>
@@ -84,7 +85,7 @@ function Card({ item }: { item: WallapopItem }) {
         {isChollo && <span style={styles.badgeChollo}>CHOLLO</span>}
         <span style={{
           ...styles.badgePlatform,
-          color: isVinted ? '#09B1BA' : '#C8FF00',
+          color: borderColor,
           borderColor: isVinted ? 'rgba(9,177,186,0.3)' : 'rgba(200,255,0,0.2)',
         }}>
           ● {isVinted ? 'VINTED' : 'WALLAPOP'}
@@ -93,7 +94,7 @@ function Card({ item }: { item: WallapopItem }) {
       <div style={styles.cardBody}>
         <p style={styles.cardTitle}>{item.title}</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 }}>
-          <span style={styles.cardPrice}>{item.price}€</span>
+          <span style={{ ...styles.cardPrice, color: borderColor }}>{item.price}€</span>
           <div style={styles.cardMeta}>
             <div>{item.city || item.location || ''}</div>
             {item.date && <div>{formatDate(item.date)}</div>}
@@ -426,7 +427,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
   card: {
-    background: '#111', border: '1px solid rgba(255,255,255,0.07)',
+    background: '#111',
     display: 'block', textDecoration: 'none', color: 'inherit', overflow: 'hidden',
   },
   cardImg: { width: '100%', height: 160, objectFit: 'cover', display: 'block' },
