@@ -2,38 +2,48 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { WallapopItem } from '@/lib/wallapop'
 
+// Estados normalizados — valen para Wallapop y Vinted a la vez
 const CONDITIONS = [
-  { label: 'TODOS', value: '' },
-  { label: 'SIN ABRIR', value: 'un_opened' },
-  { label: 'NUEVO', value: 'new' },
-  { label: 'COMO NUEVO', value: 'as_good_as_new' },
+  { label: 'TODOS',       value: '' },
+  { label: 'NUEVO',       value: 'new' },
+  { label: 'COMO NUEVO',  value: 'as_good_as_new' },
   { label: 'BUEN ESTADO', value: 'good' },
-  { label: 'ACEPTABLE', value: 'fair' },
-  { label: 'DADO TODO', value: 'has_given_it_all' },
+  { label: 'ACEPTABLE',   value: 'fair' },
 ]
 
 const CONDITION_LABEL: Record<string, string> = {
-  un_opened: 'SIN ABRIR',
-  new: 'NUEVO',
+  new:            'NUEVO',
   as_good_as_new: 'COMO NUEVO',
-  good: 'BUEN ESTADO',
-  fair: 'ACEPTABLE',
+  good:           'BUEN ESTADO',
+  fair:           'ACEPTABLE',
+  // Wallapop legacy (por si llegan de la API)
+  un_opened:      'SIN ABRIR',
   has_given_it_all: 'DADO TODO',
+  // Vinted (por si llegan en español)
+  'Nuevo con etiqueta': 'NUEVO',
+  'Nuevo sin etiqueta': 'NUEVO',
+  'Muy bueno':    'COMO NUEVO',
+  'Bueno':        'BUEN ESTADO',
+  'Satisfactorio': 'ACEPTABLE',
 }
 
+const PLATFORMS = [
+  { label: 'WALLAPOP', value: 'wallapop' },
+  { label: 'VINTED',   value: 'vinted' },
+]
+
 const SORT_OPTIONS = [
-  { label: 'MÁS RECIENTES', value: 'date_desc' },
   { label: 'PRECIO: MENOR A MAYOR', value: 'price_asc' },
   { label: 'PRECIO: MAYOR A MENOR', value: 'price_desc' },
+  { label: 'MÁS RECIENTES',         value: 'date_desc' },
 ]
 
 const HISTORY_KEY = 'chollo_search_history'
 const MAX_HISTORY = 20
 
 function getHistory(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
-  } catch { return [] }
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') }
+  catch { return [] }
 }
 
 function saveToHistory(q: string) {
@@ -57,6 +67,7 @@ function prettyCondition(value?: string) {
 
 function Card({ item }: { item: WallapopItem }) {
   const isChollo = item.price > 0 && item.price < 80
+  const isVinted = item.platform === 'vinted'
   return (
     <a href={item.url} target="_blank" rel="noopener noreferrer" style={styles.card}>
       <div style={{ position: 'relative' }}>
@@ -65,7 +76,13 @@ function Card({ item }: { item: WallapopItem }) {
           : <div style={{ ...styles.cardImg, background: '#1a1a1a' }} />
         }
         {isChollo && <span style={styles.badgeChollo}>CHOLLO</span>}
-        <span style={styles.badgePlatform}>● WALLAPOP</span>
+        <span style={{
+          ...styles.badgePlatform,
+          color: isVinted ? '#09B1BA' : '#C8FF00',
+          borderColor: isVinted ? 'rgba(9,177,186,0.3)' : 'rgba(200,255,0,0.2)',
+        }}>
+          ● {isVinted ? 'VINTED' : 'WALLAPOP'}
+        </span>
       </div>
       <div style={styles.cardBody}>
         <p style={styles.cardTitle}>{item.title}</p>
@@ -93,7 +110,8 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [selectedConditions, setSelectedConditions] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState('date_desc')
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['wallapop', 'vinted'])
+  const [sortBy, setSortBy] = useState('price_asc')
   const [results, setResults] = useState<WallapopItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -108,9 +126,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       if (
         suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
         inputRef.current && !inputRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false)
-      }
+      ) setShowSuggestions(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -144,13 +160,21 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   }
 
   function toggleCondition(value: string) {
-    if (value === '') {
-      setSelectedConditions([])
-      return
-    }
+    if (value === '') { setSelectedConditions([]); return }
     setSelectedConditions(prev =>
       prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
     )
+  }
+
+  function togglePlatform(value: string) {
+    setSelectedPlatforms(prev => {
+      if (prev.includes(value)) {
+        // No dejar desactivar las dos a la vez
+        if (prev.length === 1) return prev
+        return prev.filter(p => p !== value)
+      }
+      return [...prev, value]
+    })
   }
 
   async function doSearchWith(q: string) {
@@ -165,6 +189,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       if (minPrice) params.set('min_price', minPrice)
       if (maxPrice) params.set('max_price', maxPrice)
       if (selectedConditions.length > 0) params.set('conditions', selectedConditions.join(','))
+      params.set('platforms', selectedPlatforms.join(','))
 
       const res = await fetch(`/api/search?${params.toString()}`)
       if (!res.ok) throw new Error(`Error ${res.status}`)
@@ -173,7 +198,6 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       setSearched(true)
       saveToHistory(q.trim())
 
-      // Registrar en Supabase
       fetch('/api/searches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,9 +231,12 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const chollos = results.filter(r => r.price > 0 && r.price < 80)
   const bestPrice = results.length > 0 ? Math.min(...results.map(r => r.price)) : null
   const avgPrice = results.length > 0 ? Math.round(results.reduce((a, r) => a + r.price, 0) / results.length) : null
+  const wallapopCount = results.filter(r => r.platform === 'wallapop').length
+  const vintedCount = results.filter(r => r.platform === 'vinted').length
 
   return (
     <main style={styles.main}>
+
       {/* Barra de búsqueda */}
       <div style={styles.searchBar}>
         <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
@@ -229,28 +256,21 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
           {showSuggestions && suggestions.length > 0 && (
             <div ref={suggestionsRef} style={styles.suggestions}>
               {suggestions.map((s, i) => (
-                <div
-                  key={i}
-                  style={styles.suggestionItem}
-                  onMouseDown={() => selectSuggestion(s)}
-                >
-                  <span style={{ opacity: 0.4, marginRight: 8 }}>🕐</span>
-                  {s}
+                <div key={i} style={styles.suggestionItem} onMouseDown={() => selectSuggestion(s)}>
+                  <span style={{ opacity: 0.4, marginRight: 8 }}>🕐</span>{s}
                 </div>
               ))}
             </div>
           )}
         </div>
         <input
-          type="number"
-          value={minPrice}
+          type="number" value={minPrice}
           onChange={e => setMinPrice(e.target.value)}
           placeholder="Mín €"
           style={{ ...styles.input, width: 90, flex: 'none' }}
         />
         <input
-          type="number"
-          value={maxPrice}
+          type="number" value={maxPrice}
           onChange={e => setMaxPrice(e.target.value)}
           placeholder="Máx €"
           style={{ ...styles.input, width: 90, flex: 'none' }}
@@ -260,14 +280,39 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
         </button>
       </div>
 
+      {/* Toggles de plataforma */}
+      <div style={styles.filtersRow}>
+        <span style={styles.filterLabel}>PLATAFORMA:</span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {PLATFORMS.map(p => {
+            const active = selectedPlatforms.includes(p.value)
+            const isVinted = p.value === 'vinted'
+            return (
+              <button
+                key={p.value}
+                onClick={() => togglePlatform(p.value)}
+                style={{
+                  ...styles.filterBtn,
+                  ...(active ? {
+                    background: isVinted ? '#09B1BA' : '#C8FF00',
+                    border: `1px solid ${isVinted ? '#09B1BA' : '#C8FF00'}`,
+                    color: '#000',
+                  } : {}),
+                }}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Filtros de estado */}
       <div style={styles.filtersRow}>
         <span style={styles.filterLabel}>ESTADO:</span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {CONDITIONS.map(c => {
-            const active = c.value === ''
-              ? selectedConditions.length === 0
-              : selectedConditions.includes(c.value)
+            const active = c.value === '' ? selectedConditions.length === 0 : selectedConditions.includes(c.value)
             return (
               <button
                 key={c.value}
@@ -286,7 +331,15 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
         <div style={styles.statsRow}>
           <div style={styles.statBox}>
             <div style={styles.statValue}>{results.length}</div>
-            <div style={styles.statLabel}>Resultados</div>
+            <div style={styles.statLabel}>Total</div>
+          </div>
+          <div style={styles.statBox}>
+            <div style={{ ...styles.statValue, color: '#C8FF00' }}>{wallapopCount}</div>
+            <div style={styles.statLabel}>Wallapop</div>
+          </div>
+          <div style={styles.statBox}>
+            <div style={{ ...styles.statValue, color: '#09B1BA' }}>{vintedCount}</div>
+            <div style={styles.statLabel}>Vinted</div>
           </div>
           <div style={styles.statBox}>
             <div style={{ ...styles.statValue, color: '#FF5F1F' }}>{bestPrice}€</div>
@@ -312,21 +365,15 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
           <p style={styles.resultCount}>
             {results.length} resultado{results.length !== 1 ? 's' : ''} · "{query.toUpperCase()}"
           </p>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={styles.sortSelect}
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={styles.sortSelect}>
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       )}
 
       {/* Grid */}
       <div style={styles.grid}>
-        {sortedResults.map(item => <Card key={item.id} item={item} />)}
+        {sortedResults.map(item => <Card key={`${item.platform}-${item.id}`} item={item} />)}
       </div>
 
       {/* Sin resultados */}
@@ -352,7 +399,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 28px', fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
   },
-  filtersRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
+  filtersRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
   filterLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.35)' },
   filterBtn: {
     background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
@@ -360,14 +407,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
     fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer',
   },
-  filterBtnActive: {
-    background: '#C8FF00', border: '1px solid #C8FF00', color: '#000',
-  },
+  filterBtnActive: { background: '#C8FF00', border: '1px solid #C8FF00', color: '#000' },
   statsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
-  statBox: {
-    background: '#111', border: '1px solid rgba(255,255,255,0.07)',
-    padding: '14px 24px', minWidth: 110,
-  },
+  statBox: { background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '14px 24px', minWidth: 90 },
   statValue: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 2, color: '#C8FF00', lineHeight: 1 },
   statLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
   resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', margin: 0 },
@@ -380,8 +422,7 @@ const styles: Record<string, React.CSSProperties> = {
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
   card: {
     background: '#111', border: '1px solid rgba(255,255,255,0.07)',
-    display: 'block', textDecoration: 'none', color: 'inherit',
-    overflow: 'hidden',
+    display: 'block', textDecoration: 'none', color: 'inherit', overflow: 'hidden',
   },
   cardImg: { width: '100%', height: 160, objectFit: 'cover', display: 'block' },
   cardBody: { padding: '10px 12px' },
@@ -403,14 +444,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Barlow Condensed, sans-serif',
   },
   badgePlatform: {
-    position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)', color: '#C8FF00',
+    position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)',
     fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px',
-    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid rgba(200,255,0,0.2)',
+    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid',
   },
   suggestions: {
     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-    background: '#181818', border: '1px solid rgba(255,255,255,0.1)',
-    borderTop: 'none',
+    background: '#181818', border: '1px solid rgba(255,255,255,0.1)', borderTop: 'none',
   },
   suggestionItem: {
     padding: '10px 16px', fontSize: 13, fontFamily: 'Barlow, sans-serif',
