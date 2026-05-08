@@ -6,13 +6,24 @@ interface Alerta {
   platform: string; activa: boolean; email: string
 }
 
+interface SearchEntry {
+  query: string
+  count: number
+}
+
 export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => void }) {
   const [alertas, setAlertas] = useState<Alerta[]>([])
+  const [topSearches, setTopSearches] = useState<SearchEntry[]>([])
 
   useEffect(() => {
     fetch('/api/alerts')
       .then(r => r.json())
       .then(d => setAlertas(d.alertas || []))
+      .catch(() => {})
+
+    fetch('/api/searches')
+      .then(r => r.json())
+      .then(d => setTopSearches(d || []))
       .catch(() => {})
   }, [])
 
@@ -29,8 +40,6 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
     await fetch(`/api/alerts?id=${id}`, { method: 'DELETE' })
     setAlertas(prev => prev.filter(a => a.id !== id))
   }
-
-  const quickSearches = ['Bullpadel Hack', 'Nox ML10', 'Head Alpha Motion', 'Adidas Metalbone', 'Varlion Avant', 'Joma Master']
 
   return (
     <aside style={styles.aside}>
@@ -71,13 +80,19 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
         </button>
       </div>
 
-      {/* Búsquedas rápidas */}
+      {/* Más buscadas */}
       <div style={styles.section}>
         <div style={styles.sectionTitle}>🔥 MÁS BUSCADAS</div>
         <div style={styles.popularGrid}>
-          {quickSearches.map(q => (
-            <div key={q} style={styles.popItem} onClick={() => onOpenModal(q)}>
-              {q} <span style={{ color: '#C8FF00' }}>→</span>
+          {topSearches.length === 0 && (
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+              Aún no hay búsquedas registradas.
+            </p>
+          )}
+          {topSearches.map(s => (
+            <div key={s.query} style={styles.popItem} onClick={() => onOpenModal(s.query)}>
+              <span>{s.query}</span>
+              <span style={{ color: '#C8FF00' }}>→</span>
             </div>
           ))}
         </div>
