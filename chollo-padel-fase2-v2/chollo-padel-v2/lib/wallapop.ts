@@ -13,7 +13,17 @@ export interface WallapopItem {
   img: string | null
   date: string
 }
+
 export type PalaItem = WallapopItem
+
+// Mapeo de estados normalizados → valores internos de Wallapop
+const CONDITION_MAP: Record<string, string[]> = {
+  new:            ['un_opened', 'new'],
+  as_good_as_new: ['as_good_as_new'],
+  good:           ['good'],
+  fair:           ['fair', 'has_given_it_all'],
+}
+
 export async function searchWallapop(
   query: string,
   maxPrice?: number,
@@ -21,10 +31,17 @@ export async function searchWallapop(
   conditions?: string[]
 ): Promise<WallapopItem[]> {
   try {
-    const conditionList =
-      conditions && conditions.length > 0 ? conditions : [undefined]
+    // Traducir condiciones normalizadas a valores de Wallapop
+    let wallapopConditions: (string | undefined)[]
+    if (conditions && conditions.length > 0) {
+      const mapped = conditions.flatMap(c => CONDITION_MAP[c] ?? [])
+      wallapopConditions = mapped.length > 0 ? mapped : [undefined]
+    } else {
+      wallapopConditions = [undefined]
+    }
+
     const results = await Promise.all(
-      conditionList.map(async (condition) => {
+      wallapopConditions.map(async (condition) => {
         const input: any = {
           keyword: query,
           maxResults: 120,
@@ -33,6 +50,7 @@ export async function searchWallapop(
         if (maxPrice !== undefined) input.maxPrice = maxPrice
         if (minPrice !== undefined) input.minPrice = minPrice
         if (condition) input.condition = condition
+
         const res = await fetch(
           `https://api.apify.com/v2/acts/alvaraaz~wallapop-product-search/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=120`,
           {
@@ -42,13 +60,16 @@ export async function searchWallapop(
             cache: 'no-store',
           }
         )
+
         if (!res.ok) {
           const errText = await res.text()
           console.error(`Apify error ${res.status} para condition=${condition}:`, errText)
           return []
         }
+
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
+
         return data.map((item: any) => {
           const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
           const url = item.productUrl
@@ -74,8 +95,10 @@ export async function searchWallapop(
         })
       })
     )
+
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     const seen = new Set<string>()
+
     return results
       .flat()
       .filter((item) => {
