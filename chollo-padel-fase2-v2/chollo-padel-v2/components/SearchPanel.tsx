@@ -42,9 +42,7 @@ function Card({ item }: { item: WallapopItem }) {
           ? <img src={item.img} alt={item.title} style={styles.cardImg} loading="lazy" />
           : <div style={{ ...styles.cardImg, background: '#1a1a1a' }} />
         }
-        {isChollo && (
-          <span style={styles.badgeChollo}>CHOLLO</span>
-        )}
+        {isChollo && <span style={styles.badgeChollo}>CHOLLO</span>}
         <span style={styles.badgePlatform}>● WALLAPOP</span>
       </div>
       <div style={styles.cardBody}>
@@ -71,11 +69,22 @@ interface SearchPanelProps {
 export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const [query, setQuery] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
-  const [selectedCondition, setSelectedCondition] = useState('')
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([])
   const [results, setResults] = useState<WallapopItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(false)
+
+  function toggleCondition(value: string) {
+    if (value === '') {
+      // TODOS → limpia selección
+      setSelectedConditions([])
+      return
+    }
+    setSelectedConditions(prev =>
+      prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
+    )
+  }
 
   async function doSearch() {
     if (!query.trim()) return
@@ -87,7 +96,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     try {
       const params = new URLSearchParams({ q: query.trim() })
       if (maxPrice) params.set('max_price', maxPrice)
-      if (selectedCondition) params.set('conditions', selectedCondition)
+      if (selectedConditions.length > 0) params.set('conditions', selectedConditions.join(','))
 
       const res = await fetch(`/api/search?${params.toString()}`)
       if (!res.ok) throw new Error(`Error ${res.status}`)
@@ -123,29 +132,31 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
           value={maxPrice}
           onChange={e => setMaxPrice(e.target.value)}
           placeholder="Máx €"
-          style={{ ...styles.input, width: 100 }}
+          style={{ ...styles.input, width: 100, flex: 'none' }}
         />
         <button onClick={doSearch} disabled={loading} style={styles.btnSearch}>
           {loading ? 'BUSCANDO…' : 'BUSCAR →'}
         </button>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros de estado */}
       <div style={styles.filtersRow}>
         <span style={styles.filterLabel}>Estado:</span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {CONDITIONS.map(c => (
-            <button
-              key={c.value}
-              onClick={() => setSelectedCondition(c.value)}
-              style={{
-                ...styles.filterBtn,
-                ...(selectedCondition === c.value ? styles.filterBtnActive : {}),
-              }}
-            >
-              {c.label}
-            </button>
-          ))}
+          {CONDITIONS.map(c => {
+            const active = c.value === ''
+              ? selectedConditions.length === 0
+              : selectedConditions.includes(c.value)
+            return (
+              <button
+                key={c.value}
+                onClick={() => toggleCondition(c.value)}
+                style={{ ...styles.filterBtn, ...(active ? styles.filterBtnActive : {}) }}
+              >
+                {c.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -232,15 +243,30 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     background: '#111', border: '1px solid rgba(255,255,255,0.07)',
     display: 'block', textDecoration: 'none', color: 'inherit',
-    transition: 'border-color 0.2s',
     overflow: 'hidden',
   },
   cardImg: { width: '100%', height: 160, objectFit: 'cover', display: 'block' },
   cardBody: { padding: '10px 12px' },
-  cardTitle: { fontSize: 12, fontWeight: 600, fontFamily: 'Barlow, sans-serif', lineHeight: 1.4, color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
+  cardTitle: {
+    fontSize: 12, fontWeight: 600, fontFamily: 'Barlow, sans-serif',
+    lineHeight: 1.4, color: '#fff',
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+  },
   cardPrice: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 1, color: '#C8FF00' },
   cardMeta: { fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
-  conditionBadge: { display: 'inline-block', marginTop: 8, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px' },
-  badgeChollo: { position: 'absolute', top: 8, left: 8, background: '#FF5F1F', color: '#000', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px', fontFamily: 'Barlow Condensed, sans-serif' },
-  badgePlatform: { position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)', color: '#C8FF00', fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px', fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid rgba(200,255,0,0.2)' },
+  conditionBadge: {
+    display: 'inline-block', marginTop: 8, background: '#1a1a1a',
+    border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
+    fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px',
+  },
+  badgeChollo: {
+    position: 'absolute', top: 8, left: 8, background: '#FF5F1F', color: '#000',
+    fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px',
+    fontFamily: 'Barlow Condensed, sans-serif',
+  },
+  badgePlatform: {
+    position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)', color: '#C8FF00',
+    fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px',
+    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid rgba(200,255,0,0.2)',
+  },
 }
