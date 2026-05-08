@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { WallapopItem } from '@/lib/wallapop'
 
 const CONDITIONS = [
@@ -26,6 +26,22 @@ const SORT_OPTIONS = [
   { label: 'PRECIO: MENOR A MAYOR', value: 'price_asc' },
   { label: 'PRECIO: MAYOR A MENOR', value: 'price_desc' },
 ]
+
+const HISTORY_KEY = 'chollo_search_history'
+const MAX_HISTORY = 20
+
+function getHistory(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+  } catch { return [] }
+}
+
+function saveToHistory(q: string) {
+  try {
+    const prev = getHistory().filter(h => h.toLowerCase() !== q.toLowerCase())
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([q, ...prev].slice(0, MAX_HISTORY)))
+  } catch {}
+}
 
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
@@ -82,6 +98,50 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current && !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleQueryChange(val: string) {
+    setQuery(val)
+    const history = getHistory()
+    if (val.trim().length > 0) {
+      const filtered = history.filter(h => h.toLowerCase().includes(val.toLowerCase()))
+      setSuggestions(filtered.slice(0, 6))
+      setShowSuggestions(filtered.length > 0)
+    } else {
+      setSuggestions(history.slice(0, 6))
+      setShowSuggestions(history.length > 0)
+    }
+  }
+
+  function handleInputFocus() {
+    const history = getHistory()
+    if (query.trim().length === 0 && history.length > 0) {
+      setSuggestions(history.slice(0, 6))
+      setShowSuggestions(true)
+    }
+  }
+
+  function selectSuggestion(s: string) {
+    setQuery(s)
+    setShowSuggestions(false)
+    setTimeout(() => doSearchWith(s), 0)
+  }
 
   function toggleCondition(value: string) {
     if (value === '') {
@@ -93,15 +153,15 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     )
   }
 
-  async function doSearch() {
-    if (!query.trim()) return
+  async function doSearchWith(q: string) {
+    if (!q.trim()) return
     setLoading(true)
     setError('')
     setResults([])
     setSearched(false)
 
     try {
-      const params = new URLSearchParams({ q: query.trim() })
+      const params = new URLSearchParams({ q: q.trim() })
       if (minPrice) params.set('min_price', minPrice)
       if (maxPrice) params.set('max_price', maxPrice)
       if (selectedConditions.length > 0) params.set('conditions', selectedConditions.join(','))
@@ -111,6 +171,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
       const data: WallapopItem[] = await res.json()
       setResults(data)
       setSearched(true)
+      saveToHistory(q.trim())
     } catch (err) {
       setError('Error al buscar. Inténtalo de nuevo.')
       console.error(err)
@@ -119,11 +180,15 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     }
   }
 
+  async function doSearch() {
+    setShowSuggestions(false)
+    await doSearchWith(query)
+  }
+
   const sortedResults = useMemo(() => {
     const arr = [...results]
     if (sortBy === 'price_asc') return arr.sort((a, b) => a.price - b.price)
     if (sortBy === 'price_desc') return arr.sort((a, b) => b.price - a.price)
-    // date_desc: más recientes primero
     return arr.sort((a, b) => {
       if (!a.date) return 1
       if (!b.date) return -1
@@ -139,14 +204,35 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     <main style={styles.main}>
       {/* Barra de búsqueda */}
       <div style={styles.searchBar}>
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && doSearch()}
-          placeholder="Buscar pala, marca, modelo..."
-          style={styles.input}
-        />
+        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => handleQueryChange(e.target.value)}
+            onFocus={handleInputFocus}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { setShowSuggestions(false); doSearch() }
+              if (e.key === 'Escape') setShowSuggestions(false)
+            }}
+            placeholder="Buscar pala, marca, modelo..."
+            style={{ ...styles.input, width: '100%' }}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div ref={suggestionsRef} style={styles.suggestions}>
+              {suggestions.map((s, i) => (
+                <div
+                  key={i}
+                  style={styles.suggestionItem}
+                  onMouseDown={() => selectSuggestion(s)}
+                >
+                  <span style={{ opacity: 0.4, marginRight: 8 }}>🕐</span>
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <input
           type="number"
           value={minPrice}
@@ -168,7 +254,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 
       {/* Filtros de estado */}
       <div style={styles.filtersRow}>
-        <span style={styles.filterLabel}>Estado:</span>
+        <span style={styles.filterLabel}>ESTADO:</span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {CONDITIONS.map(c => {
             const active = c.value === ''
@@ -312,5 +398,15 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)', color: '#C8FF00',
     fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px',
     fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid rgba(200,255,0,0.2)',
+  },
+  suggestions: {
+    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+    background: '#181818', border: '1px solid rgba(255,255,255,0.1)',
+    borderTop: 'none',
+  },
+  suggestionItem: {
+    padding: '10px 16px', fontSize: 13, fontFamily: 'Barlow, sans-serif',
+    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
   },
 }
