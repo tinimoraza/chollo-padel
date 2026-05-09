@@ -21,7 +21,15 @@ const CONDITION_MAP: Record<string, string[]> = {
   fair:           ['4'],
 }
 
+// Cache del token en memoria
+let cachedAuth: { cookie: string; token: string; expiresAt: number } | null = null
+
 async function getVintedToken(): Promise<{ cookie: string; token: string } | null> {
+  // Reutilizar token si sigue vigente (5 minutos de vida)
+  if (cachedAuth && Date.now() < cachedAuth.expiresAt) {
+    return { cookie: cachedAuth.cookie, token: cachedAuth.token }
+  }
+
   try {
     const res = await fetch('https://www.vinted.es', {
       headers: {
@@ -47,6 +55,9 @@ async function getVintedToken(): Promise<{ cookie: string; token: string } | nul
 
     const token = tokenEntry?.split('=').slice(1).join('=')
     if (!token) return null
+
+    // Guardar en caché por 5 minutos
+    cachedAuth = { cookie, token, expiresAt: Date.now() + 5 * 60 * 1000 }
     return { cookie, token }
   } catch (err) {
     console.error('Error obteniendo token de Vinted:', err)
@@ -120,11 +131,8 @@ export async function searchVinted(
       })
       .map((item) => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
-
-        // Fecha desde el timestamp de la foto
         const ts = item.photo?.high_resolution?.timestamp
         const date = ts ? new Date(ts * 1000).toISOString() : ''
-
         const price = parseFloat(item.price?.amount ?? '0')
 
         return {
