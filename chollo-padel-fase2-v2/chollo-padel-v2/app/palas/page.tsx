@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
 interface Pala {
@@ -111,7 +111,7 @@ function ChollosSection({ pala }: { pala: Pala }) {
       {items.map(item => {
         const saving = pala.price > 0 ? Math.round(((pala.price - item.price) / pala.price) * 100) : 0
         return (
-          <a
+          
             key={item.id}
             href={item.url}
             target="_blank"
