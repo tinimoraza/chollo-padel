@@ -22,6 +22,16 @@ const CONDITION_MAP: Record<string, string[]> = {
   fair:           ['fair', 'has_given_it_all'],
 }
 
+// Dado un valor interno de Wallapop, devuelve la clave normalizada
+const CONDITION_REVERSE: Record<string, string> = {
+  un_opened:      'new',
+  new:            'new',
+  as_good_as_new: 'as_good_as_new',
+  good:           'good',
+  fair:           'fair',
+  has_given_it_all: 'fair',
+}
+
 export async function searchWallapop(
   query: string,
   maxPrice?: number,
@@ -65,9 +75,6 @@ export async function searchWallapop(
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
 
-        // 🔍 LOG TEMPORAL — borra esta línea tras identificar el campo condition
-        if (data.length > 0) console.log('APIFY ITEM:', JSON.stringify(data[0], null, 2))
-
         return data.map((item: any) => {
           const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
           const url = item.productUrl
@@ -82,7 +89,8 @@ export async function searchWallapop(
             images: img ? [img] : [],
             img,
             url,
-            condition: condition ?? '',
+            // Si filtramos por condición, la asignamos. Si no, queda vacío (Apify no la devuelve)
+            condition: condition ? (CONDITION_REVERSE[condition] ?? condition) : '',
             location: item.location?.city ?? '',
             city: item.location?.city ?? '',
             platform: 'wallapop',
