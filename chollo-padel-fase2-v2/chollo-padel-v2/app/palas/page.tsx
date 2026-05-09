@@ -111,7 +111,7 @@ function ChollosSection({ pala }: { pala: Pala }) {
       {items.map(item => {
         const saving = pala.price > 0 ? Math.round(((pala.price - item.price) / pala.price) * 100) : 0
         return (
-          
+          <a
             key={item.id}
             href={item.url}
             target="_blank"
