@@ -13,10 +13,8 @@ export interface WallapopItem {
   img: string | null
   date: string
 }
-
 export type PalaItem = WallapopItem
 
-// Mapeo de estados normalizados → valores internos de Wallapop
 const CONDITION_MAP: Record<string, string[]> = {
   new:            ['un_opened', 'new'],
   as_good_as_new: ['as_good_as_new'],
@@ -31,7 +29,6 @@ export async function searchWallapop(
   conditions?: string[]
 ): Promise<WallapopItem[]> {
   try {
-    // Traducir condiciones normalizadas a valores de Wallapop
     let wallapopConditions: (string | undefined)[]
     if (conditions && conditions.length > 0) {
       const mapped = conditions.flatMap(c => CONDITION_MAP[c] ?? [])
@@ -60,15 +57,16 @@ export async function searchWallapop(
             cache: 'no-store',
           }
         )
-
         if (!res.ok) {
           const errText = await res.text()
           console.error(`Apify error ${res.status} para condition=${condition}:`, errText)
           return []
         }
-
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
+
+        // 🔍 LOG TEMPORAL — borra esta línea tras identificar el campo condition
+        if (data.length > 0) console.log('APIFY ITEM:', JSON.stringify(data[0], null, 2))
 
         return data.map((item: any) => {
           const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
@@ -98,7 +96,6 @@ export async function searchWallapop(
 
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     const seen = new Set<string>()
-
     return results
       .flat()
       .filter((item) => {
