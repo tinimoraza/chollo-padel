@@ -3,16 +3,13 @@ import { useState } from 'react'
 import SearchPanel from '@/components/SearchPanel'
 import Sidebar from '@/components/Sidebar'
 import AlertModal from '@/components/AlertModal'
-
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false)
   const [prefillQuery, setPrefillQuery] = useState('')
-
   function openModal(query = '') {
     setPrefillQuery(query)
     setModalOpen(true)
   }
-
   return (
     <>
       <style>{globalStyles}</style>
@@ -23,20 +20,19 @@ export default function Home() {
             CHOLLO PADEL
           </a>
           <nav className="nav">
-            <a className="nav-link active" href="#">BUSCADOR</a>
+            <a className="nav-link active" href="/">BUSCADOR</a>
+            <a className="nav-link" href="/palas">PALAS</a>
             <a className="nav-link" href="#">MIS ALERTAS</a>
           </nav>
           <button className="btn-alert-top" onClick={() => openModal()}>
             + NUEVA ALERTA
           </button>
         </header>
-
         <div className="layout">
           <Sidebar onOpenModal={openModal} />
           <SearchPanel onOpenModal={openModal} />
         </div>
       </div>
-
       {modalOpen && (
         <AlertModal
           prefillQuery={prefillQuery}
@@ -46,7 +42,6 @@ export default function Home() {
     </>
   )
 }
-
 const globalStyles = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
