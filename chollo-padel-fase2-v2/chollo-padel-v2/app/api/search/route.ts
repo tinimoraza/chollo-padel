@@ -23,36 +23,41 @@ export async function GET(req: Request) {
   const maxP = Number.isFinite(maxPrice as number) ? maxPrice : undefined
   const minP = Number.isFinite(minPrice as number) ? minPrice : undefined
 
-  // Clave de caché única por combinación de parámetros
-  const cacheKey = [
+  // Base de la clave sin plataforma
+  const baseKey = [
     q,
-    platforms.sort().join('+'),
     maxP ?? '',
     minP ?? '',
     conditions?.sort().join('+') ?? '',
   ].join('|')
 
-  // Intentar caché primero
-  const cached = await getCached<any[]>(cacheKey)
-  if (cached) {
-    console.log(`Cache HIT para "${cacheKey}"`)
-    return NextResponse.json(cached)
+  async function fetchWithCache(
+    platform: string,
+    fetcher: () => Promise<any[]>
+  ): Promise<any[]> {
+    const key = `${platform}|${baseKey}`
+    const cached = await getCached<any[]>(key)
+    if (cached) {
+      console.log(`Cache HIT [${platform}] "${baseKey}"`)
+      return cached
+    }
+    console.log(`Cache MISS [${platform}] "${baseKey}"`)
+    const results = await fetcher()
+    setCached(key, results).catch(err => console.error(`Error caché [${platform}]:`, err))
+    return results
   }
 
-  console.log(`Cache MISS para "${cacheKey}" — llamando a APIs`)
-
   const [wallapopResults, vintedResults] = await Promise.all([
-    platforms.includes('wallapop') ? searchWallapop(q, maxP, minP, conditions) : Promise.resolve([]),
-    platforms.includes('vinted')   ? searchVinted(q, maxP, minP, conditions)   : Promise.resolve([]),
+    platforms.includes('wallapop')
+      ? fetchWithCache('wallapop', () => searchWallapop(q, maxP, minP, conditions))
+      : Promise.resolve([]),
+    platforms.includes('vinted')
+      ? fetchWithCache('vinted', () => searchVinted(q, maxP, minP, conditions))
+      : Promise.resolve([]),
   ])
 
   const combined = [...wallapopResults, ...vintedResults]
     .sort((a, b) => a.price - b.price)
-
-  // Guardar en caché (sin await para no bloquear la respuesta)
-  setCached(cacheKey, combined).catch(err =>
-    console.error('Error guardando caché:', err)
-  )
 
   return NextResponse.json(combined)
 }
