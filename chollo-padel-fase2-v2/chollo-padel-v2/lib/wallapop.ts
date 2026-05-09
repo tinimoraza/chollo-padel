@@ -22,14 +22,35 @@ const CONDITION_MAP: Record<string, string[]> = {
   fair:           ['fair', 'has_given_it_all'],
 }
 
-// Dado un valor interno de Wallapop, devuelve la clave normalizada
-const CONDITION_REVERSE: Record<string, string> = {
-  un_opened:      'new',
-  new:            'new',
-  as_good_as_new: 'as_good_as_new',
-  good:           'good',
-  fair:           'fair',
-  has_given_it_all: 'fair',
+// Extrae condition.value del HTML de un item de Wallapop
+async function fetchWallapopCondition(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+        'Accept-Language': 'es-ES,es;q=0.9',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return ''
+    const html = await res.text()
+    const match = html.match(/"condition"\s*:\s*\{[^}]*"value"\s*:\s*"([^"]+)"/)
+    return match ? match[1] : ''
+  } catch {
+    return ''
+  }
+}
+
+// Ejecuta promesas en lotes de N en paralelo
+async function batchRun<T>(items: T[], fn: (item: T) => Promise<string>, batchSize: number): Promise<string[]> {
+  const results: string[] = []
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    const batchResults = await Promise.all(batch.map(fn))
+    results.push(...batchResults)
+  }
+  return results
 }
 
 export async function searchWallapop(
@@ -75,7 +96,22 @@ export async function searchWallapop(
         const data = await res.json()
         console.log(`Apify devolvió ${data.length} items para "${query}" condition=${condition ?? 'todas'}`)
 
-        return data.map((item: any) => {
+        const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+        const seen = new Set<string>()
+
+        // Filtrar primero antes de enriquecer
+        const filtered = data.filter((item: any) => {
+          if (!item.id || seen.has(item.id)) return false
+          seen.add(item.id)
+          const titleLower = (item.title ?? '').toLowerCase()
+          if (!words.every(w => titleLower.includes(w))) return false
+          if (minPrice !== undefined && (item.price ?? 0) < minPrice) return false
+          if (maxPrice !== undefined && (item.price ?? 0) > maxPrice) return false
+          return true
+        })
+
+        // Mapear a objetos base
+        const mapped: WallapopItem[] = filtered.map((item: any) => {
           const img = item.imageUrl ?? item.images?.[0]?.urls?.medium ?? null
           const url = item.productUrl
             ? String(item.productUrl)
@@ -89,32 +125,35 @@ export async function searchWallapop(
             images: img ? [img] : [],
             img,
             url,
-            // Si filtramos por condición, la asignamos. Si no, queda vacío (Apify no la devuelve)
-            condition: condition ? (CONDITION_REVERSE[condition] ?? condition) : '',
+            condition: condition ?? '', // temporal, se enriquece abajo
             location: item.location?.city ?? '',
             city: item.location?.city ?? '',
             platform: 'wallapop',
-            date: item.createdAt
-              ? new Date(item.createdAt).toISOString()
-              : '',
+            date: item.createdAt ? new Date(item.createdAt).toISOString() : '',
           }
         })
+
+        // Enriquecer condición en lotes de 10 (evitar sobrecarga)
+        const conditions_fetched = await batchRun(
+          mapped,
+          (item) => fetchWallapopCondition(item.url),
+          10
+        )
+
+        return mapped.map((item, i) => ({
+          ...item,
+          condition: conditions_fetched[i] || condition || '',
+        }))
       })
     )
 
-    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-    const seen = new Set<string>()
-    return results
-      .flat()
-      .filter((item) => {
-        if (seen.has(item.id)) return false
-        seen.add(item.id)
-        const titleLower = item.title.toLowerCase()
-        if (!words.every(w => titleLower.includes(w))) return false
-        if (minPrice !== undefined && item.price < minPrice) return false
-        if (maxPrice !== undefined && item.price > maxPrice) return false
-        return true
-      })
+    const finalSeen = new Set<string>()
+    return results.flat().filter(item => {
+      if (finalSeen.has(item.id)) return false
+      finalSeen.add(item.id)
+      return true
+    })
+
   } catch (err) {
     console.error('Error en searchWallapop:', err)
     return []
