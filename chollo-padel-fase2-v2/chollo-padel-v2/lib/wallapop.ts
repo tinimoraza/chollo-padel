@@ -98,18 +98,19 @@ export async function searchWallapop(
       })
     )
 
-    const deduped = results.flat()
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     const seen = new Set<string>()
-    const final = deduped.filter((item) => {
-      if (seen.has(item.id)) return false
-      seen.add(item.id)
-      if (minPrice !== undefined && item.price < minPrice) return false
-      if (maxPrice !== undefined && item.price > maxPrice) return false
-      return true
-    })
-    console.log(`Total tras dedup: ${final.length} (de ${deduped.length} totales)`)
-    return final
-
+    return results
+      .flat()
+      .filter((item) => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        const titleLower = item.title.toLowerCase()
+        if (!words.every(w => titleLower.includes(w))) return false
+        if (minPrice !== undefined && item.price < minPrice) return false
+        if (maxPrice !== undefined && item.price > maxPrice) return false
+        return true
+      })
   } catch (err) {
     console.error('Error en searchWallapop:', err)
     return []
