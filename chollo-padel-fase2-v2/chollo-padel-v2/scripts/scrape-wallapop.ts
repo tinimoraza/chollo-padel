@@ -1,0 +1,216 @@
+/**
+ * scripts/scrape-wallapop.ts
+ * ===========================================
+ * Scraper de Wallapop con Playwright (navegador real).
+ * Lo ejecuta el GitHub Action cada hora.
+ * Guarda los resultados en Supabase tabla wallapop_cache.
+ *
+ * Ejecutar manualmente:
+ *   npx tsx --env-file=.env.local scripts/scrape-wallapop.ts
+ */
+
+import { chromium } from 'playwright'
+import { createClient } from '@supabase/supabase-js'
+
+const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
+
+// Búsquedas que lanzamos en cada ejecución
+// Añade aquí las que quieras (marcas, modelos populares...)
+const KEYWORDS = [
+  'pala padel',
+  'pala babolat',
+  'pala nox padel',
+  'pala head padel',
+  'pala wilson padel',
+  'pala bullpadel',
+]
+
+const MAX_RESULTS_PER_KEYWORD = 60
+
+interface WallapopRaw {
+  id: string
+  title: string
+  price: number
+  currency: string
+  condition: string
+  img: string | null
+  url: string
+  city: string
+  date: string
+  keyword: string
+}
+
+async function scrapeKeyword(
+  page: any,
+  keyword: string
+): Promise<WallapopRaw[]> {
+  const params = new URLSearchParams({
+    keywords:  keyword,
+    latitude:  '40.4168',
+    longitude: '-3.7038',
+    order_by:  'newest',
+    start:     '0',
+    step:      String(MAX_RESULTS_PER_KEYWORD),
+  })
+
+  const apiUrl = `https://api.wallapop.com/api/v3/general/search?${params}`
+
+  try {
+    // Usamos la página de Playwright para hacer fetch desde el contexto del browser
+    // Así pasa todos los checks del WAF (TLS fingerprint, cookies, etc.)
+    const result = await page.evaluate(async (url: string) => {
+      const res = await fetch(url, {
+        headers: {
+          'Accept':          'application/json',
+          'Accept-Language': 'es-ES,es;q=0.9',
+          'DeviceOS':        '0',
+          'MPlatform':       'WEB',
+        },
+      })
+      if (!res.ok) return { ok: false, status: res.status, items: [] }
+      const data = await res.json()
+      return {
+        ok:    true,
+        items: data?.search_objects ?? data?.items ?? [],
+      }
+    }, apiUrl)
+
+    if (!result.ok) {
+      console.error(`  ❌ HTTP ${result.status} para "${keyword}"`)
+      return []
+    }
+
+    console.log(`  ✅ "${keyword}": ${result.items.length} items`)
+
+    return result.items.map((item: any) => ({
+      id:        String(item.id ?? ''),
+      title:     item.title ?? '',
+      price:     item.sale_price ?? item.price ?? 0,
+      currency:  'EUR',
+      condition: item.condition ?? '',
+      img:       item.main_image_url ?? item.images?.[0]?.medium ?? null,
+      url:       `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
+      city:      item.location?.city ?? '',
+      date:      item.modification_date
+        ? new Date(item.modification_date * 1000).toISOString()
+        : new Date().toISOString(),
+      keyword,
+    }))
+
+  } catch (err) {
+    console.error(`  ❌ Error en "${keyword}":`, err)
+    return []
+  }
+}
+
+async function main() {
+  console.log('🏓 CHOLLO PADEL — Scraper Wallapop')
+  console.log(`📅 ${new Date().toISOString()}\n`)
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
+
+  // Lanzamos el browser real
+  console.log('🌐 Iniciando Playwright...')
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
+    ],
+  })
+
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    locale:    'es-ES',
+    extraHTTPHeaders: {
+      'Accept-Language': 'es-ES,es;q=0.9',
+    },
+  })
+
+  const page = await context.newPage()
+
+  // Cargamos Wallapop primero para que el browser tenga las cookies correctas
+  console.log('📦 Cargando wallapop.es para obtener cookies...')
+  await page.goto('https://es.wallapop.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForTimeout(2000)
+
+  // Scrapeamos cada keyword
+  const allItems: WallapopRaw[] = []
+
+  for (const keyword of KEYWORDS) {
+    console.log(`🔍 Buscando: "${keyword}"`)
+    const items = await scrapeKeyword(page, keyword)
+    allItems.push(...items)
+    // Pequeña pausa entre requests para no parecer un bot agresivo
+    await page.waitForTimeout(1500)
+  }
+
+  await browser.close()
+  console.log(`\n📊 Total items scrapeados: ${allItems.length}`)
+
+  if (allItems.length === 0) {
+    console.log('⚠️  Sin resultados, abortando upsert.')
+    return
+  }
+
+  // Deduplicamos por id (un item puede aparecer en varias keywords)
+  const seen = new Set<string>()
+  const unique = allItems.filter((item) => {
+    if (!item.id || seen.has(item.id)) return false
+    seen.add(item.id)
+    return true
+  })
+
+  console.log(`📊 Items únicos: ${unique.length}`)
+
+  // Upsert en Supabase (batches de 100 para no saturar)
+  const BATCH = 100
+  let inserted = 0
+
+  for (let i = 0; i < unique.length; i += BATCH) {
+    const batch = unique.slice(i, i + BATCH).map((item) => ({
+      external_id: item.id,
+      title:       item.title,
+      price:       item.price,
+      currency:    item.currency,
+      condition:   item.condition,
+      img:         item.img,
+      url:         item.url,
+      city:        item.city,
+      date:        item.date,
+      keyword:     item.keyword,
+      scraped_at:  new Date().toISOString(),
+    }))
+
+    const { error } = await supabase
+      .from('wallapop_cache')
+      .upsert(batch, { onConflict: 'external_id' })
+
+    if (error) {
+      console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
+    } else {
+      inserted += batch.length
+    }
+  }
+
+  // Limpiamos registros viejos (más de 48h) para no acumular basura
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  const { error: deleteError } = await supabase
+    .from('wallapop_cache')
+    .delete()
+    .lt('scraped_at', cutoff)
+
+  if (deleteError) {
+    console.error('⚠️  Error borrando registros viejos:', deleteError)
+  }
+
+  console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
+  console.log('🏁 Scraper completado.\n')
+}
+
+main().catch((err) => {
+  console.error('💥 Error fatal:', err)
+  process.exit(1)
+})
