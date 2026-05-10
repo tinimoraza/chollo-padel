@@ -24,7 +24,7 @@ jobs:
           node-version: '20'
 
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install
 
       - name: Instalar Playwright + Chromium
         run: npx playwright install chromium --with-deps
