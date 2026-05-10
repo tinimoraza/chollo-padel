@@ -2,9 +2,7 @@ name: Scraper Wallapop
 
 on:
   schedule:
-    # Cada hora (en punto)
     - cron: '0 * * * *'
-  # Permite lanzarlo manualmente desde GitHub Actions tab
   workflow_dispatch:
 
 jobs:
@@ -14,7 +12,6 @@ jobs:
 
     defaults:
       run:
-        # IMPORTANTE: ajusta esta ruta a donde está tu package.json
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
 
     steps:
@@ -25,8 +22,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: chollo-padel-fase2-v2/chollo-padel-v2/package-lock.json
 
       - name: Instalar dependencias
         run: npm ci
