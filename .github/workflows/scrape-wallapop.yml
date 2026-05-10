@@ -26,7 +26,10 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Instalar Playwright + Chromium
+      - name: Instalar Playwright (paquete npm)
+        run: npm install playwright
+
+      - name: Instalar Chromium
         run: npx playwright install chromium --with-deps
 
       - name: Ejecutar scraper
