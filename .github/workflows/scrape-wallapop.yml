@@ -1,0 +1,45 @@
+name: Scraper Wallapop
+
+on:
+  schedule:
+    # Cada hora (en punto)
+    - cron: '0 * * * *'
+  # Permite lanzarlo manualmente desde GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        # IMPORTANTE: ajusta esta ruta a donde está tu package.json
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: chollo-padel-fase2-v2/chollo-padel-v2/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Playwright + Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Ejecutar scraper
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/scrape-wallapop.ts
+
+      - name: Resumen
+        if: always()
+        run: echo "✅ Scraper finalizado — $(date)"
