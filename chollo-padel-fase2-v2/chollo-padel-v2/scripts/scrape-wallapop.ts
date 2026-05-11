@@ -113,7 +113,8 @@ async function main() {
   // Lanzamos el browser real
   console.log('🌐 Iniciando Playwright...')
   const browser = await chromium.launch({
-    headless: true,
+    headless: false,
+channel: 'chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -122,7 +123,7 @@ async function main() {
   })
 
   const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
     locale:    'es-ES',
     extraHTTPHeaders: {
       'Accept-Language': 'es-ES,es;q=0.9',
