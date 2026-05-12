@@ -77,10 +77,9 @@ export default function AlertasPage() {
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header}>
-        <a href="/" style={styles.logo}>
-          <span style={styles.logoMark}>🎾</span>
-          HUNTPADEL
-        </a>
+      <a href="/" style={styles.logo}>
+		<img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
+		</a>
         <nav style={styles.nav}>
           <a href="/" style={styles.navLink}>BUSCADOR</a>
           <a href="/palas" style={styles.navLink}>PALAS</a>

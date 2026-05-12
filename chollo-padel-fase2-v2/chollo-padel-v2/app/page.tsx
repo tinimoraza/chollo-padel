@@ -17,10 +17,9 @@ export default function Home() {
     <>
       <div className="app-shell">
         <header className="header">
-          <a className="logo" href="/">
-            <span className="logo-mark">🎾</span>
-            HUNTPADEL
-          </a>
+         <a className="logo" href="/">
+			<img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
+			</a>
           <nav className="nav">
             <a className="nav-link active" href="/">BUSCADOR</a>
             <a className="nav-link" href="/palas">PALAS</a>

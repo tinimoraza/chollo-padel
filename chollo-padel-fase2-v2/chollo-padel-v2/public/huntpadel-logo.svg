@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
+
+  <!-- Icono: pala minimalista -->
+  <g transform="translate(0, 2)">
+    <!-- Cuerpo pala -->
+    <rect x="8" y="2" width="30" height="36" rx="15" fill="#C8FF00"/>
+    <!-- Agujeros en cuadrícula -->
+    <circle cx="17" cy="13" r="2.8" fill="#0a0a0a"/>
+    <circle cx="28" cy="13" r="2.8" fill="#0a0a0a"/>
+    <circle cx="17" cy="23" r="2.8" fill="#0a0a0a"/>
+    <circle cx="28" cy="23" r="2.8" fill="#0a0a0a"/>
+    <!-- Mango -->
+    <rect x="19" y="37" width="8" height="16" rx="2.5" fill="#ffffff" opacity="0.9"/>
+    <!-- Separador mango/pala -->
+    <rect x="10" y="35" width="26" height="3" rx="1" fill="#0a0a0a" opacity="0.2"/>
+  </g>
+
+  <!-- Texto HUNT -->
+  <text
+    x="52"
+    y="46"
+    font-family="'Bebas Neue', 'Arial Narrow', sans-serif"
+    font-size="46"
+    fill="#ffffff"
+    letter-spacing="2"
+  >HUNT</text>
+
+  <!-- Punto separador -->
+  <circle cx="159" cy="38" r="3.5" fill="#C8FF00"/>
+
+  <!-- Texto PADEL -->
+  <text
+    x="168"
+    y="46"
+    font-family="'Bebas Neue', 'Arial Narrow', sans-serif"
+    font-size="46"
+    fill="#C8FF00"
+    letter-spacing="2"
+  >PADEL</text>
+
+</svg>
