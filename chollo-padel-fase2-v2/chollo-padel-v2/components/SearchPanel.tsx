@@ -265,6 +265,16 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Leer ?q= de la URL al cargar (para "BUSCAR AHORA" desde Mis Alertas)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const q = params.get('q')
+    if (q) {
+      setQuery(q)
+      doSearchWith(q)
+    }
+  }, [])
+
   function handleQueryChange(val: string) {
     setQuery(val)
     const history = getHistory()
