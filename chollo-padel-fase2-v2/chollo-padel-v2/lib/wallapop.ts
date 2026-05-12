@@ -1,10 +1,3 @@
-/**
- * lib/wallapop.ts — SIN APIFY
- * Lee de la tabla wallapop_cache en Supabase.
- * Los datos los rellena el GitHub Action que corre cada hora.
- * La interfaz es idéntica a la anterior → route.ts no cambia.
- */
-
 import { createClient } from '@supabase/supabase-js'
 
 export interface WallapopItem {
@@ -26,10 +19,10 @@ export interface WallapopItem {
 export type PalaItem = WallapopItem
 
 const CONDITION_MAP: Record<string, string[]> = {
-  new:           ['un_opened', 'new'],
+  new:            ['un_opened', 'new'],
   as_good_as_new: ['as_good_as_new'],
-  good:          ['good'],
-  fair:          ['fair', 'has_given_it_all'],
+  good:           ['good'],
+  fair:           ['fair', 'has_given_it_all'],
 }
 
 export async function searchWallapop(
@@ -44,11 +37,17 @@ export async function searchWallapop(
       process.env.SUPABASE_SECRET_KEY!
     )
 
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+
     let sb = supabase
       .from('wallapop_cache')
       .select('*')
       .order('price', { ascending: true })
-      .limit(200)
+      .limit(500)
+
+    for (const word of words) {
+      sb = sb.ilike('title', `%${word}%`)
+    }
 
     if (minPrice !== undefined) sb = sb.gte('price', minPrice)
     if (maxPrice !== undefined) sb = sb.lte('price', maxPrice)
@@ -62,10 +61,6 @@ export async function searchWallapop(
 
     const { data, error } = await sb
 
-    console.log('[DEBUG wallapop] error:', error)
-    console.log('[DEBUG wallapop] data length:', data?.length)
-    console.log('[DEBUG wallapop] data:', JSON.stringify(data))
-
     if (error) {
       console.error('Error leyendo wallapop_cache de Supabase:', error)
       return []
@@ -73,28 +68,21 @@ export async function searchWallapop(
 
     if (!data || data.length === 0) return []
 
-    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-
-    return data
-      .filter((item) => {
-        const titleLower = (item.title ?? '').toLowerCase()
-        return words.every((w) => titleLower.includes(w))
-      })
-      .map((item) => ({
-        id:          item.external_id,
-        title:       item.title,
-        description: item.description ?? '',
-        price:       item.price,
-        currency:    item.currency ?? 'EUR',
-        images:      item.img ? [item.img] : [],
-        img:         item.img,
-        url:         item.url,
-        condition:   item.condition ?? '',
-        location:    item.city ?? '',
-        city:        item.city ?? '',
-        platform:    'wallapop',
-        date:        item.date ?? '',
-      }))
+    return data.map((item) => ({
+      id:          item.external_id,
+      title:       item.title,
+      description: item.description ?? '',
+      price:       item.price,
+      currency:    item.currency ?? 'EUR',
+      images:      item.img ? [item.img] : [],
+      img:         item.img,
+      url:         item.url,
+      condition:   item.condition ?? '',
+      location:    item.city ?? '',
+      city:        item.city ?? '',
+      platform:    'wallapop',
+      date:        item.date ?? '',
+    }))
 
   } catch (err) {
     console.error('Error en searchWallapop:', err)
