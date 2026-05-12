@@ -25,7 +25,6 @@ export interface WallapopItem {
 
 export type PalaItem = WallapopItem
 
-// Mapa de condiciones igual que antes (para filtrar desde Supabase)
 const CONDITION_MAP: Record<string, string[]> = {
   new:           ['un_opened', 'new'],
   as_good_as_new: ['as_good_as_new'],
@@ -45,7 +44,6 @@ export async function searchWallapop(
       process.env.SUPABASE_SECRET_KEY!
     )
 
-    // Construimos la query en Supabase
     let sb = supabase
       .from('wallapop_cache')
       .select('*')
@@ -55,7 +53,6 @@ export async function searchWallapop(
     if (minPrice !== undefined) sb = sb.gte('price', minPrice)
     if (maxPrice !== undefined) sb = sb.lte('price', maxPrice)
 
-    // Filtro por condiciones si se especifican
     if (conditions && conditions.length > 0) {
       const wallapopConditions = conditions.flatMap(c => CONDITION_MAP[c] ?? [])
       if (wallapopConditions.length > 0) {
@@ -65,6 +62,10 @@ export async function searchWallapop(
 
     const { data, error } = await sb
 
+    console.log('[DEBUG wallapop] error:', error)
+    console.log('[DEBUG wallapop] data length:', data?.length)
+    console.log('[DEBUG wallapop] data:', JSON.stringify(data))
+
     if (error) {
       console.error('Error leyendo wallapop_cache de Supabase:', error)
       return []
@@ -72,7 +73,6 @@ export async function searchWallapop(
 
     if (!data || data.length === 0) return []
 
-    // Filtro de palabras clave en el título (igual que antes)
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
 
     return data
