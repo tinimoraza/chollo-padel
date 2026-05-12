@@ -16,7 +16,6 @@ const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 // Búsquedas que lanzamos en cada ejecución
-// Añade aquí las que quieras (marcas, modelos populares...)
 const KEYWORDS = [
   'pala padel',
   'pala babolat',
@@ -57,8 +56,6 @@ async function scrapeKeyword(
   const apiUrl = `https://api.wallapop.com/api/v3/general/search?${params}`
 
   try {
-    // Usamos la página de Playwright para hacer fetch desde el contexto del browser
-    // Así pasa todos los checks del WAF (TLS fingerprint, cookies, etc.)
     const result = await page.evaluate(async (url: string) => {
       const res = await fetch(url, {
         headers: {
@@ -89,7 +86,12 @@ async function scrapeKeyword(
       price:     item.sale_price ?? item.price ?? 0,
       currency:  'EUR',
       condition: item.condition ?? '',
-      img:       item.main_image_url ?? item.images?.[0]?.medium ?? null,
+      // Fix: nueva estructura de imágenes de Wallapop
+      img:       item.main_image_url
+                 ?? item.images?.[0]?.urls?.medium
+                 ?? item.images?.[0]?.urls?.big
+                 ?? item.images?.[0]?.medium
+                 ?? null,
       url:       `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
       city:      item.location?.city ?? '',
       date:      item.modification_date
@@ -110,11 +112,9 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
-  // Lanzamos el browser real
   console.log('🌐 Iniciando Playwright...')
   const browser = await chromium.launch({
-    headless: false,
-channel: 'chrome',
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -132,19 +132,16 @@ channel: 'chrome',
 
   const page = await context.newPage()
 
-  // Cargamos Wallapop primero para que el browser tenga las cookies correctas
   console.log('📦 Cargando wallapop.es para obtener cookies...')
   await page.goto('https://es.wallapop.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(2000)
 
-  // Scrapeamos cada keyword
   const allItems: WallapopRaw[] = []
 
   for (const keyword of KEYWORDS) {
     console.log(`🔍 Buscando: "${keyword}"`)
     const items = await scrapeKeyword(page, keyword)
     allItems.push(...items)
-    // Pequeña pausa entre requests para no parecer un bot agresivo
     await page.waitForTimeout(1500)
   }
 
@@ -156,7 +153,6 @@ channel: 'chrome',
     return
   }
 
-  // Deduplicamos por id (un item puede aparecer en varias keywords)
   const seen = new Set<string>()
   const unique = allItems.filter((item) => {
     if (!item.id || seen.has(item.id)) return false
@@ -166,7 +162,10 @@ channel: 'chrome',
 
   console.log(`📊 Items únicos: ${unique.length}`)
 
-  // Upsert en Supabase (batches de 100 para no saturar)
+  // Log de cuántos tienen imagen para verificar el fix
+  const conImagen = unique.filter(i => i.img !== null).length
+  console.log(`🖼️  Items con imagen: ${conImagen} / ${unique.length}`)
+
   const BATCH = 100
   let inserted = 0
 
@@ -196,7 +195,7 @@ channel: 'chrome',
     }
   }
 
-  // Limpiamos registros viejos (más de 48h) para no acumular basura
+  // Limpiamos registros viejos (más de 48h)
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   const { error: deleteError } = await supabase
     .from('wallapop_cache')
