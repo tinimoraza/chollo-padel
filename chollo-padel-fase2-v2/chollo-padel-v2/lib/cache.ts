@@ -1,14 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
+ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!
 )
 
-const TTL_MINUTES = 5
-
 export async function getCached<T>(key: string): Promise<T | null> {
-  // DESACTIVADO TEMPORALMENTE — siempre va a Supabase
   return null
 }
 
