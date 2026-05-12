@@ -18,13 +18,13 @@ export default function Home() {
       <div className="app-shell">
         <header className="header">
           <a className="logo" href="/">
-            <span className="logo-mark">🏓</span>
-            CHOLLO PADEL
+            <span className="logo-mark">🎾</span>
+            HUNTPADEL
           </a>
           <nav className="nav">
             <a className="nav-link active" href="/">BUSCADOR</a>
             <a className="nav-link" href="/palas">PALAS</a>
-            <a className="nav-link" href="#">MIS ALERTAS</a>
+            <a className="nav-link" href="/alertas">MIS ALERTAS</a>
           </nav>
           <button className="btn-alert-top" onClick={() => openModal()}>
             + NUEVA ALERTA
