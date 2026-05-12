@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SECRET_KEY!   // ← corregido (era SUPABASE_SERVICE_ROLE_KEY)
 )
 
 const TTL_MINUTES = 5
@@ -18,7 +18,6 @@ export async function getCached<T>(key: string): Promise<T | null> {
 
   const ageMs = Date.now() - new Date(data.created_at).getTime()
   if (ageMs > TTL_MINUTES * 60 * 1000) {
-    // Expirado — lo borramos y devolvemos null
     await supabase.from('search_cache').delete().eq('cache_key', key)
     return null
   }

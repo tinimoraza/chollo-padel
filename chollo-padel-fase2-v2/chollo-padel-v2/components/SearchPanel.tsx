@@ -79,7 +79,7 @@ function Card({ item }: { item: WallapopItem }) {
     >
       <div style={{ position: 'relative' }}>
         {item.img
-          ? <img src={item.img} alt={item.title} style={styles.cardImg} loading="lazy" />
+          ? <img src={item.platform === 'wallapop' && item.img ? `/api/img?url=${encodeURIComponent(item.img)}` : item.img ?? ''} alt={item.title} style={styles.cardImg} loading="lazy" />
           : <div style={{ ...styles.cardImg, background: '#1a1a1a' }} />
         }
         {isChollo && <span style={styles.badgeChollo}>CHOLLO</span>}

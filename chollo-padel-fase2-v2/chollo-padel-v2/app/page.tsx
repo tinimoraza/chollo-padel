@@ -3,16 +3,18 @@ import { useState } from 'react'
 import SearchPanel from '@/components/SearchPanel'
 import Sidebar from '@/components/Sidebar'
 import AlertModal from '@/components/AlertModal'
+
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false)
   const [prefillQuery, setPrefillQuery] = useState('')
+
   function openModal(query = '') {
     setPrefillQuery(query)
     setModalOpen(true)
   }
+
   return (
     <>
-      <style>{globalStyles}</style>
       <div className="app-shell">
         <header className="header">
           <a className="logo" href="/">
@@ -42,42 +44,3 @@ export default function Home() {
     </>
   )
 }
-const globalStyles = `
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --neon: #C8FF00; --orange: #FF5F1F; --dark: #080808;
-    --dark2: #0F0F0F; --dark3: #181818; --dark4: #222222;
-    --border: rgba(255,255,255,0.07); --border-hover: rgba(200,255,0,0.25);
-    --text: #FFFFFF; --muted: rgba(255,255,255,0.4); --card-bg: #111111;
-  }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--dark); color: var(--text);
-    font-family: 'Barlow', Arial, sans-serif; min-height: 100vh; overflow-x: hidden;
-  }
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
-    pointer-events: none; z-index: 9999;
-  }
-  .app-shell { min-height: 100vh; }
-  .header {
-    background: var(--dark2); border-bottom: 1px solid var(--border);
-    padding: 0 2rem; display: flex; align-items: center;
-    justify-content: space-between; height: 54px; position: sticky; top: 0; z-index: 100;
-  }
-  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px;
-    display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-  .logo-mark { font-size: 20px; }
-  .nav { display: flex; gap: 0; }
-  .nav-link { padding: 0 20px; height: 54px; display: flex; align-items: center;
-    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
-    letter-spacing: 2px; color: var(--muted); text-decoration: none;
-    border-bottom: 2px solid transparent; transition: all 0.2s; }
-  .nav-link:hover, .nav-link.active { color: var(--text); border-bottom-color: var(--neon); }
-  .btn-alert-top { background: var(--neon); color: #000; border: none;
-    padding: 8px 20px; font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700; letter-spacing: 2px; cursor: pointer; }
-  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 54px); }
-  @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
-`
