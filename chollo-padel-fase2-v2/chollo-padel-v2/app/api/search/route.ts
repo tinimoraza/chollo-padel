@@ -3,6 +3,8 @@ import { searchWallapop } from '@/lib/wallapop'
 import { searchVinted } from '@/lib/vinted'
 import { getCached, setCached } from '@/lib/cache'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const q = (searchParams.get('q') ?? '').trim()
