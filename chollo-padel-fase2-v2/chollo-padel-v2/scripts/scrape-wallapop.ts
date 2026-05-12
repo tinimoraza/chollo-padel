@@ -15,7 +15,6 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-// Búsquedas que lanzamos en cada ejecución
 const KEYWORDS = [
   'pala padel',
   'pala babolat',
@@ -86,7 +85,6 @@ async function scrapeKeyword(
       price:     item.sale_price ?? item.price ?? 0,
       currency:  'EUR',
       condition: item.condition ?? '',
-      // Fix: nueva estructura de imágenes de Wallapop
       img:       item.main_image_url
                  ?? item.images?.[0]?.urls?.medium
                  ?? item.images?.[0]?.urls?.big
@@ -162,7 +160,6 @@ async function main() {
 
   console.log(`📊 Items únicos: ${unique.length}`)
 
-  // Log de cuántos tienen imagen para verificar el fix
   const conImagen = unique.filter(i => i.img !== null).length
   console.log(`🖼️  Items con imagen: ${conImagen} / ${unique.length}`)
 
@@ -195,7 +192,6 @@ async function main() {
     }
   }
 
-  // Limpiamos registros viejos (más de 48h)
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   const { error: deleteError } = await supabase
     .from('wallapop_cache')
