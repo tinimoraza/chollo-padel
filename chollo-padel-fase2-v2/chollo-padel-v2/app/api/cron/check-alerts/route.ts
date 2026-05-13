@@ -66,7 +66,7 @@ async function procesarAlertaBusqueda(alerta: any) {
 
   // Enviar email
   await resend.emails.send({
-    from: 'HuntPadel <onboarding@resend.dev>',
+    from: 'HuntPadel <noreply@huntpadel.com>',
     to: alerta.email,
     subject: `🎾 ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''} resultado${nuevos.length > 1 ? 's' : ''} para "${alerta.query}"`,
     html: buildEmailBusqueda(alerta, nuevos),
@@ -115,7 +115,7 @@ async function procesarAlertaFavorito(alerta: any) {
 
   // Enviar email
   await resend.emails.send({
-    from: 'HuntPadel <onboarding@resend.dev>',
+    from: 'HuntPadel <noreply@huntpadel.com>',
     to: alerta.email,
     subject: `📉 Bajada de precio: ${item.title} ahora a ${item.price}€`,
     html: buildEmailFavorito(alerta, item),
