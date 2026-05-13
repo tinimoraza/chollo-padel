@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: string; onClose: () => void }) {
   const [query, setQuery] = useState(prefillQuery)
@@ -10,6 +10,12 @@ export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: st
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+
+  // Prerrellenar email desde localStorage al abrir el modal
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('huntpadel_email')
+    if (savedEmail) setEmail(savedEmail)
+  }, [])
 
   async function saveAlert() {
     if (!query.trim() || !email.trim()) {
@@ -33,6 +39,10 @@ export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: st
       })
 
       if (!res.ok) throw new Error('Error guardando')
+
+      // Guardar email en localStorage para futuras alertas
+      localStorage.setItem('huntpadel_email', email.trim())
+
       setSaved(true)
       setTimeout(onClose, 1800)
     } catch {
