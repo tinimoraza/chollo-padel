@@ -41,14 +41,10 @@ export async function searchWallapop(
 
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
 
+    // ── Paso 1: buscar anuncios en wallapop_cache ──────────────────────────────
     let sb = supabase
       .from('wallapop_cache')
-      .select(`
-        *,
-        price_reference (
-          precio_referencia
-        )
-      `)
+      .select('*')
       .order('price', { ascending: true })
       .limit(500)
 
@@ -75,6 +71,26 @@ export async function searchWallapop(
 
     if (!data || data.length === 0) return []
 
+    // ── Paso 2: buscar precio_referencia para los pala_id encontrados ──────────
+    const palaIds = [...new Set(data.map(i => i.pala_id).filter(Boolean))]
+    const precioRefMap: Record<string, number> = {}
+
+    if (palaIds.length > 0) {
+      const { data: refs } = await supabase
+        .from('price_reference')
+        .select('pala_id, precio_referencia')
+        .in('pala_id', palaIds)
+
+      if (refs) {
+        for (const r of refs) {
+          if (r.pala_id && r.precio_referencia) {
+            precioRefMap[r.pala_id] = r.precio_referencia
+          }
+        }
+      }
+    }
+
+    // ── Paso 3: combinar ───────────────────────────────────────────────────────
     return data.map((item) => ({
       id:                item.external_id,
       title:             item.title,
@@ -90,7 +106,7 @@ export async function searchWallapop(
       platform:          'wallapop',
       date:              item.date ?? '',
       pala_id:           item.pala_id ?? null,
-      precio_referencia: item.price_reference?.precio_referencia ?? null,
+      precio_referencia: item.pala_id ? (precioRefMap[item.pala_id] ?? null) : null,
     }))
 
   } catch (err) {
