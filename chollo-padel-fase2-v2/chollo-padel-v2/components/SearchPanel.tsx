@@ -293,6 +293,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   // Nuevos estados para alertas y favoritos
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [favoritoItem, setFavoritoItem] = useState<WallapopItem | null>(null)
+  const [soloChollo, setSoloChollo] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -419,6 +420,10 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   const wallapopCount = results.filter(r => r.platform === 'wallapop').length
   const vintedCount = results.filter(r => r.platform === 'vinted').length
 
+  const displayResults = soloChollo
+    ? sortedResults.filter(r => getDiscountTag(r.price, r.precio_referencia, r.condition)?.label === 'CHOLLO')
+    : sortedResults
+
   return (
     <main style={styles.main}>
 
@@ -539,7 +544,11 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             <div style={styles.statValue}>{avgPrice}€</div>
             <div style={styles.statLabel}>Precio medio</div>
           </div>
-          <div style={styles.statBox}>
+          <div
+            style={{ ...styles.statBox, cursor: chollos.length > 0 ? 'pointer' : 'default', outline: soloChollo ? '1px solid #FF5F1F' : 'none' }}
+            onClick={() => chollos.length > 0 && setSoloChollo(v => !v)}
+            title={soloChollo ? 'Ver todos' : 'Ver solo chollos'}
+          >
             <div style={{ ...styles.statValue, color: '#FF5F1F' }}>{chollos.length}</div>
             <div style={styles.statLabel}>🔥 Chollos</div>
           </div>
@@ -563,7 +572,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 
       {/* Grid */}
       <div style={styles.grid}>
-        {sortedResults.map(item => (
+        {displayResults.map(item => (
           <Card
             key={`${item.platform}-${item.id}`}
             item={item}

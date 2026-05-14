@@ -24,6 +24,7 @@ export default function Home() {
             <a className="nav-link active" href="/">BUSCADOR</a>
             <a className="nav-link" href="/palas">PALAS</a>
             <a className="nav-link" href="/alertas">MIS ALERTAS</a>
+            <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
           </nav>
           <button className="btn-alert-top" onClick={() => openModal()}>
             + NUEVA ALERTA
