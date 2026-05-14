@@ -72,7 +72,11 @@ export async function searchWallapop(
     if (!data || data.length === 0) return []
 
     // ── Paso 2: buscar precio_referencia para los pala_id encontrados ──────────
-    const palaIds = Array.from(new Set(data.map(i => i.pala_id).filter(Boolean)))
+    const palaIdsSet: Record<string, boolean> = {}
+    for (const item of data) {
+      if (item.pala_id) palaIdsSet[item.pala_id] = true
+    }
+    const palaIds = Object.keys(palaIdsSet)
     const precioRefMap: Record<string, number> = {}
 
     if (palaIds.length > 0) {
