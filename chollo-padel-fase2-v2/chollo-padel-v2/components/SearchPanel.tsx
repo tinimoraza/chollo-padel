@@ -173,12 +173,34 @@ const modalStyles: Record<string, React.CSSProperties> = {
   errorMsg: { background: 'rgba(255,95,31,0.15)', border: '1px solid rgba(255,95,31,0.3)', color: '#FF5F1F', padding: '10px 14px', fontSize: 12, marginTop: 8 },
 }
 
+// ─── Lógica de descuento ───────────────────────────────────────────────────────
+
+function calcDescuento(price: number, precioRef: number | null): number | null {
+  if (!precioRef || precioRef <= 0 || price <= 0) return null
+  return (precioRef - price) / precioRef
+}
+
+type DiscountTag = { label: string; emoji: string; color: string } | null
+
+function getDiscountTag(price: number, precioRef: number | null): DiscountTag {
+  const pct = calcDescuento(price, precioRef)
+  if (pct === null) return null
+  if (pct >= 0.45) return { label: 'CHOLLO',     emoji: '🔥', color: '#FF5F1F' }
+  if (pct >= 0.30) return { label: 'OFERTA',     emoji: '⚡', color: '#C8FF00' }
+  if (pct >= 0.15) return { label: 'BUEN PRECIO', emoji: '💸', color: '#09B1BA' }
+  return null
+}
+
 // ─── Card ──────────────────────────────────────────────────────────────────────
 
 function Card({ item, onFavorito }: { item: WallapopItem; onFavorito: (item: WallapopItem) => void }) {
-  const isChollo = item.price > 0 && item.price < 80
   const isVinted = item.platform === 'vinted'
   const borderColor = isVinted ? '#09B1BA' : '#C8FF00'
+  const discountTag = getDiscountTag(item.price, item.precio_referencia)
+  const descuentoPct = item.precio_referencia
+    ? Math.round(((item.precio_referencia - item.price) / item.precio_referencia) * 100)
+    : null
+
   return (
     <div style={{ ...styles.card, border: `1px solid ${borderColor}` }}>
       <a
@@ -192,7 +214,17 @@ function Card({ item, onFavorito }: { item: WallapopItem; onFavorito: (item: Wal
             ? <img src={item.platform === 'wallapop' && item.img ? `/api/img?url=${encodeURIComponent(item.img)}` : item.img ?? ''} alt={item.title} style={styles.cardImg} loading="lazy" />
             : <div style={{ ...styles.cardImg, background: '#1a1a1a' }} />
           }
-          {isChollo && <span style={styles.badgeChollo}>CHOLLO</span>}
+          {/* Badge de descuento real — sustituye al CHOLLO hardcodeado */}
+          {discountTag && (
+            <span style={{
+              ...styles.badgeChollo,
+              background: discountTag.color,
+              color: discountTag.color === '#C8FF00' ? '#000' : '#000',
+            }}>
+              {discountTag.emoji} {discountTag.label}
+              {descuentoPct !== null && ` -${descuentoPct}%`}
+            </span>
+          )}
           <span style={{
             ...styles.badgePlatform,
             color: borderColor,
@@ -204,7 +236,15 @@ function Card({ item, onFavorito }: { item: WallapopItem; onFavorito: (item: Wal
         <div style={styles.cardBody}>
           <p style={styles.cardTitle}>{item.title}</p>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 }}>
-            <span style={{ ...styles.cardPrice, color: borderColor }}>{item.price}€</span>
+            <div>
+              <span style={{ ...styles.cardPrice, color: discountTag ? discountTag.color : borderColor }}>
+                {item.price}€
+              </span>
+              {/* Precio de referencia tachado si hay descuento */}
+              {item.precio_referencia && discountTag && (
+                <span style={styles.precioRef}>{item.precio_referencia}€</span>
+              )}
+            </div>
             <div style={styles.cardMeta}>
               <div>{item.city || item.location || ''}</div>
               {item.date && <div>{formatDate(item.date)}</div>}
@@ -370,7 +410,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     })
   }, [results, sortBy])
 
-  const chollos = results.filter(r => r.price > 0 && r.price < 80)
+  const chollos = results.filter(r => getDiscountTag(r.price, r.precio_referencia)?.label === 'CHOLLO')
   const bestPrice = results.length > 0 ? Math.min(...results.map(r => r.price)) : null
   const avgPrice = results.length > 0 ? Math.round(results.reduce((a, r) => a + r.price, 0) / results.length) : null
   const wallapopCount = results.filter(r => r.platform === 'wallapop').length
@@ -607,6 +647,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
   },
   cardPrice: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 1, color: '#C8FF00' },
+  precioRef: {
+    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
+    color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through',
+    marginLeft: 6, verticalAlign: 'middle',
+  },
   cardMeta: { fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
   conditionBadge: {
     display: 'inline-block', marginTop: 8, background: '#1a1a1a',

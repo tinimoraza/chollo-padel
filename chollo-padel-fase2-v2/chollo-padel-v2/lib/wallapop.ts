@@ -14,6 +14,8 @@ export interface WallapopItem {
   platform: string
   img: string | null
   date: string
+  pala_id: string | null
+  precio_referencia: number | null
 }
 
 export type PalaItem = WallapopItem
@@ -41,7 +43,12 @@ export async function searchWallapop(
 
     let sb = supabase
       .from('wallapop_cache')
-      .select('*')
+      .select(`
+        *,
+        price_reference (
+          precio_referencia
+        )
+      `)
       .order('price', { ascending: true })
       .limit(500)
 
@@ -69,19 +76,21 @@ export async function searchWallapop(
     if (!data || data.length === 0) return []
 
     return data.map((item) => ({
-      id:          item.external_id,
-      title:       item.title,
-      description: item.description ?? '',
-      price:       item.price,
-      currency:    item.currency ?? 'EUR',
-      images:      item.img ? [item.img] : [],
-      img:         item.img,
-      url:         item.url,
-      condition:   item.condition ?? '',
-      location:    item.city ?? '',
-      city:        item.city ?? '',
-      platform:    'wallapop',
-      date:        item.date ?? '',
+      id:                item.external_id,
+      title:             item.title,
+      description:       item.description ?? '',
+      price:             item.price,
+      currency:          item.currency ?? 'EUR',
+      images:            item.img ? [item.img] : [],
+      img:               item.img,
+      url:               item.url,
+      condition:         item.condition ?? '',
+      location:          item.city ?? '',
+      city:              item.city ?? '',
+      platform:          'wallapop',
+      date:              item.date ?? '',
+      pala_id:           item.pala_id ?? null,
+      precio_referencia: item.price_reference?.precio_referencia ?? null,
     }))
 
   } catch (err) {
