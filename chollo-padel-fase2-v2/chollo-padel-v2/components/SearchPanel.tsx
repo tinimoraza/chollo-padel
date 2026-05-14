@@ -175,6 +175,8 @@ const modalStyles: Record<string, React.CSSProperties> = {
 
 // ─── Lógica de descuento ───────────────────────────────────────────────────────
 
+const GOOD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new'])
+
 function calcDescuento(price: number, precioRef: number | null): number | null {
   if (!precioRef || precioRef <= 0 || price <= 0) return null
   return (precioRef - price) / precioRef
@@ -182,12 +184,13 @@ function calcDescuento(price: number, precioRef: number | null): number | null {
 
 type DiscountTag = { label: string; emoji: string; color: string } | null
 
-function getDiscountTag(price: number, precioRef: number | null): DiscountTag {
+function getDiscountTag(price: number, precioRef: number | null, condition?: string): DiscountTag {
   const pct = calcDescuento(price, precioRef)
   if (pct === null) return null
-  if (pct >= 0.45) return { label: 'CHOLLO',     emoji: '🔥', color: '#FF5F1F' }
-  if (pct >= 0.30) return { label: 'OFERTA',     emoji: '⚡', color: '#C8FF00' }
-  if (pct >= 0.15) return { label: 'BUEN PRECIO', emoji: '💸', color: '#09B1BA' }
+  const isGoodCondition = !condition || GOOD_CONDITIONS.has(condition)
+  if (pct >= 0.45 && isGoodCondition) return { label: 'CHOLLO',      emoji: '🔥', color: '#FF5F1F' }
+  if (pct >= 0.30 && isGoodCondition) return { label: 'OFERTA',      emoji: '⚡', color: '#C8FF00' }
+  if (pct >= 0.15)                    return { label: 'BUEN PRECIO',  emoji: '💸', color: '#09B1BA' }
   return null
 }
 
@@ -196,7 +199,7 @@ function getDiscountTag(price: number, precioRef: number | null): DiscountTag {
 function Card({ item, onFavorito }: { item: WallapopItem; onFavorito: (item: WallapopItem) => void }) {
   const isVinted = item.platform === 'vinted'
   const borderColor = isVinted ? '#09B1BA' : '#C8FF00'
-  const discountTag = getDiscountTag(item.price, item.precio_referencia)
+  const discountTag = getDiscountTag(item.price, item.precio_referencia, item.condition)
   const descuentoPct = item.precio_referencia
     ? Math.round(((item.precio_referencia - item.price) / item.precio_referencia) * 100)
     : null
@@ -410,7 +413,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
     })
   }, [results, sortBy])
 
-  const chollos = results.filter(r => getDiscountTag(r.price, r.precio_referencia)?.label === 'CHOLLO')
+  const chollos = results.filter(r => getDiscountTag(r.price, r.precio_referencia, r.condition)?.label === 'CHOLLO')
   const bestPrice = results.length > 0 ? Math.min(...results.map(r => r.price)) : null
   const avgPrice = results.length > 0 ? Math.round(results.reduce((a, r) => a + r.price, 0) / results.length) : null
   const wallapopCount = results.filter(r => r.platform === 'wallapop').length
@@ -538,7 +541,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
           </div>
           <div style={styles.statBox}>
             <div style={{ ...styles.statValue, color: '#FF5F1F' }}>{chollos.length}</div>
-            <div style={styles.statLabel}>Chollos &lt;80€</div>
+            <div style={styles.statLabel}>🔥 Chollos</div>
           </div>
         </div>
       )}
