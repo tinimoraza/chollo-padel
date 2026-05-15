@@ -2,9 +2,11 @@
 import { useState, useEffect } from 'react'
 import { WallapopItem } from '@/lib/wallapop'
 
-// ─── Lógica de descuento (igual que SearchPanel) ──────────────────────────────
-
 const GOOD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new'])
+const GOOD_CONDITIONS_CHOLLOS = new Set([
+  'new', 'un_opened', 'as_good_as_new',
+  'Nuevo con etiqueta', 'Nuevo sin etiqueta',
+])
 
 function getDiscountTag(price: number, precioRef: number | null, condition?: string) {
   if (!precioRef || precioRef <= 0 || price <= 0) return null
@@ -12,7 +14,7 @@ function getDiscountTag(price: number, precioRef: number | null, condition?: str
   const isGoodCondition = !condition || GOOD_CONDITIONS.has(condition)
   if (pct >= 0.45 && isGoodCondition) return { label: 'CHOLLO',     emoji: '🔥', color: '#FF5F1F', pct }
   if (pct >= 0.30 && isGoodCondition) return { label: 'OFERTA',     emoji: '⚡', color: '#C8FF00', pct }
-  if (pct >= 0.15)                    return { label: 'BUEN PRECIO', emoji: '💸', color: '#09B1BA', pct }
+  if (pct >= 0.15 && isGoodCondition) return { label: 'BUEN PRECIO', emoji: '💸', color: '#09B1BA', pct }
   return null
 }
 
@@ -23,20 +25,13 @@ const CONDITION_LABEL: Record<string, string> = {
   'Muy bueno': 'COMO NUEVO', 'Bueno': 'BUEN ESTADO', 'Satisfactorio': 'ACEPTABLE',
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
 function ChollCard({ item }: { item: WallapopItem & { _tag: NonNullable<ReturnType<typeof getDiscountTag>> } }) {
   const { _tag } = item
   const descuentoPct = Math.round(_tag.pct * 100)
   const isVinted = item.platform === 'vinted'
 
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={styles.card}
-    >
+    <a href={item.url} target="_blank" rel="noopener noreferrer" style={styles.card}>
       <div style={{ position: 'relative' }}>
         {item.img
           ? <img
@@ -77,8 +72,6 @@ function ChollCard({ item }: { item: WallapopItem & { _tag: NonNullable<ReturnTy
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 const TAGS = ['TODOS', 'CHOLLO', 'OFERTA', 'BUEN PRECIO']
 const MARCAS = ['TODAS', 'Bullpadel', 'NOX', 'Head', 'Babolat', 'Adidas', 'Wilson', 'Siux', 'Dunlop', 'Varlion']
 
@@ -92,7 +85,6 @@ export default function ChollosPage() {
     async function load() {
       setLoading(true)
       try {
-        // Cargamos marcas populares en paralelo
         const marcas = ['bullpadel', 'nox', 'head', 'babolat', 'adidas', 'wilson', 'siux']
         const results = await Promise.all(
           marcas.map(m =>
@@ -112,14 +104,17 @@ export default function ChollosPage() {
             }
           }
         }
-        // Filtrar solo los que tienen tag
+
         const withTag = all
+          .filter(item => item.precio_referencia !== null)
+          .filter(item => GOOD_CONDITIONS_CHOLLOS.has(item.condition))
+          .filter(item => /202[0-9]/.test(item.title))
           .map(item => {
             const tag = getDiscountTag(item.price, item.precio_referencia, item.condition)
             return tag ? { ...item, _tag: tag } : null
           })
           .filter(Boolean)
-          .sort((a: any, b: any) => b._tag.pct - a._tag.pct) // mejor descuento primero
+          .sort((a: any, b: any) => b._tag.pct - a._tag.pct)
 
         setItems(withTag as any[])
       } finally {
@@ -132,97 +127,88 @@ export default function ChollosPage() {
   const filtered = items.filter(item => {
     if (tagFilter !== 'TODOS' && item._tag.label !== tagFilter) return false
     if (marcaFilter !== 'TODAS') {
-      const title = item.title.toLowerCase()
-      if (!title.includes(marcaFilter.toLowerCase())) return false
+      if (!item.title.toLowerCase().includes(marcaFilter.toLowerCase())) return false
     }
     return true
   })
 
   return (
-    <>
-      {/* Header */}
-      <div className="app-shell">
-        <header className="header">
-          <a className="logo" href="/">
-            <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-          </a>
-          <nav className="nav">
-            <a className="nav-link" href="/">BUSCADOR</a>
-            <a className="nav-link" href="/palas">PALAS</a>
-            <a className="nav-link" href="/alertas">MIS ALERTAS</a>
-            <a className="nav-link active" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-          </nav>
-          <a href="/alertas" className="btn-alert-top">+ NUEVA ALERTA</a>
-        </header>
+    <div className="app-shell">
+      <header className="header">
+        <a className="logo" href="/">
+          <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
+        </a>
+        <nav className="nav">
+          <a className="nav-link" href="/">BUSCADOR</a>
+          <a className="nav-link" href="/palas">PALAS</a>
+          <a className="nav-link" href="/alertas">MIS ALERTAS</a>
+          <a className="nav-link active" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
+        </nav>
+        <a href="/alertas" className="btn-alert-top">+ NUEVA ALERTA</a>
+      </header>
 
-        <main style={styles.main}>
-          <div style={styles.pageHeader}>
-            <h1 style={styles.title}>🔥 CHOLLOS DEL DÍA</h1>
-            <p style={styles.subtitle}>
-              Palas con mayor descuento respecto al precio de tienda · Actualizados cada hora
-            </p>
+      <main style={styles.main}>
+        <div style={styles.pageHeader}>
+          <h1 style={styles.title}>🔥 CHOLLOS DEL DÍA</h1>
+          <p style={styles.subtitle}>
+            Palas nuevas o como nuevas con mayor descuento · Actualizadas cada hora
+          </p>
+        </div>
+
+        <div style={styles.filtersRow}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {TAGS.map(t => (
+              <button
+                key={t}
+                onClick={() => setTagFilter(t)}
+                style={{
+                  ...styles.filterBtn,
+                  ...(tagFilter === t ? {
+                    background: t === 'CHOLLO' ? '#FF5F1F' : t === 'OFERTA' ? '#C8FF00' : t === 'BUEN PRECIO' ? '#09B1BA' : '#fff',
+                    color: '#000',
+                    border: '1px solid transparent',
+                  } : {})
+                }}
+              >
+                {t === 'CHOLLO' ? '🔥' : t === 'OFERTA' ? '⚡' : t === 'BUEN PRECIO' ? '💸' : ''} {t}
+              </button>
+            ))}
           </div>
-
-          {/* Filtros */}
-          <div style={styles.filtersRow}>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {TAGS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTagFilter(t)}
-                  style={{
-                    ...styles.filterBtn,
-                    ...(tagFilter === t ? {
-                      background: t === 'CHOLLO' ? '#FF5F1F' : t === 'OFERTA' ? '#C8FF00' : t === 'BUEN PRECIO' ? '#09B1BA' : '#fff',
-                      color: '#000',
-                      border: '1px solid transparent',
-                    } : {})
-                  }}
-                >
-                  {t === 'CHOLLO' ? '🔥' : t === 'OFERTA' ? '⚡' : t === 'BUEN PRECIO' ? '💸' : ''} {t}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {MARCAS.map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMarcaFilter(m)}
-                  style={{
-                    ...styles.filterBtn,
-                    ...(marcaFilter === m ? { background: '#C8FF00', color: '#000', border: '1px solid transparent' } : {})
-                  }}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {MARCAS.map(m => (
+              <button
+                key={m}
+                onClick={() => setMarcaFilter(m)}
+                style={{
+                  ...styles.filterBtn,
+                  ...(marcaFilter === m ? { background: '#C8FF00', color: '#000', border: '1px solid transparent' } : {})
+                }}
+              >
+                {m}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Contador */}
-          {!loading && (
-            <p style={styles.counter}>
-              {filtered.length} chollos encontrados
-            </p>
-          )}
+        {!loading && (
+          <p style={styles.counter}>{filtered.length} chollos encontrados</p>
+        )}
 
-          {/* Grid */}
-          {loading ? (
-            <p style={styles.loading}>Buscando chollos...</p>
-          ) : (
-            <div style={styles.grid}>
-              {filtered.map((item: any) => (
-                <ChollCard key={`${item.platform}-${item.id}`} item={item} />
-              ))}
-            </div>
-          )}
+        {loading ? (
+          <p style={styles.loading}>Buscando chollos...</p>
+        ) : (
+          <div style={styles.grid}>
+            {filtered.map((item: any) => (
+              <ChollCard key={`${item.platform}-${item.id}`} item={item} />
+            ))}
+          </div>
+        )}
 
-          {!loading && filtered.length === 0 && (
-            <p style={styles.loading}>No hay chollos con estos filtros ahora mismo.</p>
-          )}
-        </main>
-      </div>
-    </>
+        {!loading && filtered.length === 0 && (
+          <p style={styles.loading}>No hay chollos con estos filtros ahora mismo.</p>
+        )}
+      </main>
+    </div>
   )
 }
 
