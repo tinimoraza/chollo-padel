@@ -71,7 +71,7 @@ export async function searchWallapop(
 
     if (!data || data.length === 0) return []
 
-    // ── Paso 2: buscar price_reference REAL (solo de tiendas, sin fallback PVP) ─
+    // ── Paso 2: buscar price_reference REAL (solo tiendas, sin fallback PVP) ───
     const palaIdsSet: Record<string, boolean> = {}
     for (const item of data) {
       if (item.pala_id) palaIdsSet[item.pala_id] = true
