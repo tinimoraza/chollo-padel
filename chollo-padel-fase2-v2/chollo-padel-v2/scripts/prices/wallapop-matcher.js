@@ -1,219 +1,212 @@
 // scripts/prices/wallapop-matcher.js
-// Linkea wallapop_cache.pala_id → palas.id usando fuzzy match Jaro-Winkler
-// Uso: node scripts/prices/wallapop-matcher.js
-// Opciones: --dry-run (no escribe en BD, solo muestra resultados)
-//           --limit 100 (procesa solo N anuncios, útil para probar)
-
 require('dotenv').config({ path: '.env.local' });
+
 const { createClient } = require('@supabase/supabase-js');
-const { JaroWinklerDistance } = require('natural');
+const jaroWinkler = require('jaro-winkler');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SECRET_KEY
 );
 
-const DRY_RUN = process.argv.includes('--dry-run');
-const LIMIT_ARG = process.argv.indexOf('--limit');
-const LIMIT = LIMIT_ARG !== -1 ? parseInt(process.argv[LIMIT_ARG + 1]) : null;
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-const SCORE_AUTO_MATCH = 0.85;   // match automático
-const SCORE_MIN        = 0.60;   // por debajo → no match
+const AÑOS = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 
-// ─── Normalización ────────────────────────────────────────────────────────────
+function tieneAño(titulo) {
+  return AÑOS.some(a => titulo.includes(a));
+}
 
-const MARCAS = [
-  'bullpadel','nox','head','babolat','adidas','wilson','dunlop',
-  'slazenger','royal padel','siux','vibora','varlion','star vie',
-  'starvie','puma','drop shot','dropshot','softee','akkeron',
-  'black crown','blackcrown','volt','hexer','kuikma','oxdog',
-  'vairo','legend','prince','artengo','lotto','tecnifibre'
-];
+function motivoDescarte(titulo) {
+  const t = titulo.toLowerCase();
+  if (/paletero|funda|mochila|bolsa|grip|overgrip|protector|muñequera/.test(t)) return 'accesorio';
+  if (/pack|kit|lote|conjunto/.test(t)) return 'pack';
+  if (/tenis|tennis|squash|bádminton|badminton/.test(t)) return 'otro_deporte';
+  if (/zapatill|shoe|sneaker/.test(t)) return 'zapatilla';
+  if (/raqueta/.test(t) && !/pala|padel|pádel/.test(t)) return 'raqueta_tenis';
+  return null
+}
 
-function normalizar(texto) {
-  return texto
+function normalizarTitulo(titulo) {
+  return titulo
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
-    .replace(/pala\s+(de\s+)?p[aá]del\s*/gi, '')      // quita "pala de padel"
-    .replace(/\b(nueva?|segunda\s+mano|sm|ocasion|oferta|outlet|pack|funda|regalada)\b/gi, '')
-    .replace(/[^\w\s]/g, ' ')
+    .replace(/pala\s+(de\s+)?p[aá]del\s*/i, '')
+    .replace(/\braqueta\b/gi, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-function extraerMarca(titulo) {
-  const norm = normalizar(titulo);
-  return MARCAS.find(m => norm.includes(m)) || null;
+function extraerCodigoModelo(texto) {
+  // Extrae códigos tipo "03", "04", "v3", "pro", "elite", etc.
+  const match = texto.match(/\b(v?\d{2}|pro|elite|carbon|control|attack|luxury|genius|ltd)\b/i);
+  return match ? match[1].toLowerCase() : null;
 }
 
-// ─── Carga palas de BD ────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────────
 
-async function cargarPalas() {
-  const { data, error } = await supabase
+async function runMatcher(options = {}) {
+  const dryRun = options.dryRun ?? false;
+  const limit = options.limit ?? 500;
+
+  console.log(`\n===== WALLAPOP MATCHER =====`);
+  console.log(`Modo: ${dryRun ? 'DRY RUN' : 'ESCRITURA'} · Límite: ${limit}`);
+
+  // Cargar catálogo completo
+  const { data: palas, error: palasError } = await supabase
     .from('palas')
-    .select('id, nombre, marca, modelo, año, brand_slug');
+    .select('id, modelo, marca, año, precio_pvp');
 
-  if (error) throw new Error(`Error cargando palas: ${error.message}`);
-
-  // Pre-normalizar para no repetir trabajo
-  return data.map(p => ({
-    ...p,
-    _normalizado: normalizar(p.nombre || `${p.marca} ${p.modelo}`),
-    _marca_norm: (p.marca || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  }));
-}
-
-// ─── Fuzzy match ──────────────────────────────────────────────────────────────
-
-function fuzzyMatch(titulo, palas) {
-  const tituloNorm = normalizar(titulo);
-  const marcaDetectada = extraerMarca(titulo);
-
-  // Filtrar por marca si la detectamos (reduce falsos positivos enormemente)
-  const candidatos = marcaDetectada
-    ? palas.filter(p => p._marca_norm.includes(marcaDetectada) || marcaDetectada.includes(p._marca_norm))
-    : palas;
-
-  if (candidatos.length === 0) return null;
-
-  let mejorScore = 0;
-  let mejorPala = null;
-
-  for (const pala of candidatos) {
-    const score = JaroWinklerDistance(tituloNorm, pala._normalizado);
-    if (score > mejorScore) {
-      mejorScore = score;
-      mejorPala = pala;
-    }
+  if (palasError || !palas) {
+    console.error('Error cargando catálogo:', palasError?.message);
+    return;
   }
+  console.log(`Catálogo: ${palas.length} palas`);
 
-  if (mejorScore >= SCORE_AUTO_MATCH) {
-    return { pala: mejorPala, confidence: mejorScore, method: 'fuzzy_auto' };
-  }
-  if (mejorScore >= SCORE_MIN) {
-    return { pala: mejorPala, confidence: mejorScore, method: 'fuzzy_low' };
-  }
-  return null;
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
-async function main() {
-  console.log(`\n🎯 WallapopMatcher${DRY_RUN ? ' [DRY RUN]' : ''}`);
-  console.log('─'.repeat(50));
-
-  // 1. Cargar palas
-  console.log('📦 Cargando palas de BD...');
-  const palas = await cargarPalas();
-  console.log(`   ${palas.length} palas cargadas`);
-
-  // 2. Cargar anuncios sin pala_id (o todos si --force)
-  console.log('🔍 Cargando anuncios Wallapop sin matchear...');
-  let query = supabase
+  // Anuncios sin pala_id
+  const { data: anuncios, error: anunciosError } = await supabase
     .from('wallapop_cache')
-    .select('external_id, title, price')
+    .select('external_id, title, price, condition')
     .is('pala_id', null)
-    .not('title', 'is', null)
-    .order('scraped_at', { ascending: false });
+    .limit(limit);
 
-  if (LIMIT) query = query.limit(LIMIT);
+  if (anunciosError || !anuncios) {
+    console.error('Error cargando anuncios:', anunciosError?.message);
+    return;
+  }
+  console.log(`Anuncios sin match: ${anuncios.length}`);
 
-  const { data: anuncios, error: errAnuncios } = await query;
-  if (errAnuncios) throw new Error(`Error cargando anuncios: ${errAnuncios.message}`);
-  console.log(`   ${anuncios.length} anuncios por procesar\n`);
-
-  // 3. Procesar
-  const stats = { total: 0, auto: 0, low: 0, noMatch: 0, errores: 0 };
-  const updates = [];
+  let matchesAuto = 0;
+  let matchesLow = 0;
+  let descartados = 0;
+  let sinAño = 0;
+  let sinMatch = 0;
 
   for (const anuncio of anuncios) {
-    stats.total++;
-    const resultado = fuzzyMatch(anuncio.title, palas);
+    const titulo = anuncio.title ?? '';
 
-    if (!resultado) {
-      stats.noMatch++;
-      if (DRY_RUN) console.log(`  ❌ NO MATCH  | ${anuncio.title.substring(0, 60)}`);
+    // ── 1. Descartar accesorios, packs, otros deportes ──────────────────────
+    const motivo = motivoDescarte(titulo);
+    if (motivo) {
+      descartados++;
+      if (!dryRun) {
+        await supabase
+          .from('wallapop_cache')
+          .update({ match_method: 'descartado', match_confidence: 0 })
+          .eq('external_id', anuncio.external_id);
+      }
       continue;
     }
 
-    const { pala, confidence, method } = resultado;
+    // ── 2. Descartar si no tiene año en el título ────────────────────────────
+    if (!tieneAño(titulo)) {
+      sinAño++;
+      console.log(`[SIN AÑO] "${titulo}"`);
+      if (!dryRun) {
+        await supabase
+          .from('wallapop_cache')
+          .update({ match_method: 'sin_año', match_confidence: 0 })
+          .eq('external_id', anuncio.external_id);
+      }
+      continue;
+    }
 
-    if (method === 'fuzzy_auto') stats.auto++;
-    else stats.low++;
+    // ── 3. Fuzzy match contra catálogo ───────────────────────────────────────
+    const tituloNorm = normalizarTitulo(titulo);
+    const codigoAnuncio = extraerCodigoModelo(tituloNorm);
 
-    if (DRY_RUN) {
-      const icon = method === 'fuzzy_auto' ? '✅' : '🟡';
-      console.log(`  ${icon} ${(confidence * 100).toFixed(0)}% | ${anuncio.title.substring(0, 45).padEnd(45)} → ${pala.nombre}`);
-    } else {
-      // Solo guardamos los matches seguros (fuzzy_auto)
-      if (method === 'fuzzy_auto') {
-        updates.push({
-          external_id: anuncio.external_id,
-          pala_id: pala.id,
-          match_confidence: confidence,
-          match_method: method
-        });
+    let mejorMatch = null;
+    let mejorScore = 0;
+
+    for (const pala of palas) {
+      const modeloNorm = normalizarTitulo(pala.modelo ?? '');
+      let score = jaroWinkler(tituloNorm, modeloNorm);
+
+      // Penalización si el código de modelo es distinto
+      const codigoPala = extraerCodigoModelo(modeloNorm);
+      if (codigoAnuncio && codigoPala && codigoAnuncio !== codigoPala) {
+        score *= 0.80;
+      }
+
+      // Penalización si el año del anuncio no coincide con el año del catálogo
+      const añoAnuncio = AÑOS.find(a => titulo.includes(a));
+      if (añoAnuncio && pala.año && String(pala.año) !== añoAnuncio) {
+        score *= 0.75;
+      }
+
+      if (score > mejorScore) {
+        mejorScore = score;
+        mejorMatch = pala;
       }
     }
-  }
 
-  // 4. Escribir en BD — UPDATE por external_id, nunca upsert
-  //    Así solo toca pala_id/match_confidence/match_method, sin rozar title ni otros campos
-  if (!DRY_RUN && updates.length > 0) {
-    console.log(`\n💾 Guardando ${updates.length} matches seguros en BD...`);
-    const BATCH = 50;
-    let guardados = 0;
-
-    for (let i = 0; i < updates.length; i += BATCH) {
-      const batch = updates.slice(i, i + BATCH);
-
-      // UPDATE individual por external_id para evitar el not-null constraint de upsert
-      const promises = batch.map(u =>
-        supabase
+    // ── 4. Decidir qué hacer con el score ───────────────────────────────────
+    if (mejorScore >= 0.85 && mejorMatch) {
+      matchesAuto++;
+      console.log(`[AUTO ${mejorScore.toFixed(2)}] "${titulo}" → ${mejorMatch.modelo}`);
+      if (!dryRun) {
+        await supabase
           .from('wallapop_cache')
           .update({
-            pala_id: u.pala_id,
-            match_confidence: u.match_confidence,
-            match_method: u.match_method
+            pala_id: mejorMatch.id,
+            match_confidence: mejorScore,
+            match_method: 'fuzzy_auto',
           })
-          .eq('external_id', u.external_id)
-      );
-
-      const results = await Promise.all(promises);
-      const erroresBatch = results.filter(r => r.error);
-
-      if (erroresBatch.length > 0) {
-        console.error(`  ❌ ${erroresBatch.length} errores en batch ${i}-${i + BATCH}:`, erroresBatch[0].error.message);
-        stats.errores += erroresBatch.length;
-        guardados += batch.length - erroresBatch.length;
-      } else {
-        guardados += batch.length;
+          .eq('external_id', anuncio.external_id);
       }
-
-      process.stdout.write(`  ✅ ${guardados}/${updates.length}\r`);
+    } else if (mejorScore >= 0.60 && mejorMatch) {
+      matchesLow++;
+      console.log(`[LOW  ${mejorScore.toFixed(2)}] "${titulo}" → ${mejorMatch.modelo}`);
+      // No escribimos pala_id — queda pendiente para claude-matcher
+    } else {
+      sinMatch++;
+      console.log(`[MISS ${mejorScore.toFixed(2)}] "${titulo}"`);
     }
-    console.log('');
   }
 
-  // 5. Resumen
-  const matchRate = ((stats.auto + stats.low) / stats.total * 100).toFixed(1);
-  console.log('\n📊 RESUMEN');
-  console.log('─'.repeat(50));
-  console.log(`  Total anuncios:    ${stats.total}`);
-  console.log(`  ✅ Match seguro:   ${stats.auto} (score ≥ 0.85) → escritos en BD`);
-  console.log(`  🟡 Match bajo:     ${stats.low} (score 0.60-0.85) → pendiente Sprint 2`);
-  console.log(`  ❌ Sin match:      ${stats.noMatch}`);
-  console.log(`  📈 Match rate:     ${matchRate}%`);
-  if (stats.errores > 0) console.log(`  ⚠️  Errores BD:    ${stats.errores}`);
-  console.log('');
-
-  if (DRY_RUN) {
-    console.log('ℹ️  Dry run — no se ha escrito nada en BD');
-    console.log('   Quita --dry-run para guardar los matches\n');
-  }
+  console.log(`\n===== RESULTADO =====`);
+  console.log(`Auto matches:  ${matchesAuto}`);
+  console.log(`Low matches:   ${matchesLow}`);
+  console.log(`Sin año:       ${sinAño}`);
+  console.log(`Descartados:   ${descartados}`);
+  console.log(`Sin match:     ${sinMatch}`);
 }
 
-main().catch(err => {
-  console.error('💥 Error fatal:', err.message);
-  process.exit(1);
-});
+// ── CLI ────────────────────────────────────────────────────────────────────────
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+const limitArg = args.find(a => a.startsWith('--limit='));
+const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 500;
+
+// Limpiar matches incorrectos primero (sin año o con match_method null)
+async function limpiarMatchesSinAño() {
+  console.log('Limpiando matches previos sin año en título...');
+  
+  const { data: conPalaId } = await supabase
+    .from('wallapop_cache')
+    .select('external_id, title, pala_id')
+    .not('pala_id', 'is', null);
+
+  if (!conPalaId) return;
+
+  let limpiados = 0;
+  for (const item of conPalaId) {
+    if (!tieneAño(item.title ?? '')) {
+      limpiados++;
+      if (!dryRun) {
+        await supabase
+          .from('wallapop_cache')
+          .update({ pala_id: null, match_method: 'sin_año', match_confidence: 0 })
+          .eq('external_id', item.external_id);
+      }
+    }
+  }
+  console.log(`Limpiados ${limpiados} matches sin año en título`);
+}
+
+limpiarMatchesSinAño()
+  .then(() => runMatcher({ dryRun, limit }))
+  .catch(err => {
+    console.error('Error fatal:', err);
+    process.exit(1);
+  });
