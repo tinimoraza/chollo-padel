@@ -71,7 +71,7 @@ export async function searchWallapop(
 
     if (!data || data.length === 0) return []
 
-    // ── Paso 2: buscar precio_referencia para los pala_id encontrados ──────────
+    // ── Paso 2: buscar precio_referencia Y precio_pvp para los pala_id ─────────
     const palaIdsSet: Record<string, boolean> = {}
     for (const item of data) {
       if (item.pala_id) palaIdsSet[item.pala_id] = true
@@ -80,16 +80,43 @@ export async function searchWallapop(
     const precioRefMap: Record<string, number> = {}
 
     if (palaIds.length > 0) {
+      // precio_referencia de price_reference
       const { data: refs } = await supabase
         .from('price_reference')
         .select('pala_id, precio_referencia')
         .in('pala_id', palaIds)
 
+      // precio_pvp de palas como fallback
+      const { data: palas } = await supabase
+        .from('palas')
+        .select('id, precio_pvp')
+        .in('id', palaIds)
+
+      const pvpMap: Record<string, number> = {}
+      if (palas) {
+        for (const p of palas) {
+          if (p.id && p.precio_pvp) pvpMap[p.id] = p.precio_pvp
+        }
+      }
+
       if (refs) {
         for (const r of refs) {
-          if (r.pala_id && r.precio_referencia) {
+          if (!r.pala_id || !r.precio_referencia) continue
+          const pvp = pvpMap[r.pala_id]
+
+          // Si price_reference es sospechosa (< 50% del PVP), usar PVP
+          if (pvp && r.precio_referencia < pvp * 0.5) {
+            precioRefMap[r.pala_id] = pvp
+          } else {
             precioRefMap[r.pala_id] = r.precio_referencia
           }
+        }
+      }
+
+      // Palas sin price_reference → usar precio_pvp directamente
+      for (const palaId of palaIds) {
+        if (!precioRefMap[palaId] && pvpMap[palaId]) {
+          precioRefMap[palaId] = pvpMap[palaId]
         }
       }
     }
