@@ -243,7 +243,7 @@ function Card({
     : null
 
   return (
-    <div style={{ ...styles.card, border: `1px solid ${isOportunidad ? '#7C3AED' : borderColor}` }}>
+    <div style={{ ...styles.card, border: `1px solid ${isOportunidad ? '#FFB800' : borderColor}` }}>
       <a
         href={item.url}
         target="_blank"
@@ -273,7 +273,7 @@ function Card({
           <p style={styles.cardTitle}>{item.title}</p>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 }}>
             <div>
-              <span style={{ ...styles.cardPrice, color: isOportunidad ? '#7C3AED' : borderColor }}>
+              <span style={{ ...styles.cardPrice, color: isOportunidad ? '#FFB800' : borderColor }}>
                 {item.price}€
               </span>
               {/* Precio de referencia (mediana) tachado si es oportunidad */}
@@ -596,13 +596,13 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
               style={{
                 ...styles.statBox,
                 cursor: oportunidades.length > 0 ? 'pointer' : 'default',
-                outline: soloOportunidad ? '1px solid #7C3AED' : 'none',
-                borderColor: soloOportunidad ? '#7C3AED' : 'rgba(255,255,255,0.07)',
+                outline: soloOportunidad ? '1px solid #FFB800' : 'none',
+                borderColor: soloOportunidad ? '#FFB800' : 'rgba(255,255,255,0.07)',
               }}
               onClick={() => oportunidades.length > 0 && setSoloOportunidad(v => !v)}
               title={soloOportunidad ? 'Ver todos' : 'Ver solo oportunidades'}
             >
-              <div style={{ ...styles.statValue, color: '#7C3AED' }}>{oportunidades.length}</div>
+              <div style={{ ...styles.statValue, color: '#FFB800' }}>{oportunidades.length}</div>
               <div style={styles.statLabel}>💎 Oportunidades</div>
             </div>
           )}
@@ -620,7 +620,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             ({Math.round(medianaOportunidad.mediana)}€).
             {' '}
             <span
-              style={{ color: '#7C3AED', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
               onClick={() => setSoloOportunidad(v => !v)}
             >
               {soloOportunidad ? 'Ver todos los resultados' : `Ver solo las ${oportunidades.length} oportunidades`}
@@ -740,7 +740,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through',
     marginLeft: 6, verticalAlign: 'middle',
   },
-  cardMeta: { fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
+  cardMeta: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
   conditionBadge: {
     display: 'inline-block', marginTop: 8, background: '#1a1a1a',
     border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
@@ -751,14 +751,14 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 8,
     fontSize: 10,
     fontFamily: 'Barlow Condensed, sans-serif',
-    color: 'rgba(124,58,237,0.6)',
+    color: 'rgba(255,255,255,0.72)',
     letterSpacing: 0.5,
     lineHeight: 1.4,
-    borderTop: '1px solid rgba(124,58,237,0.15)',
+    borderTop: '1px solid rgba(255,184,0,0.25)',
     paddingTop: 6,
   },
   badgeOportunidad: {
-    position: 'absolute', top: 8, left: 8, background: '#7C3AED', color: '#fff',
+    position: 'absolute', top: 8, left: 8, background: '#FFB800', color: '#000',
     fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px',
     fontFamily: 'Barlow Condensed, sans-serif',
   },
@@ -779,8 +779,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 10,
-    background: 'rgba(124,58,237,0.08)',
-    border: '1px solid rgba(124,58,237,0.25)',
+    background: 'rgba(255,184,0,0.08)',
+    border: '1px solid rgba(255,184,0,0.35)',
     padding: '12px 16px',
     marginBottom: 20,
   },
@@ -792,7 +792,7 @@ const styles: Record<string, React.CSSProperties> = {
   oportunidadBannerText: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.82)',
     letterSpacing: 0.3,
     lineHeight: 1.5,
   },
