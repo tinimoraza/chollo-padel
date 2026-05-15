@@ -24,12 +24,13 @@ function motivoDescarte(titulo) {
   if (/tenis|tennis|squash|bádminton|badminton/.test(t)) return 'otro_deporte';
   if (/zapatill|shoe|sneaker/.test(t)) return 'zapatilla';
   if (/raqueta/.test(t) && !/pala|padel|pádel/.test(t)) return 'raqueta_tenis';
-  return null
+  return null;
 }
 
 function normalizarTitulo(titulo) {
   return titulo
     .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
     .replace(/pala\s+(de\s+)?p[aá]del\s*/i, '')
     .replace(/\braqueta\b/gi, '')
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -38,9 +39,73 @@ function normalizarTitulo(titulo) {
 }
 
 function extraerCodigoModelo(texto) {
-  // Extrae códigos tipo "03", "04", "v3", "pro", "elite", etc.
   const match = texto.match(/\b(v?\d{2}|pro|elite|carbon|control|attack|luxury|genius|ltd)\b/i);
   return match ? match[1].toLowerCase() : null;
+}
+
+// Aliases de marcas: variantes que aparecen en títulos de wallapop
+const MARCA_ALIASES = {
+  'bullpadel':  ['bullpadel', 'bull padel'],
+  'nox':        ['nox'],
+  'head':       ['head'],
+  'babolat':    ['babolat'],
+  'adidas':     ['adidas'],
+  'wilson':     ['wilson'],
+  'siux':       ['siux'],
+  'dunlop':     ['dunlop'],
+  'varlion':    ['varlion'],
+  'vibora':     ['vibora', 'vibor-a', 'vibor a'],
+  'star vie':   ['star vie', 'starvie'],
+  'drop shot':  ['drop shot', 'dropshot'],
+  'royal padel':['royal padel', 'royalpadel'],
+  'black crown':['black crown', 'blackcrown'],
+  'kuikma':     ['kuikma', 'decathlon'],
+  'joma':       ['joma'],
+  'oxdog':      ['oxdog'],
+  'alkemia':    ['alkemia'],
+  'puma':       ['puma'],
+};
+
+/**
+ * Devuelve true si la marca del catálogo aparece en el título normalizado.
+ * Evita matches cross-brand (Wilson → Adidas, Joma → Nox, etc.)
+ */
+function marcaEnTitulo(marcaCatalogo, tituloNorm) {
+  if (!marcaCatalogo) return true; // sin marca → no filtrar
+  const marcaKey = marcaCatalogo.toLowerCase().trim();
+  const aliases = MARCA_ALIASES[marcaKey] ?? [marcaKey];
+  return aliases.some(alias => tituloNorm.includes(alias));
+}
+
+/**
+ * Scoring híbrido: solapamiento de palabras + jaro-winkler truncado.
+ *
+ * El problema con jaro-winkler sobre strings completos es que penaliza
+ * la diferencia de longitud. Un título de wallapop tiene palabras extra
+ * al final ("nueva sin estrenar", "buen estado", etc.) que bajan el score.
+ *
+ * Estrategia:
+ * 1. wordOverlap: qué % de las palabras del modelo aparecen en el título.
+ *    Si el modelo entero está contenido → 1.0.
+ * 2. jaroTruncado: jaro-winkler entre el modelo y los primeros N tokens
+ *    del título (N = nº de tokens del modelo), eliminando ruido del final.
+ * 3. score final = max(wordOverlap, jaroTruncado)
+ */
+function scoreModelo(tituloNorm, modeloNorm) {
+  const tituloTokens = new Set(tituloNorm.split(' '));
+  const modeloTokens = modeloNorm.split(' ').filter(Boolean);
+
+  if (modeloTokens.length === 0) return 0;
+
+  // 1. Word overlap
+  const matched = modeloTokens.filter(t => tituloTokens.has(t)).length;
+  const wordOverlap = matched / modeloTokens.length;
+
+  // 2. Jaro-winkler truncado: comparar modelo contra los primeros N words del título
+  const tituloTruncado = tituloNorm.split(' ').slice(0, modeloTokens.length).join(' ');
+  const jaroTrunc = jaroWinkler(modeloNorm, tituloTruncado);
+
+  return Math.max(wordOverlap, jaroTrunc);
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────
@@ -52,7 +117,7 @@ async function runMatcher(options = {}) {
   console.log(`\n===== WALLAPOP MATCHER =====`);
   console.log(`Modo: ${dryRun ? 'DRY RUN' : 'ESCRITURA'} · Límite: ${limit}`);
 
-  // Cargar catálogo completo
+  // Cargar catálogo completo (sin limit — son ~1417 palas, caben bien en memoria)
   const { data: palas, error: palasError } = await supabase
     .from('palas')
     .select('id, modelo, marca, año, precio_pvp');
@@ -62,6 +127,13 @@ async function runMatcher(options = {}) {
     return;
   }
   console.log(`Catálogo: ${palas.length} palas`);
+
+  // Pre-normalizar modelos del catálogo (evita re-calcular en el bucle interno)
+  const palasNorm = palas.map(p => ({
+    ...p,
+    modeloNorm: normalizarTitulo(p.modelo ?? ''),
+    codigoModelo: extraerCodigoModelo(normalizarTitulo(p.modelo ?? '')),
+  }));
 
   // Anuncios sin pala_id
   const { data: anuncios, error: anunciosError } = await supabase
@@ -101,7 +173,6 @@ async function runMatcher(options = {}) {
     // ── 2. Descartar si no tiene año en el título ────────────────────────────
     if (!tieneAño(titulo)) {
       sinAño++;
-      console.log(`[SIN AÑO] "${titulo}"`);
       if (!dryRun) {
         await supabase
           .from('wallapop_cache')
@@ -114,24 +185,23 @@ async function runMatcher(options = {}) {
     // ── 3. Fuzzy match contra catálogo ───────────────────────────────────────
     const tituloNorm = normalizarTitulo(titulo);
     const codigoAnuncio = extraerCodigoModelo(tituloNorm);
+    const añoAnuncio = AÑOS.find(a => titulo.includes(a));
 
     let mejorMatch = null;
     let mejorScore = 0;
 
-    for (const pala of palas) {
-      const modeloNorm = normalizarTitulo(pala.modelo ?? '');
-      let score = jaroWinkler(tituloNorm, modeloNorm);
+    for (const pala of palasNorm) {
+      // Descarte duro: año incorrecto
+      if (añoAnuncio && pala.año && String(pala.año) !== añoAnuncio) continue;
+
+      // Descarte duro: marca no aparece en el título (evita cross-brand falsos)
+      if (!marcaEnTitulo(pala.marca, tituloNorm)) continue;
+
+      let score = scoreModelo(tituloNorm, pala.modeloNorm);
 
       // Penalización si el código de modelo es distinto
-      const codigoPala = extraerCodigoModelo(modeloNorm);
-      if (codigoAnuncio && codigoPala && codigoAnuncio !== codigoPala) {
+      if (codigoAnuncio && pala.codigoModelo && codigoAnuncio !== pala.codigoModelo) {
         score *= 0.80;
-      }
-
-      // Descartar si el año del anuncio no coincide con el año del catálogo
-      const añoAnuncio = AÑOS.find(a => titulo.includes(a));
-      if (añoAnuncio && pala.año && String(pala.año) !== añoAnuncio) {
-        continue;
       }
 
       if (score > mejorScore) {
@@ -141,7 +211,8 @@ async function runMatcher(options = {}) {
     }
 
     // ── 4. Decidir qué hacer con el score ───────────────────────────────────
-    if (mejorScore >= 0.85 && mejorMatch) {
+    // Umbral bajado a 0.80 (seguro ahora que el filtro de marca elimina falsos)
+    if (mejorScore >= 0.80 && mejorMatch) {
       matchesAuto++;
       console.log(`[AUTO ${mejorScore.toFixed(2)}] "${titulo}" → ${mejorMatch.modelo}`);
       if (!dryRun) {
@@ -157,7 +228,6 @@ async function runMatcher(options = {}) {
     } else if (mejorScore >= 0.60 && mejorMatch) {
       matchesLow++;
       console.log(`[LOW  ${mejorScore.toFixed(2)}] "${titulo}" → ${mejorMatch.modelo}`);
-      // No escribimos pala_id — queda pendiente para claude-matcher
     } else {
       sinMatch++;
       console.log(`[MISS ${mejorScore.toFixed(2)}] "${titulo}"`);
@@ -178,10 +248,10 @@ const dryRun = args.includes('--dry-run');
 const limitArg = args.find(a => a.startsWith('--limit='));
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 500;
 
-// Limpiar matches incorrectos primero (sin año o con match_method null)
+// Limpiar matches incorrectos (sin año en título o con año incorrecto vs catálogo)
 async function limpiarMatchesSinAño() {
-  console.log('Limpiando matches previos sin año en título o con año incorrecto...');
-  
+  console.log('Limpiando matches previos con año incorrecto...');
+
   const { data: conPalaId } = await supabase
     .from('wallapop_cache')
     .select('external_id, title, pala_id')
@@ -189,7 +259,6 @@ async function limpiarMatchesSinAño() {
 
   if (!conPalaId) return;
 
-  // Cargar años del catálogo para verificar
   const { data: palas } = await supabase
     .from('palas')
     .select('id, año');
