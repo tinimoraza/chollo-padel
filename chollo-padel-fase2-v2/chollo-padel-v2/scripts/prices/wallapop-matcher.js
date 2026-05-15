@@ -128,10 +128,10 @@ async function runMatcher(options = {}) {
         score *= 0.80;
       }
 
-      // Penalización si el año del anuncio no coincide con el año del catálogo
+      // Descartar si el año del anuncio no coincide con el año del catálogo
       const añoAnuncio = AÑOS.find(a => titulo.includes(a));
       if (añoAnuncio && pala.año && String(pala.año) !== añoAnuncio) {
-        score *= 0.75;
+        continue;
       }
 
       if (score > mejorScore) {
@@ -180,7 +180,7 @@ const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 500;
 
 // Limpiar matches incorrectos primero (sin año o con match_method null)
 async function limpiarMatchesSinAño() {
-  console.log('Limpiando matches previos sin año en título...');
+  console.log('Limpiando matches previos sin año en título o con año incorrecto...');
   
   const { data: conPalaId } = await supabase
     .from('wallapop_cache')
@@ -189,19 +189,33 @@ async function limpiarMatchesSinAño() {
 
   if (!conPalaId) return;
 
+  // Cargar años del catálogo para verificar
+  const { data: palas } = await supabase
+    .from('palas')
+    .select('id, año');
+  const palaAñoMap = Object.fromEntries((palas ?? []).map(p => [p.id, p.año]));
+
   let limpiados = 0;
   for (const item of conPalaId) {
-    if (!tieneAño(item.title ?? '')) {
+    const titulo = item.title ?? '';
+    const sinAño = !tieneAño(titulo);
+    const añoAnuncio = AÑOS.find(a => titulo.includes(a));
+    const añoPala = palaAñoMap[item.pala_id];
+    const añoIncorrecto = añoAnuncio && añoPala && String(añoPala) !== añoAnuncio;
+
+    if (sinAño || añoIncorrecto) {
       limpiados++;
+      const method = sinAño ? 'sin_año' : 'año_incorrecto';
+      console.log(`[LIMPIA ${method}] "${titulo}"`);
       if (!dryRun) {
         await supabase
           .from('wallapop_cache')
-          .update({ pala_id: null, match_method: 'sin_año', match_confidence: 0 })
+          .update({ pala_id: null, match_method: method, match_confidence: 0 })
           .eq('external_id', item.external_id);
       }
     }
   }
-  console.log(`Limpiados ${limpiados} matches sin año en título`);
+  console.log(`Limpiados ${limpiados} matches incorrectos`);
 }
 
 limpiarMatchesSinAño()
