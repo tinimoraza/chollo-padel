@@ -41,7 +41,7 @@ const HISTORY_KEY = 'chollo_search_history'
 const MAX_HISTORY = 20
 
 // Condiciones que activan el sistema de oportunidades
-const OPORTUNIDAD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new'])
+const OPORTUNIDAD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new', 'Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Muy bueno'])
 const MIN_ITEMS_FOR_MEDIANA = 5
 const OPORTUNIDAD_THRESHOLD = 0.90  // precio < mediana * 0.90
 const MIN_PRICE_FILTER = 10         // ignorar artículos < 10€
@@ -83,38 +83,34 @@ function calcMediana(precios: number[]): number | null {
 
 /**
  * Calcula la mediana de los artículos nuevo/como nuevo con precio válido.
- * Solo se activa si el usuario está filtrando por esas condiciones.
- * Devuelve null si no hay suficientes artículos o no aplica.
+ * FIX: Se activa SIEMPRE que haya suficientes artículos en buen estado,
+ * independientemente del filtro seleccionado. Antes solo funcionaba si el
+ * usuario había filtrado explícitamente por NUEVO/COMO NUEVO.
+ * Devuelve { mediana, nItems } o null si no hay suficientes artículos.
  */
 function calcMedianaOportunidad(
   items: WallapopItem[],
-  selectedConditions: string[]
-): number | null {
-  // Solo activar si el usuario busca nuevo y/o como nuevo (o ambos solos)
-  const buscaGoodCondition =
-    selectedConditions.length > 0 &&
-    selectedConditions.every(c => OPORTUNIDAD_CONDITIONS.has(c))
+): { mediana: number; nItems: number } | null {
+  const itemsValidos = items.filter(r =>
+    OPORTUNIDAD_CONDITIONS.has(r.condition ?? '') &&
+    r.price >= MIN_PRICE_FILTER
+  )
 
-  if (!buscaGoodCondition) return null
+  const precios = itemsValidos.map(r => r.price)
+  const mediana = calcMediana(precios)
+  if (mediana === null) return null
 
-  const precios = items
-    .filter(r =>
-      OPORTUNIDAD_CONDITIONS.has(r.condition ?? '') &&
-      r.price >= MIN_PRICE_FILTER
-    )
-    .map(r => r.price)
-
-  return calcMediana(precios)
+  return { mediana, nItems: itemsValidos.length }
 }
 
 function esOportunidad(
   item: WallapopItem,
-  medianaRef: number | null
+  medianaData: { mediana: number; nItems: number } | null
 ): boolean {
-  if (!medianaRef) return false
+  if (!medianaData) return false
   if (!OPORTUNIDAD_CONDITIONS.has(item.condition ?? '')) return false
   if (item.price < MIN_PRICE_FILTER) return false
-  return item.price < medianaRef * OPORTUNIDAD_THRESHOLD
+  return item.price < medianaData.mediana * OPORTUNIDAD_THRESHOLD
 }
 
 // ─── Modal Favorito ────────────────────────────────────────────────────────────
@@ -232,18 +228,18 @@ function Card({
   item,
   onFavorito,
   isOportunidad,
-  medianaRef,
+  medianaData,
 }: {
   item: WallapopItem
   onFavorito: (item: WallapopItem) => void
   isOportunidad: boolean
-  medianaRef: number | null
+  medianaData: { mediana: number; nItems: number } | null
 }) {
   const isVinted = item.platform === 'vinted'
   const borderColor = isVinted ? '#09B1BA' : '#C8FF00'
 
-  const descuentoPct = isOportunidad && medianaRef
-    ? Math.round(((medianaRef - item.price) / medianaRef) * 100)
+  const descuentoPct = isOportunidad && medianaData
+    ? Math.round(((medianaData.mediana - item.price) / medianaData.mediana) * 100)
     : null
 
   return (
@@ -281,8 +277,8 @@ function Card({
                 {item.price}€
               </span>
               {/* Precio de referencia (mediana) tachado si es oportunidad */}
-              {isOportunidad && medianaRef && (
-                <span style={styles.precioRef}>{Math.round(medianaRef)}€</span>
+              {isOportunidad && medianaData && (
+                <span style={styles.precioRef}>{Math.round(medianaData.mediana)}€</span>
               )}
             </div>
             <div style={styles.cardMeta}>
@@ -292,6 +288,12 @@ function Card({
           </div>
           {item.condition && (
             <span style={styles.conditionBadge}>{prettyCondition(item.condition)}</span>
+          )}
+          {/* Tooltip de oportunidad — explicación inline bajo el badge de condición */}
+          {isOportunidad && medianaData && (
+            <div style={styles.oportunidadHint}>
+              Ref. mediana de {medianaData.nItems} anuncios nuevo/como nuevo: {Math.round(medianaData.mediana)}€
+            </div>
           )}
         </div>
       </a>
@@ -441,9 +443,10 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
   }
 
   // Calcular mediana de oportunidad una vez por búsqueda
+  // FIX: ya no depende del filtro de condición seleccionado
   const medianaOportunidad = useMemo(
-    () => calcMedianaOportunidad(results, selectedConditions),
-    [results, selectedConditions]
+    () => calcMedianaOportunidad(results),
+    [results]
   )
 
   const sortedResults = useMemo(() => {
@@ -587,7 +590,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             <div style={styles.statValue}>{avgPrice}€</div>
             <div style={styles.statLabel}>Precio medio</div>
           </div>
-          {/* Contador OPORTUNIDADES — solo visible si el sistema está activo */}
+          {/* Contador OPORTUNIDADES — clicable para filtrar */}
           {medianaOportunidad !== null && (
             <div
               style={{
@@ -606,6 +609,26 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
         </div>
       )}
 
+      {/* ── BANNER EXPLICATIVO DE OPORTUNIDADES (Opción B) ────────────────────── */}
+      {searched && medianaOportunidad !== null && oportunidades.length > 0 && (
+        <div style={styles.oportunidadBanner}>
+          <span style={styles.oportunidadBannerIcon}>💎</span>
+          <span style={styles.oportunidadBannerText}>
+            <strong>¿Qué es una OPORTUNIDAD?</strong>
+            {' '}Anuncios nuevo o como nuevo con precio al menos un 10% por debajo
+            de la mediana de los {medianaOportunidad.nItems} anuncios similares encontrados
+            ({Math.round(medianaOportunidad.mediana)}€).
+            {' '}
+            <span
+              style={{ color: '#7C3AED', cursor: 'pointer', textDecoration: 'underline' }}
+              onClick={() => setSoloOportunidad(v => !v)}
+            >
+              {soloOportunidad ? 'Ver todos los resultados' : `Ver solo las ${oportunidades.length} oportunidades`}
+            </span>
+          </span>
+        </div>
+      )}
+
       {/* Error */}
       {error && <p style={{ color: '#FF5F1F', fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
@@ -614,11 +637,6 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <p style={styles.resultCount}>
             {results.length} resultado{results.length !== 1 ? 's' : ''} · "{query.toUpperCase()}"
-            {medianaOportunidad !== null && (
-              <span style={{ color: 'rgba(124,58,237,0.7)', marginLeft: 8 }}>
-                · mediana {Math.round(medianaOportunidad)}€
-              </span>
-            )}
           </p>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={styles.sortSelect}>
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -634,7 +652,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             item={item}
             onFavorito={setFavoritoItem}
             isOportunidad={esOportunidad(item, medianaOportunidad)}
-            medianaRef={medianaOportunidad}
+            medianaData={medianaOportunidad}
           />
         ))}
       </div>
@@ -728,6 +746,17 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
     fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px',
   },
+  // Hint inline bajo el badge de condición en cards de oportunidad
+  oportunidadHint: {
+    marginTop: 8,
+    fontSize: 10,
+    fontFamily: 'Barlow Condensed, sans-serif',
+    color: 'rgba(124,58,237,0.6)',
+    letterSpacing: 0.5,
+    lineHeight: 1.4,
+    borderTop: '1px solid rgba(124,58,237,0.15)',
+    paddingTop: 6,
+  },
   badgeOportunidad: {
     position: 'absolute', top: 8, left: 8, background: '#7C3AED', color: '#fff',
     fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px',
@@ -744,6 +773,28 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'rgba(255,255,255,0.35)', padding: '8px',
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10,
     letterSpacing: 1.5, cursor: 'pointer',
+  },
+  // Banner explicativo de oportunidades (Opción B)
+  oportunidadBanner: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 10,
+    background: 'rgba(124,58,237,0.08)',
+    border: '1px solid rgba(124,58,237,0.25)',
+    padding: '12px 16px',
+    marginBottom: 20,
+  },
+  oportunidadBannerIcon: {
+    fontSize: 16,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  oportunidadBannerText: {
+    fontFamily: 'Barlow Condensed, sans-serif',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 0.3,
+    lineHeight: 1.5,
   },
   suggestions: {
     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
