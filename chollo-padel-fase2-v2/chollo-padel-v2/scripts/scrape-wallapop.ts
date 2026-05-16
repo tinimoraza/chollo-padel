@@ -10,6 +10,7 @@
  */
 
 import { chromium } from 'playwright'
+import { detectarMarca } from './detect-marca'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -180,6 +181,7 @@ async function main() {
       date:         item.date,
       keyword:      item.keyword,
       platform:     'wallapop',
+      marca:        detectarMarca(item.title),
       scraped_at:   now,
       last_seen_at: now,
     }))

@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { detectarMarca } from './detect-marca'
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
@@ -126,6 +127,7 @@ async function scrapeKeyword(keyword: string, auth: { cookie: string; token: str
           date,
           keyword,
           platform:    'vinted',
+          marca:       detectarMarca(item.title ?? ''),
         }
       })
   } catch (err) {
