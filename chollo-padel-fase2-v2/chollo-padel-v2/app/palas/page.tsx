@@ -370,11 +370,15 @@ export default function PalasPage() {
   return (
     <div className="app-shell">
       <header className="header">
-        <a className="logo" href="/"><span className="logo-mark">🏓</span>CHOLLO PADEL</a>
+        <a className="logo" href="/">
+          <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
+        </a>
         <nav className="nav">
           <a className="nav-link" href="/">BUSCADOR</a>
           <a className="nav-link active" href="/palas">PALAS</a>
-          <a className="nav-link" href="#">MIS ALERTAS</a>
+          <a className="nav-link" href="/top" style={{ color: '#FFB800' }}>🏆 TOP</a>
+          <a className="nav-link" href="/alertas">MIS ALERTAS</a>
+          <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
         </nav>
       </header>
 

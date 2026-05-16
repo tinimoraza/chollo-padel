@@ -83,7 +83,9 @@ export default function AlertasPage() {
         <nav style={styles.nav}>
           <a href="/" style={styles.navLink}>BUSCADOR</a>
           <a href="/palas" style={styles.navLink}>PALAS</a>
+          <a href="/top" style={{ ...styles.navLink, color: '#FFB800' }}>🏆 TOP</a>
           <a href="/alertas" style={{ ...styles.navLink, ...styles.navLinkActive }}>MIS ALERTAS</a>
+          <a href="/chollos" style={{ ...styles.navLink, color: '#FF5F1F' }}>🔥 CHOLLOS</a>
         </nav>
       </header>
 
