@@ -39,6 +39,13 @@ const CONDICIONES_BUENAS = new Set([
 ])
 
 const MIN_PRICE        = 30    // Ignorar anuncios por debajo de 30€ (accesorios, grips...)
+
+// Palabras en el título que indican que NO es una pala
+const EXCLUIR_PALABRAS = [
+  'bolsa', 'paletero', 'mochila', 'zapatilla', 'zapatillas',
+  'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
+  'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador',
+]
 const MIN_ITEMS_MEDIA  = 5     // Mínimo de anuncios para calcular precio medio fiable
 const DESCUENTO_MIN    = 25    // % mínimo de descuento para ser oportunidad
 const TOP_N            = 10    // Tamaño del ranking
@@ -105,22 +112,28 @@ async function main() {
       continue
     }
 
-    console.log(`  📦 ${items.length} anuncios encontrados`)
+    // Filtrar accesorios (bolsas, paleteros, mochilas...)
+    const soloParas = items.filter((item: CacheItem) => {
+      const t = item.title.toLowerCase()
+      return !EXCLUIR_PALABRAS.some(palabra => t.includes(palabra))
+    })
+    console.log(`  📦 ${items.length} anuncios → ${soloParas.length} tras filtrar accesorios`)
+    const itemsFiltrados = soloParas
 
     // Calcular precio medio
-    if (items.length < MIN_ITEMS_MEDIA) {
-      console.log(`  ⚠️  Menos de ${MIN_ITEMS_MEDIA} anuncios — precio medio poco fiable, saltando`)
+    if (itemsFiltrados.length < MIN_ITEMS_MEDIA) {
+      console.log(`  ⚠️  Menos de ${MIN_ITEMS_MEDIA} anuncios tras filtrar — saltando`)
       continue
     }
 
-    const precios  = items.map((i: CacheItem) => i.price)
+    const precios  = itemsFiltrados.map((i: CacheItem) => i.price)
     const media    = precios.reduce((a: number, b: number) => a + b, 0) / precios.length
     const precioMedio = Math.round(media * 100) / 100
 
-    console.log(`  💰 Precio medio: ${precioMedio}€ (sobre ${items.length} anuncios)`)
+    console.log(`  💰 Precio medio: ${precioMedio}€ (sobre ${itemsFiltrados.length} anuncios)`)
 
     // Detectar oportunidades
-    const oportunidadesKeyword = items
+    const oportunidadesKeyword = itemsFiltrados
       .filter((item: CacheItem) => {
         const descuento = ((precioMedio - item.price) / precioMedio) * 100
         return descuento >= DESCUENTO_MIN
