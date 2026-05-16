@@ -219,16 +219,51 @@ async function main() {
     }
   }
 
-  // ── Verificar anuncios Vinted que llevan 7+ días sin aparecer ──
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
+  // Si Vinted deja de devolverlos, casi siempre es porque están vendidos/retirados.
+  const idsEncontrados = new Set<string>(unique.map(i => i.external_id))
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: enBD } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'vinted')
+    .gte('last_seen_at', threeDaysAgo)
+
+  if (enBD && enBD.length > 0) {
+    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id))
+    if (noVistos.length > 0) {
+      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted no vistos en este scrape...`)
+      const toDeleteAggressive: string[] = []
+
+      for (const { external_id } of noVistos) {
+        const active = await isVintedItemActive(external_id, auth)
+        if (!active) toDeleteAggressive.push(external_id)
+        await new Promise(r => setTimeout(r, 300)) // throttle
+      }
+
+      if (toDeleteAggressive.length > 0) {
+        const { error: delErr } = await supabase
+          .from('wallapop_cache')
+          .delete()
+          .in('external_id', toDeleteAggressive)
+        if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
+      } else {
+        console.log('✅ [Agresivo] Todos los no vistos siguen activos en Vinted')
+      }
+    }
+  }
+
+  // ── Verificar anuncios Vinted que llevan 1+ día sin aparecer ──
+  const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   const { data: stale, error: staleError } = await supabase
     .from('wallapop_cache')
     .select('external_id')
     .eq('platform', 'vinted')
-    .lt('last_seen_at', sevenDaysAgo)
+    .lt('last_seen_at', oneDayAgo)
 
   if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 7+ días...`)
+    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
     const toDelete: string[] = []
 
     for (const item of stale) {

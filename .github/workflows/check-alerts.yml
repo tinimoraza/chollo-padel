@@ -1,0 +1,51 @@
+name: Check Alerts
+
+# Llama al endpoint /api/cron/check-alerts de Vercel 3 veces al día.
+# Gratis en GitHub Actions (2000 min/mes en plan gratuito).
+# Esto es el workaround al límite de Vercel Hobby (solo 1 cron/día).
+#
+# Horarios UTC (ajusta si quieres otra zona horaria):
+#   08:00 UTC → 10:00 España (verano) / 09:00 (invierno)
+#   13:00 UTC → 15:00 España (verano) / 14:00 (invierno)
+#   19:00 UTC → 21:00 España (verano) / 20:00 (invierno)
+#
+# Secrets necesarios en GitHub → Settings → Secrets → Actions:
+#   CRON_SECRET     → el mismo valor que en Vercel / .env.local
+#   VERCEL_APP_URL  → https://huntpadel.com  (sin barra final)
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # Mañana
+    - cron: '0 13 * * *'  # Mediodía
+    - cron: '0 19 * * *'  # Noche
+  workflow_dispatch:       # Permite lanzarlo manualmente desde GitHub UI
+
+jobs:
+  check-alerts:
+    name: Enviar alertas de chollos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Llamar al endpoint check-alerts
+        run: |
+          echo "⏰ $(date -u '+%Y-%m-%d %H:%M:%S UTC') — Disparando check-alerts..."
+
+          RESPONSE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            "${{ secrets.VERCEL_APP_URL }}/api/cron/check-alerts")
+
+          echo "📡 HTTP status: $RESPONSE"
+          echo "📄 Respuesta:"
+          cat /tmp/response.txt
+          echo ""
+
+          if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 300 ]; then
+            echo "✅ Alertas procesadas correctamente"
+          else
+            echo "❌ Error en check-alerts (HTTP $RESPONSE)"
+            exit 1
+          fi

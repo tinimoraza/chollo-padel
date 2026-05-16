@@ -195,16 +195,66 @@ async function main() {
     }
   }
 
-  // ── Verificar anuncios que llevan 7+ días sin aparecer en scrapes ──
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
+  // Si Wallapop deja de devolverlos, casi siempre es porque están vendidos/retirados.
+  // Se verifica inmediatamente contra la API (solo anuncios vistos en los últimos 3 días
+  // para evitar verificar anuncios ya obsoletos que el TTL de 1 día limpiará).
+  const idsEncontrados = new Set<string>(unique.map(i => i.id))
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: enBD } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'wallapop')
+    .gte('last_seen_at', threeDaysAgo)
+
+  if (enBD && enBD.length > 0) {
+    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id))
+    if (noVistos.length > 0) {
+      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios no vistos en este scrape...`)
+      const toDeleteAggressive: string[] = []
+
+      for (const { external_id } of noVistos) {
+        try {
+          const res = await fetch(`https://api.wallapop.com/api/v3/items/${external_id}`, {
+            headers: { 'Accept': 'application/json', 'MPlatform': 'WEB', 'Accept-Language': 'es-ES' },
+          })
+          if (res.status === 404 || res.status === 410) {
+            toDeleteAggressive.push(external_id)
+          } else if (res.ok) {
+            const data = await res.json()
+            if (data?.item?.flags?.sold || data?.item?.flags?.reserved || data?.item?.status === 'sold') {
+              toDeleteAggressive.push(external_id)
+            }
+          }
+        } catch {
+          // Si falla la verificación, lo dejará el TTL de 1 día
+        }
+        await new Promise(r => setTimeout(r, 200)) // throttle
+      }
+
+      if (toDeleteAggressive.length > 0) {
+        const { error: delErr } = await supabase
+          .from('wallapop_cache')
+          .delete()
+          .in('external_id', toDeleteAggressive)
+        if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios vendidos/retirados`)
+      } else {
+        console.log('✅ [Agresivo] Todos los no vistos siguen activos en la API')
+      }
+    }
+  }
+
+  // ── Verificar anuncios que llevan 1+ día sin aparecer en scrapes ──
+  const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   const { data: stale, error: staleError } = await supabase
     .from('wallapop_cache')
     .select('external_id, url')
     .eq('platform', 'wallapop')
-    .lt('last_seen_at', sevenDaysAgo)
+    .lt('last_seen_at', oneDayAgo)
 
   if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios sin actividad en 7+ días...`)
+    console.log(`\n🔍 Verificando ${stale.length} anuncios sin actividad en 24h+...`)
     const toDelete: string[] = []
 
     for (const item of stale) {
@@ -212,11 +262,11 @@ async function main() {
         const res = await fetch(`https://api.wallapop.com/api/v3/items/${item.external_id}`, {
           headers: { 'Accept': 'application/json', 'MPlatform': 'WEB' },
         })
-        if (res.status === 404) {
+        if (res.status === 404 || res.status === 410) {
           toDelete.push(item.external_id)
         } else if (res.ok) {
           const data = await res.json()
-          if (data?.item?.flags?.sold || data?.item?.status === 'sold') {
+          if (data?.item?.flags?.sold || data?.item?.flags?.reserved || data?.item?.status === 'sold') {
             toDelete.push(item.external_id)
           }
         }
