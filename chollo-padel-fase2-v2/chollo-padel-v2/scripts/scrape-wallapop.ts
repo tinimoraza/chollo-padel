@@ -225,7 +225,7 @@ async function main() {
             toDeleteAggressive.push(external_id)
           } else if (res.ok) {
             const data = await res.json()
-            if (data?.item?.flags?.sold || data?.item?.flags?.reserved || data?.item?.status === 'sold') {
+            if (data?.reserved?.flag === true || data?.sold?.flag === true || data?.item?.flags?.sold || data?.item?.flags?.reserved) {
               toDeleteAggressive.push(external_id)
             }
           }
@@ -268,7 +268,7 @@ async function main() {
           toDelete.push(item.external_id)
         } else if (res.ok) {
           const data = await res.json()
-          if (data?.item?.flags?.sold || data?.item?.flags?.reserved || data?.item?.status === 'sold') {
+          if (data?.reserved?.flag === true || data?.sold?.flag === true || data?.item?.flags?.sold || data?.item?.flags?.reserved) {
             toDelete.push(item.external_id)
           }
         }

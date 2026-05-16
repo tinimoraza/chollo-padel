@@ -133,8 +133,11 @@ async function isWallapopActive(externalId: string): Promise<boolean> {
 
     if (res.ok) {
       const data = await res.json()
-      const flags = data?.item?.flags ?? {}
-      if (flags.sold || flags.reserved || data?.item?.status === 'sold') return false
+      // La API devuelve reserved y sold como objetos {flag: bool} en la raíz,
+      // no anidados en data.item.flags
+      if (data?.reserved?.flag === true) return false
+      if (data?.sold?.flag === true) return false
+      if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false  // fallback estructura antigua
       return true
     }
 
