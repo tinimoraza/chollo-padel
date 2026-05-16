@@ -23,12 +23,12 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 // Keywords a buscar — las mismas que el scraper para máxima cobertura
 const KEYWORDS = [
-  'pala padel',
-  'pala babolat',
-  'pala nox padel',
-  'pala head padel',
-  'pala wilson padel',
-  'pala bullpadel',
+  'bullpadel',
+  'babolat padel',
+  'nox padel',
+  'head padel',
+  'wilson padel',
+  'adidas padel',
 ]
 
 // Condiciones que consideramos "nuevo / como nuevo"
