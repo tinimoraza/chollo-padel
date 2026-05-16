@@ -43,7 +43,7 @@ const MAX_HISTORY = 20
 // Condiciones que activan el sistema de oportunidades
 const OPORTUNIDAD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new', 'Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Muy bueno'])
 const MIN_ITEMS_FOR_MEDIANA = 5
-const OPORTUNIDAD_THRESHOLD = 0.90  // precio < mediana * 0.90
+const OPORTUNIDAD_THRESHOLD = 0.75  // precio < media * 0.75 (al menos 25% de descuento)
 const MIN_PRICE_FILTER = 10         // ignorar artículos < 10€
 
 function getHistory(): string[] {
@@ -276,7 +276,7 @@ function Card({
               <span style={{ ...styles.cardPrice, color: isOportunidad ? '#FFB800' : borderColor }}>
                 {item.price}€
               </span>
-              {/* Precio de referencia (mediana) tachado si es oportunidad */}
+              {/* Precio de referencia (pvp medio) tachado si es oportunidad */}
               {isOportunidad && medianaData && (
                 <span style={styles.precioRef}>{Math.round(medianaData.mediana)}€</span>
               )}
@@ -292,7 +292,7 @@ function Card({
           {/* Tooltip de oportunidad — explicación inline bajo el badge de condición */}
           {isOportunidad && medianaData && (
             <div style={styles.oportunidadHint}>
-              Ref. mediana de {medianaData.nItems} anuncios nuevo/como nuevo: {Math.round(medianaData.mediana)}€
+              Precio medio de {medianaData.nItems} anuncios nuevo/como nuevo: {Math.round(medianaData.mediana)}€
             </div>
           )}
         </div>
@@ -615,8 +615,8 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
           <span style={styles.oportunidadBannerIcon}>💎</span>
           <span style={styles.oportunidadBannerText}>
             <strong>¿Qué es una OPORTUNIDAD?</strong>
-            {' '}Anuncios nuevo o como nuevo con precio al menos un 10% por debajo
-            de la mediana de los {medianaOportunidad.nItems} anuncios similares encontrados
+            {' '}Anuncios nuevo o como nuevo con precio al menos un 25% por debajo
+            del precio medio de los {medianaOportunidad.nItems} anuncios similares encontrados
             ({Math.round(medianaOportunidad.mediana)}€).
             {' '}
             <span
