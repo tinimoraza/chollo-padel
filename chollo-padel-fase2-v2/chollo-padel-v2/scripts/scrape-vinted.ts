@@ -24,12 +24,14 @@ const KEYWORDS = [
   'pala bullpadel',
 ]
 
+// Vinted devuelve el string de la UI directamente en item.status,
+// no el ID numerico -- mapeamos los literales en espanol.
 const CONDITION_MAP_REVERSE: Record<string, string> = {
-  '6': 'new',            // Vinted: "Nuevo con etiquetas" -> nuevo
-  '1': 'as_good_as_new', // Vinted: "Nuevo sin etiquetas" -> como nuevo
-  '2': 'good',           // Vinted: "Muy bueno"           -> buen estado
-  '3': 'fair',           // Vinted: "Bueno"               -> aceptable
-  '4': 'fair',           // Vinted: "Satisfactorio"       -> aceptable
+  'Nuevo con etiquetas': 'new',
+  'Nuevo sin etiquetas': 'as_good_as_new',
+  'Muy bueno':           'good',
+  'Bueno':               'good',
+  'Satisfactorio':       'fair',
 }
 
 // ── Token Vinted ────────────────────────────────────────────────────────────
