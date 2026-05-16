@@ -1,0 +1,37 @@
+name: Scraper Vinted
+
+on:
+  schedule:
+    - cron: '30 * * * *'   # Cada hora a :30 (offset respecto a Wallapop que va a :00)
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Ejecutar scraper Vinted
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/scrape-vinted.ts
+
+      - name: Resumen
+        if: always()
+        run: echo "✅ Scraper Vinted finalizado — $(date)"

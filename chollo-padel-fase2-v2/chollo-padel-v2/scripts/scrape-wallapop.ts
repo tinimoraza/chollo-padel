@@ -165,25 +165,28 @@ async function main() {
 
   const BATCH = 100
   let inserted = 0
+  const now = new Date().toISOString()
 
   for (let i = 0; i < unique.length; i += BATCH) {
     const batch = unique.slice(i, i + BATCH).map((item) => ({
-      external_id: item.id,
-      title:       item.title,
-      price:       item.price,
-      currency:    item.currency,
-      condition:   item.condition,
-      img:         item.img,
-      url:         item.url,
-      city:        item.city,
-      date:        item.date,
-      keyword:     item.keyword,
-      scraped_at:  new Date().toISOString(),
+      external_id:  item.id,
+      title:        item.title,
+      price:        item.price,
+      currency:     item.currency,
+      condition:    item.condition,
+      img:          item.img,
+      url:          item.url,
+      city:         item.city,
+      date:         item.date,
+      keyword:      item.keyword,
+      platform:     'wallapop',
+      scraped_at:   now,
+      last_seen_at: now,
     }))
 
     const { error } = await supabase
       .from('wallapop_cache')
-      .upsert(batch, { onConflict: 'external_id' })
+      .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
 
     if (error) {
       console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
@@ -192,18 +195,62 @@ async function main() {
     }
   }
 
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  // ── Verificar anuncios que llevan 7+ días sin aparecer en scrapes ──
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: stale, error: staleError } = await supabase
+    .from('wallapop_cache')
+    .select('external_id, url')
+    .eq('platform', 'wallapop')
+    .lt('last_seen_at', sevenDaysAgo)
+
+  if (!staleError && stale && stale.length > 0) {
+    console.log(`\n🔍 Verificando ${stale.length} anuncios sin actividad en 7+ días...`)
+    const toDelete: string[] = []
+
+    for (const item of stale) {
+      try {
+        const res = await fetch(`https://api.wallapop.com/api/v3/items/${item.external_id}`, {
+          headers: { 'Accept': 'application/json', 'MPlatform': 'WEB' },
+        })
+        if (res.status === 404) {
+          toDelete.push(item.external_id)
+        } else if (res.ok) {
+          const data = await res.json()
+          if (data?.item?.flags?.sold || data?.item?.status === 'sold') {
+            toDelete.push(item.external_id)
+          }
+        }
+      } catch {
+        // Si falla la verificación, dejamos el anuncio — se borrará a los 30 días
+      }
+      await new Promise(r => setTimeout(r, 200)) // throttle
+    }
+
+    if (toDelete.length > 0) {
+      const { error: delErr } = await supabase
+        .from('wallapop_cache')
+        .delete()
+        .in('external_id', toDelete)
+      if (!delErr) console.log(`🗑️  Eliminados ${toDelete.length} anuncios vendidos/eliminados`)
+    } else {
+      console.log('✅ Todos siguen activos')
+    }
+  }
+
+  // ── Borrar anuncios con más de 30 días sin actividad ──
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const { error: deleteError } = await supabase
     .from('wallapop_cache')
     .delete()
-    .lt('scraped_at', cutoff)
+    .eq('platform', 'wallapop')
+    .lt('last_seen_at', thirtyDaysAgo)
 
   if (deleteError) {
     console.error('⚠️  Error borrando registros viejos:', deleteError)
   }
 
   console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
-  console.log('🏁 Scraper completado.\n')
+  console.log('🏁 Scraper Wallapop completado.\n')
 }
 
 main().catch((err) => {
