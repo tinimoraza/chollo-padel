@@ -24,11 +24,11 @@ const KEYWORDS = [
 ]
 
 const CONDITION_MAP_REVERSE: Record<string, string> = {
-  '1': 'new',
-  '6': 'new',
-  '2': 'as_good_as_new',
-  '3': 'good',
-  '4': 'fair',
+  '6': 'new',            // Vinted: "Nuevo con etiquetas" -> nuevo
+  '1': 'as_good_as_new', // Vinted: "Nuevo sin etiquetas" -> como nuevo
+  '2': 'good',           // Vinted: "Muy bueno"           -> buen estado
+  '3': 'fair',           // Vinted: "Bueno"               -> aceptable
+  '4': 'fair',           // Vinted: "Satisfactorio"       -> aceptable
 }
 
 // ── Token Vinted ────────────────────────────────────────────────────────────
