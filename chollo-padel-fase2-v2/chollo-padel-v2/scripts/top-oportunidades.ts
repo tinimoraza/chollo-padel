@@ -29,7 +29,8 @@ const TOP_N           = 10   // Tamaño del ranking
 const CONDICIONES_BUENAS = ['new', 'un_opened', 'as_good_as_new']
 
 const EXCLUIR_PALABRAS = [
-  'paletero', 'mochila', 'bolsa', 'zapatilla', 'zapatillas',
+  'junior', 'infantil', 'niño', 'niña', 'reparada', 'reparado', 'dañada', 'dañado', 'rota', 'roto', 'golpe', 'paletero',
+  'mochila', 'bolsa', 'zapatilla', 'zapatillas',
   'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
   'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador', 'lote',
 ]
