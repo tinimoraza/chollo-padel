@@ -16,6 +16,9 @@ jobs:
     name: Generar Top 10 oportunidades
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
 
     steps:
       - name: Checkout repo
