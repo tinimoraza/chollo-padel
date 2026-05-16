@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('top_oportunidades')
     .select('*')
     .order('descuento_pct', { ascending: false })
