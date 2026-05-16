@@ -4,12 +4,13 @@
  */
 
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('top_oportunidades')
     .select('*')
     .order('descuento_pct', { ascending: false })
@@ -19,5 +20,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Error leyendo top oportunidades' }, { status: 500 })
   }
 
-  return NextResponse.json({ items: data ?? [], updated_at: data?.[0]?.updated_at ?? null })
+  return NextResponse.json(
+    { items: data ?? [], updated_at: data?.[0]?.updated_at ?? null },
+    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+  )
 }
