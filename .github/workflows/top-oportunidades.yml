@@ -1,0 +1,37 @@
+name: Top Oportunidades
+
+# Genera el Top 10 de chollos cada hora ejecutando
+# scripts/top-oportunidades.ts contra Supabase.
+# No necesita Playwright — solo lee wallapop_cache.
+# Correr justo después del scraper de Wallapop (:15)
+# para tener los datos más frescos posibles.
+
+on:
+  schedule:
+    - cron: '15 * * * *'   # Cada hora a :15 (después del scrape de Wallapop a :00)
+  workflow_dispatch:        # Permite lanzarlo manualmente desde GitHub UI
+
+jobs:
+  top-oportunidades:
+    name: Generar Top 10 oportunidades
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci --prefer-offline
+
+      - name: Generar Top Oportunidades
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/top-oportunidades.ts
