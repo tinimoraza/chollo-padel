@@ -32,7 +32,7 @@ const VERIFY_THROTTLE = 250  // ms entre llamadas a la API de Wallapop
 
 // 'good' incluido para Vinted: su condición 2 ("Muy bueno") se mapea a 'good'
 // y representa artículos en excelente estado — sin él, Vinted queda excluido casi entero.
-const CONDICIONES_BUENAS = ['new', 'un_opened', 'as_good_as_new', 'good']
+const CONDICIONES_BUENAS = ['new', 'un_opened', 'as_good_as_new']
 
 const EXCLUIR_PALABRAS = [
   'junior', 'infantil', 'niño', 'niña', 'reparada', 'reparado', 'dañada', 'dañado', 'rota', 'roto', 'golpe', 'paletero',
