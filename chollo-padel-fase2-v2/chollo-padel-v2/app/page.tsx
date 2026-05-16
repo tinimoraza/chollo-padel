@@ -23,6 +23,7 @@ export default function Home() {
           <nav className="nav">
             <a className="nav-link active" href="/">BUSCADOR</a>
             <a className="nav-link" href="/palas">PALAS</a>
+            <a className="nav-link" href="/top" style={{ color: '#FFB800' }}>🏆 TOP</a>
             <a className="nav-link" href="/alertas">MIS ALERTAS</a>
             <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
           </nav>
