@@ -130,7 +130,7 @@ async function scrapeKeyword(keyword: string, auth: { cookie: string; token: str
           date,
           keyword,
           platform:    'vinted',
-          marca:       detectarMarca(item.title ?? ''),
+          marca:       detectarMarca(item.title ?? '', keyword),
         }
       })
   } catch (err) {

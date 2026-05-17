@@ -182,7 +182,7 @@ async function main() {
       date:         item.date,
       keyword:      item.keyword,
       platform:     'wallapop',
-      marca:        detectarMarca(item.title),
+      marca:        detectarMarca(item.title, item.keyword),
       scraped_at:   now,
       last_seen_at: now,
     }))

@@ -27,12 +27,20 @@ const MARCAS = [
   { regex: /alkemia/i,            marca: 'Alkemia' },
   { regex: /softee/i,             marca: 'Softee' },
   { regex: /kelme/i,              marca: 'Kelme' },
+  { regex: /vairo/i,              marca: 'Vairo' },
   { regex: /ocho.?padel/i,        marca: 'Ocho Padel' },
 ]
 
-export function detectarMarca(title: string): string | null {
+export function detectarMarca(title: string, keyword?: string): string | null {
+  // 1. Intentar detectar desde el título
   for (const { regex, marca } of MARCAS) {
     if (regex.test(title)) return marca
+  }
+  // 2. Fallback: detectar desde la keyword (cubre casos donde el título no menciona la marca)
+  if (keyword) {
+    for (const { regex, marca } of MARCAS) {
+      if (regex.test(keyword)) return marca
+    }
   }
   return null
 }
