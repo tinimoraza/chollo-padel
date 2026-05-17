@@ -51,7 +51,7 @@ function tokenizar(texto: string): string[] {
     .replace(/[^\w\s]/g, ' ')    // quitar toda puntuación
     .split(/\s+/)
     .filter(t => t.length >= 2)
-    .filter(t => KEEP_WORDS.has(t) || (!STOP_WORDS.has(t) && !/^\d+$/.test(t)))
+    .filter(t => KEEP_WORDS.has(t) || (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t))))  // preservar 01-09 (versiones modelo Bullpadel)
 }
 
 function extraerAnio(texto: string): number | null {
@@ -91,8 +91,7 @@ interface CacheItem {
 export async function matchPalaIds(supabase: ReturnType<typeof createClient>, opts?: { verbose?: boolean }): Promise<{ matched: number; ambiguous: number; noMatch: number }> {
   const verbose = opts?.verbose ?? true
 
-  if (verbose) console.log('
-🔗 Match pala_id iniciado...')
+  if (verbose) console.log('\n🔗 Match pala_id iniciado...')
 
   const { data: palasRaw, error: palasErr } = await supabase
     .from('palas')
