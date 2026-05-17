@@ -28,6 +28,11 @@ const MARCAS = [
   { regex: /softee/i,             marca: 'Softee' },
   { regex: /kelme/i,              marca: 'Kelme' },
   { regex: /vairo/i,              marca: 'Vairo' },
+  { regex: /teknifibre|tecnifibre/i, marca: 'Tecnifibre' },
+  { regex: /akkeron/i,            marca: 'Akkeron' },
+  { regex: /royal.?padel/i,       marca: 'Royal Padel' },
+  { regex: /\bmunich\b/i,          marca: 'Munich' },
+  { regex: /\bpuma\b/i,            marca: 'Puma' },
   { regex: /ocho.?padel/i,        marca: 'Ocho Padel' },
 ]
 
