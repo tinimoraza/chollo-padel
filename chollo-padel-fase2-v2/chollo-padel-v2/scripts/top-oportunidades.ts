@@ -6,12 +6,16 @@
  *
  * Lógica:
  *  1. Lee wallapop_cache filtrando por CONDICIONES_TOP (new, un_opened, as_good_as_new)
- *  2. Solo grupos con ≥5 anuncios y precio ≥ MIN_PRICE (55€)
- *  3. Precio medio calculado SOLO con new + un_opened (más fiable)
- *  4. Marca como oportunidad los que están ≥25% por debajo de ese precio medio
- *  5. Ordena por SCORE COMPUESTO: descuento × peso_condición × bonus_año × bonus_recencia
- *  6. Guarda posición anterior y calcula tendencia (nueva_entrada / sube / baja / igual)
- *  7. Verifica los finalistas contra la API de Wallapop (vendidos → borrar y rellenar)
+ *  2. Agrupa por marca + modelo + año (anuncios sin año → grupo propio "sin_año")
+ *  3. MIN_ITEMS_GRUPO: 3 si el grupo tiene año detectado, 5 si no (datos menos fiables)
+ *  4. Precio medio calculado SOLO con Wallapop new + un_opened (≥5 para ser fiable)
+ *     Si no hay suficientes, fallback a todos los de Wallapop del grupo
+ *  5. Ordena por SCORE COMPUESTO:
+ *       descuento × peso_condición × bonus_año × bonus_recencia × bonus_ahorro
+ *     - Sin año en título → penalización 0.85 (no sabemos qué versión es)
+ *     - Año viejo (≤2022) → penalización fuerte 0.65
+ *  6. Guarda posición anterior y calcula tendencia (nueva_entrada/sube/baja/igual)
+ *  7. Verifica finalistas contra API Wallapop (vendidos → borrar y rellenar)
  *  8. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking (TOP_N = 10)
  *
  * Ejecutar manualmente:
@@ -23,50 +27,54 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-const MIN_PRICE            = 55   // Subido de 30 → 55€ para filtrar ruido
-const MIN_ITEMS_GRUPO      = 5    // Mínimo anuncios por grupo para mediana fiable
-const DESCUENTO_MIN        = 25   // % mínimo de descuento para ser oportunidad
-const TOP_N                = 10   // Tamaño del ranking
-const VERIFY_THROTTLE      = 250  // ms entre llamadas a la API de Wallapop
+const MIN_PRICE                = 55    // mínimo 55€ para filtrar ruido
+const MIN_ITEMS_GRUPO_CON_AÑO  = 3    // grupos con año: menos datos pero más fiables
+const MIN_ITEMS_GRUPO_SIN_AÑO  = 5    // grupos sin año: necesitamos más datos para confiar
+const DESCUENTO_MIN            = 25   // % mínimo de descuento para ser oportunidad
+const TOP_N                    = 10   // tamaño del ranking
+const VERIFY_THROTTLE          = 250  // ms entre llamadas a la API de Wallapop
 
 // Condiciones que entran al top
 const CONDICIONES_TOP          = ['new', 'un_opened', 'as_good_as_new']
-// Para el precio medio solo usamos las más fiables (sabemos que no se han usado)
+// Para precio medio: solo Wallapop new/un_opened — más fiable y sin sesgos de mercados europeos
 const CONDICIONES_PRECIO_MEDIO = ['new', 'un_opened']
-const MIN_ITEMS_PRECIO_MEDIO   = 3  // mínimo new/un_opened para usar precio medio fiable
+const MIN_ITEMS_PRECIO_MEDIO   = 5    // mínimo new/un_opened de Wallapop para mediana fiable
 
-// Pesos por condición — new es el rey, as_good_as_new se penaliza por ser la más "mentida"
+// Pesos por condición
 const PESO_CONDICION: Record<string, number> = {
   new:            1.00,
   un_opened:      0.85,
   as_good_as_new: 0.60,
 }
 
-// Años en título: bonus si es reciente, penalización si es viejo
-// Sin año → neutro (no penalizamos la ausencia, pero sí la vetustez cuando aparece)
-function scoreAnio(title: string): number {
+// Extrae el año del título si existe (2018-2029)
+function extraerAnio(title: string): number | null {
   const match = title.match(/20(1[89]|2[0-9])/)
-  if (!match) return 1.0
-  const anio = parseInt(match[0])
-  if (anio >= 2024) return 1.15   // modelo reciente → bonus
-  if (anio === 2023) return 0.90  // 2023 → ligera penalización
-  return 0.65                     // ≤2022 → penalización fuerte (pala vieja)
+  return match ? parseInt(match[0]) : null
 }
 
-// Recencia del anuncio en BD — más reciente = más probable que siga activo
+// Score por año:
+// - Sin año → 0.85 (penalización: no sabemos qué versión es, puede ser vieja)
+// - Año reciente → bonus
+// - Año viejo → penalización fuerte
+function scoreAnio(title: string): number {
+  const anio = extraerAnio(title)
+  if (anio === null) return 0.85   // sin año — sospechoso, puede ser versión vieja
+  if (anio >= 2024)  return 1.15   // modelo reciente → bonus
+  if (anio === 2023) return 0.90   // 2023 → ligera penalización
+  return 0.65                      // ≤2022 → penalización fuerte
+}
+
+// Recencia del anuncio en BD
 function scoreRecencia(scrapedAt: string | null): number {
   if (!scrapedAt) return 0.85
   const dias = (Date.now() - new Date(scrapedAt).getTime()) / (1000 * 60 * 60 * 24)
   if (dias <= 2) return 1.00
   if (dias <= 7) return 0.85
-  return 0.60  // más de 7 días → algo raro si sigue en BD con ese precio
+  return 0.60
 }
 
-/**
- * Score compuesto final.
- * Combina % descuento × peso condición × bonus año × bonus recencia.
- * El log del ahorro absoluto evita premiar solo % y valora también los € ahorrados.
- */
+// Score compuesto final
 function calcularScore(
   descuentoPct: number,
   condition: string,
@@ -135,7 +143,9 @@ function extraerModelo(title: string, marca: string): string {
   )
   const marcaLower = marca.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const sinMarca = sinPrefijo.replace(new RegExp(marcaLower, 'i'), '').trim()
-  const palabras = sinMarca.split(/\s+/).filter(Boolean).slice(0, 2)
+  // Quitar también el año del modelo para que no forme parte del nombre
+  const sinAnio = sinMarca.replace(/\b20(1[89]|2[0-9])\b/, '').trim()
+  const palabras = sinAnio.split(/\s+/).filter(Boolean).slice(0, 2)
   return palabras.join(' ').trim()
 }
 
@@ -198,7 +208,7 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
-  // ── 0. Guardar posiciones actuales antes de tocar nada ───────────────────
+  // ── 0. Guardar posiciones actuales ────────────────────────────────────────
   console.log('📌 Leyendo posiciones actuales del top...')
   const { data: topActual } = await supabase
     .from('top_oportunidades')
@@ -230,8 +240,15 @@ async function main() {
 
   console.log(`📊 ${items.length} anuncios en condición top con precio ≥ ${MIN_PRICE}€\n`)
 
-  // ── 2. Filtrar accesorios y agrupar por marca + modelo ────────────────────
-  const grupos = new Map<string, { items: CacheItem[], marca: string, modelo: string }>()
+  // ── 2. Filtrar y agrupar por marca + modelo + año ─────────────────────────
+  // Clave: "Nox||at10||2025" o "Nox||at10||sin_año"
+  // Separar por año evita mezclar versiones antiguas con nuevas en la misma mediana
+  const grupos = new Map<string, {
+    items:    CacheItem[]
+    marca:    string
+    modelo:   string
+    anio:     number | null
+  }>()
 
   for (const item of items as CacheItem[]) {
     const titleLower = item.title.toLowerCase()
@@ -243,27 +260,49 @@ async function main() {
     const modelo = extraerModelo(item.title, marca)
     if (!modelo) continue
 
-    const clave = `${marca}||${modelo}`
+    const anio = extraerAnio(item.title)
+    const anioKey = anio ? String(anio) : 'sin_año'
+    const clave = `${marca}||${modelo}||${anioKey}`
+
     if (!grupos.has(clave)) {
-      grupos.set(clave, { items: [], marca, modelo })
+      grupos.set(clave, { items: [], marca, modelo, anio })
     }
     grupos.get(clave)!.items.push(item)
   }
 
-  console.log(`🔍 ${grupos.size} grupos marca+modelo detectados`)
+  console.log(`🔍 ${grupos.size} grupos marca+modelo+año detectados`)
 
   // ── 3. Calcular oportunidades con score compuesto ─────────────────────────
   const todasOportunidades: any[] = []
 
   for (const [, grupo] of grupos) {
-    if (grupo.items.length < MIN_ITEMS_GRUPO) continue
+    // Grupos con año necesitan menos items (datos más fiables)
+    // Grupos sin año necesitan más items para compensar la incertidumbre
+    const minItems = grupo.anio !== null
+      ? MIN_ITEMS_GRUPO_CON_AÑO
+      : MIN_ITEMS_GRUPO_SIN_AÑO
 
-    // Precio medio solo con new + un_opened si hay suficientes; si no, fallback a todos
-    const itemsPrecioMedio = grupo.items.filter(i => CONDICIONES_PRECIO_MEDIO.includes(i.condition))
+    if (grupo.items.length < minItems) continue
+
+    // Precio medio: solo Wallapop new + un_opened (excluye Vinted, precios europeos sesgados)
+    const itemsPrecioMedio = grupo.items.filter(i =>
+      CONDICIONES_PRECIO_MEDIO.includes(i.condition) && i.platform === 'wallapop'
+    )
+
+    // Fallback: si no hay suficientes new/un_opened de Wallapop, usar todos los de Wallapop
+    const itemsFallback = grupo.items.filter(i => i.platform === 'wallapop')
+
     const preciosParaMediana = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
       ? itemsPrecioMedio.map(i => i.price)
-      : grupo.items.map(i => i.price)
-    const usandoFiable = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
+      : itemsFallback.length >= minItems
+        ? itemsFallback.map(i => i.price)
+        : grupo.items.map(i => i.price)  // último fallback: todos incluido Vinted
+
+    const modoMediana = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
+      ? 'new/un_opened Wallapop'
+      : itemsFallback.length >= minItems
+        ? 'todos Wallapop'
+        : 'todos (incl. Vinted)'
 
     const med = mediana(preciosParaMediana)
 
@@ -291,16 +330,19 @@ async function main() {
           img:           item.img,
           url:           item.url,
           city:          item.city,
-          keyword:       `${grupo.marca} ${grupo.modelo}`,
+          keyword:       grupo.anio
+            ? `${grupo.marca} ${grupo.modelo} ${grupo.anio}`
+            : `${grupo.marca} ${grupo.modelo}`,
           pala_id:       item.pala_id,
         }
       })
 
     if (oportunidades.length > 0) {
+      const anioLabel = grupo.anio ? String(grupo.anio) : 'sin año'
       console.log(
-        `  💎 ${grupo.marca} ${grupo.modelo}: mediana ${med}€` +
-        ` (${usandoFiable ? 'new/un_opened' : 'fallback todos'}),` +
-        ` ${oportunidades.length} oportunidades`
+        `  💎 ${grupo.marca} ${grupo.modelo} [${anioLabel}]:` +
+        ` mediana ${med}€ (${modoMediana}),` +
+        ` ${grupo.items.length} anuncios, ${oportunidades.length} oportunidades`
       )
       todasOportunidades.push(...oportunidades)
     }
@@ -308,7 +350,7 @@ async function main() {
 
   console.log(`\n📊 Total oportunidades brutas: ${todasOportunidades.length}`)
 
-  // ── 4. Deduplicar y ordenar por SCORE ────────────────────────────────────
+  // ── 4. Deduplicar y ordenar por score ────────────────────────────────────
   const deduplicado = new Map<string, any>()
   for (const op of todasOportunidades) {
     const existing = deduplicado.get(op.external_id)
@@ -327,7 +369,7 @@ async function main() {
     return
   }
 
-  // ── 5. Verificar activos contra la API — rellenar hasta TOP_N ────────────
+  // ── 5. Verificar activos contra la API ───────────────────────────────────
   const maxVerificar = Math.min(candidatos.length, TOP_N * 3)
   console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos contra la API de Wallapop...\n`)
 
@@ -380,7 +422,7 @@ async function main() {
     }
 
     const puestosMovidos = posicionAnterior !== null
-      ? posicionAnterior - posicionNueva  // positivo = sube, negativo = baja
+      ? posicionAnterior - posicionNueva
       : null
 
     const tendenciaLabel = {
