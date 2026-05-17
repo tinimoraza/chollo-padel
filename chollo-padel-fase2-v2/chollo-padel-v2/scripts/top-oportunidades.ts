@@ -40,6 +40,9 @@ const CONDICIONES_TOP          = ['new', 'un_opened', 'as_good_as_new']
 const CONDICIONES_PRECIO_MEDIO = ['new', 'un_opened']
 const MIN_ITEMS_PRECIO_MEDIO   = 5    // mínimo new/un_opened de Wallapop para mediana fiable
 
+// Bonus por pala identificada en el catálogo (pala_id conocido)
+const BONUS_PALA_CONOCIDA = 1.10
+
 // Pesos por condición
 const PESO_CONDICION: Record<string, number> = {
   new:            1.00,
@@ -81,15 +84,17 @@ function calcularScore(
   title: string,
   scrapedAt: string | null,
   precioMedio: number,
-  price: number
+  price: number,
+  palaId: string | null = null
 ): number {
   const pesoCondicion = PESO_CONDICION[condition] ?? 0.5
   const pesoAnio      = scoreAnio(title)
   const pesoRecencia  = scoreRecencia(scrapedAt)
   const ahorroAbs     = precioMedio - price
   const bonusAhorro   = Math.log10(Math.max(ahorroAbs, 1) + 1)
+  const bonusCatalogo = palaId ? BONUS_PALA_CONOCIDA : 1.0
 
-  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro
+  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro * bonusCatalogo
 }
 
 const EXCLUIR_PALABRAS = [
@@ -316,7 +321,8 @@ async function main() {
           item.title,
           item.scraped_at,
           med,
-          item.price
+          item.price,
+          item.pala_id
         )
         return {
           external_id:   item.external_id,
