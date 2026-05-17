@@ -5,15 +5,14 @@
  * Lo ejecuta GitHub Actions cada hora.
  *
  * Lógica:
- *  1. Lee wallapop_cache agrupando por marca + modelo (extraído del título)
- *  2. Solo grupos con ≥5 anuncios new/un_opened/as_good_as_new y precio > 30€
- *  3. Calcula la mediana de precio por grupo
- *  4. Marca como oportunidad los que están ≥25% por debajo de la mediana
- *  5. Deduplica por external_id, ordena por % descuento desc — candidatos al Top
- *  6. [NUEVO] Verifica los finalistas contra la API de Wallapop:
- *       - Vendidos/retirados → se borran de wallapop_cache + se descartan
- *       - Si quedan huecos, se rellenan con los siguientes candidatos
- *  7. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking
+ *  1. Lee wallapop_cache filtrando por CONDICIONES_TOP (new, un_opened, as_good_as_new)
+ *  2. Solo grupos con ≥5 anuncios y precio ≥ MIN_PRICE (55€)
+ *  3. Precio medio calculado SOLO con new + un_opened (más fiable)
+ *  4. Marca como oportunidad los que están ≥25% por debajo de ese precio medio
+ *  5. Ordena por SCORE COMPUESTO: descuento × peso_condición × bonus_año × bonus_recencia
+ *  6. Guarda posición anterior y calcula tendencia (nueva_entrada / sube / baja / igual)
+ *  7. Verifica los finalistas contra la API de Wallapop (vendidos → borrar y rellenar)
+ *  8. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking (TOP_N = 10)
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/top-oportunidades.ts
@@ -24,24 +23,74 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-const MIN_PRICE       = 30   // Ignorar anuncios por debajo de 30€
-const MIN_ITEMS_GRUPO = 5    // Mínimo anuncios por grupo para mediana fiable
-const DESCUENTO_MIN   = 25   // % mínimo de descuento para ser oportunidad
-const TOP_N           = 10   // Tamaño del ranking
-const VERIFY_THROTTLE = 250  // ms entre llamadas a la API de Wallapop
+const MIN_PRICE            = 55   // Subido de 30 → 55€ para filtrar ruido
+const MIN_ITEMS_GRUPO      = 5    // Mínimo anuncios por grupo para mediana fiable
+const DESCUENTO_MIN        = 25   // % mínimo de descuento para ser oportunidad
+const TOP_N                = 10   // Tamaño del ranking
+const VERIFY_THROTTLE      = 250  // ms entre llamadas a la API de Wallapop
 
-// 'good' incluido para Vinted: su condición 2 ("Muy bueno") se mapea a 'good'
-// y representa artículos en excelente estado — sin él, Vinted queda excluido casi entero.
-const CONDICIONES_BUENAS = ['new', 'un_opened', 'as_good_as_new']
+// Condiciones que entran al top
+const CONDICIONES_TOP          = ['new', 'un_opened', 'as_good_as_new']
+// Para el precio medio solo usamos las más fiables (sabemos que no se han usado)
+const CONDICIONES_PRECIO_MEDIO = ['new', 'un_opened']
+const MIN_ITEMS_PRECIO_MEDIO   = 3  // mínimo new/un_opened para usar precio medio fiable
+
+// Pesos por condición — new es el rey, as_good_as_new se penaliza por ser la más "mentida"
+const PESO_CONDICION: Record<string, number> = {
+  new:            1.00,
+  un_opened:      0.85,
+  as_good_as_new: 0.60,
+}
+
+// Años en título: bonus si es reciente, penalización si es viejo
+// Sin año → neutro (no penalizamos la ausencia, pero sí la vetustez cuando aparece)
+function scoreAnio(title: string): number {
+  const match = title.match(/20(1[89]|2[0-9])/)
+  if (!match) return 1.0
+  const anio = parseInt(match[0])
+  if (anio >= 2024) return 1.15   // modelo reciente → bonus
+  if (anio === 2023) return 0.90  // 2023 → ligera penalización
+  return 0.65                     // ≤2022 → penalización fuerte (pala vieja)
+}
+
+// Recencia del anuncio en BD — más reciente = más probable que siga activo
+function scoreRecencia(scrapedAt: string | null): number {
+  if (!scrapedAt) return 0.85
+  const dias = (Date.now() - new Date(scrapedAt).getTime()) / (1000 * 60 * 60 * 24)
+  if (dias <= 2) return 1.00
+  if (dias <= 7) return 0.85
+  return 0.60  // más de 7 días → algo raro si sigue en BD con ese precio
+}
+
+/**
+ * Score compuesto final.
+ * Combina % descuento × peso condición × bonus año × bonus recencia.
+ * El log del ahorro absoluto evita premiar solo % y valora también los € ahorrados.
+ */
+function calcularScore(
+  descuentoPct: number,
+  condition: string,
+  title: string,
+  scrapedAt: string | null,
+  precioMedio: number,
+  price: number
+): number {
+  const pesoCondicion = PESO_CONDICION[condition] ?? 0.5
+  const pesoAnio      = scoreAnio(title)
+  const pesoRecencia  = scoreRecencia(scrapedAt)
+  const ahorroAbs     = precioMedio - price
+  const bonusAhorro   = Math.log10(Math.max(ahorroAbs, 1) + 1)
+
+  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro
+}
 
 const EXCLUIR_PALABRAS = [
-  'junior', 'infantil', 'niño', 'niña', 'reparada', 'reparado', 'dañada', 'dañado', 'rota', 'roto', 'golpe', 'paletero',
-  'mochila', 'bolsa', 'zapatilla', 'zapatillas',
+  'junior', 'infantil', 'niño', 'niña', 'reparada', 'reparado', 'dañada', 'dañado',
+  'rota', 'roto', 'golpe', 'paletero', 'mochila', 'bolsa', 'zapatilla', 'zapatillas',
   'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
   'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador', 'lote',
 ]
 
-// Marcas conocidas con sus regex de detección
 const MARCAS = [
   { regex: /bullpadel/i,    marca: 'Bullpadel' },
   { regex: /adidas/i,       marca: 'Adidas' },
@@ -64,7 +113,7 @@ const MARCAS = [
   { regex: /akkeron/i,      marca: 'Akkeron' },
   { regex: /\bjoma\b/i,     marca: 'Joma' },
   { regex: /kombat/i,       marca: 'Kombat' },
-  { regex: /\blok\b/i,      marca: 'Lok' },
+  { regex: /\bloc\b/i,      marca: 'Lok' },
   { regex: /alkemia/i,      marca: 'Alkemia' },
   { regex: /softee/i,       marca: 'Softee' },
   { regex: /kelme/i,        marca: 'Kelme' },
@@ -78,11 +127,12 @@ function detectarMarca(title: string): string | null {
   return null
 }
 
-// Extrae las 2 primeras palabras del título después de la marca como modelo
 function extraerModelo(title: string, marca: string): string {
   const lower = title.toLowerCase()
-  const sinPrefijo = lower
-    .replace(/^(pala de pádel|pala de padel|pala pádel|pala padel|raqueta de pádel|raqueta padel|pala|raqueta)\s+/i, '')
+  const sinPrefijo = lower.replace(
+    /^(pala de pádel|pala de padel|pala pádel|pala padel|raqueta de pádel|raqueta padel|pala|raqueta)\s+/i,
+    ''
+  )
   const marcaLower = marca.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const sinMarca = sinPrefijo.replace(new RegExp(marcaLower, 'i'), '').trim()
   const palabras = sinMarca.split(/\s+/).filter(Boolean).slice(0, 2)
@@ -112,13 +162,9 @@ interface CacheItem {
   city:        string | null
   pala_id:     string | null
   marca:       string | null
+  scraped_at:  string | null
 }
 
-/**
- * Verifica si un anuncio de Wallapop sigue activo.
- * Reutiliza la misma lógica que scrape-wallapop.ts.
- * Devuelve true si está activo, false si está vendido/retirado.
- */
 async function isWallapopActive(externalId: string): Promise<boolean> {
   try {
     const res = await fetch(`https://api.wallapop.com/api/v3/items/${externalId}`, {
@@ -133,20 +179,15 @@ async function isWallapopActive(externalId: string): Promise<boolean> {
 
     if (res.ok) {
       const data = await res.json()
-      // La API devuelve reserved y sold como objetos {flag: bool} en la raíz,
-      // no anidados en data.item.flags
       if (data?.reserved?.flag === true) return false
       if (data?.sold?.flag === true) return false
-      if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false  // fallback estructura antigua
+      if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false
       return true
     }
 
-    // Otros errores (429, 5xx...) → asumir activo para no borrar por error de red
     console.warn(`  ⚠️  API Wallapop devolvió ${res.status} para ${externalId} — asumimos activo`)
     return true
-
   } catch {
-    // Error de red → asumir activo
     return true
   }
 }
@@ -157,12 +198,29 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
+  // ── 0. Guardar posiciones actuales antes de tocar nada ───────────────────
+  console.log('📌 Leyendo posiciones actuales del top...')
+  const { data: topActual } = await supabase
+    .from('top_oportunidades')
+    .select('external_id, posicion')
+    .order('posicion', { ascending: true })
+
+  const posicionesAnteriores = new Map<string, number>()
+  if (topActual) {
+    for (const row of topActual) {
+      if (row.external_id && row.posicion) {
+        posicionesAnteriores.set(row.external_id, row.posicion)
+      }
+    }
+  }
+  console.log(`  ${posicionesAnteriores.size} entradas en el top actual\n`)
+
   // ── 1. Leer candidatos de wallapop_cache ──────────────────────────────────
   console.log('📦 Leyendo wallapop_cache...')
   const { data: items, error } = await supabase
     .from('wallapop_cache')
-    .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca')
-    .in('condition', CONDICIONES_BUENAS)
+    .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca, scraped_at')
+    .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
 
   if (error || !items) {
@@ -170,7 +228,7 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`📊 ${items.length} anuncios en condición buena con precio > ${MIN_PRICE}€\n`)
+  console.log(`📊 ${items.length} anuncios en condición top con precio ≥ ${MIN_PRICE}€\n`)
 
   // ── 2. Filtrar accesorios y agrupar por marca + modelo ────────────────────
   const grupos = new Map<string, { items: CacheItem[], marca: string, modelo: string }>()
@@ -194,54 +252,75 @@ async function main() {
 
   console.log(`🔍 ${grupos.size} grupos marca+modelo detectados`)
 
-  // ── 3. Calcular oportunidades brutas ──────────────────────────────────────
+  // ── 3. Calcular oportunidades con score compuesto ─────────────────────────
   const todasOportunidades: any[] = []
 
   for (const [, grupo] of grupos) {
     if (grupo.items.length < MIN_ITEMS_GRUPO) continue
 
-    const precios = grupo.items.map(i => i.price)
-    const med = mediana(precios)
+    // Precio medio solo con new + un_opened si hay suficientes; si no, fallback a todos
+    const itemsPrecioMedio = grupo.items.filter(i => CONDICIONES_PRECIO_MEDIO.includes(i.condition))
+    const preciosParaMediana = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
+      ? itemsPrecioMedio.map(i => i.price)
+      : grupo.items.map(i => i.price)
+    const usandoFiable = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
+
+    const med = mediana(preciosParaMediana)
 
     const oportunidades = grupo.items
       .filter(item => item.price < med * (1 - DESCUENTO_MIN / 100))
-      .map(item => ({
-        external_id:   item.external_id,
-        title:         item.title,
-        price:         item.price,
-        precio_medio:  Math.round(med * 100) / 100,
-        descuento_pct: Math.round(((med - item.price) / med) * 100),
-        condition:     item.condition,
-        platform:      item.platform,
-        img:           item.img,
-        url:           item.url,
-        city:          item.city,
-        keyword:       `${grupo.marca} ${grupo.modelo}`,
-        pala_id:       item.pala_id,
-      }))
+      .map(item => {
+        const descuentoPct = Math.round(((med - item.price) / med) * 100)
+        const score = calcularScore(
+          descuentoPct,
+          item.condition,
+          item.title,
+          item.scraped_at,
+          med,
+          item.price
+        )
+        return {
+          external_id:   item.external_id,
+          title:         item.title,
+          price:         item.price,
+          precio_medio:  Math.round(med * 100) / 100,
+          descuento_pct: descuentoPct,
+          score:         Math.round(score * 100) / 100,
+          condition:     item.condition,
+          platform:      item.platform,
+          img:           item.img,
+          url:           item.url,
+          city:          item.city,
+          keyword:       `${grupo.marca} ${grupo.modelo}`,
+          pala_id:       item.pala_id,
+        }
+      })
 
     if (oportunidades.length > 0) {
-      console.log(`  💎 ${grupo.marca} ${grupo.modelo}: mediana ${med}€, ${oportunidades.length} oportunidades`)
+      console.log(
+        `  💎 ${grupo.marca} ${grupo.modelo}: mediana ${med}€` +
+        ` (${usandoFiable ? 'new/un_opened' : 'fallback todos'}),` +
+        ` ${oportunidades.length} oportunidades`
+      )
       todasOportunidades.push(...oportunidades)
     }
   }
 
   console.log(`\n📊 Total oportunidades brutas: ${todasOportunidades.length}`)
 
-  // ── 4. Deduplicar y ordenar — lista completa de candidatos ───────────────
+  // ── 4. Deduplicar y ordenar por SCORE ────────────────────────────────────
   const deduplicado = new Map<string, any>()
   for (const op of todasOportunidades) {
     const existing = deduplicado.get(op.external_id)
-    if (!existing || op.descuento_pct > existing.descuento_pct) {
+    if (!existing || op.score > existing.score) {
       deduplicado.set(op.external_id, op)
     }
   }
 
-  // Todos los candidatos ordenados por descuento desc — elegiremos hasta TOP_N activos
   const candidatos = Array.from(deduplicado.values())
-    .sort((a, b) => b.descuento_pct - a.descuento_pct)
+    .sort((a, b) => b.score - a.score)
 
-  console.log(`📋 ${candidatos.length} candidatos únicos`)
+  console.log(`📋 ${candidatos.length} candidatos únicos ordenados por score`)
 
   if (candidatos.length === 0) {
     console.log('⚠️  Sin candidatos — no se actualiza la tabla.')
@@ -249,10 +328,6 @@ async function main() {
   }
 
   // ── 5. Verificar activos contra la API — rellenar hasta TOP_N ────────────
-  //
-  // Verificamos candidatos en orden hasta completar TOP_N activos.
-  // Limitamos las llamadas a TOP_N * 3 como máximo para no agotar cuota
-  // si hay muchos vendidos (indicaría un problema en el scrape).
   const maxVerificar = Math.min(candidatos.length, TOP_N * 3)
   console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos contra la API de Wallapop...\n`)
 
@@ -262,13 +337,15 @@ async function main() {
   for (let i = 0; i < maxVerificar && top.length < TOP_N; i++) {
     const candidato = candidatos[i]
 
-    // Los anuncios de Vinted no tienen este endpoint — los aceptamos directamente
     if (candidato.platform !== 'wallapop') {
       top.push(candidato)
       continue
     }
 
-    process.stdout.write(`  [${i + 1}/${maxVerificar}] ${candidato.external_id} (${candidato.descuento_pct}% dto)... `)
+    process.stdout.write(
+      `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
+      ` (score: ${candidato.score}, ${candidato.descuento_pct}% dto, ${candidato.condition})... `
+    )
     const activo = await isWallapopActive(candidato.external_id)
 
     if (activo) {
@@ -282,7 +359,53 @@ async function main() {
     await sleep(VERIFY_THROTTLE)
   }
 
-  // ── 6. Limpiar de wallapop_cache los vendidos detectados ─────────────────
+  // ── 6. Calcular tendencia tipo ranking musical ────────────────────────────
+  const ahora = new Date().toISOString()
+
+  console.log(`\n🏆 Top ${top.length} final con tendencias:`)
+
+  const topConTendencia = top.map((op, idx) => {
+    const posicionNueva    = idx + 1
+    const posicionAnterior = posicionesAnteriores.get(op.external_id) ?? null
+
+    let tendencia: 'nueva_entrada' | 'sube' | 'baja' | 'igual'
+    if (posicionAnterior === null) {
+      tendencia = 'nueva_entrada'
+    } else if (posicionNueva < posicionAnterior) {
+      tendencia = 'sube'
+    } else if (posicionNueva > posicionAnterior) {
+      tendencia = 'baja'
+    } else {
+      tendencia = 'igual'
+    }
+
+    const puestosMovidos = posicionAnterior !== null
+      ? posicionAnterior - posicionNueva  // positivo = sube, negativo = baja
+      : null
+
+    const tendenciaLabel = {
+      nueva_entrada: '🆕',
+      sube:          `⬆️  +${puestosMovidos}`,
+      baja:          `⬇️  ${puestosMovidos}`,
+      igual:         '➡️',
+    }[tendencia]
+
+    console.log(
+      `  ${posicionNueva}. ${tendenciaLabel} [score: ${op.score}] ` +
+      `${op.title} — ${op.price}€ (mediana: ${op.precio_medio}€, ${op.descuento_pct}% dto, ${op.condition})`
+    )
+
+    return {
+      ...op,
+      posicion:          posicionNueva,
+      posicion_anterior: posicionAnterior,
+      puestos_movidos:   puestosMovidos,
+      tendencia,
+      updated_at:        ahora,
+    }
+  })
+
+  // ── 7. Limpiar vendidos de wallapop_cache ─────────────────────────────────
   if (vendidosABorrar.length > 0) {
     console.log(`\n🗑️  Eliminando ${vendidosABorrar.length} anuncios vendidos de wallapop_cache...`)
     const { error: delErr } = await supabase
@@ -296,13 +419,8 @@ async function main() {
     }
   }
 
-  // ── 7. Guardar el Top en la BD ────────────────────────────────────────────
-  console.log(`\n🏆 Top ${top.length} final tras verificación:`)
-  top.forEach((op, i) => {
-    console.log(`  ${i + 1}. [${op.descuento_pct}%] ${op.title} — ${op.price}€ (mediana: ${op.precio_medio}€)`)
-  })
-
-  if (top.length === 0) {
+  // ── 8. Guardar el Top en la BD ────────────────────────────────────────────
+  if (topConTendencia.length === 0) {
     console.log('\n⚠️  Sin anuncios activos en el Top — no se actualiza la tabla.')
     return
   }
@@ -317,17 +435,16 @@ async function main() {
     return
   }
 
-  const now = new Date().toISOString()
   const { error: insertError } = await supabase
     .from('top_oportunidades')
-    .insert(top.map(op => ({ ...op, updated_at: now })))
+    .insert(topConTendencia)
 
   if (insertError) {
     console.error('❌ Error insertando Top:', insertError)
     return
   }
 
-  console.log(`\n✅ Top ${top.length} guardado en top_oportunidades.`)
+  console.log(`\n✅ Top ${topConTendencia.length} guardado en top_oportunidades.`)
   if (vendidosABorrar.length > 0) {
     console.log(`🧹 ${vendidosABorrar.length} anuncios vendidos eliminados de wallapop_cache de paso.`)
   }
