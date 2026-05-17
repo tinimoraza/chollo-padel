@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { matchPalaIds } from './match-pala-id'
 import { detectarMarca } from './detect-marca'
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -300,6 +301,10 @@ async function main() {
   }
 
   console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
+
+  // ── Match pala_id automático ─────────────────────────────────────────────
+  await matchPalaIds(supabase)
+
   console.log('🏁 Scraper Vinted completado.\n')
 }
 

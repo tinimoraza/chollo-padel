@@ -12,6 +12,7 @@
 import { chromium } from 'playwright'
 import { detectarMarca } from './detect-marca'
 import { createClient } from '@supabase/supabase-js'
+import { matchPalaIds } from './match-pala-id'
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
@@ -302,6 +303,10 @@ async function main() {
   }
 
   console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
+
+  // ── Match pala_id automático ─────────────────────────────────────────────
+  await matchPalaIds(supabase)
+
   console.log('🏁 Scraper Wallapop completado.\n')
 }
 

@@ -84,6 +84,127 @@ interface CacheItem {
   marca:       string | null
 }
 
+/**
+ * Función exportable para usar desde otros scripts (scrapers).
+ * Recibe el cliente supabase ya inicializado para reutilizarlo.
+ */
+export async function matchPalaIds(supabase: ReturnType<typeof createClient>, opts?: { verbose?: boolean }): Promise<{ matched: number; ambiguous: number; noMatch: number }> {
+  const verbose = opts?.verbose ?? true
+
+  if (verbose) console.log('
+🔗 Match pala_id iniciado...')
+
+  const { data: palasRaw, error: palasErr } = await supabase
+    .from('palas')
+    .select('id, marca, modelo, año')
+
+  if (palasErr || !palasRaw) {
+    console.error('❌ matchPalaIds: Error cargando palas:', palasErr)
+    return { matched: 0, ambiguous: 0, noMatch: 0 }
+  }
+
+  const palas: PalaCatalogo[] = palasRaw.map((p: any) => ({
+    id:     p.id,
+    marca:  p.marca,
+    modelo: p.modelo,
+    año:    p.año,
+    tokens: extraerTokensModelo(p.modelo, p.marca),
+  }))
+
+  const palasPorMarca = new Map<string, PalaCatalogo[]>()
+  for (const pala of palas) {
+    const m = pala.marca.toLowerCase()
+    if (!palasPorMarca.has(m)) palasPorMarca.set(m, [])
+    palasPorMarca.get(m)!.push(pala)
+  }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('wallapop_cache')
+    .select('external_id, title, marca')
+    .is('pala_id', null)
+    .not('marca', 'is', null)
+
+  if (itemsErr || !items) {
+    console.error('❌ matchPalaIds: Error cargando cache:', itemsErr)
+    return { matched: 0, ambiguous: 0, noMatch: 0 }
+  }
+
+  const EXCLUIR_ACCESORIOS = ['bolsa','mochila','funda','paletero','grip','overgrip',
+    'protector','muñequera','bolas','pelota','pelotas','camiseta','zapatilla','zapatillas',
+    'ropa','lote','pack','antivibrador']
+
+  const TOKENS_DIFERENCIADORES = new Set([
+    'ctrl','carbon','team','hrd','light','soft','air',
+    'pro','elite','attack','motion','drive','match',
+    'arrow','cross','hit','rx','hybrid','power','speed',
+    '18k','12k','alum','luxury','ltd','xtrem','arena',
+  ])
+
+  let matched = 0, ambiguous = 0, noMatch = 0
+  const updates: { external_id: string; pala_id: string }[] = []
+
+  for (const item of items as CacheItem[]) {
+    const marcaAnuncio = item.marca?.toLowerCase()
+    if (!marcaAnuncio) continue
+    const candidatas = palasPorMarca.get(marcaAnuncio) ?? []
+    if (candidatas.length === 0) continue
+
+    const titleLower = item.title.toLowerCase()
+    if (EXCLUIR_ACCESORIOS.some(w => titleLower.includes(w))) { noMatch++; continue }
+
+    const anioTitulo = extraerAnio(item.title)
+    const tokensTitle = tokenizar(titleLower)
+
+    const scored = candidatas
+      .map(pala => {
+        if (anioTitulo !== null && pala.año !== anioTitulo) return null
+        const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
+        if (tokensMatch.length < pala.tokens.length) return null
+        if (tokensMatch.length === 0) return null
+        const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
+        if (!tokensDif.every(t => tokensTitle.includes(t))) return null
+        return { pala, score: pala.tokens.length }
+      })
+      .filter(Boolean) as { pala: PalaCatalogo; score: number }[]
+
+    if (scored.length === 0) { noMatch++; continue }
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      const extraA = a.pala.tokens.filter(t => !tokensTitle.includes(t)).length
+      const extraB = b.pala.tokens.filter(t => !tokensTitle.includes(t)).length
+      return extraA - extraB
+    })
+
+    const maxScore = scored[0].score
+    const topMatches = scored.filter(s => s.score === maxScore)
+    const topSinExtra = topMatches.filter(s =>
+      s.pala.tokens.filter(t => !tokensTitle.includes(t)).length ===
+      topMatches[0].pala.tokens.filter(t => !tokensTitle.includes(t)).length
+    )
+
+    if (topSinExtra.length > 1) { ambiguous++; continue }
+
+    matched++
+    updates.push({ external_id: item.external_id, pala_id: topSinExtra[0].pala.id })
+  }
+
+  if (updates.length > 0) {
+    const BATCH = 100
+    for (let i = 0; i < updates.length; i += BATCH) {
+      for (const u of updates.slice(i, i + BATCH)) {
+        await supabase.from('wallapop_cache').update({ pala_id: u.pala_id }).eq('external_id', u.external_id)
+      }
+    }
+  }
+
+  if (verbose) {
+    console.log(`  ✅ Match pala_id: ${matched} asignados, ${ambiguous} ambiguos, ${noMatch} sin match`)
+  }
+
+  return { matched, ambiguous, noMatch }
+}
+
 async function main() {
   console.log(`🔗 HUNTPADEL — Match pala_id${DRY_RUN ? ' [DRY RUN]' : ''}`)
   console.log(`📅 ${new Date().toISOString()}\n`)
