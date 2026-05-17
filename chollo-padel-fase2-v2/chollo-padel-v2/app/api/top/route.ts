@@ -13,7 +13,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('top_oportunidades')
     .select('*')
-    .order('descuento_pct', { ascending: false })
+    .order('posicion', { ascending: true })
     .limit(10)
 
   if (error) {
