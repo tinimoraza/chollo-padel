@@ -41,7 +41,9 @@ const HISTORY_KEY = 'chollo_search_history'
 const MAX_HISTORY = 20
 
 // Condiciones que activan el sistema de oportunidades
-const OPORTUNIDAD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new', 'Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Muy bueno'])
+// Wallapop: new, un_opened, as_good_as_new  |  Vinted: solo "Nuevo con etiqueta" y "Nuevo sin etiqueta"
+// EXCLUIDO: 'Muy bueno' (equivale a "good" en Vinted — se colaba como oportunidad)
+const OPORTUNIDAD_CONDITIONS = new Set(['new', 'un_opened', 'as_good_as_new', 'Nuevo con etiqueta', 'Nuevo sin etiqueta'])
 const MIN_ITEMS_FOR_MEDIANA = 5
 const OPORTUNIDAD_THRESHOLD = 0.75  // precio < media * 0.75 (al menos 25% de descuento)
 const MIN_PRICE_FILTER = 10         // ignorar artículos < 10€
