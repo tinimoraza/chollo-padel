@@ -66,11 +66,14 @@ const EXCLUIR_ACCESORIOS = new Set([
   'protector', 'muñequera', 'bolas', 'pelota', 'pelotas', 'camiseta',
   'zapatilla', 'zapatillas', 'ropa', 'lote', 'antivibrador',
   // Raquetas de tenis inequívocas (no confundibles con pádel)
+  'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v1', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
   'pure drive', 'pure aero', 'pure strike',
   'hierros', 'madera', 'putter',
-  // Golf
-  'speedback', 'driver golf',
+  // Golf / esquí / otros deportes
+  'speedback', 'driver golf', 'esquís', 'esqui', 'snowboard',
+  // Máquinas y equipamiento
+  'máquina padel', 'lanzadora',
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
@@ -407,12 +410,28 @@ export async function matchPalaIds(
 
   if (verbose) console.log('\n🔗 Match pala_id iniciado...')
 
-  const { data: palasRaw, error: palasErr } = await supabase
-    .from('palas')
-    .select('id, marca, modelo, año')
+  // Supabase limita a 1000 filas por defecto — paginamos para traer todo el catálogo
+  const palasRaw: any[] = []
+  const PAGE_SIZE = 1000
+  let fromRow = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('palas')
+      .select('id, marca, modelo, año')
+      .range(fromRow, fromRow + PAGE_SIZE - 1)
+    if (error) {
+      console.error('❌ matchPalaIds: Error cargando palas:', error)
+      return { matched: 0, ambiguous: 0, noMatch: 0 }
+    }
+    if (!data || data.length === 0) break
+    palasRaw.push(...data)
+    if (data.length < PAGE_SIZE) break
+    fromRow += PAGE_SIZE
+  }
+  const palasErr = null
 
-  if (palasErr || !palasRaw) {
-    console.error('❌ matchPalaIds: Error cargando palas:', palasErr)
+  if (!palasRaw || palasRaw.length === 0) {
+    console.error('❌ matchPalaIds: sin datos de palas')
     return { matched: 0, ambiguous: 0, noMatch: 0 }
   }
 
@@ -482,12 +501,28 @@ async function main() {
 
   // ── 1. Cargar catálogo de palas ────────────────────────────────────────────
   console.log('📚 Cargando catálogo de palas...')
-  const { data: palasRaw, error: palasErr } = await supabase
-    .from('palas')
-    .select('id, marca, modelo, año')
+  // Supabase limita a 1000 filas por defecto — paginamos para traer todo el catálogo
+  const palasRaw: any[] = []
+  const PAGE = 1000
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('palas')
+      .select('id, marca, modelo, año')
+      .range(from, from + PAGE - 1)
+    if (error) {
+      console.error('❌ Error cargando palas:', error)
+      process.exit(1)
+    }
+    if (!data || data.length === 0) break
+    palasRaw.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  const palasErr = null
 
-  if (palasErr || !palasRaw) {
-    console.error('❌ Error cargando palas:', palasErr)
+  if (!palasRaw || palasRaw.length === 0) {
+    console.error('❌ Error cargando palas: sin datos')
     process.exit(1)
   }
 
