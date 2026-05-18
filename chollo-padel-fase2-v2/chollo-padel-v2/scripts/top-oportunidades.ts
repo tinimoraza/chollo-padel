@@ -28,21 +28,14 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-const MIN_PRICE                = 55    // mínimo 55€ para filtrar ruido
-const MIN_ITEMS_GRUPO_CON_AÑO  = 3    // grupos con año: menos datos pero más fiables
-const MIN_ITEMS_GRUPO_SIN_AÑO  = 5    // grupos sin año: necesitamos más datos para confiar
-const DESCUENTO_MIN            = 25   // % mínimo de descuento para ser oportunidad
-const TOP_N                    = 10   // tamaño del ranking
-const VERIFY_THROTTLE          = 250  // ms entre llamadas a la API de Wallapop
+const MIN_PRICE         = 55    // mínimo 55€ para filtrar ruido
+const DESCUENTO_MIN     = 25   // % mínimo de descuento respecto al precio de tienda
+const TOP_N             = 10   // tamaño del ranking
+const MAX_POR_PALA_ID   = 2    // máximo 2 anuncios del mismo modelo en el top
+const VERIFY_THROTTLE   = 250  // ms entre llamadas a la API de Wallapop
 
 // Condiciones que entran al top
-const CONDICIONES_TOP          = ['new', 'un_opened', 'as_good_as_new']
-// Para precio medio: solo Wallapop new/un_opened — más fiable y sin sesgos de mercados europeos
-const CONDICIONES_PRECIO_MEDIO = ['new', 'un_opened']
-const MIN_ITEMS_PRECIO_MEDIO   = 5    // mínimo new/un_opened de Wallapop para mediana fiable
-
-// Bonus por pala identificada en el catálogo (pala_id conocido)
-const BONUS_PALA_CONOCIDA = 1.10
+const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 
 // Pesos por condición
 const PESO_CONDICION: Record<string, number> = {
@@ -57,19 +50,14 @@ function extraerAnio(title: string): number | null {
   return match ? parseInt(match[0]) : null
 }
 
-// Score por año:
-// - Sin año → 0.85 (penalización: no sabemos qué versión es, puede ser vieja)
-// - Año reciente → bonus
-// - Año viejo → penalización fuerte
 function scoreAnio(title: string): number {
   const anio = extraerAnio(title)
-  if (anio === null) return 0.85   // sin año — sospechoso, puede ser versión vieja
-  if (anio >= 2024)  return 1.15   // modelo reciente → bonus
-  if (anio === 2023) return 0.90   // 2023 → ligera penalización
-  return 0.65                      // ≤2022 → penalización fuerte
+  if (anio === null) return 0.85
+  if (anio >= 2024)  return 1.15
+  if (anio === 2023) return 0.90
+  return 0.65
 }
 
-// Recencia del anuncio en BD
 function scoreRecencia(scrapedAt: string | null): number {
   if (!scrapedAt) return 0.85
   const dias = (Date.now() - new Date(scrapedAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -78,90 +66,30 @@ function scoreRecencia(scrapedAt: string | null): number {
   return 0.60
 }
 
-// Score compuesto final
 function calcularScore(
   descuentoPct: number,
   condition: string,
   title: string,
   scrapedAt: string | null,
-  precioMedio: number,
+  precioReferencia: number,
   price: number,
-  palaId: string | null = null
 ): number {
   const pesoCondicion = PESO_CONDICION[condition] ?? 0.5
   const pesoAnio      = scoreAnio(title)
   const pesoRecencia  = scoreRecencia(scrapedAt)
-  const ahorroAbs     = precioMedio - price
+  const ahorroAbs     = precioReferencia - price
   const bonusAhorro   = Math.log10(Math.max(ahorroAbs, 1) + 1)
-  const bonusCatalogo = palaId ? BONUS_PALA_CONOCIDA : 1.0
 
-  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro * bonusCatalogo
+  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro
 }
 
 const EXCLUIR_PALABRAS = [
-  'junior', 'infantil', 'niño', 'niña', 'reparada', 'reparado', 'dañada', 'dañado',
+  'junior', 'infantil', 'niño', 'niña', 'youth',  // palas infantiles/junior
+  'reparada', 'reparado', 'dañada', 'dañado',
   'rota', 'roto', 'golpe', 'paletero', 'mochila', 'bolsa', 'zapatilla', 'zapatillas',
   'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
   'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador', 'lote',
 ]
-
-const MARCAS = [
-  { regex: /bullpadel/i,    marca: 'Bullpadel' },
-  { regex: /adidas/i,       marca: 'Adidas' },
-  { regex: /babolat/i,      marca: 'Babolat' },
-  { regex: /\bnox\b/i,      marca: 'Nox' },
-  { regex: /\bhead\b/i,     marca: 'Head' },
-  { regex: /wilson/i,       marca: 'Wilson' },
-  { regex: /siux/i,         marca: 'Siux' },
-  { regex: /vibora/i,       marca: 'Vibora' },
-  { regex: /star.?vie/i,    marca: 'Starvie' },
-  { regex: /drop.?shot/i,   marca: 'Drop Shot' },
-  { regex: /royal.?padel/i, marca: 'Royal Padel' },
-  { regex: /kuikma/i,       marca: 'Kuikma' },
-  { regex: /varlion/i,      marca: 'Varlion' },
-  { regex: /black.?crown/i, marca: 'Black Crown' },
-  { regex: /dunlop/i,       marca: 'Dunlop' },
-  { regex: /enebe/i,        marca: 'Enebe' },
-  { regex: /oxdog/i,        marca: 'Oxdog' },
-  { regex: /\bpuma\b/i,     marca: 'Puma' },
-  { regex: /akkeron/i,      marca: 'Akkeron' },
-  { regex: /\bjoma\b/i,     marca: 'Joma' },
-  { regex: /kombat/i,       marca: 'Kombat' },
-  { regex: /\bloc\b/i,      marca: 'Lok' },
-  { regex: /alkemia/i,      marca: 'Alkemia' },
-  { regex: /softee/i,       marca: 'Softee' },
-  { regex: /kelme/i,        marca: 'Kelme' },
-  { regex: /ocho.?padel/i,  marca: 'Ocho Padel' },
-]
-
-function detectarMarca(title: string): string | null {
-  for (const { regex, marca } of MARCAS) {
-    if (regex.test(title)) return marca
-  }
-  return null
-}
-
-function extraerModelo(title: string, marca: string): string {
-  const lower = title.toLowerCase()
-  const sinPrefijo = lower.replace(
-    /^(pala de pádel|pala de padel|pala pádel|pala padel|raqueta de pádel|raqueta padel|pala|raqueta)\s+/i,
-    ''
-  )
-  const marcaLower = marca.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const sinMarca = sinPrefijo.replace(new RegExp(marcaLower, 'i'), '').trim()
-  // Quitar también el año del modelo para que no forme parte del nombre
-  const sinAnio = sinMarca.replace(/\b20(1[89]|2[0-9])\b/, '').trim()
-  const palabras = sinAnio.split(/\s+/).filter(Boolean).slice(0, 2)
-  return palabras.join(' ').trim()
-}
-
-function mediana(precios: number[]): number {
-  const sorted = [...precios].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 !== 0
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2
-}
 
 function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
@@ -176,7 +104,7 @@ interface CacheItem {
   img:         string | null
   url:         string
   city:        string | null
-  pala_id:     string | null
+  pala_id:     string
   marca:       string | null
   scraped_at:  string | null
 }
@@ -231,131 +159,94 @@ async function main() {
   }
   console.log(`  ${posicionesAnteriores.size} entradas en el top actual\n`)
 
-  // ── 1. Leer candidatos de wallapop_cache ──────────────────────────────────
-  console.log('📦 Leyendo wallapop_cache...')
+  // ── 1. Leer price_reference — precios oficiales de tiendas ───────────────
+  console.log('💰 Cargando precios de referencia de tiendas...')
+  const { data: precios, error: preciosErr } = await supabase
+    .from('price_reference')
+    .select('pala_id, precio_referencia')
+
+  if (preciosErr || !precios) {
+    console.error('❌ Error cargando price_reference:', preciosErr)
+    process.exit(1)
+  }
+
+  // Mapa pala_id → precio_referencia (precio de tienda oficial)
+  const preciosPorPalaId = new Map<string, number>()
+  for (const p of precios) {
+    if (p.pala_id && p.precio_referencia) {
+      preciosPorPalaId.set(p.pala_id, p.precio_referencia)
+    }
+  }
+  console.log(`  ${preciosPorPalaId.size} palas con precio de tienda\n`)
+
+  // ── 2. Leer candidatos de wallapop_cache — SOLO con pala_id ──────────────
+  console.log('📦 Leyendo wallapop_cache (solo anuncios con pala_id)...')
   const { data: items, error } = await supabase
     .from('wallapop_cache')
     .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca, scraped_at')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
+    .not('pala_id', 'is', null)
 
   if (error || !items) {
     console.error('❌ Error leyendo wallapop_cache:', error)
     process.exit(1)
   }
 
-  console.log(`📊 ${items.length} anuncios en condición top con precio ≥ ${MIN_PRICE}€\n`)
+  console.log(`📊 ${items.length} anuncios con pala_id en condición top con precio ≥ ${MIN_PRICE}€\n`)
 
-  // ── 2. Filtrar y agrupar por marca + modelo + año ─────────────────────────
-  // Clave: "Nox||at10||2025" o "Nox||at10||sin_año"
-  // Separar por año evita mezclar versiones antiguas con nuevas en la misma mediana
-  const grupos = new Map<string, {
-    items:    CacheItem[]
-    marca:    string
-    modelo:   string
-    anio:     number | null
-  }>()
+  // ── 3. Calcular oportunidades contra precio de tienda ────────────────────
+  console.log('🔍 Calculando oportunidades contra precio de referencia de tienda...\n')
+
+  const todasOportunidades: any[] = []
+  let sinPrecioTienda = 0
 
   for (const item of items as CacheItem[]) {
     const titleLower = item.title.toLowerCase()
     if (EXCLUIR_PALABRAS.some(p => titleLower.includes(p))) continue
 
-    const marca = item.marca ?? detectarMarca(item.title)
-    if (!marca) continue
-
-    const modelo = extraerModelo(item.title, marca)
-    if (!modelo) continue
-
-    const anio = extraerAnio(item.title)
-    const anioKey = anio ? String(anio) : 'sin_año'
-    const clave = `${marca}||${modelo}||${anioKey}`
-
-    if (!grupos.has(clave)) {
-      grupos.set(clave, { items: [], marca, modelo, anio })
+    // Precio oficial de tienda para esta pala
+    const precioTienda = preciosPorPalaId.get(item.pala_id)
+    if (!precioTienda) {
+      sinPrecioTienda++
+      continue  // sin precio de tienda → no podemos calcular descuento real
     }
-    grupos.get(clave)!.items.push(item)
-  }
 
-  console.log(`🔍 ${grupos.size} grupos marca+modelo+año detectados`)
+    // Descuento respecto al precio de tienda
+    if (item.price >= precioTienda * (1 - DESCUENTO_MIN / 100)) continue
 
-  // ── 3. Calcular oportunidades con score compuesto ─────────────────────────
-  const todasOportunidades: any[] = []
-
-  for (const [, grupo] of grupos) {
-    // Grupos con año necesitan menos items (datos más fiables)
-    // Grupos sin año necesitan más items para compensar la incertidumbre
-    const minItems = grupo.anio !== null
-      ? MIN_ITEMS_GRUPO_CON_AÑO
-      : MIN_ITEMS_GRUPO_SIN_AÑO
-
-    if (grupo.items.length < minItems) continue
-
-    // Precio medio: solo Wallapop new + un_opened (excluye Vinted, precios europeos sesgados)
-    const itemsPrecioMedio = grupo.items.filter(i =>
-      CONDICIONES_PRECIO_MEDIO.includes(i.condition) && i.platform === 'wallapop'
+    const descuentoPct = Math.round(((precioTienda - item.price) / precioTienda) * 100)
+    const score = calcularScore(
+      descuentoPct,
+      item.condition,
+      item.title,
+      item.scraped_at,
+      precioTienda,
+      item.price,
     )
 
-    // Fallback: si no hay suficientes new/un_opened de Wallapop, usar todos los de Wallapop
-    const itemsFallback = grupo.items.filter(i => i.platform === 'wallapop')
-
-    const preciosParaMediana = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
-      ? itemsPrecioMedio.map(i => i.price)
-      : itemsFallback.length >= minItems
-        ? itemsFallback.map(i => i.price)
-        : grupo.items.map(i => i.price)  // último fallback: todos incluido Vinted
-
-    const modoMediana = itemsPrecioMedio.length >= MIN_ITEMS_PRECIO_MEDIO
-      ? 'new/un_opened Wallapop'
-      : itemsFallback.length >= minItems
-        ? 'todos Wallapop'
-        : 'todos (incl. Vinted)'
-
-    const med = mediana(preciosParaMediana)
-
-    const oportunidades = grupo.items
-      .filter(item => item.price < med * (1 - DESCUENTO_MIN / 100))
-      .map(item => {
-        const descuentoPct = Math.round(((med - item.price) / med) * 100)
-        const score = calcularScore(
-          descuentoPct,
-          item.condition,
-          item.title,
-          item.scraped_at,
-          med,
-          item.price,
-          item.pala_id
-        )
-        return {
-          external_id:   item.external_id,
-          title:         item.title,
-          price:         item.price,
-          precio_medio:  Math.round(med * 100) / 100,
-          descuento_pct: descuentoPct,
-          score:         Math.round(score * 100) / 100,
-          condition:     item.condition,
-          platform:      item.platform,
-          img:           item.img,
-          url:           item.url,
-          city:          item.city,
-          keyword:       grupo.anio
-            ? `${grupo.marca} ${grupo.modelo} ${grupo.anio}`
-            : `${grupo.marca} ${grupo.modelo}`,
-          pala_id:       item.pala_id,
-        }
-      })
-
-    if (oportunidades.length > 0) {
-      const anioLabel = grupo.anio ? String(grupo.anio) : 'sin año'
-      console.log(
-        `  💎 ${grupo.marca} ${grupo.modelo} [${anioLabel}]:` +
-        ` mediana ${med}€ (${modoMediana}),` +
-        ` ${grupo.items.length} anuncios, ${oportunidades.length} oportunidades`
-      )
-      todasOportunidades.push(...oportunidades)
-    }
+    const anio = extraerAnio(item.title)
+    todasOportunidades.push({
+      external_id:   item.external_id,
+      title:         item.title,
+      price:         item.price,
+      precio_medio:  precioTienda,   // precio de referencia de tienda (precio "nuevo")
+      descuento_pct: descuentoPct,
+      score:         Math.round(score * 100) / 100,
+      condition:     item.condition,
+      platform:      item.platform,
+      img:           item.img,
+      url:           item.url,
+      city:          item.city,
+      keyword:       anio
+        ? `${item.marca ?? ''} ${anio}`.trim()
+        : (item.marca ?? item.title.substring(0, 30)),
+      pala_id:       item.pala_id,
+    })
   }
 
-  console.log(`\n📊 Total oportunidades brutas: ${todasOportunidades.length}`)
+  console.log(`  💎 ${todasOportunidades.length} oportunidades encontradas`)
+  console.log(`  ⚠️  ${sinPrecioTienda} anuncios sin precio de tienda (excluidos)`)
 
   // ── 4. Deduplicar y ordenar por score ────────────────────────────────────
   const deduplicado = new Map<string, any>()
@@ -369,22 +260,31 @@ async function main() {
   const candidatos = Array.from(deduplicado.values())
     .sort((a, b) => b.score - a.score)
 
-  console.log(`📋 ${candidatos.length} candidatos únicos ordenados por score`)
+  // Diversidad: máximo MAX_POR_PALA_ID anuncios del mismo modelo en los candidatos a verificar
+  const conteoPorPalaId = new Map<string, number>()
+  const candidatosDiversos = candidatos.filter(op => {
+    const count = conteoPorPalaId.get(op.pala_id) ?? 0
+    if (count >= MAX_POR_PALA_ID) return false
+    conteoPorPalaId.set(op.pala_id, count + 1)
+    return true
+  })
 
-  if (candidatos.length === 0) {
+  console.log(`\n📋 ${candidatos.length} candidatos únicos → ${candidatosDiversos.length} tras límite de diversidad (max ${MAX_POR_PALA_ID} por modelo)`)
+
+  if (candidatosDiversos.length === 0) {
     console.log('⚠️  Sin candidatos — no se actualiza la tabla.')
     return
   }
 
   // ── 5. Verificar activos contra la API ───────────────────────────────────
-  const maxVerificar = Math.min(candidatos.length, TOP_N * 3)
+  const maxVerificar = Math.min(candidatosDiversos.length, TOP_N * 3)
   console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos contra la API de Wallapop...\n`)
 
   const top: any[] = []
   const vendidosABorrar: string[] = []
 
   for (let i = 0; i < maxVerificar && top.length < TOP_N; i++) {
-    const candidato = candidatos[i]
+    const candidato = candidatosDiversos[i]
 
     if (candidato.platform !== 'wallapop') {
       top.push(candidato)
@@ -393,7 +293,7 @@ async function main() {
 
     process.stdout.write(
       `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
-      ` (score: ${candidato.score}, ${candidato.descuento_pct}% dto, ${candidato.condition})... `
+      ` (score: ${candidato.score}, ${candidato.descuento_pct}% dto vs tienda, ${candidato.condition})... `
     )
     const activo = await isWallapopActive(candidato.external_id)
 
@@ -441,7 +341,7 @@ async function main() {
 
     console.log(
       `  ${posicionNueva}. ${tendenciaLabel} [score: ${op.score}] ` +
-      `${op.title} — ${op.price}€ (mediana: ${op.precio_medio}€, ${op.descuento_pct}% dto, ${op.condition})`
+      `${op.title} — ${op.price}€ (precio tienda: ${op.precio_medio}€, ${op.descuento_pct}% dto, ${op.condition})`
     )
 
     return {
