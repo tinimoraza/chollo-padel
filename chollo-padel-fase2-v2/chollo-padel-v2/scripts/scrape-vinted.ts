@@ -23,6 +23,24 @@ const KEYWORDS = [
   'pala head padel',
   'pala wilson padel',
   'pala bullpadel',
+  'pala adidas padel',
+  'pala siux padel',
+  'pala drop shot padel',
+  'pala starvie padel',
+]
+
+// Palabras que indican que el anuncio NO es una pala de pádel
+// Se filtran ANTES del upsert para no contaminar la BD
+const EXCLUIR_SCRAPER = [
+  'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
+  'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
+  'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
+  'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
+  'esquís', 'esqui ', 'snowboard',
+  'raqueta badminton', 'raqueta squash',
+  'máquina padel', 'lanzadora', 'maquina padel',
+  'lote palas', 'lote pádel', 'conjunto padel', 'set padel',
+  '2 palas', '2 raquetas', '3 palas', '4 palas',
 ]
 
 // Vinted devuelve el string de la UI directamente en item.status,
@@ -197,10 +215,14 @@ async function main() {
   const unique = allItems.filter(item => {
     if (!item.external_id || seen.has(item.external_id)) return false
     seen.add(item.external_id)
+    // Filtrar basura antes de guardar en BD (tenis, golf, esquí, lotes...)
+    const tl = (item.title ?? '').toLowerCase()
+    if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
     return true
   })
 
-  console.log(`📊 Items únicos: ${unique.length}`)
+  const filtrados = allItems.length - unique.length
+  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)  console.log(`📊 Items únicos: ${unique.length}`)
 
   const now = new Date().toISOString()
   const BATCH = 100

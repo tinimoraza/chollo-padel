@@ -32,7 +32,25 @@ const KEYWORDS = [
   'pala dunlop padel',
 ]
 
-const MAX_RESULTS_PER_KEYWORD = 60
+// Palabras que indican que el anuncio NO es una pala de pádel
+// Se filtran ANTES del upsert para no contaminar la BD
+const EXCLUIR_SCRAPER = [
+  // Raquetas de tenis
+  'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
+  'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
+  'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
+  // Golf
+  'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
+  // Esquí / snow
+  'esquís', 'esqui ', 'snowboard', 'ski ',
+  // Otros deportes
+  'raqueta badminton', 'raqueta squash',
+  // Máquinas y equipamiento no-pala
+  'máquina padel', 'lanzadora', 'maquina padel',
+  // Lotes y conjuntos (precio no comparable)
+  'lote palas', 'lote pádel', 'conjunto padel', 'set padel',
+  '2 palas', '2 raquetas', '3 palas', '4 palas',
+]
 
 interface WallapopRaw {
   id: string
@@ -163,10 +181,14 @@ async function main() {
   const unique = allItems.filter((item) => {
     if (!item.id || seen.has(item.id)) return false
     seen.add(item.id)
+    // Filtrar basura antes de guardar en BD (tenis, golf, esquí, lotes...)
+    const tl = item.title.toLowerCase()
+    if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
     return true
   })
 
-  console.log(`📊 Items únicos: ${unique.length}`)
+  const filtrados = allItems.length - seen.size
+  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
 
   const conImagen = unique.filter(i => i.img !== null).length
   console.log(`🖼️  Items con imagen: ${conImagen} / ${unique.length}`)
