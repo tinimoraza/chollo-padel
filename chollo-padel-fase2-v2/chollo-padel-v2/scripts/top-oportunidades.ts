@@ -40,7 +40,7 @@ const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 // Pesos por condición
 const PESO_CONDICION: Record<string, number> = {
   new:            1.00,
-  un_opened:      0.85,
+  un_opened:      1.00,
   as_good_as_new: 0.60,
 }
 
