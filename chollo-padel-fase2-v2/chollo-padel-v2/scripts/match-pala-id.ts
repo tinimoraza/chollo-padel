@@ -41,6 +41,7 @@ const KEEP_WORDS = new Set([
   'match', 'drive', 'arrow', 'cross', 'hit', 'rx',
   '18k', '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena', 'hard',
   'pro', 'evo', 'plus', 'motion', 'elite', 'genius', 'attack',
+  'lite',    // Nox AT10 Xtreme Lite
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
 ])
@@ -53,15 +54,23 @@ const TOKENS_DIFERENCIADORES = new Set([
   'pro', 'elite', 'attack', 'motion', 'drive', 'match',
   'arrow', 'cross', 'hit', 'rx', 'hybrid', 'power', 'speed',
   '18k', '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena',
+  'lite',    // Nox AT10 Xtreme Lite vs Xtreme
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
 ])
 
 // Palabras que indican que el anuncio NO es una pala
 const EXCLUIR_ACCESORIOS = new Set([
+  // Accesorios pádel
   'bolsa', 'mochila', 'funda', 'paletero', 'grip', 'overgrip',
   'protector', 'muñequera', 'bolas', 'pelota', 'pelotas', 'camiseta',
-  'zapatilla', 'zapatillas', 'ropa', 'lote', 'pack', 'antivibrador',
+  'zapatilla', 'zapatillas', 'ropa', 'lote', 'antivibrador',
+  // Raquetas de tenis inequívocas (no confundibles con pádel)
+  'pro staff', 'blade v1', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
+  'pure drive', 'pure aero', 'pure strike',
+  'hierros', 'madera', 'putter',
+  // Golf
+  'speedback', 'driver golf',
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
