@@ -6,17 +6,18 @@
  *
  * Lógica:
  *  1. Lee wallapop_cache filtrando por CONDICIONES_TOP (new, un_opened, as_good_as_new)
- *  2. Agrupa por marca + modelo + año (anuncios sin año → grupo propio "sin_año")
- *  3. MIN_ITEMS_GRUPO: 3 si el grupo tiene año detectado, 5 si no (datos menos fiables)
- *  4. Precio medio calculado SOLO con Wallapop new + un_opened (≥5 para ser fiable)
- *     Si no hay suficientes, fallback a todos los de Wallapop del grupo
- *  5. Ordena por SCORE COMPUESTO:
+ *     SOLO anuncios con pala_id asignado (match confirmado con catálogo)
+ *  2. Carga price_reference para esos pala_id (precio oficial de tiendas scrapeadas)
+ *     Anuncios cuyo pala_id no tiene precio en price_reference → excluidos
+ *  3. Descuento calculado contra precio_referencia de tienda (NO mediana de segunda mano)
+ *     Esto da descuentos reales respecto al precio de mercado nuevo
+ *  4. Ordena por SCORE COMPUESTO:
  *       descuento × peso_condición × bonus_año × bonus_recencia × bonus_ahorro
- *     - Sin año en título → penalización 0.85 (no sabemos qué versión es)
+ *     - Sin año en título → penalización 0.85
  *     - Año viejo (≤2022) → penalización fuerte 0.65
- *  6. Guarda posición anterior y calcula tendencia (nueva_entrada/sube/baja/igual)
- *  7. Verifica finalistas contra API Wallapop (vendidos → borrar y rellenar)
- *  8. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking (TOP_N = 10)
+ *  5. Guarda posición anterior y calcula tendencia (nueva_entrada/sube/baja/igual)
+ *  6. Verifica finalistas contra API Wallapop (vendidos → borrar y rellenar)
+ *  7. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking (TOP_N = 10)
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/top-oportunidades.ts
