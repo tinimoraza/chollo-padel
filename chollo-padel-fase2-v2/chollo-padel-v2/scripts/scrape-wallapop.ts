@@ -20,10 +20,16 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 const KEYWORDS = [
   'pala padel',
   'pala babolat',
-  'pala nox padel',
+  'pala nox',
   'pala head padel',
   'pala wilson padel',
   'pala bullpadel',
+  'pala adidas padel',
+  'pala siux',
+  'pala drop shot',
+  'pala starvie',
+  'pala vibora padel',
+  'pala dunlop padel',
 ]
 
 const MAX_RESULTS_PER_KEYWORD = 60
