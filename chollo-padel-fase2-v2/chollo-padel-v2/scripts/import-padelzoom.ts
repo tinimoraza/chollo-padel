@@ -8,9 +8,8 @@
  *                 para obtener todas las URLs del catálogo (~800 palas)
  *   2. FICHA    — fetch individual por URL para extraer año, marca,
  *                 forma, balance, núcleo, cara, peso, jugadores, etc.
- *   3. UPSERT   — inserta/actualiza en tabla `palas` (onConflict: slug)
- *                 Solo toca palas que NO vienen de padelful, o rellena
- *                 campos vacíos si ya existen.
+ *   3. UPSERT   — inserta en tabla `palas` (onConflict: slug, ignoreDuplicates: true)
+ *                 Solo añade palas con slug nuevo — nunca sobreescribe padelful.
  *
  * Ejecutar:
  *   npx tsx --env-file=.env.local scripts/import-padelzoom.ts
@@ -457,7 +456,7 @@ async function upsertBatch(palas: PalaData[]): Promise<{ ok: number, err: number
       .from('palas')
       .upsert(batch, {
         onConflict:        'slug',
-        ignoreDuplicates:  false,  // actualiza campos si ya existe
+        ignoreDuplicates:  true,   // solo insertar slugs nuevos — nunca sobreescribir padelful
       })
 
     if (error) {
@@ -482,22 +481,10 @@ async function main() {
   const limited = listing.slice(0, LIMIT === Infinity ? listing.length : LIMIT)
   console.log(`\n[main] Procesando ${limited.length} palas${LIMIT !== Infinity ? ` (límite: ${LIMIT})` : ''}`)
 
-  // Opcional: filtrar slugs que YA están en BD con fuente=padelful (tienen datos completos)
-  // Solo importar las que NO están o tienen fuente=padelzoom
-  const { data: existing } = await supabase
-    .from('palas')
-    .select('slug, fuente')
-    .in('slug', limited.map(x => urlToSlug(x.url)))
-
-  const existingPadelful = new Set(
-    (existing ?? []).filter(r => r.fuente === 'padelful').map(r => r.slug)
-  )
-
-  const toProcess = limited.filter(x => !existingPadelful.has(urlToSlug(x.url)))
-  const skipped   = limited.length - toProcess.length
-
-  console.log(`[main] Saltando ${skipped} palas ya en BD con fuente=padelful`)
-  console.log(`[main] Fetcheando fichas de ${toProcess.length} palas...\n`)
+  // Sin pre-filtro: ignoreDuplicates:true en el upsert garantiza que los slugs
+  // existentes se ignoran. Así evitamos la query .in() con 800 slugs (falla por URL limit).
+  const toProcess = limited
+  console.log(`[main] Fetcheando fichas de ${toProcess.length} palas (slugs existentes se ignorarán en upsert)...\n`)
 
   // FASE 2: Fichas individuales
   const palas: PalaData[] = []
