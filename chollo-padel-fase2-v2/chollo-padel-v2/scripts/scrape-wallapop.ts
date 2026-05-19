@@ -34,6 +34,8 @@ const KEYWORDS = [
 
 // Palabras que indican que el anuncio NO es una pala de pádel
 // Se filtran ANTES del upsert para no contaminar la BD
+const MAX_RESULTS_PER_KEYWORD = 40
+
 const EXCLUIR_SCRAPER = [
   // Raquetas de tenis
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',

@@ -222,7 +222,7 @@ async function main() {
   })
 
   const filtrados = allItems.length - unique.length
-  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)  console.log(`📊 Items únicos: ${unique.length}`)
+  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
 
   const now = new Date().toISOString()
   const BATCH = 100
