@@ -44,6 +44,7 @@ const KEEP_WORDS = new Set([
   'lite',    // Nox AT10 Xtreme Lite
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
+  'woman',   // Bullpadel versión femenina (W normalizado → woman)
 ])
 
 // Tokens que diferencian variantes dentro de una misma familia.
@@ -57,6 +58,7 @@ const TOKENS_DIFERENCIADORES = new Set([
   'lite',    // Nox AT10 Xtreme Lite vs Xtreme
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
+  'woman',   // Bullpadel versión femenina
 ])
 
 // Palabras que indican que el anuncio NO es una pala
@@ -73,7 +75,9 @@ const EXCLUIR_ACCESORIOS = new Set([
   // Golf / esquí / otros deportes
   'speedback', 'driver golf', 'esquís', 'esqui', 'snowboard',
   // Máquinas y equipamiento
-  'máquina padel', 'lanzadora',
+  'máquina padel', 'lanzadora', 'slinger',
+  // Modelos sin catálogo — evitar falsos positivos con familia similar
+  'essex',  // Adidas Essex 2260 Metalbone
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
@@ -116,13 +120,16 @@ function tokenizar(texto: string): string[] {
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
     .replace(/pro\s*\+/g, 'proplus')   // normalizar "pro +" / "pro+" → proplus (Oxdog)
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
+    .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
+    .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
+    .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
     .split(/\s+/)
-    .filter(t => t.length >= 2 || t === 'x')  // preservar 'x' aunque sea 1 char
+    .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t))  // preservar 'x' y dígitos simples (Siux Pro 3, Pro 4...)
     .filter(t =>
       KEEP_WORDS.has(t) ||
-      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t)))
-    )  // preservar 01-09 (versiones modelo Bullpadel)
+      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t)))
+    )  // preservar 01-09, dígitos simples, y versiones vXpY
 }
 
 function extraerAnio(texto: string): number | null {
@@ -208,9 +215,10 @@ interface MatchResult {
 }
 
 // Umbral de match parcial: % mínimo de tokens del modelo que deben estar en el título
-// Lo suficientemente alto para evitar falsos positivos, lo suficiente bajo para cubrir
-// anuncios con nombre corto ("Nox AT10 Genius" → modelo "Nox AT10 Genius Attack 18K Alum")
-const PARTIAL_MATCH_THRESHOLD = 0.6
+// Se reduce a 0.5 cuando el título contiene año + jugador conocido (identificadores fuertes
+// que compensan un nombre abreviado, ej: "Nox AT10 18K 2025 Agustín Tapia")
+const PARTIAL_MATCH_THRESHOLD      = 0.6
+const PARTIAL_MATCH_THRESHOLD_SOFT = 0.5  // con año + jugador en título
 
 function matchearItem(
   item: CacheItem,
@@ -257,15 +265,19 @@ function matchearItem(
   // ── Fase 2: match PARCIAL si la fase 1 no da nada ────────────────────────
   // Condiciones: ≥60% tokens del modelo en título + todos los diferenciadores presentes
   // Solo se aplica si el resultado es único (evitar falsos positivos por ambigüedad)
+  // Excepción: threshold baja a 50% si el título tiene año + jugador (identificadores fuertes)
   if (scored.length === 0) {
+    const tieneAnioYJugador = anioTitulo !== null && jugadoresTitulo.length > 0
+    const threshold = tieneAnioYJugador ? PARTIAL_MATCH_THRESHOLD_SOFT : PARTIAL_MATCH_THRESHOLD
     // Extraer números de modelo del título (01-09, v2, v3... pero NO años 20XX)
     // Estos son tokens que identifican la versión exacta del modelo
     const numerosModelo = titleLower
       .replace(/\b20\d{2}\b/g, '')          // quitar años
       .replace(/hrd\+/g, 'hrd')
+      .replace(/\b(\d+)\.(\d+)\b/g, 'VER')  // ignorar versiones X.Y — no son números de modelo
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
-      .filter(t => /^(0[1-9]|v\d+|\d{2})$/.test(t))  // 01-09, v2, v10, etc.
+      .filter(t => /^(0[1-9]|v\d+|\d{1,2})$/.test(t) && t !== 'VER')  // 01-09, v2, v10, 3, 4 — excluir versiones
 
     const parciales = candidatas
       .map(pala => {
@@ -275,7 +287,7 @@ function matchearItem(
         // GUARD: si el título contiene un número de modelo (04, 05, v10...)
         // y el modelo del catálogo tiene un número distinto → falso positivo seguro
         if (numerosModelo.length > 0) {
-          const numerosModPala = pala.tokens.filter(t => /^(0[1-9]|v\d+|\d{2})$/.test(t))
+          const numerosModPala = pala.tokens.filter(t => /^(0[1-9]|v\d+|\d{1,2})$/.test(t) && !/^v\d+p\d+$/.test(t))  // excluir versiones vXpY
           if (numerosModPala.length > 0) {
             // El modelo tiene número → debe coincidir con alguno del título
             const hayConflicto = numerosModPala.every(n => !numerosModelo.includes(n))
@@ -285,7 +297,7 @@ function matchearItem(
 
         const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
         const ratio = tokensMatch.length / pala.tokens.length
-        if (ratio < PARTIAL_MATCH_THRESHOLD) return null
+        if (ratio < threshold) return null
         // Los diferenciadores del modelo SÍ deben estar en el título
         const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
         if (!tokensDif.every(t => tokensTitle.includes(t))) return null
