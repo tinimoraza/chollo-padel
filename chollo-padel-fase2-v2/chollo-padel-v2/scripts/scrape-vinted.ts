@@ -43,9 +43,17 @@ const EXCLUIR_SCRAPER = [
   '2 palas', '2 raquetas', '3 palas', '4 palas',
 ]
 
-// Vinted devuelve el string de la UI directamente en item.status,
-// no el ID numerico -- mapeamos los literales en espanol.
+// Vinted devuelve el ID numérico de condición en item.status_id (o item.status como número).
+// Ref: https://www.vinted.es (IDs observados en la API)
+// 6 = Nuevo con etiquetas, 1 = Nuevo sin etiquetas, 2 = Muy bueno, 3 = Bueno, 4 = Satisfactorio
 const CONDITION_MAP_REVERSE: Record<string, string> = {
+  // IDs numéricos (lo que realmente devuelve la API de Vinted)
+  '6': 'new',            // Nuevo con etiquetas
+  '1': 'as_good_as_new', // Nuevo sin etiquetas
+  '2': 'good',           // Muy bueno
+  '3': 'good',           // Bueno
+  '4': 'fair',           // Satisfactorio
+  // Strings en español (fallback por si algún endpoint devuelve el label)
   'Nuevo con etiquetas': 'new',
   'Nuevo sin etiquetas': 'as_good_as_new',
   'Muy bueno':           'good',
@@ -133,7 +141,7 @@ async function scrapeKeyword(keyword: string, auth: { cookie: string; token: str
         const ts  = item.photo?.high_resolution?.timestamp
         const date = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
         const price = parseFloat(item.price?.amount ?? '0')
-        const conditionId = String(item.status ?? '')
+        const conditionId = String(item.status_id ?? item.status ?? '')
         const condition = CONDITION_MAP_REVERSE[conditionId] ?? conditionId
 
         return {

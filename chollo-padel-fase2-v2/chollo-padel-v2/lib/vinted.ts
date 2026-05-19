@@ -21,6 +21,21 @@ const CONDITION_MAP: Record<string, string[]> = {
   fair:           ['4'],
 }
 
+// Normaliza el valor crudo de item.status (ID numérico o label en español)
+// al mismo sistema que usa wallapop_cache y SearchPanel
+const CONDITION_NORMALIZE: Record<string, string> = {
+  '6': 'new',
+  '1': 'as_good_as_new',
+  '2': 'good',
+  '3': 'good',
+  '4': 'fair',
+  'Nuevo con etiquetas': 'new',
+  'Nuevo sin etiquetas': 'as_good_as_new',
+  'Muy bueno':           'good',
+  'Bueno':               'good',
+  'Satisfactorio':       'fair',
+}
+
 // Caché del token en memoria
 let cachedAuth: { cookie: string; token: string; expiresAt: number } | null = null
 
@@ -141,7 +156,7 @@ export async function searchVinted(
           images: img ? [img] : [],
           img,
           url: item.url ?? `https://www.vinted.es/items/${item.id}`,
-          condition: item.status ?? '',
+          condition: CONDITION_NORMALIZE[String(item.status ?? '')] ?? String(item.status ?? ''),
           location: 'Europa',
           city: 'Europa',
           platform: 'vinted',
