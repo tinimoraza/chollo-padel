@@ -102,6 +102,9 @@ const EXCLUIR_ACCESORIOS = new Set([
   'máquina padel', 'lanzadora', 'slinger',
   // Modelos sin catálogo — evitar falsos positivos con familia similar
   'essex',  // Adidas Essex 2260 Metalbone
+  // Otros deportes que cuelan con marcas de pádel
+  'pickleball',
+  'bolas de golf', 'bolas golf', 'blade pro v',  // Wilson golf/tenis
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
@@ -148,6 +151,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
     .replace(/\bproline\b/g, 'pro line') // normalizar "proline" → "pro line" (Bullpadel Flow Pro Line)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
+    .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
     .split(/\s+/)
@@ -277,6 +281,11 @@ function matchearItem(
   // Babolat: "Viper Lebron" siempre es Technical Viper — inyectar "technical" si falta
   if (marcaNorm === 'babolat' && tokensTitle.includes('viper') && tokensTitle.some(t => t === 'lebron' || t === 'juan') && !tokensTitle.includes('technical')) {
     tokensTitle = [...tokensTitle, 'technical']
+  }
+  // Nox AT10 18K sin "genius"/"alum" → única variante 18K en catálogo, inyectar tokens
+  // Ej: "Nox AT10 18K 2025 Agustín Tapia" → el catálogo tiene "AT10 Genius 18K Alum 2025"
+  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k') && !tokensTitle.includes('genius')) {
+    tokensTitle = [...tokensTitle, 'genius', 'alum']
   }
   const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)

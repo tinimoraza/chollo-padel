@@ -38,6 +38,11 @@ const EXCLUIR_SCRAPER = [
   'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
   // Golf
   'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
+  'bolas de golf', 'bolas golf', ' golf ',  // Wilson golf
+  // Pickleball
+  'pickleball',
+  // Wilson tenis específico
+  'blade pro v',
   // Esquí / snow
   'esquís', 'esqui ', 'snowboard', 'ski ',
   // Otros deportes
