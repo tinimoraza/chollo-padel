@@ -241,8 +241,10 @@ interface MatchResult {
 // Umbral de match parcial: % mínimo de tokens del modelo que deben estar en el título
 // Se reduce a 0.5 cuando el título contiene año + jugador conocido (identificadores fuertes
 // que compensan un nombre abreviado, ej: "Nox AT10 18K 2025 Agustín Tapia")
+// Se reduce a 0.4 cuando el título es corto (≤5 tokens útiles) — títulos tipo "Vertex 05 2026"
 const PARTIAL_MATCH_THRESHOLD      = 0.6
 const PARTIAL_MATCH_THRESHOLD_SOFT = 0.5  // con año + jugador en título
+const PARTIAL_MATCH_THRESHOLD_MIN  = 0.4  // título corto (≤5 tokens útiles)
 
 function matchearItem(
   item: CacheItem,
@@ -292,7 +294,8 @@ function matchearItem(
   // Excepción: threshold baja a 50% si el título tiene año + jugador (identificadores fuertes)
   if (scored.length === 0) {
     const tieneAnioYJugador = anioTitulo !== null && jugadoresTitulo.length > 0
-    const threshold = tieneAnioYJugador ? PARTIAL_MATCH_THRESHOLD_SOFT : PARTIAL_MATCH_THRESHOLD
+    const tituloCorto = tokensTitle.length <= 5
+    const threshold = tieneAnioYJugador ? PARTIAL_MATCH_THRESHOLD_SOFT : tituloCorto ? PARTIAL_MATCH_THRESHOLD_MIN : PARTIAL_MATCH_THRESHOLD
     // Extraer números de modelo del título (01-09, v2, v3... pero NO años 20XX)
     // Estos son tokens que identifican la versión exacta del modelo
     const numerosModelo = titleLower
