@@ -32,15 +32,35 @@ const KEYWORDS = [
 // Palabras que indican que el anuncio NO es una pala de pádel
 // Se filtran ANTES del upsert para no contaminar la BD
 const EXCLUIR_SCRAPER = [
+  // Raquetas de tenis
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
   'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
+  // Golf
   'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
-  'esquís', 'esqui ', 'snowboard',
-  'raqueta badminton', 'raqueta squash',
+  // Esquí / snow
+  'esquís', 'esqui ', 'snowboard', 'ski ',
+  // Otros deportes
+  'raqueta badminton', 'raqueta squash', 'hockey hierba', 'hockey hielo',
+  // Máquinas y equipamiento no-pala
   'máquina padel', 'lanzadora', 'maquina padel',
+  // Lotes y conjuntos (precio no comparable)
   'lote palas', 'lote pádel', 'conjunto padel', 'set padel',
   '2 palas', '2 raquetas', '3 palas', '4 palas',
+  // Ropa y calzado
+  'camiseta', 'camisetas', ' talla ', 'talla s', 'talla m', 'talla l', 'talla xl',
+  'talla xs', 'zapatilla', 'zapatillas', 'botas ', 'botines', 'calcetines',
+  'pantalon', 'pantalón', 'chaqueta', 'sudadera', 'equipacion', 'equipación',
+  'chandal', 'chándal', 'shorts', 'polo ',
+  // Pelotas y accesorios
+  'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
+  'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
+  'protector', 'muñequera', 'munequera', 'presurizador',
+  // Coleccionismo / fútbol / otros deportes
+  'mundial', 'euro 20', 'champions', 'match worn', 'player version',
+  'original históri', 'original histori', 'camp nou',
+  // Lotes varios
+  'lote ', '+ accesorios', 'y accesorios', 'con accesorios',
 ]
 
 // Vinted devuelve el ID numérico de condición en item.status_id (o item.status como número).
