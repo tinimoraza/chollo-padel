@@ -146,6 +146,8 @@ function tokenizar(texto: string): string[] {
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
     .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
+    .replace(/\bproline\b/g, 'pro line') // normalizar "proline" → "pro line" (Bullpadel Flow Pro Line)
+    .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
     .split(/\s+/)
@@ -163,7 +165,7 @@ function extraerAnio(texto: string): number | null {
 
 // Jugadores conocidos — se eliminan del modelo del catálogo para tokenizar,
 // pero se usan como tokens de desempate cuando aparecen en el título del anuncio.
-const JUGADORES_PATTERN = /\b(juan lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez)\b/gi
+const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez)\b/gi
 
 function extraerTokensModelo(modelo: string, marca: string): string[] {
   const sinMarca   = modelo.replace(new RegExp(`^${marca}\\s+`, 'i'), '')
@@ -271,7 +273,11 @@ function matchearItem(
 
   const anioTitulo    = extraerAnio(item.title)
   const versionTitulo = extraerVersionTitulo(item.title)
-  const tokensTitle   = tokenizar(titleLower)
+  let tokensTitle   = tokenizar(titleLower)
+  // Babolat: "Viper Lebron" siempre es Technical Viper — inyectar "technical" si falta
+  if (marcaNorm === 'babolat' && tokensTitle.includes('viper') && tokensTitle.some(t => t === 'lebron' || t === 'juan') && !tokensTitle.includes('technical')) {
+    tokensTitle = [...tokensTitle, 'technical']
+  }
   const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)
 
