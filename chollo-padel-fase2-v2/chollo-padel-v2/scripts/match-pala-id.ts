@@ -25,7 +25,8 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-const DRY_RUN = process.argv.includes('--dry-run')
+const DRY_RUN    = process.argv.includes('--dry-run')
+const DEBUG_NOMATCH = process.argv.includes('--debug-nomatch')
 
 // ─── Constantes compartidas (una única fuente de verdad) ──────────────────────
 
@@ -53,12 +54,35 @@ const KEEP_WORDS = new Set([
 const TOKENS_DIFERENCIADORES = new Set([
   'ctrl', 'carbon', 'team', 'hrd', 'light', 'soft', 'air',
   'pro', 'elite', 'attack', 'motion', 'drive', 'match',
-  'arrow', 'cross', 'hit', 'rx', 'hybrid', 'power', 'speed',
-  '18k', '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena',
+  'arrow', 'cross', 'hit', 'rx', 'power', 'speed',
+  '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena',
+  'hybrid',  // Bullpadel Vertex 04 Hybrid vs Vertex 04 Comfort — diferenciador de subfamilia
   'lite',    // Nox AT10 Xtreme Lite vs Xtreme
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
   'woman',   // Bullpadel versión femenina
+  // v4 — diferenciadores de subfamilias Head, Bullpadel, Babolat, NOX...
+  'extreme', // Head Extreme Pro vs Head Speed Pro
+  'vertex',  // Bullpadel Vertex vs Hack vs Hack Ctrl
+  'hack',    // Bullpadel Hack vs Vertex
+  'genius',  // NOX AT10 Genius vs AT10 Xtreme
+  'viper',   // Babolat Technical Viper vs Air Viper
+  // 'coello' — tratado como jugador en JUGADORES_PATTERN, no como diferenciador
+  'zephyr',
+  'delta',
+  'flash',
+  'radical',
+  'instinct',
+  'prestige',
+  'xplore',
+  'contact',
+  'xtreme',  // NOX AT10 Xtreme vs AT10 12K
+  'neuron',  // Bullpadel Hack Neuron vs Hack
+  'aquila',
+  'galerna',
+  'leader',
+  'comfort',  // Bullpadel Vertex 04 Comfort vs Vertex 04 Hybrid
+  'revolution', // Siux Pegasus Revolution vs Pegasus
 ])
 
 // Palabras que indican que el anuncio NO es una pala
@@ -337,6 +361,39 @@ function matchearItem(
     return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
   }
 
+  // ── Desempate 1c: más diferenciadores del título coinciden con el modelo ──
+  // Ej: "Head Extreme Motion" → extreme+motion en título → gana Head Extreme Motion
+  // Ej: "Head Extreme Pro Coello" → extreme+pro+coello en título
+  //   Head Extreme Pro tokens:[extreme,pro] → todos sus difs están en título ✓
+  //   Head Coello Pro  tokens:[coello,pro]  → todos sus difs están en título ✓ (empate)
+  //   → paso siguiente: descartar los que tienen difs que NO están en el título
+  if (difEnTitulo.size > 0) {
+    // Paso A: preferir los que tienen más difs del título en sus tokens
+    const difMatch = (s: { pala: PalaCatalogo }) =>
+      [...difEnTitulo].filter(d => s.pala.tokens.includes(d)).length
+    const maxDifMatch = Math.max(...scored.map(difMatch))
+    const conMaxDif = scored.filter(s => difMatch(s) === maxDifMatch)
+    if (conMaxDif.length > 0 && conMaxDif.length < scored.length) scored = conMaxDif
+
+    // Paso B: descartar candidatos que tienen difs propios NO presentes en el título
+    // Ej: "Head Extreme Pro Coello" → título tiene [extreme,pro,coello]
+    //   Head Extreme Pro [extreme,pro] → todos en título ✓ — conservar
+    //   Head Coello Pro  [coello,pro]  → todos en título ✓ — conservar (empate, seguimos)
+    // Ej: "Bullpadel Vertex 04 Comfort" → título tiene [vertex,comfort]
+    //   Vertex 04 Hybrid [vertex,hybrid] → hybrid NO en título → descartar
+    const sinDifExtra = scored.filter(s => {
+      const difsPropios = s.pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
+      return difsPropios.every(t => difEnTitulo.has(t))
+    })
+    if (sinDifExtra.length > 0 && sinDifExtra.length < scored.length) scored = sinDifExtra
+  }
+
+  if (scored.length === 0) return 'noMatch'
+  if (scored.length === 1) {
+    const winner = scored[0].pala
+    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+  }
+
   // ── Desempate 1b: jugador en título (Juan Lebron, Ale Galan…) ────────────
   // Si el título menciona un jugador → preferir modelos que lo incluyan.
   // Si el título NO menciona jugador → preferir modelos que NO lo incluyan.
@@ -462,21 +519,30 @@ export async function matchPalaIds(
     palasPorMarca.get(m)!.push(pala)
   }
 
-  // Incluir también anuncios sin marca (se detecta del título)
-  const { data: items, error: itemsErr } = await supabase
-    .from('wallapop_cache')
-    .select('external_id, title, marca')
-    .is('pala_id', null)
-
-  if (itemsErr || !items) {
-    console.error('❌ matchPalaIds: Error cargando cache:', itemsErr)
-    return { matched: 0, ambiguous: 0, noMatch: 0 }
+  // Cargar anuncios sin pala_id — paginado (Supabase limita a 1000 por query)
+  const items: CacheItem[] = []
+  const PAGE_CACHE = 1000
+  let fromCache = 0
+  while (true) {
+    const { data: batch, error: batchErr } = await supabase
+      .from('wallapop_cache')
+      .select('external_id, title, marca')
+      .is('pala_id', null)
+      .range(fromCache, fromCache + PAGE_CACHE - 1)
+    if (batchErr) {
+      console.error('❌ matchPalaIds: Error cargando cache:', batchErr)
+      return { matched: 0, ambiguous: 0, noMatch: 0 }
+    }
+    if (!batch || batch.length === 0) break
+    items.push(...(batch as CacheItem[]))
+    if (batch.length < PAGE_CACHE) break
+    fromCache += PAGE_CACHE
   }
 
   let matched = 0, ambiguous = 0, noMatch = 0
   const updates: { external_id: string; pala_id: string }[] = []
 
-  for (const item of items as CacheItem[]) {
+  for (const item of items) {
     const result = matchearItem(item, palasPorMarca)
     if (result === 'noMatch' || result === 'excluido') { noMatch++; continue }
     if (result === 'ambiguous') { ambiguous++; continue }
@@ -574,16 +640,25 @@ async function main() {
   }
   console.log()
 
-  // ── 2. Cargar anuncios sin pala_id (incluye marca=null) ───────────────────
+  // ── 2. Cargar anuncios sin pala_id (paginado — Supabase limita a 1000) ──────
   console.log('📦 Cargando wallapop_cache sin pala_id...')
-  const { data: items, error: itemsErr } = await supabase
-    .from('wallapop_cache')
-    .select('external_id, title, marca')
-    .is('pala_id', null)
-
-  if (itemsErr || !items) {
-    console.error('❌ Error cargando wallapop_cache:', itemsErr)
-    process.exit(1)
+  const items: CacheItem[] = []
+  const PAGE_ITEMS = 1000
+  let fromItems = 0
+  while (true) {
+    const { data: batch, error: batchErr } = await supabase
+      .from('wallapop_cache')
+      .select('external_id, title, marca')
+      .is('pala_id', null)
+      .range(fromItems, fromItems + PAGE_ITEMS - 1)
+    if (batchErr) {
+      console.error('❌ Error cargando wallapop_cache:', batchErr)
+      process.exit(1)
+    }
+    if (!batch || batch.length === 0) break
+    items.push(...(batch as CacheItem[]))
+    if (batch.length < PAGE_ITEMS) break
+    fromItems += PAGE_ITEMS
   }
 
   console.log(`  ${items.length} anuncios sin pala_id\n`)
@@ -596,9 +671,47 @@ async function main() {
   const updates: MatchResult[] = []
   const ambiguousItems: { titulo: string; candidatos: PalaCatalogo[] }[] = []
 
-  for (const item of items as CacheItem[]) {
-    // Para capturar los candidatos de los ambiguos, necesitamos una versión
-    // extendida que devuelva el detalle. Usamos matchearItem + re-run para debug.
+  // Contadores para --debug-nomatch
+  const debugNomatch = {
+    sinMarca:       [] as string[],  // 🔴 No se detectó marca
+    sinCatalogo:    [] as string[],  // 🟠 Marca detectada pero sin palas en catálogo
+    descartDif:     [] as string[],  // 🟡 Descartado por diferenciador extra en título
+    ratioInsuf:     [] as string[],  // ⚫ Ratio < threshold — tokens insuficientes
+  }
+
+  for (const item of items) {
+    // Para debug-nomatch: categorizar los sin-match antes de llamar a matchearItem
+    if (DEBUG_NOMATCH && !matchearItem(item, palasPorMarca).toString().startsWith('excluido')) {
+      const titleLow = item.title.toLowerCase()
+      const accs = [...EXCLUIR_ACCESORIOS].some(w => titleLow.includes(w))
+      if (!accs) {
+        let mNorm = item.marca?.toLowerCase() ?? null
+        if (!mNorm) {
+          const det = detectarMarcaDesideTitulo(item.title)
+          if (det) mNorm = det.toLowerCase()
+        }
+        if (mNorm === 'star vie') mNorm = 'starvie'
+        if (!mNorm) {
+          debugNomatch.sinMarca.push(item.title)
+        } else if ((palasPorMarca.get(mNorm) ?? []).length === 0) {
+          debugNomatch.sinCatalogo.push(`[${mNorm}] ${item.title}`)
+        } else {
+          const tokensT = tokenizar(titleLow)
+          const difT = new Set(tokensT.filter(t => TOKENS_DIFERENCIADORES.has(t)))
+          const cands = (palasPorMarca.get(mNorm) ?? [])
+          const conRatio = cands.filter(p => {
+            const tm = p.tokens.filter(t => tokensT.includes(t))
+            return tm.length / p.tokens.length >= PARTIAL_MATCH_THRESHOLD
+          })
+          if (conRatio.length > 0) {
+            debugNomatch.descartDif.push(item.title)
+          } else {
+            debugNomatch.ratioInsuf.push(item.title)
+          }
+        }
+      }
+    }
+
     const result = matchearItem(item, palasPorMarca)
     if (result === 'excluido')  { excluidos++; continue }
     if (result === 'noMatch')   { noMatch++;   continue }
@@ -628,6 +741,46 @@ async function main() {
   console.log(`  ⚠️  Ambiguos:       ${ambiguous}`)
   console.log(`  ❌ Sin match:       ${noMatch}`)
   console.log(`  🚫 Accesorios:      ${excluidos}\n`)
+
+  // ── Debug-nomatch: categorías de fallos ──────────────────────────────────
+  if (DEBUG_NOMATCH) {
+    console.log('🔍 DEBUG NOMATCH — Categorías de los sin-match:')
+    console.log(`  🔴 Sin marca detectada:          ${debugNomatch.sinMarca.length}`)
+    console.log(`  🟠 Marca sin catálogo (import!): ${debugNomatch.sinCatalogo.length}`)
+    console.log(`  🟡 Descartado por diferenciador: ${debugNomatch.descartDif.length}`)
+    console.log(`  ⚫ Ratio insuficiente (<60%):    ${debugNomatch.ratioInsuf.length}`)
+    console.log()
+
+    if (debugNomatch.sinCatalogo.length > 0) {
+      // Agrupar por marca para saber qué importar
+      const porMarca = new Map<string, number>()
+      for (const t of debugNomatch.sinCatalogo) {
+        const marca = t.match(/^\[([^\]]+)\]/)?.[1] ?? 'desconocida'
+        porMarca.set(marca, (porMarca.get(marca) ?? 0) + 1)
+      }
+      console.log('  🟠 Marcas sin catálogo (anuncios afectados):')
+      for (const [m, n] of [...porMarca.entries()].sort((a,b) => b[1]-a[1])) {
+        console.log(`     ${m}: ${n} anuncios`)
+      }
+      console.log()
+    }
+
+    if (debugNomatch.sinMarca.length > 0) {
+      console.log(`  🔴 Muestra sin marca (primeros 10):`)
+      for (const t of debugNomatch.sinMarca.slice(0, 10)) {
+        console.log(`     "${t.substring(0, 65)}"`)
+      }
+      console.log()
+    }
+
+    if (debugNomatch.descartDif.length > 0) {
+      console.log(`  🟡 Muestra descartados por diferenciador (primeros 10):`)
+      for (const t of debugNomatch.descartDif.slice(0, 10)) {
+        console.log(`     "${t.substring(0, 65)}"`)
+      }
+      console.log()
+    }
+  }
 
   if (updates.length === 0) {
     console.log('⚠️  Sin actualizaciones que aplicar.')
