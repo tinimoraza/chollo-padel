@@ -136,6 +136,8 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'varlion':    'Varlion',
   'volt':       'Volt',
   'tamanaco':   'Tamanaco',
+  'kuikma':     'Kuikma',
+  'akkeron':    'Akkeron',
 }
 
 // ─── Funciones de parsing ──────────────────────────────────────────────────────
@@ -152,6 +154,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bproline\b/g, 'pro line') // normalizar "proline" → "pro line" (Bullpadel Flow Pro Line)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
+    .replace(/\bcontrol\b/g, 'ctrl')        // normalizar "control" → "ctrl" (Bullpadel Indiga Control = CTR)
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
     .split(/\s+/)
