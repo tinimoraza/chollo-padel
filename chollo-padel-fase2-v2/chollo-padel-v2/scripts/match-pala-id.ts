@@ -34,6 +34,7 @@ const DEBUG_NOMATCH = process.argv.includes('--debug-nomatch')
 const STOP_WORDS = new Set([
   'de', 'da', 'del', 'la', 'el', 'y', 'e', 'con', 'para', 'pala', 'padel',
   'raqueta', 'serie', 'series', 'edition', 'version', 'by',
+  'a22', 'a23', 'a24', 'rc',  // Akkeron — nunca aparecen en títulos Wallapop
 ])
 
 // Palabras que diferencian modelos — nunca ignorar aunque sean cortas
