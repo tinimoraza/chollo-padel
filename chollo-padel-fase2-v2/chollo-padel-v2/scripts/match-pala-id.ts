@@ -159,6 +159,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bproline\b/g, 'line') // normalizar "proline" → "line" (Bullpadel Flow Pro Line → Flow Line)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
+    .replace(/\b(hack|vertex|flow)\s+(\d)\b/g, '$1 0$2') // "Hack 3" → "Hack 03", "Vertex 4" → "Vertex 04"
     .replace(/\bcontrol\b/g, 'ctrl')        // normalizar "control" → "ctrl" (Bullpadel Indiga Control = CTR)
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
