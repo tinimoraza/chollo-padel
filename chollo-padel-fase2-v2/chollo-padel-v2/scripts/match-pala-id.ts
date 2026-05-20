@@ -138,6 +138,11 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'tamanaco':   'Tamanaco',
   'kuikma':     'Kuikma',
   'akkeron':    'Akkeron',
+  'joma':       'Joma',
+  'vibor-a':    'Vibora',
+  'vibora':     'Vibora',
+  'kombat':     'Kombat',
+  'kaitt':      'Kaitt',
 }
 
 // ─── Funciones de parsing ──────────────────────────────────────────────────────
@@ -151,7 +156,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
     .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
-    .replace(/\bproline\b/g, 'pro line') // normalizar "proline" → "pro line" (Bullpadel Flow Pro Line)
+    .replace(/\bproline\b/g, 'line') // normalizar "proline" → "line" (Bullpadel Flow Pro Line → Flow Line)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
     .replace(/\bcontrol\b/g, 'ctrl')        // normalizar "control" → "ctrl" (Bullpadel Indiga Control = CTR)
@@ -287,8 +292,9 @@ function matchearItem(
   }
   // Nox AT10 18K sin "genius"/"alum" → única variante 18K en catálogo, inyectar tokens
   // Ej: "Nox AT10 18K 2025 Agustín Tapia" → el catálogo tiene "AT10 Genius 18K Alum 2025"
-  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k') && !tokensTitle.includes('genius')) {
-    tokensTitle = [...tokensTitle, 'genius', 'alum']
+  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k')) {
+    if (!tokensTitle.includes('genius')) tokensTitle = [...tokensTitle, 'genius']
+    if (!tokensTitle.includes('alum')) tokensTitle = [...tokensTitle, 'alum']
   }
   const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)
