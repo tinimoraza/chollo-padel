@@ -84,6 +84,9 @@ const TOKENS_DIFERENCIADORES = new Set([
   'leader',
   'comfort',  // Bullpadel Vertex 04 Comfort vs Vertex 04 Hybrid
   'revolution', // Siux Pegasus Revolution vs Pegasus
+  'st1', 'st2', 'st3', 'st4',  // Siux Electra ST2/ST3/ST4 vs Electra Pro/Go/Elite
+  'advance',    // Bullpadel Vertex Advance vs Vertex 04/05
+  'jr',         // Bullpadel Hack JR (Junior) vs Hack 04/03
 ])
 
 // Palabras que indican que el anuncio NO es una pala
@@ -298,6 +301,10 @@ function matchearItem(
     if (!tokensTitle.includes('genius')) tokensTitle = [...tokensTitle, 'genius']
     if (!tokensTitle.includes('alum')) tokensTitle = [...tokensTitle, 'alum']
   }
+  // AT10 Attack sin 18K → en catálogo siempre es "Genius Attack"
+  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('attack') && !tokensTitle.includes('genius')) {
+    tokensTitle = [...tokensTitle, 'genius']
+  }
   const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)
 
@@ -347,6 +354,12 @@ function matchearItem(
             if (hayConflicto) return null
           }
         }
+        // GUARD: si el modelo tiene número de versión (03, 04...) y el título NO tiene
+        // ningún número de modelo → ambiguo, no asignar en match parcial
+        if (numerosModelo.length === 0) {
+          const numerosModPala = pala.tokens.filter(t => /^0[1-9]$/.test(t))  // solo 01-09 (versiones Bullpadel)
+          if (numerosModPala.length > 0) return null
+        }
 
         const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
         const ratio = tokensMatch.length / pala.tokens.length
@@ -363,6 +376,14 @@ function matchearItem(
 
     // Solo asignar si hay un único candidato parcial claro (o varios del mismo año → más reciente)
     if (parciales.length > 0) {
+      // Si el título NO menciona jugador, descartar modelos que tengan jugador
+      if (jugadoresTitulo.length === 0) {
+        const RE_JUG2 = new RegExp(JUGADORES_PATTERN.source, 'gi')
+        const sinJug = parciales.filter(s =>
+          !RE_JUG2.test(s.pala.modelo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+        )
+        if (sinJug.length > 0) parciales.splice(0, parciales.length, ...sinJug)
+      }
       parciales.sort((a, b) => b.score - a.score)
       const maxScore  = parciales[0].score
       const topParc   = parciales.filter(s => s.score === maxScore)
@@ -442,12 +463,12 @@ function matchearItem(
       })
       if (conJugador.length > 0 && conJugador.length < scored.length) scored = conJugador
     } else {
-      // Título SIN jugador → preferir modelos sin jugador
+      // Título SIN jugador → descartar modelos que tengan jugador (no solo en empate)
       const sinJugador = scored.filter(s => {
         const re2 = new RegExp(JUGADORES_PATTERN.source, 'gi')
         return !re2.test(s.pala.modelo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
       })
-      if (sinJugador.length > 0 && sinJugador.length < scored.length) scored = sinJugador
+      if (sinJugador.length > 0) scored = sinJugador
     }
   }
 
