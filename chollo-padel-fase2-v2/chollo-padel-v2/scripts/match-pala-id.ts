@@ -305,6 +305,10 @@ function matchearItem(
   if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('attack') && !tokensTitle.includes('genius')) {
     tokensTitle = [...tokensTitle, 'genius']
   }
+  // AT10 12K sin "genius" → inyectar genius (AT10 Genius 12K es el modelo estándar)
+  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('12k') && !tokensTitle.includes('genius')) {
+    tokensTitle = [...tokensTitle, 'genius']
+  }
   const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)
 
