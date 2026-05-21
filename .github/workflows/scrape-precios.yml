@@ -1,0 +1,46 @@
+name: Scrape Precios Tiendas
+
+# Scrapa Padel Nuestro + Padelzoom 4x al día
+# y recalcula price_reference para cada pala.
+# Horas: 07:00, 13:00, 19:00, 23:00 UTC
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+    - cron: '0 13 * * *'
+    - cron: '0 19 * * *'
+    - cron: '0 23 * * *'
+  workflow_dispatch:  # Permite lanzarlo manualmente desde GitHub UI
+
+jobs:
+  scrape-precios:
+    name: Scrape precios tiendas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Scrape Padel Nuestro
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js padelnuestro
+
+      - name: Scrape Padelzoom
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js padelzoom
