@@ -106,17 +106,14 @@ export async function searchVinted(
       order: 'newest_first',
     })
 
-    // Filtrar por categoría "Racquet Sports" (pádel, tenis, squash)
-    // Evita que búsquedas genéricas devuelvan ropa u otros artículos
-    params.append('catalog_ids[]', '4338')
-
+    // catalog_ids[] añadido directo a la URL — URLSearchParams codifica [] como %5B%5D y Vinted no lo entiende
     if (minPrice !== undefined) params.set('price_from', String(minPrice))
     if (maxPrice !== undefined) params.set('price_to', String(maxPrice))
     for (const id of statusIds) {
       params.append('status_ids[]', id)
     }
 
-    const res = await fetch(`https://www.vinted.es/api/v2/catalog/items?${params}`, {
+    const res = await fetch(`https://www.vinted.es/api/v2/catalog/items?${params}&catalog_ids[]=4338`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
