@@ -1,3 +1,13 @@
+/**
+ * lib/vinted.ts
+ * =============================================
+ * Búsqueda de anuncios Vinted desde Supabase (wallapop_cache platform='vinted').
+ * Los datos se mantienen frescos por scrape-vinted.ts (GH Actions cada hora a :30).
+ * Incluye precio_referencia de tienda igual que Wallapop.
+ */
+
+import { createClient } from '@supabase/supabase-js'
+
 export interface VintedItem {
   id: string
   title: string
@@ -12,66 +22,15 @@ export interface VintedItem {
   platform: string
   img: string | null
   date: string
+  pala_id: string | null
+  precio_referencia: number | null
 }
 
 const CONDITION_MAP: Record<string, string[]> = {
-  new:            ['6', '1'],
-  as_good_as_new: ['2'],
-  good:           ['3'],
-  fair:           ['4'],
-}
-
-const CONDITION_NORMALIZE: Record<string, string> = {
-  '6': 'new',
-  '1': 'as_good_as_new',
-  '2': 'good',
-  '3': 'good',
-  '4': 'fair',
-  'Nuevo con etiquetas': 'new',
-  'Nuevo sin etiquetas': 'as_good_as_new',
-  'Muy bueno':           'good',
-  'Bueno':               'good',
-  'Satisfactorio':       'fair',
-}
-
-let cachedAuth: { cookie: string; token: string; expiresAt: number } | null = null
-
-async function getVintedToken(): Promise<{ cookie: string; token: string } | null> {
-  if (cachedAuth && Date.now() < cachedAuth.expiresAt) {
-    return { cookie: cachedAuth.cookie, token: cachedAuth.token }
-  }
-  try {
-    const res = await fetch('https://www.vinted.es', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9',
-      },
-    })
-
-    const rawCookies = res.headers.getSetCookie?.() ?? []
-
-    const cookie = rawCookies
-      .map((c) => c.split(';')[0])
-      .filter((c) => {
-        const [, val] = c.split('=')
-        return val && val.trim().length > 0
-      })
-      .join('; ')
-
-    const tokenEntry = rawCookies
-      .map((c) => c.split(';')[0])
-      .find((c) => c.startsWith('access_token_web=') && c.length > 'access_token_web='.length + 5)
-
-    const token = tokenEntry?.split('=').slice(1).join('=')
-    if (!token) return null
-
-    cachedAuth = { cookie, token, expiresAt: Date.now() + 5 * 60 * 1000 }
-    return { cookie, token }
-  } catch (err) {
-    console.error('Error obteniendo token de Vinted:', err)
-    return null
-  }
+  new:            ['new'],
+  as_good_as_new: ['as_good_as_new'],
+  good:           ['good'],
+  fair:           ['fair'],
 }
 
 export async function searchVinted(
@@ -81,90 +40,86 @@ export async function searchVinted(
   conditions?: string[]
 ): Promise<VintedItem[]> {
   try {
-    const auth = await getVintedToken()
-    if (!auth) {
-      console.error('No se pudo obtener token de Vinted')
-      return []
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    )
+
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+
+    // ── Paso 1: buscar en wallapop_cache platform='vinted' ────────────────────
+    let sb = supabase
+      .from('wallapop_cache')
+      .select('*')
+      .eq('platform', 'vinted')
+      .order('price', { ascending: true })
+      .limit(500)
+
+    for (const word of words) {
+      sb = sb.ilike('title', `%${word}%`)
     }
 
-    const { cookie, token } = auth
+    if (minPrice !== undefined) sb = sb.gte('price', minPrice)
+    if (maxPrice !== undefined) sb = sb.lte('price', maxPrice)
 
-    const statusIds: string[] = []
     if (conditions && conditions.length > 0) {
-      for (const c of conditions) {
-        const mapped = CONDITION_MAP[c]
-        if (mapped) statusIds.push(...mapped)
+      const vintedConditions = conditions.flatMap(c => CONDITION_MAP[c] ?? [])
+      if (vintedConditions.length > 0) {
+        sb = sb.in('condition', vintedConditions)
       }
     }
 
-    // FIX 1: catalog_ids[] dentro del URLSearchParams para que se codifique correctamente
-    const params = new URLSearchParams({
-      search_text: query,
-      per_page: '120',
-      order: 'newest_first',
-    })
+    const { data, error } = await sb
 
-    params.append('catalog_ids[]', '4338')
-
-    if (minPrice !== undefined) params.set('price_from', String(minPrice))
-    if (maxPrice !== undefined) params.set('price_to', String(maxPrice))
-    for (const id of statusIds) {
-      params.append('status_ids[]', id)
-    }
-
-    const url = `https://www.vinted.es/api/v2/catalog/items?${params.toString()}`
-    console.log('Vinted URL:', url)
-
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'es-ES,es;q=0.9',
-        'Referer': 'https://www.vinted.es/',
-        'Cookie': cookie,
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error(`Vinted API error ${res.status}:`, errText)
+    if (error) {
+      console.error('Error leyendo Vinted de Supabase:', error)
       return []
     }
 
-    const data = await res.json()
-    console.log('Vinted raw data keys:', Object.keys(data))
-    console.log('Vinted items count:', data.items?.length ?? 'undefined')
-    console.log('Vinted primer item:', JSON.stringify(data.items?.[0], null, 2))
-    const items: any[] = data.items ?? []
-    console.log(`Vinted devolvió ${items.length} items para "${query}"`)
+    if (!data || data.length === 0) return []
 
-    // catalog_ids[]=4338 ya filtra por categoría pádel — devolvemos todo lo que llegue
-    return items
-      .filter((item) => !!(item.title ?? '').trim())
-      .map((item) => {
-        const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
-        const ts = item.photo?.high_resolution?.timestamp
-        const date = ts ? new Date(ts * 1000).toISOString() : ''
-        const price = parseFloat(item.price?.amount ?? '0')
+    // ── Paso 2: price_reference de tienda (igual que Wallapop) ───────────────
+    const palaIdsSet: Record<string, boolean> = {}
+    for (const item of data) {
+      if (item.pala_id) palaIdsSet[item.pala_id] = true
+    }
+    const palaIds = Object.keys(palaIdsSet)
+    const precioRefMap: Record<string, number> = {}
 
-        return {
-          id: String(item.id),
-          title: item.title ?? '',
-          description: '',
-          price,
-          currency: item.price?.currency_code ?? 'EUR',
-          images: img ? [img] : [],
-          img,
-          url: item.url ?? `https://www.vinted.es/items/${item.id}`,
-          condition: CONDITION_NORMALIZE[String(item.status ?? '')] ?? String(item.status ?? ''),
-          location: 'Europa',
-          city: 'Europa',
-          platform: 'vinted',
-          date,
+    if (palaIds.length > 0) {
+      const { data: refs } = await supabase
+        .from('price_reference')
+        .select('pala_id, precio_referencia, fuentes_count')
+        .in('pala_id', palaIds)
+
+      if (refs) {
+        for (const r of refs) {
+          if (r.pala_id && r.precio_referencia && r.fuentes_count > 0) {
+            precioRefMap[r.pala_id] = r.precio_referencia
+          }
         }
-      })
+      }
+    }
+
+    // ── Paso 3: combinar ──────────────────────────────────────────────────────
+    return data.map((item) => ({
+      id:                item.external_id,
+      title:             item.title,
+      description:       '',
+      price:             item.price,
+      currency:          item.currency ?? 'EUR',
+      images:            item.img ? [item.img] : [],
+      img:               item.img,
+      url:               item.url,
+      condition:         item.condition ?? '',
+      location:          item.city ?? 'Europa',
+      city:              item.city ?? 'Europa',
+      platform:          'vinted',
+      date:              item.date ?? '',
+      pala_id:           item.pala_id ?? null,
+      precio_referencia: item.pala_id ? (precioRefMap[item.pala_id] ?? null) : null,
+    }))
+
   } catch (err) {
     console.error('Error en searchVinted:', err)
     return []
