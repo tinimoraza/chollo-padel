@@ -140,33 +140,9 @@ export async function searchVinted(
     const items: any[] = data.items ?? []
     console.log(`Vinted devolvió ${items.length} items para "${query}"`)
 
-    const PADEL_TERMS = [
-      'pala', 'padel', 'pádel', 'bullpadel', 'babolat', 'nox', 'starvie',
-      'vibora', 'siux', 'adidas', 'wilson', 'head', 'drop shot', 'varlion',
-      'black crown', 'royal padel', 'kuikma',
-    ]
-    const queryLower = query.toLowerCase()
-    const isPadelQuery = PADEL_TERMS.some(t => queryLower.includes(t))
-    if (!isPadelQuery) {
-      console.log(`Vinted: query "${query}" no es de pádel, ignorada`)
-      return []
-    }
-
-    // FIX 2: filtrar solo por la marca principal (primera palabra significativa),
-    // no por TODAS las palabras — evita descartar resultados con títulos escuetos
-    const STOP_WORDS = new Set(['pala', 'padel', 'pádel', 'de', 'para', 'con', 'y'])
-    const brandWords = queryLower
-      .split(/\s+/)
-      .filter(w => w.length > 2 && !STOP_WORDS.has(w))
-
+    // catalog_ids[]=4338 ya filtra por categoría pádel — devolvemos todo lo que llegue
     return items
-      .filter((item) => {
-        const titleLower = (item.title ?? '').toLowerCase()
-        // Si no hay palabras clave relevantes, devolver todo
-        if (brandWords.length === 0) return true
-        // Basta con que el título contenga AL MENOS UNA palabra clave
-        return brandWords.some((w) => titleLower.includes(w))
-      })
+      .filter((item) => !!(item.title ?? '').trim())
       .map((item) => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
         const ts = item.photo?.high_resolution?.timestamp
