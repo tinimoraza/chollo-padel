@@ -106,6 +106,10 @@ export async function searchVinted(
       order: 'newest_first',
     })
 
+    // Filtrar por categoría "Racquet Sports" (pádel, tenis, squash)
+    // Evita que búsquedas genéricas devuelvan ropa u otros artículos
+    params.append('catalog_ids[]', '4338')
+
     if (minPrice !== undefined) params.set('price_from', String(minPrice))
     if (maxPrice !== undefined) params.set('price_to', String(maxPrice))
     for (const id of statusIds) {
@@ -134,7 +138,18 @@ export async function searchVinted(
     const items: any[] = data.items ?? []
     console.log(`Vinted devolvió ${items.length} items para "${query}"`)
 
+    // Validar que la búsqueda es de pádel — rechazamos queries sin relación
+    const PADEL_TERMS = [
+      'pala', 'padel', 'pádel', 'bullpadel', 'babolat', 'nox', 'starvie',
+      'vibora', 'siux', 'adidas', 'wilson', 'head', 'drop shot', 'varlion',
+      'black crown', 'royal padel', 'kuikma',
+    ]
     const queryLower = query.toLowerCase()
+    const isPadelQuery = PADEL_TERMS.some(t => queryLower.includes(t))
+    if (!isPadelQuery) {
+      console.log(`Vinted: query "${query}" no es de pádel, ignorada`)
+      return []
+    }
 
     // Solo exigimos la marca — ignoramos "pala"/"padel" en el filtro post-búsqueda
     // porque en Vinted los títulos son escuetos ("NOX AT10 2024")
