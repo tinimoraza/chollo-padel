@@ -356,6 +356,13 @@ async function main() {
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
 
+  // ── Invalidar search_cache ────────────────────────────────────────────────
+  // Los anuncios borrados (vendidos) quedan en caché hasta TTL si no se invalida.
+  // Borramos toda la caché al final de cada scrape para que la próxima búsqueda
+  // lea datos frescos de BD.
+  await supabase.from('search_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  console.log('🗑️  search_cache invalidada')
+
   console.log('🏁 Scraper Wallapop completado.\n')
 }
 

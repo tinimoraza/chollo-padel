@@ -60,18 +60,10 @@ const EXCLUIR_SCRAPER = [
   'talla xs', 'zapatilla', 'zapatillas', 'botas ', 'botines', 'calcetines',
   'pantalon', 'pantalón', 'chaqueta', 'sudadera', 'equipacion', 'equipación',
   'chandal', 'chándal', 'shorts', 'polo ',
-  // Calzado — chanclas / sandalias (frecuente en Vinted con marca Adidas)
-  'chancla', 'sandalia', 'sandalias', 'sandal',
-  'chinelo', 'chinelos', 'adilette', 'playeras ',
-  // Fundas y accesorios de pala (no son palas)
-  'funda ', 'fundas ', 'fodero', 'racchetta',
-  'porta pala', 'paletero',
   // Pelotas y accesorios
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
-  'mochila', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
+  'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
-  // Accesorios sueltos frecuentes en Vinted
-  'gafas ', ' gafas', '+ regalo', 'pulsera', 'correa ',
   // Coleccionismo / fútbol / otros deportes
   'mundial', 'euro 20', 'champions', 'match worn', 'player version',
   'original históri', 'original histori', 'camp nou',
@@ -379,6 +371,10 @@ async function main() {
 
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
+
+  // ── Invalidar search_cache ────────────────────────────────────────────────
+  await supabase.from('search_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  console.log('🗑️  search_cache invalidada')
 
   console.log('🏁 Scraper Vinted completado.\n')
 }
