@@ -8,9 +8,11 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
-  // Seguridad básica: solo Vercel Cron puede llamar esto
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const authHeader = req.headers.get('authorization') ?? ''
+  const expected = `Bearer ${process.env.CRON_SECRET ?? ''}`
+
+  if (authHeader !== expected) {
+    console.error('AUTH FAILED — header:', authHeader.length, 'expected:', expected.length)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -53,7 +55,6 @@ async function procesarAlertaBusqueda(alerta: any) {
 
   if (resultados.length === 0) return
 
-  // Obtener items ya notificados para esta alerta
   const { data: yaNotificados } = await supabaseAdmin
     .from('notificaciones')
     .select('item_id')
@@ -64,7 +65,6 @@ async function procesarAlertaBusqueda(alerta: any) {
 
   if (nuevos.length === 0) return
 
-  // Enviar email
   await resend.emails.send({
     from: 'HuntPadel <noreply@huntpadel.com>',
     to: alerta.email,
@@ -72,7 +72,6 @@ async function procesarAlertaBusqueda(alerta: any) {
     html: buildEmailBusqueda(alerta, nuevos),
   })
 
-  // Guardar notificaciones enviadas
   await supabaseAdmin.from('notificaciones').insert(
     nuevos.map(item => ({
       alerta_id: alerta.id,
@@ -83,7 +82,6 @@ async function procesarAlertaBusqueda(alerta: any) {
     }))
   )
 
-  // Actualizar ultima_notificacion
   await supabaseAdmin
     .from('alertas')
     .update({ ultima_notificacion: new Date().toISOString() })
@@ -93,7 +91,6 @@ async function procesarAlertaBusqueda(alerta: any) {
 async function procesarAlertaFavorito(alerta: any) {
   if (!alerta.item_id || !alerta.max_price) return
 
-  // Buscar el item concreto en wallapop_cache
   const { data: item } = await supabaseAdmin
     .from('wallapop_cache')
     .select('*')
@@ -103,7 +100,6 @@ async function procesarAlertaFavorito(alerta: any) {
   if (!item) return
   if (item.price >= alerta.max_price) return
 
-  // Comprobar si ya notificamos este precio
   const { data: yaNotificado } = await supabaseAdmin
     .from('notificaciones')
     .select('id')
@@ -113,7 +109,6 @@ async function procesarAlertaFavorito(alerta: any) {
 
   if (yaNotificado) return
 
-  // Enviar email
   await resend.emails.send({
     from: 'HuntPadel <noreply@huntpadel.com>',
     to: alerta.email,
@@ -121,7 +116,6 @@ async function procesarAlertaFavorito(alerta: any) {
     html: buildEmailFavorito(alerta, item),
   })
 
-  // Guardar notificación
   await supabaseAdmin.from('notificaciones').insert({
     alerta_id: alerta.id,
     item_id: alerta.item_id,
