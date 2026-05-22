@@ -134,6 +134,9 @@ export async function searchVinted(
     }
 
     const data = await res.json()
+    console.log('Vinted raw data keys:', Object.keys(data))
+    console.log('Vinted items count:', data.items?.length ?? 'undefined')
+    console.log('Vinted primer item:', JSON.stringify(data.items?.[0], null, 2))
     const items: any[] = data.items ?? []
     console.log(`Vinted devolvió ${items.length} items para "${query}"`)
 
