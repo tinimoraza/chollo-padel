@@ -134,12 +134,28 @@ export async function searchVinted(
     const items: any[] = data.items ?? []
     console.log(`Vinted devolvió ${items.length} items para "${query}"`)
 
-    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+    // Validar que la búsqueda es de pádel — rechazamos queries sin relación
+    const PADEL_TERMS = [
+      'pala', 'padel', 'pádel', 'bullpadel', 'babolat', 'nox', 'starvie',
+      'vibora', 'siux', 'adidas', 'wilson', 'head', 'drop shot', 'varlion',
+      'black crown', 'royal padel', 'kuikma',
+    ]
+    const queryLower = query.toLowerCase()
+    const isPadelQuery = PADEL_TERMS.some(t => queryLower.includes(t))
+    if (!isPadelQuery) {
+      console.log(`Vinted: query "${query}" no es de pádel, ignorada`)
+      return []
+    }
+
+    // Solo exigimos la marca — ignoramos "pala"/"padel" en el filtro post-búsqueda
+    // porque en Vinted los títulos son escuetos ("NOX AT10 2024")
+    const brandWords = queryLower.split(/\s+/).filter(w => w !== 'pala' && w !== 'padel' && w !== 'pádel')
 
     return items
       .filter((item) => {
         const titleLower = (item.title ?? '').toLowerCase()
-        return words.every((w) => titleLower.includes(w))
+        if (brandWords.length === 0) return true
+        return brandWords.every((w) => titleLower.includes(w))
       })
       .map((item) => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null

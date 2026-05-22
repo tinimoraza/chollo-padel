@@ -19,14 +19,17 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 const KEYWORDS = [
   'pala padel',
   'pala babolat',
-  'pala nox padel',
+  'pala nox',
   'pala head padel',
-  'pala wilson padel',
+  'pala wilson',
   'pala bullpadel',
-  'pala adidas padel',
-  'pala siux padel',
-  'pala drop shot padel',
-  'pala starvie padel',
+  'pala adidas',
+  'pala siux',
+  'pala drop shot',
+  'pala starvie',
+  'pala vibora',
+  'pala varlion',
+  'pala black crown',
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel
@@ -154,12 +157,15 @@ async function scrapeKeyword(keyword: string, auth: { cookie: string; token: str
     const items: any[] = data.items ?? []
     console.log(`  ✅ "${keyword}": ${items.length} items`)
 
-    const words = keyword.toLowerCase().split(/\s+/).filter(Boolean)
+    // Solo exigimos la marca — ignoramos "pala"/"padel" porque en Vinted los
+    // títulos son escuetos ("NOX AT10 2024") y no siempre incluyen esas palabras
+    const brandWords = keyword.toLowerCase().split(/\s+/).filter(w => w !== 'pala' && w !== 'padel')
 
     return items
       .filter(item => {
         const titleLower = (item.title ?? '').toLowerCase()
-        return words.every(w => titleLower.includes(w))
+        if (brandWords.length === 0) return true
+        return brandWords.every(w => titleLower.includes(w))
       })
       .map(item => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
