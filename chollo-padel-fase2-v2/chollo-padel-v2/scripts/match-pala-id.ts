@@ -15,6 +15,12 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v11 (2026-05-22):
+ *  - "pro line" → "line" en tokenizar (Flow Pro Line matchea con título "Flow Proline")
+ *  - número suelto 1-9 tras modelo normaliza a 0X ("Hack Hybrid 3" → token "03")
+ *  - AT10_18K_ACTIVO: cuando inyección 18k activa, ignorar año del título en fases 1 y 2
+ *    (vendedores ponen año actual 2026 pero la pala AT10 18K es 2023/2024)
+ *
  * Ejecutar:
  *   npx tsx --env-file=.env.local scripts/match-pala-id.ts
  *   npx tsx --env-file=.env.local scripts/match-pala-id.ts --dry-run
@@ -147,12 +153,26 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'vibora':     'Vibora',
   'kombat':     'Kombat',
   'kaitt':      'Kaitt',
+  // v10: alias de modelo → marca (títulos sin nombre de marca explícito)
+  'vertex':     'Bullpadel',  // "Vertex 05 2026" → Bullpadel
+  'hack':       'Bullpadel',  // "Hack 04 Hybrid" → Bullpadel
+  'indiga':     'Bullpadel',
+  'hack ctrl':  'Bullpadel',
+  'at10':       'Nox',        // "AT10 Genius 18K" → Nox
+  'ml10':       'Nox',
+  'metalbone':  'Adidas',     // "Metalbone 3.4 HRD+" → Adidas
+  'metagame':   'Adidas',
+  'metalwrist': 'Adidas',
+  'yarara':     'Vibora',
+  'electra':    'Siux',       // "Electra ST2" → Siux
+  'pegasus':    'Siux',
 }
 
 // ─── Funciones de parsing ──────────────────────────────────────────────────────
 
 function tokenizar(texto: string): string[] {
   return texto
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // v10: quitar tildes ANTES de tokenizar (élite→elite, pádel→padel, González→gonzalez)
     .toLowerCase()
     .replace(/hrd\+/g, 'hrd')          // normalizar hrd+ → hrd
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
@@ -161,9 +181,12 @@ function tokenizar(texto: string): string[] {
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
     .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
     .replace(/\bproline\b/g, 'line') // normalizar "proline" → "line" (Bullpadel Flow Pro Line → Flow Line)
+    .replace(/\bpro\s+line\b/g, 'line') // v11: "pro line" → "line" (mismo compuesto con espacio)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
     .replace(/\b(hack|vertex|flow)\s+(\d)\b/g, '$1 0$2') // "Hack 3" → "Hack 03", "Vertex 4" → "Vertex 04"
+    .replace(/\b(hack|vertex|flow)(0[1-9])\b/g, '$1 $2') // v10: "hack03" → "hack 03" (pegados sin espacio)
+    .replace(/\b(hack|vertex|flow)(\s+\w+)\s+(\d)\b/g, '$1$2 0$3') // v11: "Hack Hybrid 3" → "Hack Hybrid 03"
     .replace(/\bcontrol\b/g, 'ctrl')        // normalizar "control" → "ctrl" (Bullpadel Indiga Control = CTR)
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
@@ -182,7 +205,7 @@ function extraerAnio(texto: string): number | null {
 
 // Jugadores conocidos — se eliminan del modelo del catálogo para tokenizar,
 // pero se usan como tokens de desempate cuando aparecen en el título del anuncio.
-const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez)\b/gi
+const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso)\b/gi
 
 function extraerTokensModelo(modelo: string, marca: string): string[] {
   const sinMarca   = modelo.replace(new RegExp(`^${marca}\\s+`, 'i'), '')
@@ -220,14 +243,16 @@ function extraerVersionTitulo(titulo: string): string | null {
 
 /** Intenta detectar la marca desde el título cuando wallapop_cache.marca es null. */
 function detectarMarcaDesideTitulo(titulo: string): string | null {
-  const tl = titulo.toLowerCase()
-  // Primero intentar frases de dos palabras (ej: "drop shot", "black crown")
+  // Normalizar tildes igual que tokenizar() para que los alias funcionen
+  const tl = titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  // Primero intentar frases de dos palabras (ej: "drop shot", "black crown", "at10")
   for (const [key, val] of Object.entries(MARCAS_CONOCIDAS)) {
     if (key.includes(' ') && tl.includes(key)) return val
   }
-  // Luego palabras sueltas
+  // Luego palabras sueltas — buscar en tokens para evitar falsos positivos
+  const tokens = tl.split(/\s+/)
   for (const [key, val] of Object.entries(MARCAS_CONOCIDAS)) {
-    if (!key.includes(' ') && tl.split(/\s+/).includes(key)) return val
+    if (!key.includes(' ') && tokens.includes(key)) return val
   }
   return null
 }
@@ -291,13 +316,19 @@ function matchearItem(
   const anioTitulo    = extraerAnio(item.title)
   const versionTitulo = extraerVersionTitulo(item.title)
   let tokensTitle   = tokenizar(titleLower)
+  // ── difEnTitulo se calcula con los tokens REALES del título, ANTES de inyecciones ──
+  // Así los tokens inyectados (genius, alum, technical…) no aparecen como
+  // "diferenciadores extra" del título y no descartan candidatos incorrectamente.
+  const difEnTitulo = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
   // Babolat: "Viper Lebron" siempre es Technical Viper — inyectar "technical" si falta
   if (marcaNorm === 'babolat' && tokensTitle.includes('viper') && tokensTitle.some(t => t === 'lebron' || t === 'juan') && !tokensTitle.includes('technical')) {
     tokensTitle = [...tokensTitle, 'technical']
   }
   // Nox AT10 18K sin "genius"/"alum" → única variante 18K en catálogo, inyectar tokens
   // Ej: "Nox AT10 18K 2025 Agustín Tapia" → el catálogo tiene "AT10 Genius 18K Alum 2025"
-  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k')) {
+  // v11: si el año del título no existe en catálogo para AT10 18K, ignorar año (vendedor pone año actual)
+  const AT10_18K_ACTIVO = marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k')
+  if (AT10_18K_ACTIVO) {
     if (!tokensTitle.includes('genius')) tokensTitle = [...tokensTitle, 'genius']
     if (!tokensTitle.includes('alum')) tokensTitle = [...tokensTitle, 'alum']
   }
@@ -309,13 +340,14 @@ function matchearItem(
   if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('12k') && !tokensTitle.includes('genius')) {
     tokensTitle = [...tokensTitle, 'genius']
   }
-  const difEnTitulo   = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)))
+  // difEnTitulo ya calculado arriba, antes de inyecciones — no recalcular aquí
   const jugadoresTitulo = extraerJugadoresTitulo(item.title)
 
   // ── Fase 1: match ESTRICTO (todos los tokens del modelo en el título) ──────
   let scored = candidatas
     .map(pala => {
-      if (anioTitulo !== null && pala.año !== anioTitulo) return null
+      // v11: para AT10 18K, ignorar año del título (vendedores ponen año actual aunque la pala sea 2023/2024)
+      if (anioTitulo !== null && pala.año !== anioTitulo && !AT10_18K_ACTIVO) return null
       if (pala.tokens.length === 0) return null
       const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
       if (tokensMatch.length < pala.tokens.length) return null
@@ -345,7 +377,8 @@ function matchearItem(
 
     const parciales = candidatas
       .map(pala => {
-        if (anioTitulo !== null && pala.año !== anioTitulo) return null
+        // v11: para AT10 18K, ignorar año del título
+        if (anioTitulo !== null && pala.año !== anioTitulo && !AT10_18K_ACTIVO) return null
         if (pala.tokens.length === 0) return null
 
         // GUARD: si el título contiene un número de modelo (04, 05, v10...)
