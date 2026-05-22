@@ -263,6 +263,12 @@ async function main() {
   const filtrados = allItems.length - unique.length
   console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
 
+  // SAFETY: si unique queda vacío (todos filtrados o error), NO tocar BD
+  if (unique.length === 0) {
+    console.log('⚠️  0 items únicos tras filtrar — abortando para proteger datos en BD.')
+    return
+  }
+
   const now = new Date().toISOString()
   const BATCH = 100
   let inserted = 0
