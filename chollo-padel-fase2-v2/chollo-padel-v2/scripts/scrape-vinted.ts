@@ -60,10 +60,18 @@ const EXCLUIR_SCRAPER = [
   'talla xs', 'zapatilla', 'zapatillas', 'botas ', 'botines', 'calcetines',
   'pantalon', 'pantalón', 'chaqueta', 'sudadera', 'equipacion', 'equipación',
   'chandal', 'chándal', 'shorts', 'polo ',
+  // Calzado — chanclas / sandalias (frecuente en Vinted con marca Adidas)
+  'chancla', 'sandalia', 'sandalias', 'sandal',
+  'chinelo', 'chinelos', 'adilette', 'playeras ',
+  // Fundas y accesorios de pala (no son palas)
+  'funda ', 'fundas ', 'fodero', 'racchetta',
+  'porta pala', 'paletero',
   // Pelotas y accesorios
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
-  'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
+  'mochila', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
+  // Accesorios sueltos frecuentes en Vinted
+  'gafas ', ' gafas', '+ regalo', 'pulsera', 'correa ',
   // Coleccionismo / fútbol / otros deportes
   'mundial', 'euro 20', 'champions', 'match worn', 'player version',
   'original históri', 'original histori', 'camp nou',
