@@ -15,6 +15,13 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v12 (2026-05-22):
+ *  - matchPalaIds: carga también anuncios con match_method=no_match o ambiguous
+ *    para reintentarlos cuando el catálogo crece (fix ratio bajando con el tiempo)
+ *  - matchPalaIds: escribe match_method='no_match'/'ambiguous' en los fallidos
+ *    para distinguirlos de anuncios nuevos sin intentar
+ *  - matchPalaIds: en matches exitosos también escribe match_method='fuzzy_auto'
+ *
  * v11 (2026-05-22):
  *  - "pro line" → "line" en tokenizar (Flow Pro Line matchea con título "Flow Proline")
  *  - número suelto 1-9 tras modelo normaliza a 0X ("Hack Hybrid 3" → token "03")
@@ -606,7 +613,8 @@ export async function matchPalaIds(
     palasPorMarca.get(m)!.push(pala)
   }
 
-  // Cargar anuncios sin pala_id — paginado (Supabase limita a 1000 por query)
+  // Cargar anuncios sin pala_id (nunca intentados, no_match previo, o ambiguous previo)
+  // — paginado (Supabase limita a 1000 por query)
   const items: CacheItem[] = []
   const PAGE_CACHE = 1000
   let fromCache = 0
@@ -615,6 +623,7 @@ export async function matchPalaIds(
       .from('wallapop_cache')
       .select('external_id, title, marca')
       .is('pala_id', null)
+      .or('match_method.is.null,match_method.eq.no_match,match_method.eq.ambiguous')
       .range(fromCache, fromCache + PAGE_CACHE - 1)
     if (batchErr) {
       console.error('❌ matchPalaIds: Error cargando cache:', batchErr)
@@ -627,25 +636,55 @@ export async function matchPalaIds(
   }
 
   let matched = 0, ambiguous = 0, noMatch = 0
-  const updates: { external_id: string; pala_id: string }[] = []
+  const updates:       { external_id: string; pala_id: string }[] = []
+  const noMatchIds:    string[] = []
+  const ambiguousIds:  string[] = []
 
   for (const item of items) {
     const result = matchearItem(item, palasPorMarca)
-    if (result === 'noMatch' || result === 'excluido') { noMatch++; continue }
-    if (result === 'ambiguous') { ambiguous++; continue }
+    if (result === 'noMatch' || result === 'excluido') {
+      noMatch++
+      noMatchIds.push(item.external_id)
+      continue
+    }
+    if (result === 'ambiguous') {
+      ambiguous++
+      ambiguousIds.push(item.external_id)
+      continue
+    }
     matched++
     updates.push({ external_id: result.external_id, pala_id: result.pala_id })
   }
 
+  const BATCH = 100
+
+  // Escribir pala_id en los matches
   if (updates.length > 0) {
-    const BATCH = 100
     for (let i = 0; i < updates.length; i += BATCH) {
       for (const u of updates.slice(i, i + BATCH)) {
         await supabase
           .from('wallapop_cache')
-          .update({ pala_id: u.pala_id })
+          .update({ pala_id: u.pala_id, match_method: 'fuzzy_auto' })
           .eq('external_id', u.external_id)
       }
+    }
+  }
+
+  // Marcar los fallidos con match_method para que se reintenten cuando el catálogo crezca
+  if (noMatchIds.length > 0) {
+    for (let i = 0; i < noMatchIds.length; i += BATCH) {
+      await supabase
+        .from('wallapop_cache')
+        .update({ match_method: 'no_match' })
+        .in('external_id', noMatchIds.slice(i, i + BATCH))
+    }
+  }
+  if (ambiguousIds.length > 0) {
+    for (let i = 0; i < ambiguousIds.length; i += BATCH) {
+      await supabase
+        .from('wallapop_cache')
+        .update({ match_method: 'ambiguous' })
+        .in('external_id', ambiguousIds.slice(i, i + BATCH))
     }
   }
 
