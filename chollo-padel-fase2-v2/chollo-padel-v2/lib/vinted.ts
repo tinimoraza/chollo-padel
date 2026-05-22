@@ -21,8 +21,6 @@ const CONDITION_MAP: Record<string, string[]> = {
   fair:           ['4'],
 }
 
-// Normaliza el valor crudo de item.status (ID numérico o label en español)
-// al mismo sistema que usa wallapop_cache y SearchPanel
 const CONDITION_NORMALIZE: Record<string, string> = {
   '6': 'new',
   '1': 'as_good_as_new',
@@ -36,7 +34,6 @@ const CONDITION_NORMALIZE: Record<string, string> = {
   'Satisfactorio':       'fair',
 }
 
-// Caché del token en memoria
 let cachedAuth: { cookie: string; token: string; expiresAt: number } | null = null
 
 async function getVintedToken(): Promise<{ cookie: string; token: string } | null> {
@@ -100,20 +97,25 @@ export async function searchVinted(
       }
     }
 
+    // FIX 1: catalog_ids[] dentro del URLSearchParams para que se codifique correctamente
     const params = new URLSearchParams({
       search_text: query,
       per_page: '120',
       order: 'newest_first',
     })
 
-    // catalog_ids=4338 → filtra por "Racquet Sports". Sin corchetes, así lo usa la API de Vinted
+    params.append('catalog_ids[]', '4338')
+
     if (minPrice !== undefined) params.set('price_from', String(minPrice))
     if (maxPrice !== undefined) params.set('price_to', String(maxPrice))
     for (const id of statusIds) {
       params.append('status_ids[]', id)
     }
 
-    const res = await fetch(`https://www.vinted.es/api/v2/catalog/items?${params}&catalog_ids=4338`, {
+    const url = `https://www.vinted.es/api/v2/catalog/items?${params.toString()}`
+    console.log('Vinted URL:', url)
+
+    const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -135,7 +137,6 @@ export async function searchVinted(
     const items: any[] = data.items ?? []
     console.log(`Vinted devolvió ${items.length} items para "${query}"`)
 
-    // Validar que la búsqueda es de pádel — rechazamos queries sin relación
     const PADEL_TERMS = [
       'pala', 'padel', 'pádel', 'bullpadel', 'babolat', 'nox', 'starvie',
       'vibora', 'siux', 'adidas', 'wilson', 'head', 'drop shot', 'varlion',
@@ -148,15 +149,20 @@ export async function searchVinted(
       return []
     }
 
-    // Solo exigimos la marca — ignoramos "pala"/"padel" en el filtro post-búsqueda
-    // porque en Vinted los títulos son escuetos ("NOX AT10 2024")
-    const brandWords = queryLower.split(/\s+/).filter(w => w !== 'pala' && w !== 'padel' && w !== 'pádel')
+    // FIX 2: filtrar solo por la marca principal (primera palabra significativa),
+    // no por TODAS las palabras — evita descartar resultados con títulos escuetos
+    const STOP_WORDS = new Set(['pala', 'padel', 'pádel', 'de', 'para', 'con', 'y'])
+    const brandWords = queryLower
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !STOP_WORDS.has(w))
 
     return items
       .filter((item) => {
         const titleLower = (item.title ?? '').toLowerCase()
+        // Si no hay palabras clave relevantes, devolver todo
         if (brandWords.length === 0) return true
-        return brandWords.every((w) => titleLower.includes(w))
+        // Basta con que el título contenga AL MENOS UNA palabra clave
+        return brandWords.some((w) => titleLower.includes(w))
       })
       .map((item) => {
         const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
