@@ -102,7 +102,7 @@ interface WallapopRaw {
   img: string | null; url: string; city: string; date: string; keyword: string
 }
 
-async function scrapeKeyword(keyword: string): Promise<WallapopRaw[]> {
+async function scrapeKeyword(keyword: string): Promise<{ items: WallapopRaw[], status: number, rawKeys: string[] }> {
   const params = new URLSearchParams({
     keywords: keyword, latitude: '40.4168', longitude: '-3.7038',
     order_by: 'newest', start: '0', step: String(MAX_RESULTS_PER_KEYWORD),
@@ -111,20 +111,37 @@ async function scrapeKeyword(keyword: string): Promise<WallapopRaw[]> {
     const res = await fetch(`https://api.wallapop.com/api/v3/general/search?${params}`, {
       headers: wallapopHeaders(), cache: 'no-store',
     })
-    if (!res.ok) { console.error(`❌ HTTP ${res.status} para "${keyword}"`); return [] }
+
+    const status = res.status
+
+    if (!res.ok) {
+      const body = await res.text()
+      console.error(`❌ HTTP ${status} para "${keyword}" — body: ${body.slice(0, 200)}`)
+      return { items: [], status, rawKeys: [] }
+    }
+
     const data = await res.json()
+    const rawKeys = Object.keys(data)
     const items: any[] = data?.search_objects ?? data?.items ?? []
-    console.log(`✅ "${keyword}": ${items.length} items`)
-    return items.map((item: any) => ({
-      id: String(item.id ?? ''), title: item.title ?? '',
-      price: item.sale_price ?? item.price ?? 0, condition: item.condition ?? '',
-      img: item.main_image_url ?? item.images?.[0]?.urls?.medium ?? item.images?.[0]?.urls?.big ?? null,
-      url: `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
-      city: item.location?.city ?? '',
-      date: item.modification_date ? new Date(item.modification_date * 1000).toISOString() : new Date().toISOString(),
-      keyword,
-    }))
-  } catch (err) { console.error(`❌ Error en "${keyword}":`, err); return [] }
+    console.log(`✅ "${keyword}": ${items.length} items — claves respuesta: ${rawKeys.join(', ')}`)
+
+    return {
+      status,
+      rawKeys,
+      items: items.map((item: any) => ({
+        id: String(item.id ?? ''), title: item.title ?? '',
+        price: item.sale_price ?? item.price ?? 0, condition: item.condition ?? '',
+        img: item.main_image_url ?? item.images?.[0]?.urls?.medium ?? item.images?.[0]?.urls?.big ?? null,
+        url: `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
+        city: item.location?.city ?? '',
+        date: item.modification_date ? new Date(item.modification_date * 1000).toISOString() : new Date().toISOString(),
+        keyword,
+      }))
+    }
+  } catch (err) {
+    console.error(`❌ Error en "${keyword}":`, err)
+    return { items: [], status: 0, rawKeys: [] }
+  }
 }
 
 async function verificarAnuncio(externalId: string): Promise<'activo' | 'vendido' | 'error'> {
@@ -142,7 +159,6 @@ async function verificarAnuncio(externalId: string): Promise<'activo' | 'vendido
 }
 
 export async function GET(req: NextRequest) {
-  // Autenticación por query param (más fiable que header en Vercel)
   const { searchParams } = new URL(req.url)
   const secret = searchParams.get('secret')
 
@@ -159,17 +175,42 @@ export async function GET(req: NextRequest) {
   )
 
   const allItems: WallapopRaw[] = []
-  for (const keyword of KEYWORDS) {
-    const items = await scrapeKeyword(keyword)
+  const debugInfo: { keyword: string, status: number, items: number, rawKeys: string[] }[] = []
+
+  // Solo probamos la primera keyword para el diagnóstico
+  const testKeyword = KEYWORDS[0]
+  const { items: testItems, status: testStatus, rawKeys } = await scrapeKeyword(testKeyword)
+  debugInfo.push({ keyword: testKeyword, status: testStatus, items: testItems.length, rawKeys })
+
+  // Si la primera keyword falla, devolvemos el debug sin procesar el resto
+  if (testStatus !== 200) {
+    return NextResponse.json({
+      ok: false,
+      error: `Wallapop devuelve HTTP ${testStatus}`,
+      debug: debugInfo,
+      elapsed_ms: Date.now() - startedAt,
+    })
+  }
+
+  // Si la primera keyword funciona pero devuelve 0 items, también lo reportamos
+  if (testItems.length === 0) {
+    return NextResponse.json({
+      ok: false,
+      error: 'HTTP 200 pero 0 items — respuesta vacía o estructura inesperada',
+      debug: debugInfo,
+      elapsed_ms: Date.now() - startedAt,
+    })
+  }
+
+  // Todo OK — procesamos el resto de keywords
+  allItems.push(...testItems)
+  for (const keyword of KEYWORDS.slice(1)) {
+    const { items } = await scrapeKeyword(keyword)
     allItems.push(...items)
     await sleep(1200)
   }
 
   console.log(`📊 Total items: ${allItems.length}`)
-
-  if (allItems.length === 0) {
-    return NextResponse.json({ ok: false, error: 'Sin resultados', elapsed_ms: Date.now() - startedAt })
-  }
 
   const seen = new Set<string>()
   const unique = allItems.filter(item => {
