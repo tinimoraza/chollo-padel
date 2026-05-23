@@ -194,8 +194,7 @@ async function main() {
   console.log(`\n📊 Total items scrapeados: ${allItems.length}`)
 
   if (allItems.length === 0) {
-    console.log('⚠️  Sin resultados, abortando upsert.')
-    return
+    console.log('⚠️  Sin resultados de scrape (probablemente 403 Wallapop). Saltando upsert, continuando limpieza...')
   }
 
   const seen = new Set<string>()
@@ -208,43 +207,47 @@ async function main() {
     return true
   })
 
-  const filtrados = allItems.length - seen.size
-  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
+  if (unique.length > 0) {
+    const filtrados = allItems.length - seen.size
+    console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
 
-  const conImagen = unique.filter(i => i.img !== null).length
-  console.log(`🖼️  Items con imagen: ${conImagen} / ${unique.length}`)
+    const conImagen = unique.filter(i => i.img !== null).length
+    console.log(`🖼️  Items con imagen: ${conImagen} / ${unique.length}`)
 
-  const BATCH = 100
-  let inserted = 0
-  const now = new Date().toISOString()
+    const BATCH = 100
+    let inserted = 0
+    const now = new Date().toISOString()
 
-  for (let i = 0; i < unique.length; i += BATCH) {
-    const batch = unique.slice(i, i + BATCH).map((item) => ({
-      external_id:  item.id,
-      title:        item.title,
-      price:        item.price,
-      currency:     item.currency,
-      condition:    item.condition,
-      img:          item.img,
-      url:          item.url,
-      city:         item.city,
-      date:         item.date,
-      keyword:      item.keyword,
-      platform:     'wallapop',
-      marca:        detectarMarca(item.title, item.keyword),
-      scraped_at:   now,
-      last_seen_at: now,
-    }))
+    for (let i = 0; i < unique.length; i += BATCH) {
+      const batch = unique.slice(i, i + BATCH).map((item) => ({
+        external_id:  item.id,
+        title:        item.title,
+        price:        item.price,
+        currency:     item.currency,
+        condition:    item.condition,
+        img:          item.img,
+        url:          item.url,
+        city:         item.city,
+        date:         item.date,
+        keyword:      item.keyword,
+        platform:     'wallapop',
+        marca:        detectarMarca(item.title, item.keyword),
+        scraped_at:   now,
+        last_seen_at: now,
+      }))
 
-    const { error } = await supabase
-      .from('wallapop_cache')
-      .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
+      const { error } = await supabase
+        .from('wallapop_cache')
+        .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
 
-    if (error) {
-      console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
-    } else {
-      inserted += batch.length
+      if (error) {
+        console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
+      } else {
+        inserted += batch.length
+      }
     }
+    console.log(`
+✅ Guardados ${inserted} items en Supabase.`)
   }
 
   // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
@@ -350,8 +353,6 @@ async function main() {
   if (deleteError) {
     console.error('⚠️  Error borrando registros viejos:', deleteError)
   }
-
-  console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
 
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
