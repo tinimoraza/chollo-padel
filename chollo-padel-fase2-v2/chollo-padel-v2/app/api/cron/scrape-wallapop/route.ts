@@ -142,16 +142,12 @@ async function verificarAnuncio(externalId: string): Promise<'activo' | 'vendido
 }
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
+  // Autenticación por query param (más fiable que header en Vercel)
+  const { searchParams } = new URL(req.url)
+  const secret = searchParams.get('secret')
 
-  // DEBUG TEMPORAL — borrar tras confirmar que funciona
-  console.log('DEBUG authHeader:', authHeader)
-  console.log('DEBUG CRON_SECRET:', process.env.CRON_SECRET)
-  console.log('DEBUG expected:', `Bearer ${process.env.CRON_SECRET}`)
-  console.log('DEBUG match:', authHeader === `Bearer ${process.env.CRON_SECRET}`)
-
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized', debug_received: authHeader }, { status: 401 })
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const startedAt = Date.now()
