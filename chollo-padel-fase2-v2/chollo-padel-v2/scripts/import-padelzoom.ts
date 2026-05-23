@@ -481,10 +481,26 @@ async function main() {
   const limited = listing.slice(0, LIMIT === Infinity ? listing.length : LIMIT)
   console.log(`\n[main] Procesando ${limited.length} palas${LIMIT !== Infinity ? ` (límite: ${LIMIT})` : ''}`)
 
-  // Sin pre-filtro: el upsert con onConflict:slug + ignoreDuplicates:true
-  // protege los datos de Padelful. Fetcheamos todo y dejamos que Supabase descarte duplicados.
-  const toProcess = limited
-  console.log(`[main] Fetcheando ${toProcess.length} fichas...\n`)
+  // Pre-filtro: cargar slugs ya existentes en BD y excluir los que ya están
+  // Evita fetchear fichas de palas que ya importó Padelful (mismos slugs)
+  console.log('[main] Cargando slugs existentes en BD...')
+  const slugsExistentes = new Set<string>()
+  const PAGE = 1000
+  let fromSlug = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('palas')
+      .select('slug')
+      .range(fromSlug, fromSlug + PAGE - 1)
+    if (error || !data || data.length === 0) break
+    data.forEach((r: any) => slugsExistentes.add(r.slug))
+    if (data.length < PAGE) break
+    fromSlug += PAGE
+  }
+  console.log(`[main] ${slugsExistentes.size} slugs ya en BD`)
+
+  const toProcess = limited.filter(item => !slugsExistentes.has(urlToSlug(item.url)))
+  console.log(`[main] ${toProcess.length} palas nuevas a fetchear (${limited.length - toProcess.length} ya en BD, saltadas)\n`)
 
   // FASE 2: Fichas individuales
   const palas: PalaData[] = []
