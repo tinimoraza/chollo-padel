@@ -21,5 +21,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next|favicon.ico|huntpadel-logo.svg).*)'],
+  matcher: ['/((?!api/|_next|favicon.ico|huntpadel-logo.svg).*)'],
 }
