@@ -377,6 +377,14 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
+  // ── Invalidar search_cache al INICIO (no al final, por si el job muere por timeout) ──
+  const { error: cacheErrorInicio } = await supabase
+    .from('search_cache')
+    .delete()
+    .neq('cache_key', '')
+  if (cacheErrorInicio) console.error('⚠️  Error invalidando search_cache:', cacheErrorInicio.message)
+  else console.log('🗑️  search_cache invalidada')
+
   console.log('🔑 Obteniendo token de Vinted...')
   const auth = await getVintedToken()
   if (!auth) {
@@ -539,10 +547,6 @@ async function main() {
 
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
-
-  // ── Invalidar search_cache ────────────────────────────────────────────────
-  await supabase.from('search_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  console.log('🗑️  search_cache invalidada')
 
   console.log('🏁 Scraper Vinted completado.\n')
 }
