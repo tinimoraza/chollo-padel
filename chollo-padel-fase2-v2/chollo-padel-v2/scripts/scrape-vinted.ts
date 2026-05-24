@@ -5,6 +5,11 @@
  * Lo ejecuta GitHub Actions cada hora.
  * Guarda los resultados en Supabase tabla wallapop_cache con platform='vinted'.
  *
+ * v3 (2026-05-24):
+ *  - Keywords Star Vie: añadidas 'star vie X' (con espacio) para todos los modelos
+ *    + starvie drax/kenta/astrum/titania/aquila/brava/exodus/black titan
+ *  - Keywords Joma: añadidas variantes específicas HRD/SFT/Iconic 2026
+ *
  * v2 (2026-05-24):
  *  - Paginación incremental: carga IDs ya en BD antes de scrapear.
  *    Por cada keyword pagina hasta encontrar un ID conocido → para.
@@ -84,10 +89,25 @@ const KEYWORDS = [
   'siux titan',
 
   // ── STAR VIE ───────────────────────────────────────────────────────────
+  'star vie triton',
+  'star vie raptor',
+  'star vie drax',
+  'star vie kenta',
+  'star vie astrum',
+  'star vie metheora',
+  'star vie basalto',
+  'star vie titania',
+  'star vie aquila',
+  'star vie brava',
+  'star vie exodus',
+  'star vie black titan',
+  'starvie triton',
   'starvie raptor',
+  'starvie drax',
+  'starvie kenta',
+  'starvie astrum',
   'starvie metheora',
   'starvie basalto',
-  'starvie tribu',
 
   // ── VIBORA ─────────────────────────────────────────────────────────────
   'vibora titan',
@@ -113,6 +133,14 @@ const KEYWORDS = [
   'joma valkiria',
   'joma hyper pro',
   'joma blast pro',
+  'joma blast pro hrd',
+  'joma blast pro sft',
+  'joma hyper pro hrd',
+  'joma hyper pro soft',
+  'joma valkiria pro hrd',
+  'joma valkiria pro soft',
+  'joma slam pro iconic',
+  'joma tournament pro iconic',
 
   // ── MARCAS MEDIAS ──────────────────────────────────────────────────────
   'pala black crown',

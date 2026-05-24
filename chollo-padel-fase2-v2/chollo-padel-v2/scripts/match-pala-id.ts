@@ -15,6 +15,11 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v13 (2026-05-24):
+ *  - tokenizar: normaliza "hard" → "hrd" y "soft" → "sft" en títulos de anuncios
+ *    (Vinted usa "Blast Pro Hard" en vez de "Blast Pro HRD")
+ *  - KEEP_WORDS + TOKENS_DIFERENCIADORES: añadido "sft"
+ *
  * v12 (2026-05-22):
  *  - matchPalaIds: carga también anuncios con match_method=no_match o ambiguous
  *    para reintentarlos cuando el catálogo crece (fix ratio bajando con el tiempo)
@@ -60,6 +65,7 @@ const KEEP_WORDS = new Set([
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
   'woman',   // Bullpadel versión femenina (W normalizado → woman)
+  'sft',     // Joma Blast Pro SFT vs HRD
 ])
 
 // Tokens que diferencian variantes dentro de una misma familia.
@@ -70,6 +76,7 @@ const TOKENS_DIFERENCIADORES = new Set([
   'pro', 'elite', 'attack', 'motion', 'drive', 'match',
   'arrow', 'cross', 'hit', 'rx', 'power', 'speed',
   '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena',
+  'sft',     // Joma Blast Pro SFT vs HRD
   'hybrid',  // Bullpadel Vertex 04 Hybrid vs Vertex 04 Comfort — diferenciador de subfamilia
   'lite',    // Nox AT10 Xtreme Lite vs Xtreme
   'x',       // Head Speed Pro X vs Speed Pro
@@ -182,6 +189,8 @@ function tokenizar(texto: string): string[] {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // v10: quitar tildes ANTES de tokenizar (élite→elite, pádel→padel, González→gonzalez)
     .toLowerCase()
     .replace(/hrd\+/g, 'hrd')          // normalizar hrd+ → hrd
+    .replace(/\bhard\b/g, 'hrd')       // v13: normalizar "hard" → "hrd" (Vinted usa "Blast Pro Hard")
+    .replace(/\bsoft\b/g, 'sft')       // v13: normalizar "soft" → "sft" (Joma SFT = Soft)
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
     .replace(/pro\s*\+/g, 'proplus')   // normalizar "pro +" / "pro+" → proplus (Oxdog)
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
