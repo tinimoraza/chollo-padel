@@ -140,6 +140,7 @@ async function runPipeline(sourceSlug) {
 
       if (!match) {
         match = await fuzzyMatch(p.title);
+        console.log(`[debug] "${p.title}" → method=${match.method} confidence=${match.confidence?.toFixed(3)}`);
         await saveToCache(source.id, p.url_producto, p.title, match);
       }
 

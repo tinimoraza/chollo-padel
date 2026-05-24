@@ -7,19 +7,33 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
+// Colores y palabras decorativas que aparecen en títulos de tienda pero no en BD
+const COLOR_WORDS = [
+  'negro','negra','blanco','blanca','rojo','roja','azul','verde','amarillo',
+  'naranja','rosa','morado','gris','beige','turquesa','fluor','flúor',
+  'celeste','dorado','plateado','marron','lila','coral',
+  'black','white','red','blue','green','lime','grey','gray',
+  'edicion','limitada','limited','edition','padel','pala','de',
+]
+
 function normalize(str) {
-  return str
+  let s = str
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+
+  // Año corto → año completo: "25" → "2025", "26" → "2026", etc.
+  s = s.replace(/\b(2[2-9])\b/g, '20$1')
+
+  // Eliminar colores y palabras decorativas
+  s = s.split(' ').filter(t => !COLOR_WORDS.includes(t)).join(' ').replace(/\s+/g, ' ').trim()
+
+  return s
 }
 
-// ── Token overlap: qué fracción de tokens del modelo aparecen en el título ──
-// Útil cuando el título de tienda es largo pero contiene el modelo como substring.
-// Ej: "Pala Bullpadel Hack 03 Power 2024 Negro" → tokens modelo ["hack","03","power"]
-//     → 3/3 = 1.0 ✅
+// Token overlap: qué fracción de tokens del modelo aparecen en el título
 function tokenOverlap(titleNorm, modelNorm) {
   const titleTokens = new Set(titleNorm.split(' ').filter(t => t.length > 1));
   const modelTokens = modelNorm.split(' ').filter(t => t.length > 1);
@@ -28,9 +42,7 @@ function tokenOverlap(titleNorm, modelNorm) {
   return hits / modelTokens.length;
 }
 
-// ── Score combinado ──────────────────────────────────────────────────────────
-// Jaro-Winkler captura similitud global; token-overlap captura "el modelo está
-// contenido en el título". Usamos el máximo para no penalizar títulos largos.
+// Score combinado: máximo entre Jaro-Winkler y token-overlap
 function combinedScore(titleNorm, targetNorm) {
   const jw = JaroWinklerDistance(titleNorm, targetNorm);
   const to = tokenOverlap(titleNorm, targetNorm);
@@ -70,7 +82,6 @@ async function fuzzyMatch(productTitle) {
   let bestScore = 0;
 
   for (const pala of candidates) {
-    // Comparar contra modelo Y nombre — quedarnos con el mejor
     const targetModelo = normalize(pala.modelo || '');
     const targetNombre = normalize(pala.nombre || '');
     const score = Math.max(
