@@ -1,0 +1,40 @@
+name: Match Pala ID
+
+# Cruza los anuncios de wallapop_cache sin pala_id contra el catálogo de palas.
+# No necesita Playwright — solo lee/escribe Supabase.
+# Corre a :45 de cada hora, después del scrape de Vinted (:30) y antes del
+# top-oportunidades (:15 de la hora siguiente), para que el top tenga el
+# máximo de anuncios matcheados.
+
+on:
+  schedule:
+    - cron: '45 * * * *'  # Cada hora a :45
+  workflow_dispatch:       # Permite lanzarlo manualmente desde GitHub UI
+
+jobs:
+  match-pala-id:
+    name: Asignar pala_id a anuncios sin matchear
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Ejecutar matcher
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/match-pala-id.ts
