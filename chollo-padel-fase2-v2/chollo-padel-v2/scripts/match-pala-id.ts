@@ -15,6 +15,10 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v14 (2026-05-24):
+ *  - palasPorMarca: alias 'starvie' → palas de 'Star Vie'
+ *    detectarMarca() devuelve 'Starvie' pero BD tiene marca='Star Vie' → 0 candidatos
+ *
  * v13 (2026-05-24):
  *  - tokenizar: normaliza "hard" → "hrd" y "soft" → "sft" en títulos de anuncios
  *    (Vinted usa "Blast Pro Hard" en vez de "Blast Pro HRD")
@@ -621,6 +625,10 @@ export async function matchPalaIds(
     if (!palasPorMarca.has(m)) palasPorMarca.set(m, [])
     palasPorMarca.get(m)!.push(pala)
   }
+  // v14: alias star vie ↔ starvie
+  // BD usa "Star Vie" (con espacio), detectarMarca() devuelve "Starvie" → sin candidatos
+  const starVieList = palasPorMarca.get('star vie') ?? []
+  if (starVieList.length > 0) palasPorMarca.set('starvie', starVieList)
 
   // Cargar anuncios sin pala_id (nunca intentados, no_match previo, o ambiguous previo)
   // — paginado (Supabase limita a 1000 por query)
@@ -753,6 +761,10 @@ async function main() {
     if (!palasPorMarca.has(m)) palasPorMarca.set(m, [])
     palasPorMarca.get(m)!.push(pala)
   }
+  // v14: alias star vie ↔ starvie
+  // BD usa "Star Vie" (con espacio), detectarMarca() devuelve "Starvie" → sin candidatos
+  const starVieListMain = palasPorMarca.get('star vie') ?? []
+  if (starVieListMain.length > 0) palasPorMarca.set('starvie', starVieListMain)
 
   console.log(`  ${palas.length} palas cargadas, ${palasPorMarca.size} marcas\n`)
 
