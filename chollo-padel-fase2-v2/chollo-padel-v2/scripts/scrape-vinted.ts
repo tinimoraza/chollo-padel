@@ -168,6 +168,25 @@ const EXCLUIR_SCRAPER = [
   'original históri', 'original histori', 'camp nou',
   // Lotes varios
   'lote ', '+ accesorios', 'y accesorios', 'con accesorios',
+  // Calzado (Vinted europeo trae mucho)
+  'samba', 'superstar', 'stan smith', 'forum low', 'forum mid',
+  'gazelle', 'campus ', 'ultraboost', 'nmd ', 'zx ', 'yeezy',
+  'air max', 'air force', 'dunk ', 'jordan ', 'presto ', 'blazer ',
+  'new balance', 'salomon ', 'reebok ', 'puma suede', 'puma basket',
+  'asics ', 'mizuno ', 'brooks ', 'hoka ', 'on running',
+  // Raquetas de otros deportes
+  'yonex', 'ezone', 'vcore', 'astrox', 'nanoflare',
+  'babolat pure', 'babolat boost', 'babolat drive', // babolat tenis (no pádel)
+  'wilson blade', 'wilson ultra', 'wilson clash', 'wilson burn',
+  // Ropa europea (francés/italiano)
+  'maillot', 'maglia', 'vêtements', 'chaussure', 'scarpe', 'pantaloni',
+  'jersey ', 'shirt ', 't-shirt', 'tshirt', 'ensemble ', 'ensemble col',
+  // Coleccionismo / lujo / otros
+  'gucci', 'oakley', 'ray-ban', 'porsche design',
+  // Videojuegos / otros
+  'jeux video', 'playstation', 'xbox', 'nintendo',
+  // Golf específico
+  'série club', 'serie club', 'ping ', 'titleist', 'callaway',
 ]
 
 // Vinted devuelve el ID numérico de condición en item.status_id (o item.status como número).
