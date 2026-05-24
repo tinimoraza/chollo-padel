@@ -377,56 +377,70 @@ async function main() {
   }
 
   // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
-  // Si Vinted deja de devolverlos, casi siempre es porque están vendidos/retirados.
-  const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  // Solo tiene sentido si el scrape fue "completo" (trajo volumen real).
+  // Si fue incremental (≤50 items) la ausencia no significa nada — saltamos.
+  // Cap duro de MAX_VERIFY verificaciones por ejecución para no agotar el timeout.
+  const MAX_VERIFY = 40
+  const SCRAPE_INCREMENTAL = allItems.length <= 50
 
-  const { data: enBD } = await supabase
-    .from('wallapop_cache')
-    .select('external_id')
-    .eq('platform', 'vinted')
-    .gte('last_seen_at', threeDaysAgo)
+  if (SCRAPE_INCREMENTAL) {
+    console.log(`\n⏭️  Verificación agresiva omitida — scrape incremental (${allItems.length} items). Los stale se limpian en el bloque TTL.`)
+  } else {
+    const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 
-  if (enBD && enBD.length > 0) {
-    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id))
-    if (noVistos.length > 0) {
-      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted no vistos en este scrape...`)
-      const toDeleteAggressive: string[] = []
+    const { data: enBD } = await supabase
+      .from('wallapop_cache')
+      .select('external_id')
+      .eq('platform', 'vinted')
+      .gte('last_seen_at', threeDaysAgo)
 
-      for (const { external_id } of noVistos) {
-        const active = await isVintedItemActive(external_id, auth)
-        if (!active) toDeleteAggressive.push(external_id)
-        await sleep(300) // throttle
-      }
+    if (enBD && enBD.length > 0) {
+      const noVistos = enBD
+        .filter(r => !idsEncontrados.has(r.external_id))
+        .slice(0, MAX_VERIFY) // cap duro: nunca más de MAX_VERIFY por ejecución
 
-      if (toDeleteAggressive.length > 0) {
-        const { error: delErr } = await supabase
-          .from('wallapop_cache')
-          .delete()
-          .in('external_id', toDeleteAggressive)
-        if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
-      } else {
-        console.log('✅ [Agresivo] Todos los no vistos siguen activos en Vinted')
+      if (noVistos.length > 0) {
+        console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios (cap ${MAX_VERIFY})...`)
+        const toDeleteAggressive: string[] = []
+
+        for (const { external_id } of noVistos) {
+          const active = await isVintedItemActive(external_id, auth)
+          if (!active) toDeleteAggressive.push(external_id)
+          await sleep(300)
+        }
+
+        if (toDeleteAggressive.length > 0) {
+          const { error: delErr } = await supabase
+            .from('wallapop_cache')
+            .delete()
+            .in('external_id', toDeleteAggressive)
+          if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
+        } else {
+          console.log('✅ [Agresivo] Todos los verificados siguen activos en Vinted')
+        }
       }
     }
   }
 
   // ── Verificar anuncios Vinted que llevan 1+ día sin aparecer ──
+  // Cap duro: máximo MAX_VERIFY por ejecución, se rotan en lotes horarios.
   const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   const { data: stale, error: staleError } = await supabase
     .from('wallapop_cache')
     .select('external_id')
     .eq('platform', 'vinted')
     .lt('last_seen_at', oneDayAgo)
+    .limit(MAX_VERIFY) // nunca más de MAX_VERIFY — el resto espera a la siguiente hora
 
   if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
+    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+ (cap ${MAX_VERIFY})...`)
     const toDelete: string[] = []
 
     for (const item of stale) {
       const active = await isVintedItemActive(item.external_id, auth)
       if (!active) toDelete.push(item.external_id)
-      await sleep(300) // throttle
+      await sleep(300)
     }
 
     if (toDelete.length > 0) {
