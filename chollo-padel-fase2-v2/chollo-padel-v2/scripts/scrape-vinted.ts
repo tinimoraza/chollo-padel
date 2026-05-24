@@ -5,6 +5,11 @@
  * Lo ejecuta GitHub Actions cada hora.
  * Guarda los resultados en Supabase tabla wallapop_cache con platform='vinted'.
  *
+ * v2 (2026-05-24):
+ *  - Paginación incremental: carga IDs ya en BD antes de scrapear.
+ *    Por cada keyword pagina hasta encontrar un ID conocido → para.
+ *    Primera ejecución trae todo. Siguientes solo lo nuevo.
+ *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/scrape-vinted.ts
  */
@@ -89,6 +94,11 @@ const CONDITION_MAP_REVERSE: Record<string, string> = {
   'Satisfactorio':       'fair',
 }
 
+const PER_PAGE = 96  // máximo estable que acepta la API de Vinted
+const MAX_PAGES = 20 // techo de seguridad: nunca más de 20 páginas por keyword (~1920 items)
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+
 // ── Token Vinted ────────────────────────────────────────────────────────────
 
 let cachedAuth: { cookie: string; token: string; expiresAt: number } | null = null
@@ -127,12 +137,17 @@ async function getVintedToken(): Promise<{ cookie: string; token: string } | nul
   }
 }
 
-// ── Búsqueda ────────────────────────────────────────────────────────────────
+// ── Búsqueda de una página ───────────────────────────────────────────────────
 
-async function scrapeKeyword(keyword: string, auth: { cookie: string; token: string }) {
+async function scrapeKeywordPage(
+  keyword: string,
+  auth: { cookie: string; token: string },
+  page: number
+): Promise<any[]> {
   const params = new URLSearchParams({
     search_text: keyword,
-    per_page:    '120',
+    per_page:    String(PER_PAGE),
+    page:        String(page),
     order:       'newest_first',
   })
 
@@ -149,51 +164,98 @@ async function scrapeKeyword(keyword: string, auth: { cookie: string; token: str
     })
 
     if (!res.ok) {
-      console.error(`  ❌ HTTP ${res.status} para "${keyword}"`)
+      console.error(`  ❌ HTTP ${res.status} para "${keyword}" pág ${page}`)
       return []
     }
 
     const data = await res.json()
-    const items: any[] = data.items ?? []
-    console.log(`  ✅ "${keyword}": ${items.length} items`)
-
-    // Solo exigimos la marca — ignoramos "pala"/"padel" porque en Vinted los
-    // títulos son escuetos ("NOX AT10 2024") y no siempre incluyen esas palabras
-    const brandWords = keyword.toLowerCase().split(/\s+/).filter(w => w !== 'pala' && w !== 'padel')
-
-    return items
-      .filter(item => {
-        const titleLower = (item.title ?? '').toLowerCase()
-        if (brandWords.length === 0) return true
-        return brandWords.every(w => titleLower.includes(w))
-      })
-      .map(item => {
-        const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
-        const ts  = item.photo?.high_resolution?.timestamp
-        const date = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
-        const price = parseFloat(item.price?.amount ?? '0')
-        const conditionId = String(item.status_id ?? item.status ?? '')
-        const condition = CONDITION_MAP_REVERSE[conditionId] ?? conditionId
-
-        return {
-          external_id: `vinted_${item.id}`,
-          title:       item.title ?? '',
-          price,
-          currency:    item.price?.currency_code ?? 'EUR',
-          condition,
-          img,
-          url:         item.url ?? `https://www.vinted.es/items/${item.id}`,
-          city:        'Europa',
-          date,
-          keyword,
-          platform:    'vinted',
-          marca:       detectarMarca(item.title ?? '', keyword),
-        }
-      })
+    return data.items ?? []
   } catch (err) {
-    console.error(`  ❌ Error en "${keyword}":`, err)
+    console.error(`  ❌ Error en "${keyword}" pág ${page}:`, err)
     return []
   }
+}
+
+// ── Búsqueda paginada con parada incremental ─────────────────────────────────
+// Pagina hasta que encuentra un ID ya conocido en BD (idsEnBD) o no hay más resultados.
+
+async function scrapeKeyword(
+  keyword: string,
+  auth: { cookie: string; token: string },
+  idsEnBD: Set<string>
+): Promise<any[]> {
+  // Solo exigimos la marca — ignoramos "pala"/"padel" porque en Vinted los
+  // títulos son escuetos ("NOX AT10 2024") y no siempre incluyen esas palabras
+  const brandWords = keyword.toLowerCase().split(/\s+/).filter(w => w !== 'pala' && w !== 'padel')
+
+  const result: any[] = []
+  let totalPaginas = 0
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const rawItems = await scrapeKeywordPage(keyword, auth, page)
+
+    if (rawItems.length === 0) {
+      // No hay más resultados
+      break
+    }
+
+    totalPaginas = page
+    let encontradoConocido = false
+
+    for (const item of rawItems) {
+      const externalId = `vinted_${item.id}`
+
+      // Si encontramos un ID que ya está en BD, todos los siguientes también lo estarán
+      // (orden newest_first) — paramos esta keyword
+      if (idsEnBD.has(externalId)) {
+        encontradoConocido = true
+        break
+      }
+
+      const titleLower = (item.title ?? '').toLowerCase()
+
+      // Filtro de marca: si la keyword tiene marca, exigirla en el título
+      if (brandWords.length > 0 && !brandWords.every(w => titleLower.includes(w))) {
+        continue
+      }
+
+      const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
+      const ts  = item.photo?.high_resolution?.timestamp
+      const date = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
+      const price = parseFloat(item.price?.amount ?? '0')
+      const conditionId = String(item.status_id ?? item.status ?? '')
+      const condition = CONDITION_MAP_REVERSE[conditionId] ?? conditionId
+
+      result.push({
+        external_id: externalId,
+        title:       item.title ?? '',
+        price,
+        currency:    item.price?.currency_code ?? 'EUR',
+        condition,
+        img,
+        url:         item.url ?? `https://www.vinted.es/items/${item.id}`,
+        city:        'Europa',
+        date,
+        keyword,
+        platform:    'vinted',
+        marca:       detectarMarca(item.title ?? '', keyword),
+      })
+    }
+
+    if (encontradoConocido) {
+      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado al encontrar ID conocido`)
+      return result
+    }
+
+    // Si la página vino incompleta, es la última
+    if (rawItems.length < PER_PAGE) break
+
+    // Pausa entre páginas para no martillear la API
+    await sleep(800)
+  }
+
+  console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s)`)
+  return result
 }
 
 // ── Verificar anuncio Vinted activo ─────────────────────────────────────────
@@ -234,66 +296,84 @@ async function main() {
   }
   console.log('✅ Token obtenido\n')
 
+  // ── Cargar IDs ya en BD ANTES de scrapear ───────────────────────────────
+  // Esto permite parar la paginación en cuanto encontramos anuncios conocidos.
+  console.log('📋 Cargando IDs de Vinted ya en BD...')
+  const { data: bdRows, error: bdError } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'vinted')
+
+  if (bdError) {
+    console.error('⚠️  Error cargando IDs de BD:', bdError)
+    // No abortamos — en el peor caso scrapeamos todo como si fuera la primera vez
+  }
+
+  const idsEnBD = new Set<string>((bdRows ?? []).map(r => r.external_id))
+  console.log(`✅ ${idsEnBD.size} IDs de Vinted ya en BD\n`)
+
+  // ── Scraping paginado por keyword ────────────────────────────────────────
   const allItems: any[] = []
 
   for (const keyword of KEYWORDS) {
     console.log(`🔍 Buscando: "${keyword}"`)
-    const items = await scrapeKeyword(keyword, auth)
+    const items = await scrapeKeyword(keyword, auth, idsEnBD)
     allItems.push(...items)
-    await new Promise(r => setTimeout(r, 1500))
+    await sleep(1500) // pausa entre keywords
   }
 
   console.log(`\n📊 Total items scrapeados: ${allItems.length}`)
 
   if (allItems.length === 0) {
-    console.log('⚠️  Sin resultados, abortando upsert.')
-    return
-  }
+    console.log('⚠️  Sin resultados nuevos — BD ya estaba al día.')
+    // No abortamos: seguimos con la limpieza de vendidos
+  } else {
+    // ── Deduplicar y filtrar basura ────────────────────────────────────────
+    const seen = new Set<string>()
+    const unique = allItems.filter(item => {
+      if (!item.external_id || seen.has(item.external_id)) return false
+      seen.add(item.external_id)
+      const tl = (item.title ?? '').toLowerCase()
+      if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
+      return true
+    })
 
-  const seen = new Set<string>()
-  const unique = allItems.filter(item => {
-    if (!item.external_id || seen.has(item.external_id)) return false
-    seen.add(item.external_id)
-    // Filtrar basura antes de guardar en BD (tenis, golf, esquí, lotes...)
-    const tl = (item.title ?? '').toLowerCase()
-    if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
-    return true
-  })
+    const filtrados = allItems.length - unique.length
+    console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
 
-  const filtrados = allItems.length - unique.length
-  console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
-
-  // SAFETY: si unique queda vacío (todos filtrados o error), NO tocar BD
-  if (unique.length === 0) {
-    console.log('⚠️  0 items únicos tras filtrar — abortando para proteger datos en BD.')
-    return
-  }
-
-  const now = new Date().toISOString()
-  const BATCH = 100
-  let inserted = 0
-
-  for (let i = 0; i < unique.length; i += BATCH) {
-    const batch = unique.slice(i, i + BATCH).map(item => ({
-      ...item,
-      scraped_at:   now,
-      last_seen_at: now,
-    }))
-
-    const { error } = await supabase
-      .from('wallapop_cache')
-      .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
-
-    if (error) {
-      console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
+    if (unique.length === 0) {
+      console.log('⚠️  0 items únicos tras filtrar — abortando upsert para proteger BD.')
     } else {
-      inserted += batch.length
+      // ── Upsert en BD ────────────────────────────────────────────────────
+      const now = new Date().toISOString()
+      const BATCH = 100
+      let inserted = 0
+
+      for (let i = 0; i < unique.length; i += BATCH) {
+        const batch = unique.slice(i, i + BATCH).map(item => ({
+          ...item,
+          scraped_at:   now,
+          last_seen_at: now,
+        }))
+
+        const { error } = await supabase
+          .from('wallapop_cache')
+          .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
+
+        if (error) {
+          console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
+        } else {
+          inserted += batch.length
+        }
+      }
+
+      console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
     }
   }
 
   // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
   // Si Vinted deja de devolverlos, casi siempre es porque están vendidos/retirados.
-  const idsEncontrados = new Set<string>(unique.map(i => i.external_id))
+  const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data: enBD } = await supabase
@@ -311,7 +391,7 @@ async function main() {
       for (const { external_id } of noVistos) {
         const active = await isVintedItemActive(external_id, auth)
         if (!active) toDeleteAggressive.push(external_id)
-        await new Promise(r => setTimeout(r, 300)) // throttle
+        await sleep(300) // throttle
       }
 
       if (toDeleteAggressive.length > 0) {
@@ -341,7 +421,7 @@ async function main() {
     for (const item of stale) {
       const active = await isVintedItemActive(item.external_id, auth)
       if (!active) toDelete.push(item.external_id)
-      await new Promise(r => setTimeout(r, 300)) // throttle
+      await sleep(300) // throttle
     }
 
     if (toDelete.length > 0) {
@@ -366,8 +446,6 @@ async function main() {
   if (deleteError) {
     console.error('⚠️  Error borrando registros viejos:', deleteError)
   }
-
-  console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
 
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
