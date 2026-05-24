@@ -35,6 +35,11 @@ const KEYWORDS = [
   'pala vibora',
   'pala varlion',
   'pala black crown',
+  'pala royal padel',
+  'pala tecnifibre',
+  'pala volt padel',
+  'pala tamanaco',
+  'pala oxdog',
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel
