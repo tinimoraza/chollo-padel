@@ -45,6 +45,7 @@ export async function searchWallapop(
     let sb = supabase
       .from('wallapop_cache')
       .select('*')
+      .eq('platform', 'wallapop')
       .order('price', { ascending: true })
       .limit(500)
 
