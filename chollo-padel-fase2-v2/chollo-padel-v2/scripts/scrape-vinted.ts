@@ -22,7 +22,10 @@ const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 const KEYWORDS = [
+  // Genérica — coge marcas menores y long tail
   'pala padel',
+
+  // Por marca — garantiza cobertura aunque el modelo esté enterrado en pág 2+
   'pala babolat',
   'pala nox',
   'pala head padel',
@@ -40,6 +43,22 @@ const KEYWORDS = [
   'pala volt padel',
   'pala tamanaco',
   'pala oxdog',
+
+  // Por familia/modelo — para que la paginación incremental no se salte
+  // modelos nuevos que aparecen más atrás que los ya conocidos de la misma marca.
+  // Sin "pala" delante porque en Vinted los títulos suelen ser escuetos.
+  'vertex padel',       // Bullpadel Vertex 04/05
+  'hack bullpadel',     // Bullpadel Hack 03/04
+  'metalbone adidas',   // Adidas Metalbone
+  'nox at10',           // Nox AT10 (familia completa)
+  'nox ml10',           // Nox ML10
+  'head delta',         // Head Delta
+  'head speed padel',   // Head Speed
+  'babolat viper',      // Babolat Technical Viper
+  'starvie astrum',     // StarVie Astrum
+  'starvie tribu',      // StarVie Tribu
+  'siux pegasus',       // Siux Pegasus
+  'vibora black mamba', // Vibora Black Mamba
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel
@@ -195,6 +214,11 @@ async function scrapeKeyword(
 
   const result: any[] = []
   let totalPaginas = 0
+  // Vinted ordena por newest_first pero no es estricto — mezcla relevancia.
+  // No paramos al primer conocido: esperamos KNOWN_STREAK_STOP seguidos.
+  // Así no nos saltamos anuncios nuevos que aparecen después de uno viejo.
+  const KNOWN_STREAK_STOP = 5
+  let knownStreak = 0
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const rawItems = await scrapeKeywordPage(keyword, auth, page)
@@ -205,16 +229,20 @@ async function scrapeKeyword(
     }
 
     totalPaginas = page
-    let encontradoConocido = false
+    let pararPorStreak = false
 
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
 
-      // Si encontramos un ID que ya está en BD, todos los siguientes también lo estarán
-      // (orden newest_first) — paramos esta keyword
       if (idsEnBD.has(externalId)) {
-        encontradoConocido = true
-        break
+        knownStreak++
+        if (knownStreak >= KNOWN_STREAK_STOP) {
+          pararPorStreak = true
+          break
+        }
+        continue // conocido pero no llega al umbral — seguimos mirando
+      } else {
+        knownStreak = 0 // anuncio nuevo reinicia el contador
       }
 
       const titleLower = (item.title ?? '').toLowerCase()
@@ -247,8 +275,8 @@ async function scrapeKeyword(
       })
     }
 
-    if (encontradoConocido) {
-      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado al encontrar ID conocido`)
+    if (pararPorStreak) {
+      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado tras ${KNOWN_STREAK_STOP} conocidos consecutivos`)
       return result
     }
 
