@@ -16,6 +16,27 @@ function normalize(str) {
     .trim();
 }
 
+// ── Token overlap: qué fracción de tokens del modelo aparecen en el título ──
+// Útil cuando el título de tienda es largo pero contiene el modelo como substring.
+// Ej: "Pala Bullpadel Hack 03 Power 2024 Negro" → tokens modelo ["hack","03","power"]
+//     → 3/3 = 1.0 ✅
+function tokenOverlap(titleNorm, modelNorm) {
+  const titleTokens = new Set(titleNorm.split(' ').filter(t => t.length > 1));
+  const modelTokens = modelNorm.split(' ').filter(t => t.length > 1);
+  if (modelTokens.length === 0) return 0;
+  const hits = modelTokens.filter(t => titleTokens.has(t)).length;
+  return hits / modelTokens.length;
+}
+
+// ── Score combinado ──────────────────────────────────────────────────────────
+// Jaro-Winkler captura similitud global; token-overlap captura "el modelo está
+// contenido en el título". Usamos el máximo para no penalizar títulos largos.
+function combinedScore(titleNorm, targetNorm) {
+  const jw = JaroWinklerDistance(titleNorm, targetNorm);
+  const to = tokenOverlap(titleNorm, targetNorm);
+  return Math.max(jw, to);
+}
+
 function extractBrand(title, knownBrands) {
   const normalized = normalize(title);
   for (const brand of knownBrands) {
@@ -49,8 +70,13 @@ async function fuzzyMatch(productTitle) {
   let bestScore = 0;
 
   for (const pala of candidates) {
-    const target = normalize(pala.modelo || pala.nombre);
-    const score = JaroWinklerDistance(normalized, target);
+    // Comparar contra modelo Y nombre — quedarnos con el mejor
+    const targetModelo = normalize(pala.modelo || '');
+    const targetNombre = normalize(pala.nombre || '');
+    const score = Math.max(
+      targetModelo ? combinedScore(normalized, targetModelo) : 0,
+      targetNombre ? combinedScore(normalized, targetNombre) : 0,
+    );
     if (score > bestScore) {
       bestScore = score;
       bestMatch = pala;
@@ -72,11 +98,18 @@ async function fuzzyMatch(productTitle) {
       confidence: bestScore,
       method: 'needs_claude',
       candidates: candidates
-        .map(p => ({
-          id: p.id,
-          nombre: p.nombre,
-          score: JaroWinklerDistance(normalized, normalize(p.modelo || p.nombre))
-        }))
+        .map(p => {
+          const tM = normalize(p.modelo || '');
+          const tN = normalize(p.nombre || '');
+          return {
+            id: p.id,
+            nombre: p.nombre,
+            score: Math.max(
+              tM ? combinedScore(normalized, tM) : 0,
+              tN ? combinedScore(normalized, tN) : 0,
+            )
+          };
+        })
         .sort((a, b) => b.score - a.score)
         .slice(0, 5)
     };
