@@ -22,43 +22,113 @@ const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 const KEYWORDS = [
-  // Genérica — coge marcas menores y long tail
-  'pala padel',
 
-  // Por marca — garantiza cobertura aunque el modelo esté enterrado en pág 2+
-  'pala babolat',
-  'pala nox',
-  'pala head padel',
-  'pala wilson',
-  'pala bullpadel',
-  'pala adidas',
-  'pala siux',
-  'pala drop shot',
-  'pala starvie',
-  'pala vibora',
-  'pala varlion',
+  // ── BULLPADEL ──────────────────────────────────────────────────────────
+  'bullpadel hack',
+  'bullpadel vertex',
+  'bullpadel count',
+  'bullpadel spike',
+  'bullpadel flow',
+  'bullpadel gold',
+  'bullpadel legend',
+  'bullpadel indiga',
+  'bullpadel cosmos',
+
+  // ── NOX ────────────────────────────────────────────────────────────────
+  'nox at10',
+  'nox ml10',
+  'nox equation',
+  'nox tempo',
+  'nox x-one',
+  'nox joker',
+  'nox nerbo',
+  'nox luxury',
+  'nox pro',
+
+  // ── ADIDAS ─────────────────────────────────────────────────────────────
+  'adidas metalbone',
+  'adidas adipower',
+  'adidas match',
+  'adidas drive',
+  'adidas rx',
+  'adidas carbon',
+  'adidas cross',
+  'adidas arrow',
+
+  // ── HEAD ───────────────────────────────────────────────────────────────
+  'head alpha',
+  'head delta',
+  'head zephyr',
+  'head flash',
+  'head speed',
+  'head extreme',
+  'head prestige',
+  'head radical',
+
+  // ── WILSON ─────────────────────────────────────────────────────────────
+  'wilson bela',
+  'wilson carbon',
+  'wilson ultra',
+  'wilson blade',
+
+  // ── BABOLAT ────────────────────────────────────────────────────────────
+  'babolat viper',
+  'babolat technical',
+  'babolat air',
+  'babolat counter',
+
+  // ── SIUX ───────────────────────────────────────────────────────────────
+  'siux diablo',
+  'siux electra',
+  'siux pegasus',
+  'siux titan',
+
+  // ── STAR VIE ───────────────────────────────────────────────────────────
+  'starvie raptor',
+  'starvie metheora',
+  'starvie basalto',
+  'starvie tribu',
+
+  // ── VIBORA ─────────────────────────────────────────────────────────────
+  'vibora titan',
+  'vibora yarara',
+  'vibora botero',
+  'vibora black mamba',
+
+  // ── OXDOG ──────────────────────────────────────────────────────────────
+  'oxdog hyper',
+  'oxdog pure',
+  'oxdog ultimate',
+  'oxdog hive',
+
+  // ── VARLION ────────────────────────────────────────────────────────────
+  'varlion summum',
+  'varlion lf',
+  'varlion avant',
+
+  // ── JOMA ───────────────────────────────────────────────────────────────
+  'joma gold pro',
+  'joma slam pro',
+  'joma tournament',
+  'joma valkiria',
+  'joma hyper pro',
+  'joma blast pro',
+
+  // ── MARCAS MEDIAS ──────────────────────────────────────────────────────
   'pala black crown',
   'pala royal padel',
+  'pala drop shot',
+  'pala dunlop',
   'pala tecnifibre',
+  'pala puma padel',
+  'pala munich padel',
+  'pala akkeron',
+  'pala vairo',
+  'pala lotto padel',
+  'pala kuikma',
   'pala volt padel',
   'pala tamanaco',
-  'pala oxdog',
 
-  // Por familia/modelo — para que la paginación incremental no se salte
-  // modelos nuevos que aparecen más atrás que los ya conocidos de la misma marca.
-  // Sin "pala" delante porque en Vinted los títulos suelen ser escuetos.
-  'vertex padel',       // Bullpadel Vertex 04/05
-  'hack bullpadel',     // Bullpadel Hack 03/04
-  'metalbone adidas',   // Adidas Metalbone
-  'nox at10',           // Nox AT10 (familia completa)
-  'nox ml10',           // Nox ML10
-  'head delta',         // Head Delta
-  'head speed padel',   // Head Speed
-  'babolat viper',      // Babolat Technical Viper
-  'starvie astrum',     // StarVie Astrum
-  'starvie tribu',      // StarVie Tribu
-  'siux pegasus',       // Siux Pegasus
-  'vibora black mamba', // Vibora Black Mamba
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel
@@ -208,17 +278,12 @@ async function scrapeKeyword(
   auth: { cookie: string; token: string },
   idsEnBD: Set<string>
 ): Promise<any[]> {
-  // Solo exigimos la marca — ignoramos "pala"/"padel" porque en Vinted los
-  // títulos son escuetos ("NOX AT10 2024") y no siempre incluyen esas palabras
-  const brandWords = keyword.toLowerCase().split(/\s+/).filter(w => w !== 'pala' && w !== 'padel')
+  // Con keywords por familia (ej: 'bullpadel hack'), Vinted ya filtra por relevancia.
+  // No re-filtramos por título — un anuncio "Hack 04 2026" sin repetir "bullpadel" es válido.
+  const brandWords: string[] = []
 
   const result: any[] = []
   let totalPaginas = 0
-  // Vinted ordena por newest_first pero no es estricto — mezcla relevancia.
-  // No paramos al primer conocido: esperamos KNOWN_STREAK_STOP seguidos.
-  // Así no nos saltamos anuncios nuevos que aparecen después de uno viejo.
-  const KNOWN_STREAK_STOP = 5
-  let knownStreak = 0
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const rawItems = await scrapeKeywordPage(keyword, auth, page)
@@ -229,28 +294,19 @@ async function scrapeKeyword(
     }
 
     totalPaginas = page
-    let pararPorStreak = false
+    let encontradoConocido = false
 
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
 
+      // Si encontramos un ID que ya está en BD, todos los siguientes también lo estarán
+      // (orden newest_first) — paramos esta keyword
       if (idsEnBD.has(externalId)) {
-        knownStreak++
-        if (knownStreak >= KNOWN_STREAK_STOP) {
-          pararPorStreak = true
-          break
-        }
-        continue // conocido pero no llega al umbral — seguimos mirando
-      } else {
-        knownStreak = 0 // anuncio nuevo reinicia el contador
+        encontradoConocido = true
+        break
       }
 
       const titleLower = (item.title ?? '').toLowerCase()
-
-      // Filtro de marca: si la keyword tiene marca, exigirla en el título
-      if (brandWords.length > 0 && !brandWords.every(w => titleLower.includes(w))) {
-        continue
-      }
 
       const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
       const ts  = item.photo?.high_resolution?.timestamp
@@ -275,8 +331,8 @@ async function scrapeKeyword(
       })
     }
 
-    if (pararPorStreak) {
-      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado tras ${KNOWN_STREAK_STOP} conocidos consecutivos`)
+    if (encontradoConocido) {
+      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado al encontrar ID conocido`)
       return result
     }
 
@@ -405,70 +461,57 @@ async function main() {
   }
 
   // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
-  // Solo tiene sentido si el scrape fue "completo" (trajo volumen real).
-  // Si fue incremental (≤50 items) la ausencia no significa nada — saltamos.
-  // Cap duro de MAX_VERIFY verificaciones por ejecución para no agotar el timeout.
-  const MAX_VERIFY = 40
-  const SCRAPE_INCREMENTAL = allItems.length <= 50
+  // Si Vinted deja de devolverlos, casi siempre es porque están vendidos/retirados.
+  const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 
-  if (SCRAPE_INCREMENTAL) {
-    console.log(`\n⏭️  Verificación agresiva omitida — scrape incremental (${allItems.length} items). Los stale se limpian en el bloque TTL.`)
-  } else {
-    const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: enBD } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'vinted')
+    .gte('last_seen_at', threeDaysAgo)
 
-    const { data: enBD } = await supabase
-      .from('wallapop_cache')
-      .select('external_id')
-      .eq('platform', 'vinted')
-      .gte('last_seen_at', threeDaysAgo)
+  if (enBD && enBD.length > 0) {
+    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id)).slice(0, 50)
+    if (noVistos.length > 0) {
+      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted (cap 50)...`)
+      const toDeleteAggressive: string[] = []
 
-    if (enBD && enBD.length > 0) {
-      const noVistos = enBD
-        .filter(r => !idsEncontrados.has(r.external_id))
-        .slice(0, MAX_VERIFY) // cap duro: nunca más de MAX_VERIFY por ejecución
+      for (const { external_id } of noVistos) {
+        const active = await isVintedItemActive(external_id, auth)
+        if (!active) toDeleteAggressive.push(external_id)
+        await sleep(300) // throttle
+      }
 
-      if (noVistos.length > 0) {
-        console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios (cap ${MAX_VERIFY})...`)
-        const toDeleteAggressive: string[] = []
-
-        for (const { external_id } of noVistos) {
-          const active = await isVintedItemActive(external_id, auth)
-          if (!active) toDeleteAggressive.push(external_id)
-          await sleep(300)
-        }
-
-        if (toDeleteAggressive.length > 0) {
-          const { error: delErr } = await supabase
-            .from('wallapop_cache')
-            .delete()
-            .in('external_id', toDeleteAggressive)
-          if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
-        } else {
-          console.log('✅ [Agresivo] Todos los verificados siguen activos en Vinted')
-        }
+      if (toDeleteAggressive.length > 0) {
+        const { error: delErr } = await supabase
+          .from('wallapop_cache')
+          .delete()
+          .in('external_id', toDeleteAggressive)
+        if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
+      } else {
+        console.log('✅ [Agresivo] Todos los no vistos siguen activos en Vinted')
       }
     }
   }
 
   // ── Verificar anuncios Vinted que llevan 1+ día sin aparecer ──
-  // Cap duro: máximo MAX_VERIFY por ejecución, se rotan en lotes horarios.
   const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   const { data: stale, error: staleError } = await supabase
     .from('wallapop_cache')
     .select('external_id')
     .eq('platform', 'vinted')
     .lt('last_seen_at', oneDayAgo)
-    .limit(MAX_VERIFY) // nunca más de MAX_VERIFY — el resto espera a la siguiente hora
+    .limit(50)
 
   if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+ (cap ${MAX_VERIFY})...`)
+    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
     const toDelete: string[] = []
 
     for (const item of stale) {
       const active = await isVintedItemActive(item.external_id, auth)
       if (!active) toDelete.push(item.external_id)
-      await sleep(300)
+      await sleep(300) // throttle
     }
 
     if (toDelete.length > 0) {
