@@ -15,6 +15,11 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v15 (2026-05-25):
+ *  - MARCAS_CONOCIDAS: eliminado 'royal' (falso positivo con "Royal Blue" → marca Royal Padel incorrecta)
+ *    Se mantiene 'royal padel' (dos palabras) que sí es inequívoco.
+ *  - MARCAS_CONOCIDAS: añadidos 'jhayber' → Jhayber y 'harlem' → Harlem
+ *
  * v14 (2026-05-24):
  *  - palasPorMarca: alias 'starvie' → palas de 'Star Vie'
  *    detectarMarca() devuelve 'Starvie' pero BD tiene marca='Star Vie' → 0 candidatos
@@ -155,7 +160,7 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'víbora':     'Vibora',
   'siux':       'Siux',
   'royal padel':'Royal Padel',
-  'royal':      'Royal Padel',
+  // 'royal' eliminado: falso positivo con "Royal Blue" (color), detecta Royal Padel donde no hay
   'drop shot':  'Drop Shot',
   'dropshot':   'Drop Shot',
   'tecnifibre': 'Tecnifibre',
@@ -167,6 +172,8 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'kuikma':     'Kuikma',
   'akkeron':    'Akkeron',
   'joma':       'Joma',
+  'jhayber':    'Jhayber',
+  'harlem':     'Harlem',
   'vibor-a':    'Vibora',
   'vibora':     'Vibora',
   'kombat':     'Kombat',
