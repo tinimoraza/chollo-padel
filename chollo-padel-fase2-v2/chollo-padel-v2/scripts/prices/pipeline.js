@@ -1,4 +1,6 @@
 // scripts/prices/pipeline.js
+// v4 (2026-05-25):
+//   - insertSnapshot: .maybeSingle() → .limit(1) para evitar error PGRST116 cuando ya hay >1 duplicado
 // v3 (2026-05-25):
 //   - recalculatePriceReference: ventana 24h → 30 días (palas sin snapshot diario perdían precio_referencia)
 //   - runPipeline: filtrar productos cuyo título contiene "pack" antes de matching
@@ -56,9 +58,9 @@ async function insertSnapshot(palaId, sourceId, product, confidence) {
     .eq('source_id', sourceId)
     .eq('url_producto', product.url_producto)
     .gte('scraped_at', today)
-    .maybeSingle();
+    .limit(1);
 
-  if (existing) return true; // Ya existe hoy, no duplicar
+  if (existing && existing.length > 0) return true; // Ya existe hoy, no duplicar
 
   const { error } = await supabase.from('price_snapshots').insert({
     pala_id: palaId,
