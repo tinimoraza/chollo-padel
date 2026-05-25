@@ -1,4 +1,10 @@
 // scripts/prices/pipeline.js
+// v3 (2026-05-25):
+//   - recalculatePriceReference: ventana 24h → 30 días (palas sin snapshot diario perdían precio_referencia)
+//   - runPipeline: filtrar productos cuyo título contiene "pack" antes de matching
+// v2 (2026-05-25):
+//   - insertSnapshot: check anti-duplicado por pala_id+source_id+url_producto+día
+//   - recalculatePriceReference: dedup por url_producto antes de promediar (evita inflado por duplicados Roma Sport)
 require('dotenv').config({ path: '.env.local' });
 
 const { createClient } = require('@supabase/supabase-js');
@@ -127,7 +133,7 @@ async function recalculatePriceReference(palaIds) {
   console.log(`[pipeline] Recalculando precio_referencia para ${palaIds.length} palas...`);
 
   for (const palaId of palaIds) {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 días
     const { data: snaps } = await supabase
       .from('price_snapshots')
       .select('precio, source_id, url_producto')
@@ -212,6 +218,12 @@ async function runPipeline(sourceSlug) {
       url_producto:    product.url            ?? product.url_producto    ?? null,
       title:           product.title,
     };
+
+    // Filtrar packs (pack = bundle de varios productos, no una pala sola)
+    if (/\bpack\b/i.test(p.title)) {
+      console.log(`[pipeline] Descartando pack: "${p.title}"`);
+      continue;
+    }
 
     try {
       let match = await getFromCache(source.id, p.url_producto);
