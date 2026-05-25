@@ -129,4 +129,4 @@ async function fuzzyMatch(productTitle) {
   return { pala_id: null, confidence: bestScore, method: 'no_match' };
 }
 
-module.exports = { fuzzyMatch, normalize };
+module.exports = { fuzzyMatch, normalize, extractBrand };

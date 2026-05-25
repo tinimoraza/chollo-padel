@@ -2,7 +2,7 @@
 require('dotenv').config({ path: '.env.local' });
 
 const { createClient } = require('@supabase/supabase-js');
-const { fuzzyMatch } = require('./fuzzy-matcher');
+const { fuzzyMatch, normalize, extractBrand } = require('./fuzzy-matcher');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -52,6 +52,61 @@ async function insertSnapshot(palaId, sourceId, product, confidence) {
   });
   if (error) console.error('[pipeline] Error insertando snapshot:', error.message);
   return !error;
+}
+
+// Detecta marcas conocidas del catálogo (se cachea igual que fuzzyMatch)
+let _knownBrandsCache = null;
+async function getKnownBrands() {
+  if (_knownBrandsCache) return _knownBrandsCache;
+  const { data } = await supabase.from('palas').select('marca');
+  _knownBrandsCache = [...new Set((data || []).map(p => p.marca))];
+  return _knownBrandsCache;
+}
+
+// Guarda o actualiza una pala candidata (vista en tiendas pero no en catálogo)
+async function upsertCandidata(title, sourceSlug, precio, url) {
+  const tituloNorm = normalize(title);
+  const knownBrands = await getKnownBrands();
+  const marcaDetectada = extractBrand(title, knownBrands);
+
+  // Buscar si ya existe por titulo_normalizado
+  const { data: existing } = await supabase
+    .from('palas_candidatas')
+    .select('id, fuentes, urls, precio_min, precio_max, veces_visto')
+    .eq('titulo_normalizado', tituloNorm)
+    .single();
+
+  if (existing) {
+    // Actualizar acumulando fuentes, urls y precios
+    const fuentes = existing.fuentes.includes(sourceSlug)
+      ? existing.fuentes
+      : [...existing.fuentes, sourceSlug];
+    const urls = existing.urls.includes(url)
+      ? existing.urls
+      : [...existing.urls, url];
+
+    await supabase.from('palas_candidatas').update({
+      fuentes,
+      urls,
+      precio_min: Math.min(existing.precio_min ?? precio, precio),
+      precio_max: Math.max(existing.precio_max ?? precio, precio),
+      veces_visto: existing.veces_visto + 1,
+      updated_at: new Date().toISOString(),
+    }).eq('id', existing.id);
+  } else {
+    // Insertar nueva candidata
+    await supabase.from('palas_candidatas').insert({
+      titulo: title,
+      titulo_normalizado: tituloNorm,
+      marca_detectada: marcaDetectada,
+      fuentes: [sourceSlug],
+      urls: [url],
+      precio_min: precio,
+      precio_max: precio,
+      veces_visto: 1,
+    });
+    console.log(`[candidatas] Nueva pala candidata: "${title}" (marca: ${marcaDetectada || 'desconocida'})`);
+  }
 }
 
 async function recalculatePriceReference(palaIds) {
@@ -106,6 +161,7 @@ async function runPipeline(sourceSlug) {
   let productos_scrapeados = 0;
   let matches_encontrados = 0;
   let inserts_realizados = 0;
+  let candidatas_nuevas = 0;
   let errores = 0;
   const updatedPalaIds = new Set();
 
@@ -126,8 +182,6 @@ async function runPipeline(sourceSlug) {
   }
 
   for (const product of products) {
-    // ── Normalizar campos del scraper al contrato interno ──
-    // Los scrapers pueden devolver price/url (padelnuestro) o precio/url_producto (futuros)
     const p = {
       precio:          product.price          ?? product.precio          ?? null,
       precio_original: product.precio_original                           ?? null,
@@ -140,7 +194,6 @@ async function runPipeline(sourceSlug) {
 
       if (!match) {
         match = await fuzzyMatch(p.title);
-        console.log(`[debug] "${p.title}" → method=${match.method} confidence=${match.confidence?.toFixed(3)}`);
         await saveToCache(source.id, p.url_producto, p.title, match);
       }
 
@@ -151,8 +204,10 @@ async function runPipeline(sourceSlug) {
           inserts_realizados++;
           updatedPalaIds.add(match.pala_id);
         }
-      } else if (match?.method === 'needs_claude') {
-        console.log(`[pipeline] Necesita Claude: "${p.title}"`);
+      } else {
+        // Sin match → guardar como candidata para auto-promoción futura
+        await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
+        candidatas_nuevas++;
       }
 
     } catch (err) {
@@ -182,6 +237,7 @@ async function runPipeline(sourceSlug) {
   console.log(`   Scrapeados:  ${productos_scrapeados}`);
   console.log(`   Matches:     ${matches_encontrados}`);
   console.log(`   Insertados:  ${inserts_realizados}`);
+  console.log(`   Candidatas:  ${candidatas_nuevas}`);
   console.log(`   Errores:     ${errores}`);
 }
 
