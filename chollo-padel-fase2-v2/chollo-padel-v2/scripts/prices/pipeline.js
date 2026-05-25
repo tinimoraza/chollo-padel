@@ -237,13 +237,23 @@ async function runPipeline(sourceSlug) {
 
       if (match?.pala_id) {
         matches_encontrados++;
-        const inserted = await insertSnapshot(match.pala_id, source.id, p, match.confidence);
-        if (inserted) {
-          inserts_realizados++;
-          updatedPalaIds.add(match.pala_id);
+
+        // Doble guardia: la caché puede tener matches guardados con el threshold
+        // antiguo (0.85). Si la confidence es < 0.92, lo descartamos y guardamos
+        // como candidata en lugar de contaminar precio_referencia.
+        if (match.confidence < 0.92) {
+          console.log(`[pipeline] ⚠️  Match rechazado (conf ${match.confidence.toFixed(3)} < 0.92): "${p.title}" → ${match.pala_id}`);
+          await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
+          candidatas_nuevas++;
+        } else {
+          const inserted = await insertSnapshot(match.pala_id, source.id, p, match.confidence);
+          if (inserted) {
+            inserts_realizados++;
+            updatedPalaIds.add(match.pala_id);
+          }
         }
       } else {
-        // Sin match → guardar como candidata para auto-promoción futura
+        // Sin match → guardar como candidata para ampliar catálogo
         await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
         candidatas_nuevas++;
       }

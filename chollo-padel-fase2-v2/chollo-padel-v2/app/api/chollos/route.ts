@@ -45,6 +45,11 @@ export async function GET() {
   // 1. Snapshots de las últimas 24h con precio_referencia disponible
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
+  // match_confidence >= 0.95: solo matches muy fiables.
+  // El fuzzy matcher acepta matches ~0.85 que resultan incorrectos cuando
+  // el modelo no existe en el catálogo y el matcher asigna el más parecido.
+  // Con 0.95 solo pasan matches casi exactos; reduce cobertura pero elimina
+  // descuentos falsos causados por comparar palas distintas.
   const { data: snapshots, error } = await supabaseAdmin
     .from('price_snapshots')
     .select(`
@@ -59,6 +64,7 @@ export async function GET() {
     `)
     .eq('disponible', true)
     .gte('scraped_at', since)
+    .gte('match_confidence', 0.95)
     .order('scraped_at', { ascending: false })
 
   if (error) {

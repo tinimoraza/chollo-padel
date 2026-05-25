@@ -122,7 +122,15 @@ async function fuzzyMatch(productTitle) {
     }
   }
 
-  if (bestScore >= 0.85) {
+  // Threshold 0.92 (antes 0.85).
+  // Con 0.85 el matcher aceptaba palas incorrectas cuando el modelo no estaba
+  // en el catálogo: encontraba el más parecido de la misma marca y lo asignaba
+  // con ~0.85 de confianza, contaminando precio_referencia y generando chollos
+  // falsos. Con 0.92 solo pasan matches donde los tokens se solapan casi por
+  // completo o el JaroWinkler es muy alto, lo que requiere coincidencia real
+  // de modelo y año. Los rechazados caen a needs_claude o no_match y se guardan
+  // como palas_candidatas para ampliar el catálogo.
+  if (bestScore >= 0.92) {
     return {
       pala_id: bestMatch.id,
       pala_nombre: bestMatch.nombre,
