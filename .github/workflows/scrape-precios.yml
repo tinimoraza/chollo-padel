@@ -1,8 +1,22 @@
 name: Scrape Precios Tiendas
 
-# Scrapa Padel Nuestro + Padelzoom + Roma Sport + Padel Coronado 4x al día
-# y recalcula price_reference para cada pala.
+# Pipeline completo de precios:
+#   1. Scrapa las 4 tiendas y actualiza price_snapshots
+#   2. recalculatePriceReference() actualiza palas.precio_referencia con media real de tiendas
+#   3. Inmediatamente después recalcula Top Oportunidades con los precios frescos
+#
 # Horas: 07:00, 13:00, 19:00, 23:00 UTC
+# Por qué estas horas:
+#   - 07:00 UTC = 09:00 ES → precios de apertura de tiendas
+#   - 13:00 UTC = 15:00 ES → precios de mediodía
+#   - 19:00 UTC = 21:00 ES → precios de tarde (cuando más se busca)
+#   - 23:00 UTC = 01:00 ES → precios nocturnos / flash sales
+#
+# Conexión con TOP Oportunidades:
+#   El job recalcular-top tiene "needs: scrape-precios", así que solo corre
+#   cuando los 4 scrapers terminan OK. De este modo palas.precio_referencia
+#   ya está actualizado cuando top-oportunidades.ts calcula los descuentos,
+#   y el ranking refleja precios de tiendas del mismo día.
 
 on:
   schedule:
@@ -10,7 +24,7 @@ on:
     - cron: '0 13 * * *'
     - cron: '0 19 * * *'
     - cron: '0 23 * * *'
-  workflow_dispatch:
+  workflow_dispatch:   # Permite lanzarlo manualmente desde GitHub UI
 
 jobs:
   scrape-precios:
@@ -39,7 +53,7 @@ jobs:
           SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelnuestro
 
-      - name: Scrape Padelzoom
+      - name: Scrape PadelZoom
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -56,3 +70,32 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelcoronado
+
+  recalcular-top:
+    name: Recalcular Top Oportunidades
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Solo corre si los 4 scrapers terminaron sin error
+    # Esto garantiza que precio_referencia está actualizado antes de calcular descuentos
+    needs: scrape-precios
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Recalcular Top Oportunidades con precios frescos
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/top-oportunidades.ts
