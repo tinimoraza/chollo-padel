@@ -86,7 +86,7 @@ export async function GET() {
   // 3. Filtrar por descuento significativo
   const chollos: CholloTienda[] = []
 
-  for (const snap of byKey.values()) {
+  for (const snap of Array.from(byKey.values())) {
     const pala = snap.palas as any
     const fuente = snap.price_sources as any
 
