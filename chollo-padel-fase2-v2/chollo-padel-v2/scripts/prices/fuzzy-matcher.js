@@ -16,6 +16,23 @@ const COLOR_WORDS = [
   'edicion','limitada','limited','edition','padel','pala','de',
 ]
 
+// Palabras clave en el título que identifican una marca aunque no aparezca su nombre
+// clave: palabra que puede aparecer en el título  →  valor: nombre de marca en BD
+const BRAND_ALIASES = {
+  'adipower':    'Adidas',
+  'adizero':     'Adidas',
+  'metalbone':   'Adidas',
+  'hurakán':     'Vibora',
+  'huracan':     'Vibora',
+  'yarara':      'Vibora',
+  'cobren':      'Vibora',
+  'vertex':      'Bullpadel',
+  'hack':        'Bullpadel',
+  'flow':        'Bullpadel',
+  'starvie':     'StarVie',
+  'star vie':    'StarVie',
+}
+
 function normalize(str) {
   let s = str
     .toLowerCase()
@@ -51,11 +68,22 @@ function combinedScore(titleNorm, targetNorm) {
 
 function extractBrand(title, knownBrands) {
   const normalized = normalize(title);
+  const titleLower = title.toLowerCase();
+
+  // 1. Match directo con marcas conocidas del catálogo
   for (const brand of knownBrands) {
     if (normalized.includes(normalize(brand))) {
       return normalize(brand);
     }
   }
+
+  // 2. Buscar por alias (ej: "Adipower" → "Adidas")
+  for (const [alias, brandName] of Object.entries(BRAND_ALIASES)) {
+    if (titleLower.includes(alias.toLowerCase())) {
+      return normalize(brandName);
+    }
+  }
+
   return null;
 }
 
