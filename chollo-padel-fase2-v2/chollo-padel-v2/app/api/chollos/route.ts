@@ -55,10 +55,7 @@ export async function GET() {
       scraped_at,
       source_id,
       price_sources ( nombre, slug ),
-      palas (
-        modelo, marca, año, slug, imagen_url,
-        precio_referencia
-      )
+      palas (*)
     `)
     .eq('disponible', true)
     .gte('scraped_at', since)
