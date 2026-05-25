@@ -41,6 +41,19 @@ async function saveToCache(sourceId, productUrl, productTitle, matchResult) {
 }
 
 async function insertSnapshot(palaId, sourceId, product, confidence) {
+  // Comprobar si ya existe un snapshot de esta URL+source de hoy para no duplicar
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const { data: existing } = await supabase
+    .from('price_snapshots')
+    .select('id')
+    .eq('pala_id', palaId)
+    .eq('source_id', sourceId)
+    .eq('url_producto', product.url_producto)
+    .gte('scraped_at', today)
+    .maybeSingle();
+
+  if (existing) return true; // Ya existe hoy, no duplicar
+
   const { error } = await supabase.from('price_snapshots').insert({
     pala_id: palaId,
     source_id: sourceId,
@@ -117,20 +130,31 @@ async function recalculatePriceReference(palaIds) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: snaps } = await supabase
       .from('price_snapshots')
-      .select('precio, source_id')
+      .select('precio, source_id, url_producto')
       .eq('pala_id', palaId)
       .eq('disponible', true)
       .gte('scraped_at', since);
 
     if (!snaps || snaps.length === 0) continue;
 
-    const precios = snaps.map(s => s.precio);
+    // Deduplicar por url_producto — quedarse con el precio más bajo por URL
+    // para que duplicados del mismo producto no inflen la media
+    const byUrl = new Map();
+    for (const s of snaps) {
+      const key = s.url_producto;
+      if (!byUrl.has(key) || s.precio < byUrl.get(key).precio) {
+        byUrl.set(key, s);
+      }
+    }
+    const unique = [...byUrl.values()];
+
+    const precios = unique.map(s => s.precio);
     const precio_minimo = Math.min(...precios);
     const precio_maximo = Math.max(...precios);
     const precio_referencia = parseFloat(
       (precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2)
     );
-    const fuentes_count = new Set(snaps.map(s => s.source_id)).size;
+    const fuentes_count = new Set(unique.map(s => s.source_id)).size;
 
     await supabase.from('price_reference').upsert({
       pala_id: palaId,
