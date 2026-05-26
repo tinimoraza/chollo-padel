@@ -41,15 +41,93 @@ const UMBRAL_CHOLLO = 0.70  // precio_actual ≤ 70% de referencia = ≥30% dto
 const UMBRAL_OFERTA = 0.82  // precio_actual ≤ 82% de referencia = ≥18% dto
 const MIN_REFERENCIA = 50   // ignorar palas con precio_referencia < 50€ (datos insuficientes)
 
+// ─── Guardias de calidad de match ────────────────────────────────────────────
+//
+// El fuzzy matcher puede asignar incorrectamente un snapshot a una pala del
+// catálogo con tokens similares pero año o modelo distintos. Estas guardias
+// descartan falsos positivos en runtime sin tocar la BD.
+//
+// GUARDIA A — Año de 4 dígitos en URL ≠ año catálogo
+//   "head-extreme-motion-2023" con pala.año=2026 → descartado
+//
+// GUARDIA B — Sufijo de 2 dígitos tipo -NN- en URL implica año distinto
+//   "hack-hybrid-04-25-premier-padel" con pala.año=2026 → descartado
+//   Solo actúa si NO hay año de 4 dígitos (ya cubierto por A).
+//   El patrón evita falsos positivos en SKUs como -113778-p o -32311-p.
+//
+// GUARDIA C — Misma URL asignada a dos pala_ids distintos → ambigüedad
+//   "drop-shot-axion-attack" matcheado a Soft 2026 Y a 2024 → ambos descartados
+//   Si no podemos saber cuál es el correcto, no mostramos ninguno.
+//
+// GUARDIA D — Nombre de modelo en URL claramente distinto al del catálogo
+//   "counter-origin" con pala.modelo="Counter Veron" → descartado
+//   Lista explícita de colisiones conocidas del matcher.
+
+// Colisiones conocidas: [fragmento_en_url, fragmento_en_modelo_catalogo]
+// Si la URL contiene el primero pero el modelo contiene el segundo → falso positivo
+const URL_MODEL_COLISIONES: [string, string][] = [
+  ['counter-origin',  'counter veron'],   // Babolat Counter Origin ≠ Counter Veron
+  ['counter-viper',   'counter veron'],   // Babolat Counter Viper ≠ Counter Veron
+  ['extreme-motion',  'extreme tour'],    // Head Extreme Motion ≠ Extreme Tour
+]
+
+function esDescartadoPorGuardias(
+  urlProducto: string,
+  palaAño: number,
+  palaModelo: string,
+  urlsConMismaPala: Set<string>,  // otras URLs que apuntan al mismo pala_id
+  palaIdsConMismaUrl: Set<string> // otros pala_ids que comparten esta URL
+): string | null {
+
+  const url = urlProducto.toLowerCase()
+
+  // ── GUARDIA A: año de 4 dígitos en URL ───────────────────────────────────
+  const m4 = url.match(/20(\d{2})/)
+  if (m4) {
+    const urlYear = parseInt(m4[0], 10)
+    if (urlYear !== palaAño) {
+      return `A: año URL ${urlYear} ≠ catálogo ${palaAño}`
+    }
+  }
+
+  // ── GUARDIA B: sufijo de 2 dígitos tipo -NN- implica año ─────────────────
+  // Solo si no hay año de 4 dígitos (guardia A ya lo cubriría).
+  // Patrón: -NN- donde NN es 19-29, no seguido de más de 3 dígitos (evita SKUs)
+  if (!m4) {
+    const slug = url.split('/').filter(Boolean).pop() ?? url
+    const m2 = slug.match(/-(1[9]|2[0-9])-(?!\d{3,})/)
+    if (m2) {
+      const shortYear = parseInt(m2[1], 10)
+      const fullYear = 2000 + shortYear
+      if (fullYear !== palaAño) {
+        return `B: sufijo -${m2[1]}- en URL implica ${fullYear} ≠ catálogo ${palaAño}`
+      }
+    }
+  }
+
+  // ── GUARDIA C: URL compartida entre múltiples pala_ids ───────────────────
+  // Si la misma URL está asignada a más de una pala, el matcher es ambiguo.
+  // No podemos saber cuál es correcta → descartamos todos.
+  if (palaIdsConMismaUrl.size > 1) {
+    return `C: URL compartida con ${palaIdsConMismaUrl.size - 1} pala(s) más`
+  }
+
+  // ── GUARDIA D: colisión de nombre conocida ────────────────────────────────
+  const modeloLower = palaModelo.toLowerCase()
+  for (const [urlFrag, modelFrag] of URL_MODEL_COLISIONES) {
+    if (url.includes(urlFrag) && modeloLower.includes(modelFrag)) {
+      return `D: URL contiene "${urlFrag}" pero modelo es "${modelFrag}"`
+    }
+  }
+
+  return null
+}
+
 export async function GET() {
   // 1. Snapshots de las últimas 24h con precio_referencia disponible
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
   // match_confidence >= 0.95: solo matches muy fiables.
-  // El fuzzy matcher acepta matches ~0.85 que resultan incorrectos cuando
-  // el modelo no existe en el catálogo y el matcher asigna el más parecido.
-  // Con 0.95 solo pasan matches casi exactos; reduce cobertura pero elimina
-  // descuentos falsos causados por comparar palas distintas.
   const { data: snapshots, error } = await supabaseAdmin
     .from('price_snapshots')
     .select(`
@@ -65,9 +143,7 @@ export async function GET() {
     .eq('disponible', true)
     .gte('scraped_at', since)
     .gte('match_confidence', 0.95)
-    // PadelZoom (source_id=2) es un agregador de precios, no una tienda real.
-    // Sus precios son scrapes de otras tiendas — mostrarlos como "chollo" es
-    // engañoso porque el usuario no puede comprar directamente ahí.
+    // PadelZoom (source_id=2) es un agregador, no una tienda real.
     .neq('source_id', 2)
     .order('scraped_at', { ascending: false })
 
@@ -93,7 +169,16 @@ export async function GET() {
     }
   }
 
-  // 3. Filtrar por descuento significativo
+  // 3. Construir índices para guardias C:
+  //    - por URL: qué pala_ids distintos apuntan a la misma URL
+  const urlToPalaIds = new Map<string, Set<string>>()
+  for (const snap of byKey.values()) {
+    const url = snap.url_producto
+    if (!urlToPalaIds.has(url)) urlToPalaIds.set(url, new Set())
+    urlToPalaIds.get(url)!.add(snap.pala_id)
+  }
+
+  // 4. Filtrar aplicando guardias + umbral de descuento
   const chollos: CholloTienda[] = []
 
   for (const snap of Array.from(byKey.values())) {
@@ -102,25 +187,22 @@ export async function GET() {
 
     if (!pala || !fuente) continue
 
-    console.log('[debug-año]', snap.url_producto.slice(-40), '| año:', pala?.año, '| año field:', JSON.stringify(pala).slice(0, 120))
-
     const ref = pala.precio_referencia as number | null
     if (!ref || ref < MIN_REFERENCIA) continue
 
-    // Guardia de año: si la URL del snapshot contiene un año de 4 dígitos (20xx)
-    // que difiere del año de la pala en catálogo, es un falso positivo —
-    // el matcher ha cruzado dos modelos de años distintos con tokens similares.
-    // Si la URL no contiene año de 4 dígitos, se deja pasar (sin penalización).
-    //
-    // Ejemplos que quedan descartados:
-    //   pala.año=2026, URL contiene "2023"  → falso positivo (Head Extreme Motion)
-    //   pala.año=2024, URL contiene "2025"  → falso positivo (Vibora Yarara Radical)
-    //   pala.año=2024, URL contiene "2024"  → ✅ correcto
-    //   pala.año=2025, URL sin año 4 dígitos → ✅ pasa (bullpadel-hack-04-25)
-    const urlYearMatch = snap.url_producto.match(/20(\d{2})/)
-    if (urlYearMatch) {
-      const urlYear = parseInt(urlYearMatch[0], 10)
-      if (urlYear !== pala.año) continue  // año de URL ≠ año del catálogo → descartar
+    const palaIdsEnEstaUrl = urlToPalaIds.get(snap.url_producto) ?? new Set([snap.pala_id])
+
+    const motivo = esDescartadoPorGuardias(
+      snap.url_producto,
+      pala.año,
+      pala.modelo,
+      new Set(),       // urlsConMismaPala (no usado aún)
+      palaIdsEnEstaUrl
+    )
+
+    if (motivo) {
+      console.log(`[chollos:skip] ${motivo} | ${pala.modelo} | ${snap.url_producto.slice(-50)}`)
+      continue
     }
 
     const ratio = snap.precio / ref
@@ -148,7 +230,7 @@ export async function GET() {
     })
   }
 
-  // 4. Ordenar: primero CHOLLO, luego OFERTA; dentro de cada grupo por descuento desc
+  // 5. Ordenar: primero CHOLLO, luego OFERTA; dentro de cada grupo por descuento desc
   chollos.sort((a, b) => {
     if (a.tag !== b.tag) return a.tag === 'CHOLLO' ? -1 : 1
     return b.descuento_pct - a.descuento_pct
