@@ -31,7 +31,7 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 const MIN_PRICE         = 55    // mínimo 55€ para filtrar ruido
 const DESCUENTO_MIN     = 25   // % mínimo de descuento respecto al precio de tienda
 const TOP_N             = 10   // tamaño del ranking
-const MAX_POR_PALA_ID   = 2    // máximo 2 anuncios del mismo modelo en el top
+const MAX_POR_PALA_ID   = 1    // máximo 1 anuncio por modelo en el top (mejor score)
 const VERIFY_THROTTLE   = 250  // ms entre llamadas a la API de Wallapop
 
 // Condiciones que entran al top
@@ -269,7 +269,7 @@ async function main() {
     return true
   })
 
-  console.log(`\n📋 ${candidatos.length} candidatos únicos → ${candidatosDiversos.length} tras límite de diversidad (max ${MAX_POR_PALA_ID} por modelo)`)
+  console.log(`\n📋 ${candidatos.length} candidatos únicos → ${candidatosDiversos.length} tras deduplicar por modelo (1 por pala_id, mejor score)`)
 
   if (candidatosDiversos.length === 0) {
     console.log('⚠️  Sin candidatos — no se actualiza la tabla.')
