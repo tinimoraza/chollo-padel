@@ -278,12 +278,16 @@ async function main() {
             toDeleteAggressive.push(external_id)
           } else if (res.ok) {
             const data = await res.json()
-            if (data?.reserved?.flag === true || data?.sold?.flag === true || data?.item?.flags?.sold || data?.item?.flags?.reserved) {
+            const isSold     = data?.sold?.flag    === true || data?.item?.flags?.sold     === true
+            const isReserved = data?.reserved?.flag === true || data?.item?.flags?.reserved === true
+            if (isSold) {
+              // Vendido → borrar inmediatamente
               toDeleteAggressive.push(external_id)
             }
+            // Reservado → 3 días de margen; lo gestiona el bloque stale de más abajo
           }
         } catch {
-          // Si falla la verificación, lo dejará el TTL de 1 día
+          // Si falla la verificación, lo dejará el bloque stale
         }
         await new Promise(r => setTimeout(r, 200)) // throttle
       }
@@ -300,16 +304,20 @@ async function main() {
     }
   }
 
-  // ── Verificar anuncios que llevan 1+ día sin aparecer en scrapes ──
-  const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  // ── Verificar anuncios que llevan 3+ días sin aparecer en scrapes ───────────
+  // - Vendidos (404/410/sold flag): ya se borran arriba en noVistos al primer run.
+  //   Aquí es el safety net por si alguno se escapó.
+  // - Reservados: 3 días de margen. Si llevan 3+ días sin aparecer en búsqueda
+  //   y siguen reservados, se borran.
+  const threeDaysAgoStale = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
   const { data: stale, error: staleError } = await supabase
     .from('wallapop_cache')
     .select('external_id, url')
     .eq('platform', 'wallapop')
-    .lt('last_seen_at', oneDayAgo)
+    .lt('last_seen_at', threeDaysAgoStale)
 
   if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios sin actividad en 24h+...`)
+    console.log(`\n🔍 Verificando ${stale.length} anuncios sin actividad en 3+ días...`)
     const toDelete: string[] = []
 
     for (const item of stale) {
@@ -321,9 +329,10 @@ async function main() {
           toDelete.push(item.external_id)
         } else if (res.ok) {
           const data = await res.json()
-          if (data?.reserved?.flag === true || data?.sold?.flag === true || data?.item?.flags?.sold || data?.item?.flags?.reserved) {
-            toDelete.push(item.external_id)
-          }
+          const isSold     = data?.sold?.flag    === true || data?.item?.flags?.sold     === true
+          const isReserved = data?.reserved?.flag === true || data?.item?.flags?.reserved === true
+          // Vendido o reservado sin actividad 3+ días → borrar
+          if (isSold || isReserved) toDelete.push(item.external_id)
         }
       } catch {
         // Si falla la verificación, dejamos el anuncio — se borrará a los 30 días
@@ -336,9 +345,9 @@ async function main() {
         .from('wallapop_cache')
         .delete()
         .in('external_id', toDelete)
-      if (!delErr) console.log(`🗑️  Eliminados ${toDelete.length} anuncios vendidos/eliminados`)
+      if (!delErr) console.log(`🗑️  Eliminados ${toDelete.length} anuncios vendidos/reservados caducados`)
     } else {
-      console.log('✅ Todos siguen activos')
+      console.log('✅ Todos los anuncios siguen activos o en margen de reserva')
     }
   }
 
