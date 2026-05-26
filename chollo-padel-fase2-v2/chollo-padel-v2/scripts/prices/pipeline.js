@@ -227,6 +227,24 @@ async function runPipeline(sourceSlug) {
       continue;
     }
 
+    // Filtrar palas junior/youth — se asignan incorrectamente a palas adultas
+    // porque el matcher no entiende que son productos distintos
+    if (/\b(junior|jr|youth|bambino|kids|ni[ñn]o|mini)\b/i.test(p.title) ||
+        /\b(junior|jr|youth|bambino|kids)\b/i.test(p.url_producto || '')) {
+      console.log(`[pipeline] Descartando junior/youth: "${p.title}"`);
+      await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
+      continue;
+    }
+
+    // Filtrar ediciones World Cup y coleccionista por países — no son palas de juego estándar
+    // Sus precios ~130€ se comparan con referencias de palas adultas de 200-300€ generando
+    // chollos falsos del 40-50%
+    if (/\b(world[- ]?cup|wc[-\s]?202[56]|argentina|alemania|espa[ñn]a|usa|england|colombia|france|belgium|netherland|multination|italia)\b/i.test(p.title) ||
+        /\b(world[- ]?cup|wc-202[56])\b/i.test(p.url_producto || '')) {
+      console.log(`[pipeline] Descartando edición especial/país: "${p.title}"`);
+      continue;
+    }
+
     try {
       let match = await getFromCache(source.id, p.url_producto);
 

@@ -65,6 +65,10 @@ export async function GET() {
     .eq('disponible', true)
     .gte('scraped_at', since)
     .gte('match_confidence', 0.95)
+    // PadelZoom (source_id=2) es un agregador de precios, no una tienda real.
+    // Sus precios son scrapes de otras tiendas — mostrarlos como "chollo" es
+    // engañoso porque el usuario no puede comprar directamente ahí.
+    .neq('source_id', 2)
     .order('scraped_at', { ascending: false })
 
   if (error) {
