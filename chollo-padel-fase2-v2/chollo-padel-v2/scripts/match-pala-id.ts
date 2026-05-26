@@ -15,6 +15,14 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v16 (2026-05-26):
+ *  - KEEP_WORDS: añadidos colores (black, blue, grey, white, red, green, orange, pink, yellow, purple, gold, silver, navy, lime)
+ *    Problema: "Adidas Drive Black 2026" y "Adidas Drive Blue 2026" eran indistinguibles
+ *    porque los colores no estaban en KEEP_WORDS → tokenizador los descartaba.
+ *    Con este fix los colores se preservan y actúan como tokens diferenciadores.
+ *  - TOKENS_DIFERENCIADORES: mismos colores añadidos.
+ *    Efecto: "Drive Black" matchea solo con "Drive Black", no con "Drive Blue".
+ *
  * v15 (2026-05-25):
  *  - MARCAS_CONOCIDAS: eliminado 'royal' (falso positivo con "Royal Blue" → marca Royal Padel incorrecta)
  *    Se mantiene 'royal padel' (dos palabras) que sí es inequívoco.
@@ -75,6 +83,11 @@ const KEEP_WORDS = new Set([
   'proplus', // Oxdog Ultimate Pro+ vs Pro
   'woman',   // Bullpadel versión femenina (W normalizado → woman)
   'sft',     // Joma Blast Pro SFT vs HRD
+  // v16: Colores — diferencian variantes de una misma familia
+  // Ej: Adidas Drive Black 2026 vs Drive Blue 2026 vs Drive Grey 2026
+  // Ej: Vibora Yarara Pro White 2.0 vs otras variantes
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
 ])
 
 // Tokens que diferencian variantes dentro de una misma familia.
@@ -116,6 +129,9 @@ const TOKENS_DIFERENCIADORES = new Set([
   'st1', 'st2', 'st3', 'st4',  // Siux Electra ST2/ST3/ST4 vs Electra Pro/Go/Elite
   'advance',    // Bullpadel Vertex Advance vs Vertex 04/05
   'jr',         // Bullpadel Hack JR (Junior) vs Hack 04/03
+  // v16: Colores como diferenciadores
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
 ])
 
 // Palabras que indican que el anuncio NO es una pala

@@ -1,36 +1,19 @@
 // scripts/prices/fuzzy-matcher.js
+// v4 (2026-05-26):
+//   FIX: colores añadidos a TOKENS_DIFERENCIADORES y KEEP_WORDS.
+//   Problema: "Adidas Drive Black 2026" y "Adidas Drive Blue 2026" eran indistinguibles
+//   porque black/blue/grey/white/red no estaban en KEEP_WORDS → tokenizador los descartaba.
+//   Resultado: ambos candidatos pasaban fase estricta con los mismos tokens y ganaba
+//   el primero en catálogo → "Drive Black" asignado a "Drive Blue" y viceversa.
+//   Con este fix los colores se preservan como tokens y actúan como diferenciadores.
+//
 // v3 (2026-05-26):
 //   FIX CRÍTICO: orden de desempates corregido.
-//   El desempate por diferenciadores (Desempate 2) se movió ANTES del de
-//   especificidad (Desempate 3). Con el orden anterior, "Adipower Team 2023"
-//   y "Adipower 3.2 2023" empataban en tokens (3 vs 3) y ganaba el primero
-//   en catálogo — incorrecto. Ahora el token "team" en el título prevalece
-//   y selecciona "Adipower Team" sobre "Adipower 3.2".
-//   Misma corrección resuelve Arrow Hit Carbon y Metalbone Carbon CTRL.
+//   Diferenciadores (Desempate 2) movido ANTES de especificidad (Desempate 3).
+//   "Adipower Team 2023" → gana Adipower Team sobre Adipower 3.2 gracias al token "team".
+//   "Arrow Hit Carbon" → gana Arrow Hit Carbon sobre Arrow Hit gracias al token "carbon".
 //
 // v2 (2026-05-25) — reescrito desde cero, abandona Jaro-Winkler
-//
-// PROBLEMA DEL MATCHER ANTERIOR:
-//   Jaro-Winkler mide similitud de caracteres, no de significado.
-//   "Metalbone CTRL 3.3 2024" vs "Metalbone Youth 3.3 2024" → score 0.95 (aceptado, INCORRECTO).
-//   "Hack 04 2026" vs "Hack 03 2022" → score 0.96 (aceptado, INCORRECTO).
-//   No entiende que "Youth", "03 vs 04", "Soft vs Speed" diferencian productos distintos.
-//
-// SOLUCIÓN:
-//   Sistema de tokens idéntico al de match-pala-id.ts (que funciona mejor).
-//   Regla fundamental: TODOS los tokens del modelo deben estar en el título.
-//   Tokens diferenciadores (ctrl, soft, speed, 03, 04...) son obligatorios.
-//   Si hay ambigüedad → needs_claude, nunca asignar el más parecido.
-//
-// FLUJO:
-//   1. Tokenizar título y modelo
-//   2. Filtrar candidatos por marca
-//   3. Fase estricta: todos los tokens del modelo en el título
-//   4. Aplicar diferenciadores: si el título tiene "soft" y el modelo no → descartar
-//   5. Desempate: versión X.Y → diferenciadores (ANTES de especificidad) → especificidad → año
-//   6. Un único ganador → fuzzy (confidence = ratio tokens_match/tokens_modelo)
-//      Varios → needs_claude con los candidatos
-//      Ninguno → no_match
 
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
@@ -40,7 +23,7 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
-// ─── Constantes (sincronizadas con match-pala-id.ts) ─────────────────────────
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const STOP_WORDS = new Set([
   'de', 'da', 'del', 'la', 'el', 'y', 'e', 'con', 'para', 'pala', 'padel',
@@ -49,14 +32,20 @@ const STOP_WORDS = new Set([
 ]);
 
 const KEEP_WORDS = new Set([
+  // Técnicos
   'hrd', 'ctrl', 'soft', 'air', 'light', 'team', 'carbon',
   'match', 'drive', 'arrow', 'cross', 'hit', 'rx',
   '18k', '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena', 'hard',
   'pro', 'evo', 'plus', 'motion', 'elite', 'genius', 'attack',
   'lite', 'x', 'proplus', 'woman', 'sft', 'power', 'speed',
+  // v4: Colores — diferencian variantes de una misma familia
+  // Ej: Adidas Drive Black 2026 vs Drive Blue 2026 vs Drive Grey 2026
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
 ]);
 
 const TOKENS_DIFERENCIADORES = new Set([
+  // Técnicos
   'ctrl', 'carbon', 'team', 'hrd', 'light', 'soft', 'air',
   'pro', 'elite', 'attack', 'motion', 'drive', 'match',
   'arrow', 'cross', 'hit', 'rx', 'power', 'speed',
@@ -66,12 +55,13 @@ const TOKENS_DIFERENCIADORES = new Set([
   'zephyr', 'delta', 'flash', 'radical', 'instinct',
   'comfort', 'revolution', 'advance', 'jr',
   'st1', 'st2', 'st3', 'st4',
+  // v4: Colores como diferenciadores
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
 ]);
 
-// Jugadores — se eliminan del modelo al tokenizar, se usan para desempate
 const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso)\b/gi;
 
-// Marcas conocidas para detectar desde el título del producto
 const MARCAS_CONOCIDAS = {
   'bullpadel': 'Bullpadel',
   'nox': 'Nox',
@@ -99,7 +89,6 @@ const MARCAS_CONOCIDAS = {
   'oxdog': 'Oxdog',
   'enebe': 'Enebe',
   'puma': 'Puma',
-  // Alias de modelo → marca
   'vertex': 'Bullpadel',
   'hack': 'Bullpadel',
   'at10': 'Nox',
@@ -169,15 +158,12 @@ function normalize(str) {
 function extractBrand(title, knownBrands) {
   const tl = normalize(title);
   const tokens = tl.split(/\s+/);
-  // Frases de dos palabras primero
   for (const [key, val] of Object.entries(MARCAS_CONOCIDAS)) {
     if (key.includes(' ') && tl.includes(key)) return val;
   }
-  // Palabras sueltas
   for (const [key, val] of Object.entries(MARCAS_CONOCIDAS)) {
     if (!key.includes(' ') && tokens.includes(key)) return val;
   }
-  // Fallback: marcas del catálogo
   for (const brand of knownBrands) {
     if (tl.includes(normalize(brand))) return brand;
   }
@@ -207,13 +193,11 @@ async function getCatalog() {
     from += PAGE;
   }
 
-  // Pre-computar tokens de cada pala
   _catalogCache = palas.map(p => ({
     ...p,
     tokens: extraerTokensModelo(p.modelo || '', p.marca || ''),
   }));
 
-  // Indexar por marca normalizada
   _palasPorMarca = new Map();
   for (const p of _catalogCache) {
     const key = normalize(p.marca || '');
@@ -246,31 +230,24 @@ async function fuzzyMatch(productTitle) {
   const anioTitulo = extraerAnio(productTitle);
   const versionTitulo = extraerVersion(productTitle);
 
-  // Diferenciadores presentes en el título (antes de inyecciones)
   const difEnTitulo = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)));
 
-  // ── Fase estricta: todos los tokens del modelo en el título ──────────────
+  // ── Fase estricta ────────────────────────────────────────────────────────
   let scored = candidates
     .map(pala => {
       if (pala.tokens.length === 0) return null;
-      // Año: si el título tiene año, debe coincidir
       if (anioTitulo !== null && pala.año !== anioTitulo) return null;
-      // Todos los tokens del modelo deben estar en el título
       const missing = pala.tokens.filter(t => !tokensTitle.includes(t));
       if (missing.length > 0) return null;
-      // Los diferenciadores del modelo deben estar en el título
       const difModelo = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t));
       if (!difModelo.every(t => difEnTitulo.has(t))) return null;
-      // Los diferenciadores del título no pueden apuntar a otro modelo
       const difExtra = [...difEnTitulo].filter(d => !pala.tokens.includes(d));
       if (difExtra.length > 0) return null;
-
       return { pala, score: pala.tokens.length };
     })
     .filter(Boolean);
 
-  // ── Si fase estricta falla, intentar sin restricción de año ──────────────
-  // (productos de tiendas a veces no tienen año en el título)
+  // ── Sin año en título: reintentar sin restricción de año ─────────────────
   if (scored.length === 0 && anioTitulo === null) {
     scored = candidates
       .map(pala => {
@@ -287,7 +264,6 @@ async function fuzzyMatch(productTitle) {
   }
 
   if (scored.length === 0) {
-    // ── Recopilar candidatos cercanos para needs_claude ──────────────────
     const nearCandidates = candidates
       .map(pala => {
         if (pala.tokens.length === 0) return null;
@@ -301,23 +277,16 @@ async function fuzzyMatch(productTitle) {
       .slice(0, 5);
 
     if (nearCandidates.length > 0) {
-      return {
-        pala_id: null,
-        confidence: nearCandidates[0].score,
-        method: 'needs_claude',
-        candidates: nearCandidates,
-      };
+      return { pala_id: null, confidence: nearCandidates[0].score, method: 'needs_claude', candidates: nearCandidates };
     }
     return { pala_id: null, confidence: 0, method: 'no_match' };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DESEMPATES — orden crítico:
-  //   1. Versión X.Y   (ej: 3.2 vs 3.3 — el más preciso)
-  //   2. Diferenciadores del título en el MODELO  ← MOVIDO AQUÍ (antes era Desempate 3)
-  //      "Adipower Team 2023": team ∈ título → gana "Adipower Team" sobre "Adipower 3.2"
-  //      "Arrow Hit Carbon": carbon ∈ título → gana "Arrow Hit Carbon" sobre "Arrow Hit"
-  //   3. Especificidad (más tokens totales)
+  // DESEMPATES (orden crítico):
+  //   1. Versión X.Y  (3.2 vs 3.3)
+  //   2. Diferenciadores del título en el modelo  (team, carbon, black, blue…)
+  //   3. Especificidad (nº tokens)
   //   4. Año más reciente
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -330,10 +299,7 @@ async function fuzzyMatch(productTitle) {
     if (conVersion.length > 0 && conVersion.length < scored.length) scored = conVersion;
   }
 
-  // ── Desempate 2: diferenciadores del título presentes en el MODELO ────────
-  // FIX v3: movido ANTES de especificidad.
-  // Cuando el título tiene "team" o "carbon", el candidato cuyo modelo
-  // también los tiene debe ganar aunque ambos tengan el mismo nº de tokens.
+  // ── Desempate 2: diferenciadores del título en el modelo ──────────────────
   if (difEnTitulo.size > 0 && scored.length > 1) {
     const difMatch = s => [...difEnTitulo].filter(d => s.pala.tokens.includes(d)).length;
     const maxDif = Math.max(...scored.map(difMatch));
@@ -341,7 +307,7 @@ async function fuzzyMatch(productTitle) {
     if (top.length > 0 && top.length < scored.length) scored = top;
   }
 
-  // ── Desempate 3: más tokens totales (modelo más específico) ──────────────
+  // ── Desempate 3: más tokens (modelo más específico) ───────────────────────
   if (scored.length > 1) {
     const maxScore = Math.max(...scored.map(s => s.score));
     scored = scored.filter(s => s.score === maxScore);
@@ -354,28 +320,17 @@ async function fuzzyMatch(productTitle) {
     if (top.length > 0 && top.length < scored.length) scored = top;
   }
 
-  // ── Resultado ────────────────────────────────────────────────────────────
   if (scored.length === 1) {
     const winner = scored[0].pala;
     const confidence = anioTitulo && anioTitulo === winner.año ? 1.0 : 0.95;
-    return {
-      pala_id: winner.id,
-      pala_nombre: winner.modelo,
-      confidence,
-      method: 'fuzzy',
-    };
+    return { pala_id: winner.id, pala_nombre: winner.modelo, confidence, method: 'fuzzy' };
   }
 
-  // Ambigüedad — pasar a Claude con los candidatos
   return {
     pala_id: null,
     confidence: 0.8,
     method: 'needs_claude',
-    candidates: scored.map(s => ({
-      id: s.pala.id,
-      nombre: s.pala.modelo,
-      score: s.score / (scored[0]?.score || 1),
-    })),
+    candidates: scored.map(s => ({ id: s.pala.id, nombre: s.pala.modelo, score: s.score / (scored[0]?.score || 1) })),
   };
 }
 
