@@ -102,6 +102,8 @@ export async function GET() {
 
     if (!pala || !fuente) continue
 
+    console.log('[debug-año]', snap.url_producto.slice(-40), '| año:', pala?.año, '| año field:', JSON.stringify(pala).slice(0, 120))
+
     const ref = pala.precio_referencia as number | null
     if (!ref || ref < MIN_REFERENCIA) continue
 
