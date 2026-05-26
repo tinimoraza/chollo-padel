@@ -172,7 +172,7 @@ export async function GET() {
   // 3. Construir índices para guardias C:
   //    - por URL: qué pala_ids distintos apuntan a la misma URL
   const urlToPalaIds = new Map<string, Set<string>>()
-  for (const snap of byKey.values()) {
+  for (const snap of Array.from(byKey.values())) {
     const url = snap.url_producto
     if (!urlToPalaIds.has(url)) urlToPalaIds.set(url, new Set())
     urlToPalaIds.get(url)!.add(snap.pala_id)
