@@ -22,6 +22,7 @@ export type PalaItem = WallapopItem
 
 const CONDITION_MAP: Record<string, string[]> = {
   new:            ['un_opened', 'new'],
+  un_opened:      ['un_opened'],
   as_good_as_new: ['as_good_as_new'],
   good:           ['good'],
   fair:           ['fair', 'has_given_it_all'],

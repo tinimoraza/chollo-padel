@@ -1,6 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+const CONDITION_LABEL: Record<string, string> = {
+  new:              'Nuevo',
+  un_opened:        'Sin abrir',
+  as_good_as_new:   'Como nuevo',
+  good:             'Buen estado',
+  fair:             'Aceptable',
+  has_given_it_all: 'Para piezas',
+}
+const prettyCondition = (c: string) => CONDITION_LABEL[c] ?? c
+
 interface Alerta {
   id: string
   created_at: string
@@ -156,7 +166,7 @@ export default function AlertasPage() {
                   <div style={styles.cardQuery}>{alerta.query.toUpperCase()}</div>
                   <div style={styles.cardMeta}>
                     {alerta.max_price ? `Máx ${alerta.max_price}€` : 'Sin límite de precio'}
-                    {alerta.condition ? ` · ${alerta.condition}` : ''}
+                    {alerta.condition ? ` · ${prettyCondition(alerta.condition)}` : ''}
                     {' · '}{alerta.platform}
                   </div>
                   {alerta.ultima_notificacion && (

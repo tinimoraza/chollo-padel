@@ -7,6 +7,7 @@ import AlertModal from '@/components/AlertModal'
 const CONDITIONS = [
   { label: 'TODOS',       value: '' },
   { label: 'NUEVO',       value: 'new' },
+  { label: 'SIN ABRIR',   value: 'un_opened' },
   { label: 'COMO NUEVO',  value: 'as_good_as_new' },
   { label: 'BUEN ESTADO', value: 'good' },
   { label: 'ACEPTABLE',   value: 'fair' },
