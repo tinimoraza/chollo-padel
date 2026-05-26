@@ -105,6 +105,22 @@ export async function GET() {
     const ref = pala.precio_referencia as number | null
     if (!ref || ref < MIN_REFERENCIA) continue
 
+    // Guardia de año: si la URL del snapshot contiene un año de 4 dígitos (20xx)
+    // que difiere del año de la pala en catálogo, es un falso positivo —
+    // el matcher ha cruzado dos modelos de años distintos con tokens similares.
+    // Si la URL no contiene año de 4 dígitos, se deja pasar (sin penalización).
+    //
+    // Ejemplos que quedan descartados:
+    //   pala.año=2026, URL contiene "2023"  → falso positivo (Head Extreme Motion)
+    //   pala.año=2024, URL contiene "2025"  → falso positivo (Vibora Yarara Radical)
+    //   pala.año=2024, URL contiene "2024"  → ✅ correcto
+    //   pala.año=2025, URL sin año 4 dígitos → ✅ pasa (bullpadel-hack-04-25)
+    const urlYearMatch = snap.url_producto.match(/20(\d{2})/)
+    if (urlYearMatch) {
+      const urlYear = parseInt(urlYearMatch[0], 10)
+      if (urlYear !== pala.año) continue  // año de URL ≠ año del catálogo → descartar
+    }
+
     const ratio = snap.precio / ref
     if (ratio > UMBRAL_OFERTA) continue  // descuento insuficiente
 
