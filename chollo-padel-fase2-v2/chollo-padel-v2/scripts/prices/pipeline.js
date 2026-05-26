@@ -1,12 +1,18 @@
 // scripts/prices/pipeline.js
+// v5 (2026-05-26):
+//   - recalculatePriceReference: MEDIA → MEDIANA para precio_referencia
+//     Un outlier de Roma Sport (280€) rodeado de precios de 75-150€ ya no
+//     infla la referencia. Con mediana, la referencia refleja el precio real
+//     de mercado. price_reference y palas.precio_referencia usan mediana.
+//     precio_minimo_tiendas sigue siendo el mínimo absoluto (no cambia).
 // v4 (2026-05-25):
 //   - insertSnapshot: .maybeSingle() → .limit(1) para evitar error PGRST116 cuando ya hay >1 duplicado
 // v3 (2026-05-25):
-//   - recalculatePriceReference: ventana 24h → 30 días (palas sin snapshot diario perdían precio_referencia)
+//   - recalculatePriceReference: ventana 24h → 30 días
 //   - runPipeline: filtrar productos cuyo título contiene "pack" antes de matching
 // v2 (2026-05-25):
 //   - insertSnapshot: check anti-duplicado por pala_id+source_id+url_producto+día
-//   - recalculatePriceReference: dedup por url_producto antes de promediar (evita inflado por duplicados Roma Sport)
+//   - recalculatePriceReference: dedup por url_producto antes de promediar
 require('dotenv').config({ path: '.env.local' });
 
 const { createClient } = require('@supabase/supabase-js');
@@ -98,7 +104,6 @@ async function upsertCandidata(title, sourceSlug, precio, url) {
     .single();
 
   if (existing) {
-    // Actualizar acumulando fuentes, urls y precios
     const fuentes = existing.fuentes.includes(sourceSlug)
       ? existing.fuentes
       : [...existing.fuentes, sourceSlug];
@@ -115,7 +120,6 @@ async function upsertCandidata(title, sourceSlug, precio, url) {
       updated_at: new Date().toISOString(),
     }).eq('id', existing.id);
   } else {
-    // Insertar nueva candidata
     await supabase.from('palas_candidatas').insert({
       titulo: title,
       titulo_normalizado: tituloNorm,
@@ -128,6 +132,21 @@ async function upsertCandidata(title, sourceSlug, precio, url) {
     });
     console.log(`[candidatas] Nueva pala candidata: "${title}" (marca: ${marcaDetectada || 'desconocida'})`);
   }
+}
+
+// ─── Mediana ──────────────────────────────────────────────────────────────────
+// FIX v5: sustituye la media aritmética para precio_referencia.
+// Motivo: Roma Sport tiene precios outlier (ej. 280€ cuando el mercado está
+// a 75€). La media se dispara a 163€, generando referencias irreales.
+// La mediana es robusta frente a outliers y refleja el precio real de mercado.
+function calcularMediana(precios) {
+  if (precios.length === 0) return null;
+  const sorted = [...precios].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return parseFloat(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(2));
+  }
+  return parseFloat(sorted[mid].toFixed(2));
 }
 
 async function recalculatePriceReference(palaIds) {
@@ -146,7 +165,6 @@ async function recalculatePriceReference(palaIds) {
     if (!snaps || snaps.length === 0) continue;
 
     // Deduplicar por url_producto — quedarse con el precio más bajo por URL
-    // para que duplicados del mismo producto no inflen la media
     const byUrl = new Map();
     for (const s of snaps) {
       const key = s.url_producto;
@@ -159,10 +177,12 @@ async function recalculatePriceReference(palaIds) {
     const precios = unique.map(s => s.precio);
     const precio_minimo = Math.min(...precios);
     const precio_maximo = Math.max(...precios);
-    const precio_referencia = parseFloat(
-      (precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2)
-    );
+
+    // v5: MEDIANA en lugar de media aritmética
+    const precio_referencia = calcularMediana(precios);
     const fuentes_count = new Set(unique.map(s => s.source_id)).size;
+
+    console.log(`[pipeline]   pala ${palaId}: ${precios.length} precios → mediana ${precio_referencia}€ (min ${precio_minimo}€, max ${precio_maximo}€)`);
 
     await supabase.from('price_reference').upsert({
       pala_id: palaId,
@@ -221,14 +241,13 @@ async function runPipeline(sourceSlug) {
       title:           product.title,
     };
 
-    // Filtrar packs (pack = bundle de varios productos, no una pala sola)
+    // Filtrar packs
     if (/\bpack\b/i.test(p.title)) {
       console.log(`[pipeline] Descartando pack: "${p.title}"`);
       continue;
     }
 
-    // Filtrar palas junior/youth — se asignan incorrectamente a palas adultas
-    // porque el matcher no entiende que son productos distintos
+    // Filtrar palas junior/youth
     if (/\b(junior|jr|youth|bambino|kids|ni[ñn]o|mini)\b/i.test(p.title) ||
         /\b(junior|jr|youth|bambino|kids)\b/i.test(p.url_producto || '')) {
       console.log(`[pipeline] Descartando junior/youth: "${p.title}"`);
@@ -236,9 +255,7 @@ async function runPipeline(sourceSlug) {
       continue;
     }
 
-    // Filtrar ediciones World Cup y coleccionista por países — no son palas de juego estándar
-    // Sus precios ~130€ se comparan con referencias de palas adultas de 200-300€ generando
-    // chollos falsos del 40-50%
+    // Filtrar ediciones World Cup y países
     if (/\b(world[- ]?cup|wc[-\s]?202[56]|argentina|alemania|espa[ñn]a|usa|england|colombia|france|belgium|netherland|multination|italia)\b/i.test(p.title) ||
         /\b(world[- ]?cup|wc-202[56])\b/i.test(p.url_producto || '')) {
       console.log(`[pipeline] Descartando edición especial/país: "${p.title}"`);
@@ -256,9 +273,6 @@ async function runPipeline(sourceSlug) {
       if (match?.pala_id) {
         matches_encontrados++;
 
-        // Doble guardia: la caché puede tener matches guardados con el threshold
-        // antiguo (0.85). Si la confidence es < 0.92, lo descartamos y guardamos
-        // como candidata en lugar de contaminar precio_referencia.
         if (match.confidence < 0.92) {
           console.log(`[pipeline] ⚠️  Match rechazado (conf ${match.confidence.toFixed(3)} < 0.92): "${p.title}" → ${match.pala_id}`);
           await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
@@ -271,7 +285,6 @@ async function runPipeline(sourceSlug) {
           }
         }
       } else {
-        // Sin match → guardar como candidata para ampliar catálogo
         await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
         candidatas_nuevas++;
       }

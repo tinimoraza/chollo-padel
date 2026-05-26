@@ -1,4 +1,13 @@
 // scripts/prices/fuzzy-matcher.js
+// v3 (2026-05-26):
+//   FIX CRÍTICO: orden de desempates corregido.
+//   El desempate por diferenciadores (Desempate 2) se movió ANTES del de
+//   especificidad (Desempate 3). Con el orden anterior, "Adipower Team 2023"
+//   y "Adipower 3.2 2023" empataban en tokens (3 vs 3) y ganaba el primero
+//   en catálogo — incorrecto. Ahora el token "team" en el título prevalece
+//   y selecciona "Adipower Team" sobre "Adipower 3.2".
+//   Misma corrección resuelve Arrow Hit Carbon y Metalbone Carbon CTRL.
+//
 // v2 (2026-05-25) — reescrito desde cero, abandona Jaro-Winkler
 //
 // PROBLEMA DEL MATCHER ANTERIOR:
@@ -18,7 +27,7 @@
 //   2. Filtrar candidatos por marca
 //   3. Fase estricta: todos los tokens del modelo en el título
 //   4. Aplicar diferenciadores: si el título tiene "soft" y el modelo no → descartar
-//   5. Desempate: año, versión X.Y, especificidad de tokens
+//   5. Desempate: versión X.Y → diferenciadores (ANTES de especificidad) → especificidad → año
 //   6. Un único ganador → fuzzy (confidence = ratio tokens_match/tokens_modelo)
 //      Varios → needs_claude con los candidatos
 //      Ninguno → no_match
@@ -302,6 +311,16 @@ async function fuzzyMatch(productTitle) {
     return { pala_id: null, confidence: 0, method: 'no_match' };
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // DESEMPATES — orden crítico:
+  //   1. Versión X.Y   (ej: 3.2 vs 3.3 — el más preciso)
+  //   2. Diferenciadores del título en el MODELO  ← MOVIDO AQUÍ (antes era Desempate 3)
+  //      "Adipower Team 2023": team ∈ título → gana "Adipower Team" sobre "Adipower 3.2"
+  //      "Arrow Hit Carbon": carbon ∈ título → gana "Arrow Hit Carbon" sobre "Arrow Hit"
+  //   3. Especificidad (más tokens totales)
+  //   4. Año más reciente
+  // ─────────────────────────────────────────────────────────────────────────
+
   // ── Desempate 1: versión X.Y ──────────────────────────────────────────────
   if (versionTitulo && scored.length > 1) {
     const conVersion = scored.filter(s => {
@@ -311,7 +330,10 @@ async function fuzzyMatch(productTitle) {
     if (conVersion.length > 0 && conVersion.length < scored.length) scored = conVersion;
   }
 
-  // ── Desempate 2: más diferenciadores del título coinciden ────────────────
+  // ── Desempate 2: diferenciadores del título presentes en el MODELO ────────
+  // FIX v3: movido ANTES de especificidad.
+  // Cuando el título tiene "team" o "carbon", el candidato cuyo modelo
+  // también los tiene debe ganar aunque ambos tengan el mismo nº de tokens.
   if (difEnTitulo.size > 0 && scored.length > 1) {
     const difMatch = s => [...difEnTitulo].filter(d => s.pala.tokens.includes(d)).length;
     const maxDif = Math.max(...scored.map(difMatch));
@@ -335,8 +357,6 @@ async function fuzzyMatch(productTitle) {
   // ── Resultado ────────────────────────────────────────────────────────────
   if (scored.length === 1) {
     const winner = scored[0].pala;
-    // Confidence = ratio de tokens del modelo que están en el título (siempre 1.0 aquí)
-    // pero añadimos bonus si hay año y coincide
     const confidence = anioTitulo && anioTitulo === winner.año ? 1.0 : 0.95;
     return {
       pala_id: winner.id,
