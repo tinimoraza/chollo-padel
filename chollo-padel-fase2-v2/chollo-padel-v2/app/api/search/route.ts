@@ -22,8 +22,9 @@ export async function GET(req: Request) {
   const platformsRaw = (searchParams.get('platforms') ?? 'wallapop,vinted').trim()
   const platforms = platformsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
+  const PRECIO_MINIMO_DEFAULT = 15  // igual que background.js — elimina spam de 1€ de Vinted
   const maxP = Number.isFinite(maxPrice as number) ? maxPrice : undefined
-  const minP = Number.isFinite(minPrice as number) ? minPrice : undefined
+  const minP = Number.isFinite(minPrice as number) ? minPrice : PRECIO_MINIMO_DEFAULT
 
   // Base de la clave sin plataforma
   const baseKey = [
