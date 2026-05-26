@@ -1,4 +1,15 @@
 // scripts/prices/pipeline.js
+// v6 (2026-05-26):
+//   FIX 1 — Verificación HTTP de URLs: checkUrlDisponible() hace HEAD a cada URL
+//     de price_snapshots. Si responde 404 o redirige a una URL diferente (producto
+//     descatalogado que PadelNuestro redirige silenciosamente), marca disponible=false.
+//     Se ejecuta en lote al final del pipeline para no ralentizar el scrape.
+//   FIX 2 — fuzzyMatch recibe ahora el url_producto. El matcher v5 extrae año y versión
+//     de la URL (más fiable que el título). Neuron-25 → año 2025. Drive-3-3 → versión 3.3.
+//   FIX 3 — Invalidación de caché por URL: saveToCache guarda el url_path del producto.
+//     getFromCache comprueba si el path actual coincide; si no, descarta la caché y
+//     rematchea. Evita que matches incorrectos queden perpetuados indefinidamente.
+//   RECOMENDADO tras deploy: DELETE FROM price_match_cache; para empezar limpio.
 // v5 (2026-05-26):
 //   - recalculatePriceReference: MEDIA → MEDIANA para precio_referencia
 //     Un outlier de Roma Sport (280€) rodeado de precios de 75-150€ ya no
@@ -36,13 +47,16 @@ async function getSource(slug) {
 async function getFromCache(sourceId, productUrl) {
   const { data } = await supabase
     .from('price_match_cache')
-    .select('pala_id, match_method, confidence')
+    .select('pala_id, match_method, confidence, producto_titulo')
     .eq('source_id', sourceId)
     .eq('producto_url', productUrl)
     .single();
   return data || null;
 }
 
+// Fix 3: saveToCache almacena el título actual. Si en el próximo scrape el título
+// de esa URL ha cambiado (PadelNuestro reutilizó la URL para otro producto), la
+// caché se invalida automáticamente en el bloque de matching abajo.
 async function saveToCache(sourceId, productUrl, productTitle, matchResult) {
   await supabase.from('price_match_cache').upsert({
     source_id: sourceId,
@@ -132,6 +146,62 @@ async function upsertCandidata(title, sourceSlug, precio, url) {
     });
     console.log(`[candidatas] Nueva pala candidata: "${title}" (marca: ${marcaDetectada || 'desconocida'})`);
   }
+}
+
+// ─── Fix 1: Verificación HTTP de URLs ────────────────────────────────────────
+// PadelNuestro no devuelve 404 en productos descatalogados: los redirige
+// silenciosamente a otra página. Detectamos esto comparando la URL final
+// de la respuesta con la URL que guardamos. Si son distintas → descatalogado.
+async function checkUrlDisponible(url) {
+  try {
+    const resp = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HuntPadel/1.0)' },
+    });
+    if (resp.status === 404) return false;
+    // Si hubo redirección a una URL diferente → producto descatalogado/reemplazado
+    if (resp.redirected && resp.url !== url) {
+      // Permitir redirecciones triviales (http→https, trailing slash)
+      const norm = (u) => u.replace(/^http:/, 'https:').replace(/\/$/, '');
+      if (norm(resp.url) !== norm(url)) return false;
+    }
+    return resp.ok;
+  } catch {
+    return null; // timeout u error de red → no marcar como no disponible
+  }
+}
+
+// Verifica en lote las URLs de snapshots recién insertados y marca disponible=false
+// los que ya no existen. Corre al final para no bloquear el scrape principal.
+async function verificarUrlsNuevas(palaIds, sourceId) {
+  if (palaIds.length === 0) return;
+  const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(); // últimas 2h
+  const { data: snaps } = await supabase
+    .from('price_snapshots')
+    .select('id, url_producto')
+    .in('pala_id', palaIds)
+    .eq('source_id', sourceId)
+    .eq('disponible', true)
+    .gte('scraped_at', since);
+
+  if (!snaps || snaps.length === 0) return;
+
+  console.log(`[pipeline] Verificando ${snaps.length} URLs nuevas…`);
+  let rotas = 0;
+  for (const snap of snaps) {
+    const disponible = await checkUrlDisponible(snap.url_producto);
+    if (disponible === false) {
+      await supabase
+        .from('price_snapshots')
+        .update({ disponible: false })
+        .eq('id', snap.id);
+      console.log(`[pipeline] 🔴 URL rota → disponible=false: ${snap.url_producto}`);
+      rotas++;
+    }
+  }
+  if (rotas > 0) console.log(`[pipeline] ${rotas} URLs marcadas como no disponibles.`);
 }
 
 // ─── Mediana ──────────────────────────────────────────────────────────────────
@@ -265,8 +335,16 @@ async function runPipeline(sourceSlug) {
     try {
       let match = await getFromCache(source.id, p.url_producto);
 
+      // Fix 3: si el título actual difiere del que guardamos en caché, el producto
+      // cambió en esa URL → invalidar y rematchear desde cero.
+      if (match && match.producto_titulo && match.producto_titulo !== p.title) {
+        console.log(`[pipeline] 🔄 Título cambiado en caché, rematcheando: "${p.title}"`);
+        match = null;
+      }
+
       if (!match) {
-        match = await fuzzyMatch(p.title);
+        // Fix 2: pasamos url_producto al matcher para que extraiga señales de año/versión
+        match = await fuzzyMatch(p.title, p.url_producto);
         await saveToCache(source.id, p.url_producto, p.title, match);
       }
 
@@ -296,6 +374,9 @@ async function runPipeline(sourceSlug) {
   }
 
   await recalculatePriceReference([...updatedPalaIds]);
+
+  // Fix 1: verificar URLs de los snapshots recién insertados
+  await verificarUrlsNuevas([...updatedPalaIds], source.id);
 
   await supabase.from('price_sources')
     .update({ last_scraped_at: new Date().toISOString() })

@@ -1,4 +1,17 @@
 // scripts/prices/fuzzy-matcher.js
+// v5 (2026-05-26):
+//   FIX ESTRUCTURAL: el matcher ahora recibe también la URL del producto y extrae
+//   señales de año y versión de ella, además del título.
+//   Problema raíz: PadelNuestro puede tener el mismo título para dos SKUs distintos
+//   (Neuron 2024 y Neuron 25), pero la URL sí los distingue: bullpadel-neuron-25-*
+//   implica año 2025. Del mismo modo, "drive-3-3" en URL implica versión 3.3.
+//   Con este fix:
+//     extraerAnioDeUrl("-25-" → 2025, "-26-" → 2026, etc.)
+//     extraerVersionDeUrl("-3-3-" → "3.3", "-3-2-" → "3.2", etc.)
+//   Las señales de URL tienen PRIORIDAD sobre el título cuando hay conflicto,
+//   porque la URL es estructurada y generada por la tienda (más fiable que el título libre).
+//   fuzzyMatch() acepta ahora un segundo argumento opcional: productUrl.
+//
 // v4 (2026-05-26):
 //   FIX: colores añadidos a TOKENS_DIFERENCIADORES y KEEP_WORDS.
 //   Problema: "Adidas Drive Black 2026" y "Adidas Drive Blue 2026" eran indistinguibles
@@ -139,6 +152,35 @@ function extraerVersion(texto) {
   return m ? m[1] : null;
 }
 
+// ─── Extracción de señales desde URL del producto ─────────────────────────────
+// Las URLs de tiendas son estructuradas y más fiables que los títulos libres.
+// PadelNuestro ejemplo: bullpadel-neuron-25-113768-p → año 2025
+//                       bullpadel-drive-3-3-blue-2026-p → versión 3.3
+
+function extraerAnioDeUrl(url) {
+  if (!url) return null;
+  // Sufijo de dos dígitos tipo -25- o -26- que indican año (20XX)
+  // Solo reconocemos 20-29 para no confundir con números de modelo
+  const m = url.match(/[_-](2[0-9])[_-]/);
+  if (m) {
+    const year = 2000 + parseInt(m[1]);
+    if (year >= 2018 && year <= 2030) return year;
+  }
+  // También puede aparecer el año completo en la URL
+  const mFull = url.match(/\b(20(1[89]|2[0-9]))\b/);
+  return mFull ? parseInt(mFull[1]) : null;
+}
+
+function extraerVersionDeUrl(url) {
+  if (!url) return null;
+  // Patrón: -N-N- o _N_N_ donde N es un dígito (ej: drive-3-3, match-3-2)
+  // Evitar confundir con SKUs numéricos al final tipo -113768-p
+  const sinPath = url.split('/').pop() || url; // solo el slug final
+  const m = sinPath.match(/[_-](\d)[_-](\d)[_-]/);
+  if (m) return `${m[1]}.${m[2]}`;
+  return null;
+}
+
 function extraerTokensModelo(modelo, marca) {
   const sinMarca = modelo.replace(new RegExp(`^${marca}\\s+`, 'i'), '');
   const sinAnio = sinMarca.replace(/\b20\d{2}\b/, '').trim();
@@ -210,7 +252,7 @@ async function getCatalog() {
 
 // ─── Matching principal ───────────────────────────────────────────────────────
 
-async function fuzzyMatch(productTitle) {
+async function fuzzyMatch(productTitle, productUrl) {
   const { catalog, palasPorMarca } = await getCatalog();
   const knownBrands = [...new Set(catalog.map(p => p.marca))];
 
@@ -230,13 +272,29 @@ async function fuzzyMatch(productTitle) {
   const anioTitulo = extraerAnio(productTitle);
   const versionTitulo = extraerVersion(productTitle);
 
+  // ── Señales de URL (más fiables que el título cuando hay conflicto) ────────
+  const anioUrl = extraerAnioDeUrl(productUrl);
+  const versionUrl = extraerVersionDeUrl(productUrl);
+
+  // El año efectivo es: URL (prioritario) > título
+  const anioEfectivo = anioUrl ?? anioTitulo;
+  // La versión efectiva es: URL (prioritario) > título
+  const versionEfectiva = versionUrl ?? versionTitulo;
+
+  if (anioUrl && anioUrl !== anioTitulo && anioTitulo !== null) {
+    console.log(`[fuzzy] ⚠️  Conflicto año: título="${anioTitulo}" URL="${anioUrl}" → usando URL para "${productTitle}"`);
+  }
+  if (versionUrl && versionUrl !== versionTitulo && versionTitulo !== null) {
+    console.log(`[fuzzy] ⚠️  Conflicto versión: título="${versionTitulo}" URL="${versionUrl}" → usando URL para "${productTitle}"`);
+  }
+
   const difEnTitulo = new Set(tokensTitle.filter(t => TOKENS_DIFERENCIADORES.has(t)));
 
   // ── Fase estricta ────────────────────────────────────────────────────────
   let scored = candidates
     .map(pala => {
       if (pala.tokens.length === 0) return null;
-      if (anioTitulo !== null && pala.año !== anioTitulo) return null;
+      if (anioEfectivo !== null && pala.año !== anioEfectivo) return null;
       const missing = pala.tokens.filter(t => !tokensTitle.includes(t));
       if (missing.length > 0) return null;
       const difModelo = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t));
@@ -247,8 +305,8 @@ async function fuzzyMatch(productTitle) {
     })
     .filter(Boolean);
 
-  // ── Sin año en título: reintentar sin restricción de año ─────────────────
-  if (scored.length === 0 && anioTitulo === null) {
+  // ── Sin año efectivo: reintentar sin restricción de año ──────────────────
+  if (scored.length === 0 && anioEfectivo === null) {
     scored = candidates
       .map(pala => {
         if (pala.tokens.length === 0) return null;
@@ -291,10 +349,10 @@ async function fuzzyMatch(productTitle) {
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── Desempate 1: versión X.Y ──────────────────────────────────────────────
-  if (versionTitulo && scored.length > 1) {
+  if (versionEfectiva && scored.length > 1) {
     const conVersion = scored.filter(s => {
       const m = (s.pala.modelo || '').match(/\b(\d+\.\d+)\b/);
-      return m && m[1] === versionTitulo;
+      return m && m[1] === versionEfectiva;
     });
     if (conVersion.length > 0 && conVersion.length < scored.length) scored = conVersion;
   }
@@ -322,7 +380,7 @@ async function fuzzyMatch(productTitle) {
 
   if (scored.length === 1) {
     const winner = scored[0].pala;
-    const confidence = anioTitulo && anioTitulo === winner.año ? 1.0 : 0.95;
+    const confidence = anioEfectivo && anioEfectivo === winner.año ? 1.0 : 0.95;
     return { pala_id: winner.id, pala_nombre: winner.modelo, confidence, method: 'fuzzy' };
   }
 
