@@ -255,9 +255,16 @@ async function recalculatePriceReference(palaIds) {
 
     if (!snaps || snaps.length === 0) continue;
 
+    // v6: Excluir Roma Sport (source_id=9) del cálculo de referencia.
+    // Roma Sport publica precios inflados de catálogo que distorsionan la mediana
+    // cuando es la única fuente o cuando sus precios son mucho mayores que el mercado.
+    const FUENTES_EXCLUIR_DE_REFERENCIA = new Set([9]); // 9 = Roma Sport
+    const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR_DE_REFERENCIA.has(s.source_id));
+    const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps; // fallback a todos si no hay otras fuentes
+
     // Deduplicar por url_producto — quedarse con el precio más bajo por URL
     const byUrl = new Map();
-    for (const s of snaps) {
+    for (const s of snapsFuente) {
       const key = s.url_producto;
       if (!byUrl.has(key) || s.precio < byUrl.get(key).precio) {
         byUrl.set(key, s);
@@ -372,63 +379,4 @@ async function runPipeline(sourceSlug) {
       if (match?.pala_id) {
         matches_encontrados++;
 
-        if (match.confidence < 0.92) {
-          console.log(`[pipeline] ⚠️  Match rechazado (conf ${match.confidence.toFixed(3)} < 0.92): "${p.title}" → ${match.pala_id}`);
-          await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
-          candidatas_nuevas++;
-        } else {
-          const inserted = await insertSnapshot(match.pala_id, source.id, p, match.confidence);
-          if (inserted) {
-            inserts_realizados++;
-            updatedPalaIds.add(match.pala_id);
-          }
-        }
-      } else {
-        await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
-        candidatas_nuevas++;
-      }
-
-    } catch (err) {
-      console.error(`[pipeline] Error procesando "${p.title}":`, err.message);
-      errores++;
-    }
-  }
-
-  await recalculatePriceReference([...updatedPalaIds]);
-
-  // Fix 1: verificar URLs de los snapshots recién insertados
-  await verificarUrlsNuevas([...updatedPalaIds], source.id);
-
-  await supabase.from('price_sources')
-    .update({ last_scraped_at: new Date().toISOString() })
-    .eq('id', source.id);
-
-  await supabase.from('scraper_logs').insert({
-    source_id: source.id,
-    started_at: startedAt,
-    finished_at: new Date().toISOString(),
-    productos_scrapeados,
-    matches_encontrados,
-    inserts_realizados,
-    errores,
-    status: errores > 0 && inserts_realizados === 0 ? 'error' : errores > 0 ? 'partial' : 'success',
-  });
-
-  console.log(`\n[pipeline] ✅ ${sourceSlug} completado:`);
-  console.log(`   Scrapeados:  ${productos_scrapeados}`);
-  console.log(`   Matches:     ${matches_encontrados}`);
-  console.log(`   Insertados:  ${inserts_realizados}`);
-  console.log(`   Candidatas:  ${candidatas_nuevas}`);
-  console.log(`   Errores:     ${errores}`);
-}
-
-const slug = process.argv[2];
-if (!slug) {
-  console.error('Uso: node scripts/prices/pipeline.js <store-slug>');
-  process.exit(1);
-}
-
-runPipeline(slug).catch(err => {
-  console.error('[pipeline] Error fatal:', err);
-  process.exit(1);
-});
+  

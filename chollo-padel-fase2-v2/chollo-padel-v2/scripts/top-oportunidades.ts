@@ -163,7 +163,7 @@ async function main() {
   console.log('💰 Cargando precios de referencia de tiendas...')
   const { data: precios, error: preciosErr } = await supabase
     .from('price_reference')
-    .select('pala_id, precio_referencia')
+    .select('pala_id, precio_referencia, fuentes_count')
 
   if (preciosErr || !precios) {
     console.error('❌ Error cargando price_reference:', preciosErr)
@@ -171,13 +171,22 @@ async function main() {
   }
 
   // Mapa pala_id → precio_referencia (precio de tienda oficial)
+  // Requisito mínimo: al menos 2 fuentes distintas para que la referencia sea fiable.
+  // Con 1 sola fuente (ej. Roma Sport o Padel Coronado), el precio puede estar inflado.
+  const FUENTES_MINIMAS = 2
   const preciosPorPalaId = new Map<string, number>()
+  let sinSuficientesFuentes = 0
   for (const p of precios) {
     if (p.pala_id && p.precio_referencia) {
+      if ((p.fuentes_count ?? 1) < FUENTES_MINIMAS) {
+        sinSuficientesFuentes++
+        continue
+      }
       preciosPorPalaId.set(p.pala_id, p.precio_referencia)
     }
   }
-  console.log(`  ${preciosPorPalaId.size} palas con precio de tienda\n`)
+  console.log(`  ${preciosPorPalaId.size} palas con precio de tienda (≥${FUENTES_MINIMAS} fuentes)`)
+  console.log(`  ${sinSuficientesFuentes} palas descartadas por tener <${FUENTES_MINIMAS} fuentes (precio poco fiable)\n`)
 
   // ── 2. Leer candidatos de wallapop_cache — SOLO con pala_id ──────────────
   console.log('📦 Leyendo wallapop_cache (solo anuncios con pala_id)...')
@@ -385,22 +394,4 @@ async function main() {
   }
 
   const { error: insertError } = await supabase
-    .from('top_oportunidades')
-    .insert(topConTendencia)
-
-  if (insertError) {
-    console.error('❌ Error insertando Top:', insertError)
-    return
-  }
-
-  console.log(`\n✅ Top ${topConTendencia.length} guardado en top_oportunidades.`)
-  if (vendidosABorrar.length > 0) {
-    console.log(`🧹 ${vendidosABorrar.length} anuncios vendidos eliminados de wallapop_cache de paso.`)
-  }
-  console.log('🏁 Top Oportunidades completado.\n')
-}
-
-main().catch(err => {
-  console.error('💥 Error fatal:', err)
-  process.exit(1)
-})
+    .from('top
