@@ -12,7 +12,7 @@ jobs:
   scrape-precios:
     name: Scrape precios tiendas
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60  # ampliado de 30 → 60 por los 6 scrapers nuevos
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
@@ -46,6 +46,8 @@ jobs:
           });
           "
 
+      # ── Tiendas existentes ────────────────────────────────────────────────
+
       - name: Scrape Padel Nuestro
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -69,6 +71,46 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelcoronado
+
+      # ── Tiendas nuevas ────────────────────────────────────────────────────
+
+      - name: Scrape Tennis-Point ES
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js tennispoint
+
+      - name: Scrape Decathlon ES
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js decathlon
+
+      - name: Scrape Padel Pro Shop
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js padelproshop
+
+      - name: Scrape Miravía
+        continue-on-error: true  # marketplace con anti-bot — no bloquear el pipeline si falla
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js miravia
+
+      - name: Scrape Amazon ES
+        continue-on-error: true  # anti-bot agresivo — no bloquear el pipeline si falla
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js amazon
+
+      - name: Scrape Padel Ibérico
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/prices/pipeline.js padeliberico
 
   recalcular-top:
     name: Recalcular Top Oportunidades
