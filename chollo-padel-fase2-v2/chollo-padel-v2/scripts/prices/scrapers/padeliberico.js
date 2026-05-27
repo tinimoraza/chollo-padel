@@ -1,62 +1,49 @@
 // scripts/prices/scrapers/padeliberico.js
-// Scraper Padel Ibérico — Playwright + WooCommerce/PrestaShop
-// URL catálogo: https://www.padeliberico.es/palas-de-padel/
+// Scraper Padel Ibérico — Playwright + PrestaShop
+// URL catálogo: https://www.padeliberico.es/palas-de-padel
+//
+// v2 (2026-05-27):
+//   - Dominio corregido: padeliberico.com → padeliberico.es
+//   - URL corregida: /palas-de-padel/ (404) → /palas-de-padel (sin trailing slash)
+//   - Selectores actualizados para PrestaShop:
+//     · Contenedor: article.product-miniature
+//     · Título + URL: a.thumbnail.product-thumbnail[title][href]
+//     · Precio actual: span[itemprop="price"][content]  (valor numérico en atributo content)
+//     · Precio original: span.regular-price (tachado, solo cuando hay descuento)
+//   - Paginación: ?page=N (332 productos, ~17 páginas)
 
 const SOURCE_KEY   = 'padeliberico'
-const CATEGORY_URL = 'https://www.padeliberico.es/palas-de-padel/'
-const DELAY_MS     = 1800
+const BASE_URL     = 'https://www.padeliberico.es/palas-de-padel'
+const DELAY_MS     = 1500
 
-async function extractPage(page) {
+async function extractProducts(page) {
   return page.evaluate(() => {
-    function parsePrice(text) {
-      if (!text) return NaN
-      const cleaned = text.replace(/[^\d,.\s]/g, '').trim()
-      // Formato español: 1.234,56 o 234,56
-      const m = cleaned.match(/([\d.]*\d)[\s,](\d{2})/)
-      if (m) return parseFloat(`${m[1].replace('.', '')}.${m[2]}`)
-      // Fallback
-      const n = parseFloat(cleaned.replace(',', '.'))
-      return isNaN(n) ? NaN : n
-    }
-
-    // WooCommerce standard
-    const wooProducts = Array.from(document.querySelectorAll('li.product, .product-item'))
-    if (wooProducts.length > 0) {
-      return wooProducts.map(el => {
-        const titleEl = el.querySelector('.woocommerce-loop-product__title, .product-title, h2, h3')
-        const title   = titleEl?.textContent?.trim()
-        const linkEl  = el.querySelector('a.woocommerce-loop-product__link, a')
-        const url     = linkEl?.href
-        if (!title || !url || !url.startsWith('http')) return null
-
-        const currentEl  = el.querySelector('.price ins .woocommerce-Price-amount bdi, .price .woocommerce-Price-amount bdi')
-        const originalEl = el.querySelector('.price del .woocommerce-Price-amount bdi')
-        const price      = parsePrice(currentEl?.textContent ?? el.querySelector('.woocommerce-Price-amount bdi')?.textContent ?? '')
-        const original   = parsePrice(originalEl?.textContent ?? '')
-
-        if (isNaN(price) || price <= 0) return null
-        return {
-          title,
-          price,
-          precio_original: (!isNaN(original) && original > price) ? original : null,
-          url,
-        }
-      }).filter(Boolean)
-    }
-
-    // PrestaShop fallback
-    const psProducts = Array.from(document.querySelectorAll('.product-miniature, article.product-miniature'))
-    return psProducts.map(el => {
-      const titleEl = el.querySelector('.product-title a, h3 a, h2 a')
-      const title   = titleEl?.textContent?.trim()
-      const url     = titleEl?.href ?? el.querySelector('a')?.href
+    const articles = Array.from(document.querySelectorAll('article.product-miniature'))
+    return articles.map(article => {
+      // Título y URL
+      const linkEl = article.querySelector('a.thumbnail.product-thumbnail')
+      const title  = linkEl?.getAttribute('title')?.trim()
+      const url    = linkEl?.href
       if (!title || !url) return null
 
-      const priceEl = el.querySelector('.price, .product-price-and-shipping .price')
-      const price   = parsePrice(priceEl?.textContent ?? '')
+      // Precio actual — PrestaShop lo pone en el atributo content (valor limpio sin símbolo)
+      const priceEl = article.querySelector('span[itemprop="price"]')
+      const price   = priceEl ? parseFloat(priceEl.getAttribute('content')) : NaN
       if (isNaN(price) || price <= 0) return null
 
-      return { title, price, precio_original: null, url }
+      // Precio original tachado (solo existe cuando hay descuento)
+      const regularEl = article.querySelector('span.regular-price')
+      const originalText = regularEl?.textContent?.trim() ?? ''
+      const original = originalText
+        ? parseFloat(originalText.replace(/[^0-9,]/g, '').replace(',', '.'))
+        : NaN
+
+      return {
+        title,
+        price,
+        precio_original: (!isNaN(original) && original > price) ? original : null,
+        url,
+      }
     }).filter(Boolean)
   })
 }
@@ -76,47 +63,53 @@ async function scrape() {
   const page    = await browser.newPage()
 
   await page.setExtraHTTPHeaders({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept-Language': 'es-ES,es;q=0.9',
   })
 
   const allProducts = []
-  let currentUrl = CATEGORY_URL
   let pageNum = 1
 
   try {
-    while (currentUrl) {
-      await page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+    while (true) {
+      const url = pageNum === 1 ? BASE_URL : `${BASE_URL}?page=${pageNum}`
+      console.log(`[padeliberico] Página ${pageNum}…`)
+
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
       await page.waitForTimeout(1500)
 
-      // Cerrar cookies
+      // Cerrar cookies si aparece
       try {
-        await page.click('.cmplz-accept, [data-cky-tag="accept-button"], button[id*="accept"], .cc-btn', { timeout: 3000 })
-        await page.waitForTimeout(800)
-      } catch {}
+        await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler', { timeout: 2000 })
+        await page.waitForTimeout(500)
+      } catch { /* sin banner */ }
 
-      console.log(`[padeliberico] Extrayendo página ${pageNum}…`)
+      try {
+        await page.waitForSelector('article.product-miniature', { timeout: 15_000 })
+      } catch {
+        console.log(`[padeliberico] Sin productos en página ${pageNum} — fin`)
+        break
+      }
 
-      const products = await extractPage(page)
+      const products = await extractProducts(page)
       console.log(`[padeliberico]  → ${products.length} palas`)
+
+      if (products.length === 0) break
       allProducts.push(...products)
 
-      // Siguiente página — WooCommerce o PrestaShop
-      currentUrl = await page.evaluate(() => {
-        const next = document.querySelector(
-          'a.next.page-numbers, ' +
-          'a[rel="next"], ' +
-          '.pagination .next a, ' +
-          'li.next a'
-        )
-        return next?.href ?? null
-      })
+      // Comprobar si hay página siguiente
+      const hasNext = await page.evaluate((currentPage) => {
+        return !!document.querySelector(`a[href*="page=${currentPage + 1}"]`)
+      }, pageNum)
+
+      if (!hasNext) {
+        console.log(`[padeliberico] Última página (${pageNum}). Total: ${allProducts.length}`)
+        break
+      }
 
       pageNum++
-      if (currentUrl) await page.waitForTimeout(DELAY_MS)
+      await page.waitForTimeout(DELAY_MS)
     }
-
-    console.log(`[padeliberico] Última página (${pageNum - 1}). Total: ${allProducts.length}`)
   } catch (err) {
     console.error('[padeliberico] Error:', err.message)
   } finally {

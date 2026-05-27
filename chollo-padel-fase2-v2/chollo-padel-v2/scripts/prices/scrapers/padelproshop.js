@@ -1,37 +1,48 @@
 // scripts/prices/scrapers/padelproshop.js
-// Scraper Padel Pro Shop — Playwright + WooCommerce
-// URL catálogo: https://padelproshop.com/categoria-producto/palas/
+// Scraper PadelPROShop — Playwright + Shopify
+// URL catálogo: https://padelproshop.com/collections/palas-padel
+//
+// v2 (2026-05-27):
+//   - Dominio corregido: padel-pro-shop.es → padelproshop.com
+//   - URL corregida: /categoria-producto/palas/ (WooCommerce 404) → /collections/palas-padel (Shopify)
+//   - Selectores actualizados: li.product → product-card[data-hover-title] (custom element Shopify)
+//   - Precio actual: span.price span.money
+//   - Precio tachado: span.compare-at-price span.money
+//   - Paginación: /collections/palas-padel?page=N
 
-const SOURCE_KEY  = 'padelproshop'
-const CATEGORY_URL = 'https://padelproshop.com/categoria-producto/palas/'
-const DELAY_MS    = 2000
+const SOURCE_KEY   = 'padelproshop'
+const BASE_URL     = 'https://padelproshop.com/collections/palas-padel'
+const DELAY_MS     = 1500
 
-async function extractPage(page) {
+function parsePrice(text) {
+  if (!text) return NaN
+  return parseFloat(text.replace(/[^0-9,]/g, '').replace(',', '.'))
+}
+
+async function extractProducts(page) {
   return page.evaluate(() => {
     function parsePrice(text) {
       if (!text) return NaN
-      const m = text.match(/([\d.]+,\d{2})/)
-      if (!m) return NaN
-      return parseFloat(m[1].replace('.', '').replace(',', '.'))
+      return parseFloat(text.replace(/[^0-9,]/g, '').replace(',', '.'))
     }
 
-    const products = Array.from(document.querySelectorAll('li.product'))
-    return products.map(el => {
-      const titleEl = el.querySelector('.woocommerce-loop-product__title, h2, h3')
-      const title   = titleEl?.textContent?.trim()
+    const cards = Array.from(document.querySelectorAll('product-card[data-hover-title]'))
+    return cards.map(card => {
+      const title = card.getAttribute('data-hover-title')
       if (!title) return null
 
-      const linkEl = el.querySelector('a.woocommerce-loop-product__link, a')
-      const url    = linkEl?.href
-      if (!url || !url.startsWith('http')) return null
+      const linkEl = card.querySelector('a.product-card__link')
+      if (!linkEl) return null
+      const path = linkEl.getAttribute('href') || ''
+      const url = path.startsWith('http') ? path : `https://padelproshop.com${path.split('?')[0]}`
 
-      // Precio actual (con rebajas coge el del <ins>)
-      const currentEl  = el.querySelector('.price ins .woocommerce-Price-amount bdi, .price .woocommerce-Price-amount bdi')
-      const originalEl = el.querySelector('.price del .woocommerce-Price-amount bdi')
-      const price    = parsePrice(currentEl?.textContent ?? el.querySelector('.woocommerce-Price-amount bdi')?.textContent ?? '')
-      const original = parsePrice(originalEl?.textContent ?? '')
+      const priceEl   = card.querySelector('span.price span.money')
+      const compareEl = card.querySelector('span.compare-at-price span.money')
 
-      if (isNaN(price) || price <= 0) return null
+      const price    = priceEl   ? parseFloat(priceEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.'))   : NaN
+      const original = compareEl ? parseFloat(compareEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')) : NaN
+
+      if (!title || !url || isNaN(price) || price <= 0) return null
       return {
         title,
         price,
@@ -57,44 +68,55 @@ async function scrape() {
   const page    = await browser.newPage()
 
   await page.setExtraHTTPHeaders({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept-Language': 'es-ES,es;q=0.9',
   })
 
   const allProducts = []
-  let currentUrl = CATEGORY_URL
   let pageNum = 1
 
   try {
-    while (currentUrl) {
-      await page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-      await page.waitForTimeout(1500)
+    while (true) {
+      const url = pageNum === 1 ? BASE_URL : `${BASE_URL}?page=${pageNum}`
+      console.log(`[padelproshop] Página ${pageNum}: ${url}`)
+
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+      await page.waitForTimeout(2000)
 
       // Cerrar cookies si aparece
       try {
-        await page.click('.cmplz-accept, [data-cky-tag="accept-button"], .cc-btn.cc-allow', { timeout: 3000 })
-        await page.waitForTimeout(800)
+        await page.click('button[id*="accept"], .cc-btn, [data-cky-tag="accept-button"]', { timeout: 2000 })
+        await page.waitForTimeout(500)
       } catch { /* sin banner */ }
 
-      await page.waitForSelector('li.product', { timeout: 15_000 })
-      console.log(`[padelproshop] Extrayendo página ${pageNum}…`)
+      // Esperar a que carguen las product-cards
+      try {
+        await page.waitForSelector('product-card[data-hover-title]', { timeout: 15_000 })
+      } catch {
+        console.log(`[padelproshop] Sin productos en página ${pageNum} — fin`)
+        break
+      }
 
-      const products = await extractPage(page)
+      const products = await extractProducts(page)
       console.log(`[padelproshop]  → ${products.length} palas`)
+
+      if (products.length === 0) break
       allProducts.push(...products)
 
-      // Paginación WooCommerce estándar
-      currentUrl = await page.evaluate((currentPageNum) => {
-        const next = document.querySelector('a.next.page-numbers')
-        if (!next?.href) return null
-        return next.href
-      }, pageNum)
+      // Comprobar si hay página siguiente
+      // Shopify usa <link rel="next"> en el <head>, no un <a> visible en el DOM
+      const hasNext = await page.evaluate(() => {
+        return !!document.querySelector('link[rel="next"]')
+      })
+
+      if (!hasNext) {
+        console.log(`[padelproshop] Última página (${pageNum}). Total: ${allProducts.length}`)
+        break
+      }
 
       pageNum++
-      if (currentUrl) await page.waitForTimeout(DELAY_MS)
+      await page.waitForTimeout(DELAY_MS)
     }
-
-    console.log(`[padelproshop] Última página (${pageNum - 1}). Total: ${allProducts.length}`)
   } catch (err) {
     console.error('[padelproshop] Error:', err.message)
   } finally {
