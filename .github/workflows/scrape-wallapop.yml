@@ -15,7 +15,7 @@ jobs:
         run: |
           echo "🏓 Llamando a HuntPadel scraper — $(date)"
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
+          RESPONSE=$(curl -s -L -w "\n%{http_code}" \
             --max-time 240 \
             "https://huntpadel.com/api/cron/scrape-wallapop?secret=${{ secrets.CRON_SECRET }}")
 
@@ -30,4 +30,4 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Scraper finalizado — $(date)"
+          echo "✅ Scraper finalizado — $(date
