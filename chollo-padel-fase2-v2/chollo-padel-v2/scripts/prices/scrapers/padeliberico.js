@@ -1,9 +1,9 @@
 // scripts/prices/scrapers/padeliberico.js
 // Scraper Padel Ibérico — Playwright + WooCommerce/PrestaShop
-// URL catálogo: https://www.padeliberico.com/palas-de-padel/
+// URL catálogo: https://www.padeliberico.es/palas-de-padel/
 
 const SOURCE_KEY   = 'padeliberico'
-const CATEGORY_URL = 'https://www.padeliberico.com/palas-de-padel/'
+const CATEGORY_URL = 'https://www.padeliberico.es/palas-de-padel/'
 const DELAY_MS     = 1800
 
 async function extractPage(page) {

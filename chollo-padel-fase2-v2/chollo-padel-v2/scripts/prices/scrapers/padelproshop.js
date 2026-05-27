@@ -1,9 +1,9 @@
 // scripts/prices/scrapers/padelproshop.js
 // Scraper Padel Pro Shop — Playwright + WooCommerce
-// URL catálogo: https://padel-pro-shop.es/categoria-producto/palas/
+// URL catálogo: https://padelproshop.com/categoria-producto/palas/
 
 const SOURCE_KEY  = 'padelproshop'
-const CATEGORY_URL = 'https://padel-pro-shop.es/categoria-producto/palas/'
+const CATEGORY_URL = 'https://padelproshop.com/categoria-producto/palas/'
 const DELAY_MS    = 2000
 
 async function extractPage(page) {
