@@ -8,36 +8,26 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    defaults:
-      run:
-        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    timeout-minutes: 5
 
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
+      - name: Llamar al scraper en Vercel
+        run: |
+          echo "🏓 Llamando a HuntPadel scraper — $(date)"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 240 \
+            "https://huntpadel.com/api/cron/scrape-wallapop?secret=${{ secrets.CRON_SECRET }}")
 
-      - name: Instalar dependencias
-        run: npm install
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
 
-      - name: Instalar Playwright (paquete npm)
-        run: npm install playwright
+          echo "HTTP: $HTTP_CODE"
+          echo "Respuesta: $BODY"
 
-      - name: Instalar Chromium
-        run: npx playwright install chromium --with-deps
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Error HTTP $HTTP_CODE"
+            exit 1
+          fi
 
-      - name: Ejecutar scraper
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: npx tsx scripts/scrape-wallapop.ts
-
-      - name: Resumen
-        if: always()
-        run: echo "✅ Scraper finalizado — $(date)"
+          echo "✅ Scraper finalizado — $(date)"
