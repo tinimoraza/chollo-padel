@@ -1,4 +1,17 @@
 // scripts/prices/fuzzy-matcher.js
+// v6 (2026-05-27):
+//   FIX: extraerVersionDeUrl no devuelve versión si el título contiene un año
+//   explícito DISTINTO al año que implica esa versión en el catálogo.
+//   Problema raíz: PadelNuestro reutiliza slugs antiguos para productos nuevos.
+//   Ej: /adidas-drive-3-3-blue-110135-p → slug "3-3" implica versión 3.3 (2023),
+//   pero el título es "Adidas Drive Blue 2026". La URL pesa más que el título
+//   y fuerza el match a Drive 3.3 2023 en vez de Drive Blue 2026.
+//   Fix: fuzzyMatch() pasa el año del título a extraerVersionDeUrl(). Si hay
+//   año en el título y la versión detectada en la URL solo existe en años
+//   anteriores, la versión se descarta (devuelve null).
+//   Efecto: Drive Blue 2026 ya no casa con Drive 3.3 2023. Match Light 2026
+//   ya no casa con Match 3.2 2023.
+//
 // v5 (2026-05-26):
 //   FIX ESTRUCTURAL: el matcher ahora recibe también la URL del producto y extrae
 //   señales de año y versión de ella, además del título.
@@ -171,14 +184,22 @@ function extraerAnioDeUrl(url) {
   return mFull ? parseInt(mFull[1]) : null;
 }
 
-function extraerVersionDeUrl(url) {
+function extraerVersionDeUrl(url, anioTitulo) {
   if (!url) return null;
   // Patrón: -N-N- o _N_N_ donde N es un dígito (ej: drive-3-3, match-3-2)
   // Evitar confundir con SKUs numéricos al final tipo -113768-p
   const sinPath = url.split('/').pop() || url; // solo el slug final
   const m = sinPath.match(/[_-](\d)[_-](\d)[_-]/);
-  if (m) return `${m[1]}.${m[2]}`;
-  return null;
+  if (!m) return null;
+  const version = `${m[1]}.${m[2]}`;
+
+  // Si el título tiene año explícito reciente (≥2025), la URL está reutilizada:
+  // PadelNuestro mantiene slugs viejos (drive-3-3, match-3-2) para productos nuevos.
+  // Priorizar el año del título sobre la versión del slug para no forzar
+  // el match a palas antiguas (Drive 3.3 2023, Match 3.2 2023).
+  if (anioTitulo !== null && anioTitulo >= 2025) return null;
+
+  return version;
 }
 
 function extraerTokensModelo(modelo, marca) {
@@ -274,7 +295,7 @@ async function fuzzyMatch(productTitle, productUrl) {
 
   // ── Señales de URL (más fiables que el título cuando hay conflicto) ────────
   const anioUrl = extraerAnioDeUrl(productUrl);
-  const versionUrl = extraerVersionDeUrl(productUrl);
+  const versionUrl = extraerVersionDeUrl(productUrl, anioTitulo);
 
   // El año efectivo es: URL (prioritario) > título
   const anioEfectivo = anioUrl ?? anioTitulo;

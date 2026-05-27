@@ -1,4 +1,11 @@
 // scripts/prices/pipeline.js
+// v7 (2026-05-27):
+//   FIX 1 — insertSnapshot: segundo check anti-dup por pala_id+source_id+día
+//     (independiente de la URL). Evita que slugs alternativos del mismo producto
+//     en PadelNuestro generen filas duplicadas en price_snapshots.
+//   FIX 2 — fuzzy-matcher v6: extraerVersionDeUrl ignora la versión del slug
+//     cuando el título tiene año ≥2025. Evita que slugs reutilizados (drive-3-3,
+//     match-3-2) fuercen el match a palas antiguas en vez de las nuevas 2026.
 // v6 (2026-05-26):
 //   FIX 1 — Verificación HTTP de URLs: checkUrlDisponible() hace HEAD a cada URL
 //     de price_snapshots. Si responde 404 o redirige a una URL diferente (producto
@@ -69,9 +76,10 @@ async function saveToCache(sourceId, productUrl, productTitle, matchResult) {
 }
 
 async function insertSnapshot(palaId, sourceId, product, confidence) {
-  // Comprobar si ya existe un snapshot de esta URL+source de hoy para no duplicar
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const { data: existing } = await supabase
+
+  // Check 1: misma URL hoy (anti-dup original)
+  const { data: existingUrl } = await supabase
     .from('price_snapshots')
     .select('id')
     .eq('pala_id', palaId)
@@ -79,8 +87,21 @@ async function insertSnapshot(palaId, sourceId, product, confidence) {
     .eq('url_producto', product.url_producto)
     .gte('scraped_at', today)
     .limit(1);
+  if (existingUrl && existingUrl.length > 0) return true;
 
-  if (existing && existing.length > 0) return true; // Ya existe hoy, no duplicar
+  // Check 2: misma pala+fuente hoy con URL distinta (slugs alternativos del mismo producto)
+  // Evita que PadelNuestro tenga 2 URLs para la misma pala y genere filas duplicadas.
+  const { data: existingPala } = await supabase
+    .from('price_snapshots')
+    .select('id, url_producto')
+    .eq('pala_id', palaId)
+    .eq('source_id', sourceId)
+    .gte('scraped_at', today)
+    .limit(1);
+  if (existingPala && existingPala.length > 0) {
+    console.log(`[pipeline] ⚠️  Pala ${palaId} ya tiene snapshot hoy en source ${sourceId} (URL: ${existingPala[0].url_producto}). Ignorando URL alternativa: ${product.url_producto}`);
+    return true;
+  }
 
   const { error } = await supabase.from('price_snapshots').insert({
     pala_id: palaId,
