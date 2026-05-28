@@ -94,6 +94,13 @@ const EXCLUIR_PALABRAS = [
   'titanium graphite', // Wilson Titanium Graphite (tenis)
   'graphite ultra',    // Wilson (tenis)
   'zapatilla',         // calzado deportivo
+  // Calzado en inglés (Vinted)
+  'shoe', 'shoes', 'footwear', 'sneaker', 'sneakers',
+  // Tenis en francés (Vinted)
+  'raquette de tennis', 'raquette tennis',
+  // Modelos tenis específicos
+  'ultra 99', 'ultra 100', 'ultra tour', 'bela tour',
+  'head prestige', 'padel shoes', 'padel shoe',
 ]
 
 // Marcas que fabrican TANTO tenis como pádel.
@@ -398,34 +405,4 @@ async function main() {
 
   // ── 8. Guardar el Top en la BD ────────────────────────────────────────────
   if (topConTendencia.length === 0) {
-    console.log('\n⚠️  Sin anuncios activos en el Top — no se actualiza la tabla.')
-    return
-  }
-
-  const { error: deleteError } = await supabase
-    .from('top_oportunidades')
-    .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000')
-
-  if (deleteError) {
-    console.error('❌ Error borrando top_oportunidades:', deleteError)
-    return
-  }
-
-  const { error: insertError } = await supabase
-    .from('top_oportunidades')
-    .insert(topConTendencia)
-
-  if (insertError) {
-    console.error('❌ Error insertando top_oportunidades:', insertError)
-    return
-  }
-
-  console.log(`\n✅ Top ${topConTendencia.length} guardado correctamente en top_oportunidades`)
-  console.log(`📅 Actualizado: ${ahora}`)
-}
-
-main().catch(err => {
-  console.error('💥 Error fatal:', err)
-  process.exit(1)
-})
+    console.log('\n

@@ -140,6 +140,8 @@ const EXCLUIR_ACCESORIOS = new Set([
   'bolsa', 'mochila', 'funda', 'paletero', 'grip', 'overgrip',
   'protector', 'muñequera', 'bolas', 'pelota', 'pelotas', 'camiseta',
   'zapatilla', 'zapatillas', 'ropa', 'lote', 'antivibrador',
+  // Calzado deportivo (listings en inglés de Vinted)
+  'shoe', 'shoes', 'footwear', 'sneaker', 'sneakers',
   // Raquetas de tenis inequívocas (no confundibles con pádel)
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v1', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
@@ -158,6 +160,14 @@ const EXCLUIR_ACCESORIOS = new Set([
   // Otros deportes que cuelan con marcas de pádel
   'pickleball',
   'bolas de golf', 'bolas golf', 'blade pro v',  // Wilson golf/tenis
+  // Tenis en frances (Vinted Francia/Belgica)
+  'raquette de tennis', 'raquette tennis',
+  // Head Prestige es linea de tenis, nunca padel
+  'head prestige', 'prestige mp', 'prestige pro', 'prestige tour', 'prestige mid',
+  // Wilson tenis adicionales
+  'ultra 99', 'ultra 100', 'ultra tour',
+  // Vinted: listings de calzado padel (zapatillas, no palas)
+  'padel shoes', 'padel shoe', 'padel boots',
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
@@ -422,7 +432,13 @@ function matchearItem(
   if (scored.length === 0) {
     const tieneAnioYJugador = anioTitulo !== null && jugadoresTitulo.length > 0
     const tituloCorto = tokensTitle.length <= 5
-    const threshold = tieneAnioYJugador ? PARTIAL_MATCH_THRESHOLD_SOFT : tituloCorto ? PARTIAL_MATCH_THRESHOLD_MIN : PARTIAL_MATCH_THRESHOLD
+    // Marcas multideporte: no bajar umbral por titulo corto (evita shoes/tenis falsos positivos)
+    const esMultideporte = marcaNorm ? MARCAS_MULTIDEPORTE.has(marcaNorm) : false
+    const threshold = tieneAnioYJugador
+      ? PARTIAL_MATCH_THRESHOLD_SOFT
+      : (tituloCorto && !esMultideporte)
+      ? PARTIAL_MATCH_THRESHOLD_MIN
+      : PARTIAL_MATCH_THRESHOLD
     // Extraer números de modelo del título (01-09, v2, v3... pero NO años 20XX)
     // Estos son tokens que identifican la versión exacta del modelo
     const numerosModelo = titleLower
@@ -1007,33 +1023,4 @@ async function main() {
     return
   }
 
-  // ── 4. Aplicar en batches ─────────────────────────────────────────────────
-  console.log(`💾 Aplicando ${updates.length} actualizaciones...`)
-  const BATCH = 100
-  let ok = 0
-
-  for (let i = 0; i < updates.length; i += BATCH) {
-    const batch = updates.slice(i, i + BATCH)
-    for (const u of batch) {
-      const { error } = await supabase
-        .from('wallapop_cache')
-        .update({ pala_id: u.pala_id })
-        .eq('external_id', u.external_id)
-
-      if (error) {
-        console.error(`  ⚠️  Error actualizando ${u.external_id}:`, error.message)
-      } else {
-        ok++
-      }
-    }
-    console.log(`  ${Math.min(i + BATCH, updates.length)}/${updates.length}...`)
-  }
-
-  console.log(`\n✅ ${ok} anuncios actualizados con pala_id.`)
-  console.log('🏁 Match pala_id completado.\n')
-}
-
-main().catch(err => {
-  console.error('💥 Error fatal:', err)
-  process.exit(1)
-})
+  // ── 4. Aplicar en batches ───────────────────────────────────────────
