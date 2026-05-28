@@ -2,20 +2,30 @@ name: Auto Promote Candidatas
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # Cada día a las 6:00 UTC
+    - cron: '0 6 * * *'   # Cada dia a las 6:00 UTC
   workflow_dispatch:
 
 jobs:
   auto-promote:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-      - name: Run auto-promote
+    timeout-minutes: 10
+    defaults:
+      run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Auto-promover palas candidatas
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
