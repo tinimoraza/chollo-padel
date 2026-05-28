@@ -8,133 +8,120 @@ on:
     - cron: '0 23 * * *'
   workflow_dispatch:
 
+# Scraper dividido en 3 jobs paralelos para evitar timeout de 60 min.
+# Cada grupo tarda ~15-20 min. Total real: ~25 min en vez de 60+.
+#
+# Grupo A — Puppeteer (padelnuestro, padelzoom)
+# Grupo B — Playwright set 1 (romasport, padelcoronado, padeliberico)
+# Grupo C — Playwright set 2 (padelproshop, tennispoint, decathlon, miravia, amazon)
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  WORKDIR: chollo-padel-fase2-v2/chollo-padel-v2
+
 jobs:
-  scrape-precios:
-    name: Scrape precios tiendas
+
+  # ── Grupo A: Puppeteer ──────────────────────────────────────────────────────
+  scrape-grupo-a:
+    name: "Scrape A: padelnuestro + padelzoom"
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # ampliado de 30 → 60 por los 6 scrapers nuevos
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Instalar dependencias
         run: npm install
-
-      - name: Instalar navegadores Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Limpiar caché con confidence < 0.92 (threshold viejo Jaro-Winkler)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+      - name: Limpiar cache confianza baja
         run: |
           node -e "
           const { createClient } = require('@supabase/supabase-js');
           const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
           sb.from('price_match_cache').delete().lt('confidence', 0.92).then(({ error }) => {
             if (error) { console.error('Error limpiando cache:', error.message); process.exit(1); }
-            console.log('[cache] Limpieza completada — entradas con conf < 0.92 eliminadas');
+            console.log('[cache] Limpieza OK');
           });
           "
-
-      # ── Tiendas existentes ────────────────────────────────────────────────
-
       - name: Scrape Padel Nuestro
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelnuestro
-
       - name: Scrape PadelZoom
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelzoom
 
+  # ── Grupo B: Playwright set 1 ───────────────────────────────────────────────
+  scrape-grupo-b:
+    name: "Scrape B: romasport + padelcoronado + padeliberico"
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Instalar Playwright Chromium
+        run: npx playwright install --with-deps chromium
       - name: Scrape Roma Sport
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js romasport
-
       - name: Scrape Padel Coronado
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/prices/pipeline.js padelcoronado
-
-      # ── Tiendas nuevas ────────────────────────────────────────────────────
-
-      - name: Scrape Tennis-Point ES
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/prices/pipeline.js tennispoint
-
-      - name: Scrape Decathlon ES
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/prices/pipeline.js decathlon
-
-      - name: Scrape Padel Pro Shop
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/prices/pipeline.js padelproshop
-
-      - name: Scrape Miravía
-        continue-on-error: true  # marketplace con anti-bot — no bloquear el pipeline si falla
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/prices/pipeline.js miravia
-
-      - name: Scrape Amazon ES
-        continue-on-error: true  # anti-bot agresivo — no bloquear el pipeline si falla
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/prices/pipeline.js amazon
-
-      - name: Scrape Padel Ibérico
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+      - name: Scrape Padel Iberico
         run: node scripts/prices/pipeline.js padeliberico
 
+  # ── Grupo C: Playwright set 2 ───────────────────────────────────────────────
+  scrape-grupo-c:
+    name: "Scrape C: padelproshop + tennispoint + decathlon + miravia + amazon"
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Instalar Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Scrape Padel Pro Shop
+        run: node scripts/prices/pipeline.js padelproshop
+      - name: Scrape Tennis-Point ES
+        run: node scripts/prices/pipeline.js tennispoint
+      - name: Scrape Decathlon ES
+        run: node scripts/prices/pipeline.js decathlon
+      - name: Scrape Miravia
+        continue-on-error: true
+        run: node scripts/prices/pipeline.js miravia
+      - name: Scrape Amazon ES
+        continue-on-error: true
+        run: node scripts/prices/pipeline.js amazon
+
+  # ── Recalcular top tras todos los scrapes ───────────────────────────────────
   recalcular-top:
     name: Recalcular Top Oportunidades
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: scrape-precios
+    needs: [scrape-grupo-a, scrape-grupo-b, scrape-grupo-c]
+    if: always()
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Instalar dependencias
         run: npm install
-
-      - name: Recalcular Top Oportunidades con precios frescos
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+      - name: Recalcular Top Oportunidades
         run: npx tsx scripts/top-oportunidades.ts
