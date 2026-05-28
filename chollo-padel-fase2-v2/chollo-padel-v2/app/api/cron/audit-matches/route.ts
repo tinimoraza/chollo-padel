@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
 
   if (topItems && topItems.length > 0) {
     // Cargar palas del catálogo para estos pala_ids
-    const palaIds = [...new Set(topItems.map(i => i.pala_id).filter(Boolean))]
+    const palaIds = Array.from(new Set(topItems.map(i => i.pala_id).filter(Boolean)))
     const { data: palas } = await supabaseAdmin
       .from('palas')
       .select('id, marca, modelo, año')
@@ -326,7 +326,7 @@ export async function GET(req: NextRequest) {
     .neq('source_id', 2)   // excluir PadelZoom
 
   if (snapshots && snapshots.length > 0) {
-    const palasIdsChollos = [...new Set(snapshots.map(s => s.pala_id).filter(Boolean))]
+    const palasIdsChollos = Array.from(new Set(snapshots.map(s => s.pala_id).filter(Boolean)))
     const { data: palasChollos } = await supabaseAdmin
       .from('palas')
       .select('id, marca, modelo, año, precio_referencia')
