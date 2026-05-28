@@ -191,7 +191,6 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'jhayber':    'Jhayber',
   'harlem':     'Harlem',
   'vibor-a':    'Vibora',
-  'vibora':     'Vibora',
   'kombat':     'Kombat',
   'kaitt':      'Kaitt',
   // v10: alias de modelo → marca (títulos sin nombre de marca explícito)
