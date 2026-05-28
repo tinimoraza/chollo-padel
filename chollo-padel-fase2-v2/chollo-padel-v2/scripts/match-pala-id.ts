@@ -610,7 +610,7 @@ export { STOP_WORDS, KEEP_WORDS, TOKENS_DIFERENCIADORES, EXCLUIR_ACCESORIOS, MAR
 // ─── Función exportable para scrapers ────────────────────────────────────────
 
 export async function matchPalaIds(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createClient> | any,
   opts?: { verbose?: boolean }
 ): Promise<{ matched: number; ambiguous: number; noMatch: number }> {
   const verbose = opts?.verbose ?? true
