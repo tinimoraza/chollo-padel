@@ -38,18 +38,20 @@ export async function GET(req: NextRequest) {
     const finishedAt = new Date().toISOString()
 
     // Log a scraper_logs para tener historial
-    await supabaseAdmin.from('scraper_logs').insert({
-      source_id: null,          // null indica job interno, no scraper de tienda
-      started_at: startedAt,
-      finished_at: finishedAt,
-      status: 'success',
-      productos_scrapeados: result.matched + result.ambiguous + result.noMatch,
-      matches_encontrados: result.matched,
-      inserts_realizados: result.matched,
-      errores: 0,
-    }).catch(() => {
+    try {
+      await supabaseAdmin.from('scraper_logs').insert({
+        source_id: null,          // null indica job interno, no scraper de tienda
+        started_at: startedAt,
+        finished_at: finishedAt,
+        status: 'success',
+        productos_scrapeados: result.matched + result.ambiguous + result.noMatch,
+        matches_encontrados: result.matched,
+        inserts_realizados: result.matched,
+        errores: 0,
+      })
+    } catch {
       // Si falla el log, no bloqueamos la respuesta
-    })
+    }
 
     console.log(`[cron/match-wallapop] Completado: ${result.matched} matches, ${result.ambiguous} ambiguos, ${result.noMatch} sin match`)
 
@@ -65,13 +67,15 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error('[cron/match-wallapop] Error fatal:', err)
 
-    await supabaseAdmin.from('scraper_logs').insert({
-      source_id: null,
-      started_at: startedAt,
-      finished_at: new Date().toISOString(),
-      status: 'error',
-      errores: 1,
-    }).catch(() => {})
+    try {
+      await supabaseAdmin.from('scraper_logs').insert({
+        source_id: null,
+        started_at: startedAt,
+        finished_at: new Date().toISOString(),
+        status: 'error',
+        errores: 1,
+      })
+    } catch {}
 
     return NextResponse.json(
       { error: err.message ?? 'Error desconocido' },
