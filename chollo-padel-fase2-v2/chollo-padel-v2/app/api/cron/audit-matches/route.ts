@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
     const { data: palas } = await supabaseAdmin
       .from('palas')
       .select('id, marca, modelo, año')
-      .in('id', palaIds)
+      .in('id', palaIds) as unknown as { data: { id: string; marca: string; modelo: string; año: number }[] | null }
 
     const palasMap = new Map((palas ?? []).map(p => [p.id, p]))
 
@@ -330,7 +330,7 @@ export async function GET(req: NextRequest) {
     const { data: palasChollos } = await supabaseAdmin
       .from('palas')
       .select('id, marca, modelo, año, precio_referencia')
-      .in('id', palasIdsChollos)
+      .in('id', palasIdsChollos) as unknown as { data: { id: string; marca: string; modelo: string; año: number; precio_referencia: number }[] | null }
     const palasCholosMap = new Map((palasChollos ?? []).map(p => [p.id, p]))
 
     // Cargar cache de matches para estos snapshots
