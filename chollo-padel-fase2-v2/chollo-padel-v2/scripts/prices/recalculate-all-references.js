@@ -53,9 +53,17 @@ async function run() {
 
     if (!snaps || snaps.length === 0) continue;
 
+    // Excluir fuentes que distorsionan la referencia (igual que pipeline.js):
+    //   2 = PadelZoom: agregador que ya muestra precios bajados → infla bajada artificial
+    //   9 = Roma Sport: publica precios de catalogo inflados → distorsiona la mediana
+    // Si tras excluirlas no quedan fuentes, usar todas como fallback.
+    const FUENTES_EXCLUIR = new Set([2, 9]);
+    const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR.has(s.source_id));
+    const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps;
+
     // Dedup por url_producto
     const byUrl = new Map();
-    for (const s of snaps) {
+    for (const s of snapsFuente) {
       if (!byUrl.has(s.url_producto) || s.precio < byUrl.get(s.url_producto).precio) {
         byUrl.set(s.url_producto, s);
       }

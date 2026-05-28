@@ -188,14 +188,28 @@ function extraerVersion(texto) {
 
 function extraerAnioDeUrl(url) {
   if (!url) return null;
-  // Sufijo de dos dígitos tipo -25- o -26- que indican año (20XX)
-  // Solo reconocemos 20-29 para no confundir con números de modelo
+
+  // PadelPROShop usa -NNN al final del slug como codigo de anyo: 224=2024, 225=2025, 226=2026
+  // Ej: padelproshop.com/products/pala-adidas-metalbone-carbon-ctrl-224
+  // El sufijo -NNN NO es un numero de dos digitos, asi que el patron -2X- no lo captura.
+  // Fix: detectarlo antes que el resto para devolver el anyo correcto.
+  if (url.includes('padelproshop.com')) {
+    const mPPS = url.match(/-(2\d{2})(?:[^\d]|$)/);
+    if (mPPS) {
+      const lastTwo = parseInt(mPPS[1]) % 100; // 224 % 100 = 24, 226 % 100 = 26
+      const year = 2000 + lastTwo;
+      if (year >= 2018 && year <= 2030) return year;
+    }
+  }
+
+  // Sufijo de dos digitos tipo -25- o -26- que indican anyo (20XX)
+  // Solo reconocemos 20-29 para no confundir con numeros de modelo
   const m = url.match(/[_-](2[0-9])[_-]/);
   if (m) {
     const year = 2000 + parseInt(m[1]);
     if (year >= 2018 && year <= 2030) return year;
   }
-  // También puede aparecer el año completo en la URL
+  // Tambien puede aparecer el anyo completo en la URL
   const mFull = url.match(/\b(20(1[89]|2[0-9]))\b/);
   return mFull ? parseInt(mFull[1]) : null;
 }
