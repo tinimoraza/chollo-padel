@@ -145,6 +145,10 @@ const EXCLUIR_ACCESORIOS = new Set([
   'pro staff', 'blade v1', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
   'pure drive', 'pure aero', 'pure strike',
   'hierros', 'madera', 'putter',
+  // Líneas/modelos de tenis de marcas que también hacen pádel
+  'flexpoint',         // Head Flexpoint (línea de raquetas de tenis Head)
+  'titanium graphite', // Wilson Titanium Graphite (tenis)
+  'graphite ultra',    // Wilson (tenis)
   // Golf / esquí / otros deportes
   'speedback', 'driver golf', 'esquís', 'esqui', 'snowboard',
   // Máquinas y equipamiento
@@ -348,6 +352,17 @@ function matchearItem(
     const detectada = detectarMarcaDesideTitulo(item.title)
     if (detectada) marcaNorm = detectada.toLowerCase()
   }
+
+  // Guard: marcas que fabrican TANTO tenis como pádel (Head, Wilson, Babolat, Adidas, Dunlop).
+  // Si el título contiene "raqueta" pero NO "padel"/"pala" → probable raqueta de tenis, descartar.
+  // Marcas padeleras puras (Bullpadel, Siux, Nox, StarVie…) pueden decir "raqueta" sin problema.
+  const MARCAS_MULTIDEPORTE = new Set(['head', 'wilson', 'babolat', 'adidas', 'dunlop'])
+  if (
+    marcaNorm && MARCAS_MULTIDEPORTE.has(marcaNorm) &&
+    titleLower.includes('raqueta') &&
+    !titleLower.includes('padel') &&
+    !titleLower.includes('pala')
+  ) return 'excluido'
   if (!marcaNorm) return 'noMatch'
 
   // Normalizar variantes ("starvie" puede venir como "star vie" o "StarVie")

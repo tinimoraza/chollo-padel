@@ -89,7 +89,16 @@ const EXCLUIR_PALABRAS = [
   'rota', 'roto', 'golpe', 'paletero', 'mochila', 'bolsa', 'zapatilla', 'zapatillas',
   'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
   'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador', 'lote',
+  // Líneas/modelos de tenis de marcas que también hacen pádel
+  'flexpoint',         // Head Flexpoint (línea de tenis)
+  'titanium graphite', // Wilson Titanium Graphite (tenis)
+  'graphite ultra',    // Wilson (tenis)
+  'zapatilla',         // calzado deportivo
 ]
+
+// Marcas que fabrican TANTO tenis como pádel.
+// Si el título contiene "raqueta" pero NO "padel"/"pala" → probable raqueta de tenis.
+const MARCAS_MULTIDEPORTE = new Set(['head', 'wilson', 'babolat', 'adidas', 'dunlop'])
 
 function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
@@ -213,6 +222,16 @@ async function main() {
   for (const item of items as CacheItem[]) {
     const titleLower = item.title.toLowerCase()
     if (EXCLUIR_PALABRAS.some(p => titleLower.includes(p))) continue
+
+    // Guard: marcas multideporte (Head, Wilson, Babolat, Adidas, Dunlop).
+    // Si el título dice "raqueta" pero NO "padel"/"pala" → es raqueta de tenis, descartar.
+    const marcaNorm = (item.marca ?? '').toLowerCase().trim()
+    if (
+      marcaNorm && MARCAS_MULTIDEPORTE.has(marcaNorm) &&
+      titleLower.includes('raqueta') &&
+      !titleLower.includes('padel') &&
+      !titleLower.includes('pala')
+    ) continue
 
     // Precio oficial de tienda para esta pala
     const precioTienda = preciosPorPalaId.get(item.pala_id)
