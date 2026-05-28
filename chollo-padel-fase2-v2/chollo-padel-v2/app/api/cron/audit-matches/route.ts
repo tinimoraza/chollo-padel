@@ -117,7 +117,7 @@ function extraerAnioDeUrl(url: string): number | null {
 
 function tituloTieneAccesorio(titulo: string): string | null {
   const t = titulo.toLowerCase()
-  for (const word of EXCLUIR_ACCESORIOS) {
+  for (const word of Array.from(EXCLUIR_ACCESORIOS)) {
     if (t.includes(word)) return word
   }
   return null
