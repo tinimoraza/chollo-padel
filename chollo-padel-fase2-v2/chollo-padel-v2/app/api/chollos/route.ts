@@ -46,6 +46,7 @@ const UMBRAL_CHOLLO = 0.70  // precio_actual <= 70% de referencia = >=30% dto
 const UMBRAL_OFERTA = 0.82  // precio_actual <= 82% de referencia = >=18% dto
 const MIN_REFERENCIA = 50   // ignorar palas con precio_referencia < 50 (datos insuficientes)
 const MIN_FUENTES = 2       // referencia valida solo si viene de >=2 tiendas distintas
+const MAX_SPREAD  = 2.5     // si precio_maximo/precio_minimo > 2.5, datos contaminados por bad matches
 
 // Colisiones conocidas: [fragmento_en_url, fragmento_en_modelo_catalogo]
 const URL_MODEL_COLISIONES: [string, string][] = [
@@ -96,6 +97,19 @@ function esDescartadoPorGuardias(
   for (const [urlFrag, modelFrag] of URL_MODEL_COLISIONES) {
     if (url.includes(urlFrag) && modeloLower.includes(modelFrag)) {
       return `D: URL contiene "${urlFrag}" pero modelo es "${modelFrag}"`
+    }
+  }
+
+  // GUARDIA E: codigo de anyo de Padel Pro Shop (-NNN al final de la URL)
+  // padelproshop.com usa sufijos como -224 (=2024), -225 (=2025), -226 (=2026).
+  // Si el anyo codificado no coincide con el anyo del catalogo, es un match incorrecto.
+  if (url.includes('padelproshop.com')) {
+    const mCode = url.match(/-(2\d{2})(?:[^\d]|$)/)
+    if (mCode) {
+      const codeYear = 2000 + parseInt(mCode[1].slice(1), 10)
+      if (codeYear !== palaAno) {
+        return `E: codigo padelproshop -${mCode[1]} = ${codeYear} != catalogo ${palaAno}`
+      }
     }
   }
 
@@ -152,13 +166,18 @@ export async function GET() {
   const palaIdsPresentes = Array.from(new Set(Array.from(byKey.values()).map(s => s.pala_id)))
   const { data: priceRefs } = await supabaseAdmin
     .from('price_reference')
-    .select('pala_id, precio_referencia, fuentes_count')
+    .select('pala_id, precio_referencia, fuentes_count, precio_minimo, precio_maximo')
     .in('pala_id', palaIdsPresentes)
 
-  const priceRefMap = new Map<string, { precio_referencia: number; fuentes_count: number }>(
+  const priceRefMap = new Map<string, { precio_referencia: number; fuentes_count: number; precio_minimo: number; precio_maximo: number }>(
     (priceRefs ?? []).map(r => [
       r.pala_id,
-      { precio_referencia: Number(r.precio_referencia), fuentes_count: r.fuentes_count },
+      {
+        precio_referencia: Number(r.precio_referencia),
+        fuentes_count:     r.fuentes_count,
+        precio_minimo:     Number(r.precio_minimo),
+        precio_maximo:     Number(r.precio_maximo),
+      },
     ])
   )
 
@@ -185,6 +204,10 @@ export async function GET() {
 
     // Minimo MIN_FUENTES tiendas — una sola fuente puede estar inflada
     if (priceRef.fuentes_count < MIN_FUENTES) continue
+
+    // Spread maximo: si max/min > MAX_SPREAD, la referencia esta contaminada por bad matches
+    // (p.ej. varias palas distintas matcheadas al mismo pala_id con precios muy dispares)
+    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) continue
 
     const ref = priceRef.precio_referencia
     if (!ref || ref < MIN_REFERENCIA) continue
