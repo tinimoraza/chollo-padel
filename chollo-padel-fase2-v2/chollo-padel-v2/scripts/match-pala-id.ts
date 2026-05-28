@@ -340,7 +340,7 @@ function matchearItem(
   const titleLower = item.title.toLowerCase()
 
   // Descartar accesorios
-  if ([...EXCLUIR_ACCESORIOS].some(w => titleLower.includes(w))) return 'excluido'
+  if (Array.from(EXCLUIR_ACCESORIOS).some(w => titleLower.includes(w))) return 'excluido'
 
   // Resolver marca: desde wallapop_cache.marca o detectar del título
   let marcaNorm = item.marca?.toLowerCase() ?? null
@@ -448,7 +448,7 @@ function matchearItem(
         const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
         if (!tokensDif.every(t => tokensTitle.includes(t))) return null
         // Los diferenciadores del título NO pueden apuntar a otro modelo
-        const difExtra = [...difEnTitulo].filter(d => !pala.tokens.includes(d))
+        const difExtra = Array.from(difEnTitulo).filter(d => !pala.tokens.includes(d))
         if (difExtra.length > 0) return null
         return { pala, score: tokensMatch.length, partial: true }
       })
@@ -500,7 +500,7 @@ function matchearItem(
   if (difEnTitulo.size > 0) {
     // Paso A: preferir los que tienen más difs del título en sus tokens
     const difMatch = (s: { pala: PalaCatalogo }) =>
-      [...difEnTitulo].filter(d => s.pala.tokens.includes(d)).length
+      Array.from(difEnTitulo).filter(d => s.pala.tokens.includes(d)).length
     const maxDifMatch = Math.max(...scored.map(difMatch))
     const conMaxDif = scored.filter(s => difMatch(s) === maxDifMatch)
     if (conMaxDif.length > 0 && conMaxDif.length < scored.length) scored = conMaxDif
@@ -860,7 +860,7 @@ async function main() {
     // Para debug-nomatch: categorizar los sin-match antes de llamar a matchearItem
     if (DEBUG_NOMATCH && !matchearItem(item, palasPorMarca).toString().startsWith('excluido')) {
       const titleLow = item.title.toLowerCase()
-      const accs = [...EXCLUIR_ACCESORIOS].some(w => titleLow.includes(w))
+      const accs = Array.from(EXCLUIR_ACCESORIOS).some(w => titleLow.includes(w))
       if (!accs) {
         let mNorm = item.marca?.toLowerCase() ?? null
         if (!mNorm) {
@@ -936,7 +936,7 @@ async function main() {
         porMarca.set(marca, (porMarca.get(marca) ?? 0) + 1)
       }
       console.log('  🟠 Marcas sin catálogo (anuncios afectados):')
-      for (const [m, n] of [...porMarca.entries()].sort((a,b) => b[1]-a[1])) {
+      for (const [m, n] of Array.from(porMarca.entries()).sort((a,b) => b[1]-a[1])) {
         console.log(`     ${m}: ${n} anuncios`)
       }
       console.log()
