@@ -394,4 +394,19 @@ async function main() {
   }
 
   const { error: insertError } = await supabase
-    .from('top
+    .from('top_oportunidades')
+    .insert(topConTendencia)
+
+  if (insertError) {
+    console.error('❌ Error insertando top_oportunidades:', insertError)
+    return
+  }
+
+  console.log(`\n✅ Top ${topConTendencia.length} guardado correctamente en top_oportunidades`)
+  console.log(`📅 Actualizado: ${ahora}`)
+}
+
+main().catch(err => {
+  console.error('💥 Error fatal:', err)
+  process.exit(1)
+})
