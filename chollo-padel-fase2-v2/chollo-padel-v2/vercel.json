@@ -7,6 +7,16 @@
     {
       "path": "/api/cron/check-alerts",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/match-wallapop",
+      "schedule": "0 * * * *",
+      "_comment": "Cada hora: matchea items nuevos de la extensión Wallapop (pala_id=null)"
+    },
+    {
+      "path": "/api/cron/audit-matches",
+      "schedule": "30 * * * *",
+      "_comment": "Cada hora (30 min después del match): audita TOP y CHOLLOS, corrige bad matches"
     }
   ],
   "headers": [

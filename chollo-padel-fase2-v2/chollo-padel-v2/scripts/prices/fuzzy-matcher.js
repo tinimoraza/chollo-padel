@@ -1,4 +1,19 @@
 // scripts/prices/fuzzy-matcher.js
+// v7 (2026-05-28):
+//   FIX 1 — extraerGeneracionDeUrl: extrae números de generación (01-09) del slug de URL.
+//     Problema: Padel Coronado publica title="Bullpadel Neuron" (sin "02") para el Neuron 02.
+//     El matcher veía solo "neuron" y elegía Neuron 2025 (más reciente sin versión) en lugar
+//     del correcto Neuron 02 2026. El slug "/pala-bullpadel-neuron-02/" sí tiene "-02-" que
+//     identifica la generación. Fix: inyectar "02" en tokensTitle desde URL.
+//   FIX 2 — normalizar "pwr" → "power" en tokenizar().
+//     Problema: catálogo tiene "Indiga PWR 2026", títulos de Vinted dicen "Indiga Power 2026".
+//     "power" quedaba como diferenciador huérfano → el matcher elegía "Ionic Power" (que sí
+//     tiene "power") en lugar de "Indiga PWR". Fix: pwr → power al inicio de tokenizar().
+//   FIX 3 — filtrar "pickleball" en URL además de en el título.
+//     Padeliberico.es lista palas de pickleball con URL "/pala-pickleball-head-extreme-pro.html"
+//     pero title "Head Extreme Pro 2026" (sin "pickleball"). El pipeline solo filtraba el title.
+//     Fix: añadir check de URL en pipeline.js (no en este archivo).
+//
 // v6 (2026-05-27):
 //   FIX: extraerVersionDeUrl no devuelve versión si el título contiene un año
 //   explícito DISTINTO al año que implica esa versión en el catálogo.
@@ -136,6 +151,7 @@ function tokenizar(texto) {
     .replace(/\bsoft\b/g, 'sft')
     .replace(/\bctr\b/g, 'ctrl')
     .replace(/\bcontrol\b/g, 'ctrl')
+    .replace(/\bpwr\b/g, 'power')    // Bullpadel: "Indiga PWR" → "Indiga Power" (evita que "power" en título no matchee "pwr" en catálogo)
     .replace(/pro\s*\+/g, 'proplus')
     .replace(/\bpro plus\b/g, 'proplus')
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2')
@@ -182,6 +198,29 @@ function extraerAnioDeUrl(url) {
   // También puede aparecer el año completo en la URL
   const mFull = url.match(/\b(20(1[89]|2[0-9]))\b/);
   return mFull ? parseInt(mFull[1]) : null;
+}
+
+// ─── Extrae números de generación (01-09) del slug de la URL ─────────────────
+// Problema: Padel Coronado lista "Bullpadel Neuron 02" con title="Bullpadel Neuron"
+// (sin "02"). El matcher solo ve "neuron" y elige Neuron 2025 (el más reciente
+// sin "02" en tokens) en lugar de "Neuron 02 2026". La URL sí tiene "-02-" que
+// identifica la generación. Este fix lo extrae y lo inyecta en los tokens del título.
+//
+// Solo extrae números 01-09 (generaciones como 02, 03, 04, 05...)
+// NO extrae: años (20XX), IDs de producto (5+ dígitos), versiones X.Y (ya cubiertas)
+//
+// Ejemplos:
+//   "pala-bullpadel-neuron-02/" → ["02"]
+//   "bullpadel-vertex-04-hybrid" → ["04"]
+//   "bullpadel-neuron-25-113768-p" → [] (25 no es 01-09, 113768 no es 01-09)
+//   "head-extreme-pro-2026" → [] (sin generación)
+function extraerGeneracionDeUrl(url) {
+  if (!url) return [];
+  const slug = (url.split('/').filter(Boolean).pop() ?? '')
+    .replace(/[_-]/g, '-');
+  // Extraer todos los fragmentos que son exactamente 01-09
+  const parts = slug.split('-');
+  return parts.filter(t => /^0[1-9]$/.test(t));
 }
 
 function extraerVersionDeUrl(url, anioTitulo) {
@@ -296,6 +335,21 @@ async function fuzzyMatch(productTitle, productUrl) {
   // ── Señales de URL (más fiables que el título cuando hay conflicto) ────────
   const anioUrl = extraerAnioDeUrl(productUrl);
   const versionUrl = extraerVersionDeUrl(productUrl, anioTitulo);
+
+  // ── Generación desde URL (01-09): Neuron 02, Vertex 04, Hack 03… ─────────
+  // El title de tiendas a veces omite el número de generación aunque la URL sí lo tiene.
+  // Ej: Padel Coronado title="Bullpadel Neuron", URL="/pala-bullpadel-neuron-02/"
+  // Sin "02" en tokens el matcher elige el modelo más reciente sin generación (Neuron 2025)
+  // en lugar del correcto (Neuron 02 2026). Inyectar "02" resuelve el desempate.
+  const generacionUrl = extraerGeneracionDeUrl(productUrl);
+  if (generacionUrl.length > 0) {
+    const tituloSet = new Set(tokensTitle);
+    const nuevos = generacionUrl.filter(g => !tituloSet.has(g));
+    if (nuevos.length > 0) {
+      console.log(`[fuzzy] 💡 Generación de URL inyectada: [${nuevos.join(', ')}] para "${productTitle}"`);
+      tokensTitle = [...tokensTitle, ...nuevos];
+    }
+  }
 
   // El año efectivo es: URL (prioritario) > título
   const anioEfectivo = anioUrl ?? anioTitulo;

@@ -219,6 +219,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bhard\b/g, 'hrd')       // v13: normalizar "hard" → "hrd" (Vinted usa "Blast Pro Hard")
     .replace(/\bsoft\b/g, 'sft')       // v13: normalizar "soft" → "sft" (Joma SFT = Soft)
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
+    .replace(/\bpwr\b/g, 'power')      // normalizar "PWR" → "power" (Bullpadel: "Indiga PWR" vs título "Indiga Power")
     .replace(/pro\s*\+/g, 'proplus')   // normalizar "pro +" / "pro+" → proplus (Oxdog)
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
@@ -598,6 +599,13 @@ function matchearItem(
 
   return 'ambiguous'
 }
+
+// ─── Exports adicionales para el sistema de auditoría ────────────────────────
+// El auditor de matches (api/cron/audit-matches) reutiliza estas funciones
+// para verificar que los matches en TOP y CHOLLOS son coherentes.
+export { tokenizar, extraerAnio, extraerTokensModelo, detectarMarcaDesideTitulo, matchearItem }
+export type { PalaCatalogo, CacheItem, MatchResult }
+export { STOP_WORDS, KEEP_WORDS, TOKENS_DIFERENCIADORES, EXCLUIR_ACCESORIOS, MARCAS_CONOCIDAS }
 
 // ─── Función exportable para scrapers ────────────────────────────────────────
 
