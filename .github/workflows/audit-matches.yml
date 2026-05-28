@@ -1,0 +1,29 @@
+name: Audit Matches
+
+# Audita matches del TOP y CHOLLOS cada hora a :20.
+# Corre después de match-wallapop (:05) y top-oportunidades (:15)
+# para que los datos estén frescos antes de auditar.
+
+on:
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  audit-matches:
+    name: Auditar matches TOP y CHOLLOS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Llamar endpoint audit-matches en Vercel
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X GET "https://www.huntpadel.com/api/cron/audit-matches" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          cat /tmp/response.json
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Error: HTTP $STATUS"
+            exit 1
+          fi

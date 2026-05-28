@@ -1,0 +1,29 @@
+name: Match Wallapop
+
+# Asigna pala_id a los items de wallapop_cache que aún no tienen match.
+# Solo opera sobre datos en Supabase — no llama a la API de Wallapop.
+# Se ejecuta cada hora a :05 (la extensión Chrome scrapeó durante los minutos previos).
+
+on:
+  schedule:
+    - cron: '5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  match-wallapop:
+    name: Matchear items Wallapop sin pala_id
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Llamar endpoint match-wallapop en Vercel
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X GET "https://www.huntpadel.com/api/cron/match-wallapop" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          cat /tmp/response.json
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Error: HTTP $STATUS"
+            exit 1
+          fi
