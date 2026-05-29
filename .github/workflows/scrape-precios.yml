@@ -78,7 +78,7 @@ jobs:
 
   # -- Grupo C: fetch + Playwright set 2 ----------------------------------------
   scrape-grupo-c:
-    name: "Scrape C: padelproshop + tennispoint + miravia + amazon"
+    name: "Scrape C: padelproshop + tennispoint + padelmarket + miravia + amazon"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -97,6 +97,8 @@ jobs:
         run: node scripts/prices/pipeline.js padelproshop
       - name: Scrape Tennis-Point ES
         run: node scripts/prices/pipeline.js tennispoint
+      - name: Scrape Padel Market
+        run: node scripts/prices/pipeline.js padelmarket
       - name: Scrape Miravia
         continue-on-error: true
         run: node scripts/prices/pipeline.js miravia
