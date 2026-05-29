@@ -405,4 +405,37 @@ async function main() {
 
   // ── 8. Guardar el Top en la BD ────────────────────────────────────────────
   if (topConTendencia.length === 0) {
-    console.log('\n
+    console.log('\n⚠️  Top vacío — no se actualiza la tabla.')
+    return
+  }
+
+  console.log(`\n💾 Guardando top ${topConTendencia.length} en top_oportunidades...`)
+
+  // Borrar entradas anteriores que ya no están en el top
+  const idsNuevos = topConTendencia.map(op => op.external_id)
+  const { error: deleteErr } = await supabase
+    .from('top_oportunidades')
+    .delete()
+    .not('external_id', 'in', `(${idsNuevos.map(id => `"${id}"`).join(',')})`)
+
+  if (deleteErr) {
+    console.error('  ⚠️  Error borrando entradas antiguas:', deleteErr)
+  }
+
+  // Upsert del nuevo top
+  const { error: upsertErr } = await supabase
+    .from('top_oportunidades')
+    .upsert(topConTendencia, { onConflict: 'external_id' })
+
+  if (upsertErr) {
+    console.error('❌ Error guardando top_oportunidades:', upsertErr)
+    process.exit(1)
+  }
+
+  console.log(`✅ Top ${topConTendencia.length} guardado correctamente.`)
+}
+
+main().catch(err => {
+  console.error('❌ Error fatal:', err)
+  process.exit(1)
+})
