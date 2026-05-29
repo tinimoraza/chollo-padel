@@ -6,8 +6,8 @@ const MAX_SCROLLS     = 100
 const STABLE_NEEDED   = 4
 
 async function scrapeBrandPage(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {})
-  await page.waitForTimeout(2000)
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 40000 }).catch(() => {})
+  await page.waitForTimeout(2500)
 
   try {
     await page.waitForSelector('.e-loop-item.product, li.product', { timeout: 8000 })
@@ -122,10 +122,16 @@ async function scrape() {
     await page.waitForSelector('.cmplz-accept, button[data-cmplz], .cc-btn, [data-cky-tag="accept-button"]', { timeout: 5000 })
     await page.click('.cmplz-accept, button[data-cmplz], .cc-btn, [data-cky-tag="accept-button"]')
     console.log('[padelcoronado] Banner cookies cerrado ✅')
-    await page.waitForTimeout(1500)
+    // Esperar a que la página se estabilice tras el banner (puede hacer reload)
+    await page.waitForLoadState('domcontentloaded').catch(() => {})
+    await page.waitForTimeout(2500)
   } catch {
     console.log('[padelcoronado] Sin banner de cookies')
   }
+
+  // Esperar a que el DOM esté listo antes de evaluar
+  await page.waitForLoadState('domcontentloaded').catch(() => {})
+  await page.waitForTimeout(1000)
 
   // Descubrir URLs de marca desde el sidebar de filtros
   const brandUrls = await page.evaluate(() => {
