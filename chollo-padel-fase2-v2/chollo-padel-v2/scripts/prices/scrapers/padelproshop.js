@@ -1,74 +1,95 @@
 // scripts/prices/scrapers/padelproshop.js
-// v3 (2026-05-29): API JSON de Shopify en vez de Playwright
-// Shopify expone /collections/{handle}/products.json?limit=250&page=N
-// No requiere navegador — mucho más rápido y fiable.
+// v10 (2026-05-29): Section API + parser corregido (data-hover-title en línea separada)
 
 const SOURCE_KEY = 'padelproshop'
-const BASE_URL   = 'https://padelproshop.com/collections/palas-padel/products.json'
-const LIMIT      = 250
-const DELAY_MS   = 800
+const BASE_URL   = 'https://padelproshop.com/collections/palas-padel'
+const SECTION_ID = 'template--26596133339441__main'
+const DELAY_MS   = 600
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms))
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+function extractFromHtml(html) {
+  const items = []
+  const seen  = new Set()
+
+  // Dividir el HTML en bloques de product-card
+  const chunks = html.split('<product-card')
+  chunks.shift() // quitar el trozo anterior al primer <product-card
+
+  for (const chunk of chunks) {
+    // Título
+    const titleMatch = chunk.match(/data-hover-title="([^"]+)"/)
+    if (!titleMatch) continue
+    const title = titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim()
+
+    // URL (quitar variant)
+    const hrefMatch = chunk.match(/href="(\/products\/[^"?]+)/)
+    if (!hrefMatch) continue
+    const url = 'https://padelproshop.com' + hrefMatch[1]
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    // Buscar todos los precios en el chunk (formato "164,95€" o "164.95€")
+    const priceStrs = chunk.match(/[\d]+[,.]?\d*\s*€/g) || []
+    const prices = priceStrs
+      .map(s => parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')))
+      .filter(n => !isNaN(n) && n > 0)
+
+    if (prices.length === 0) continue
+
+    const price    = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    const original = maxPrice > price ? maxPrice : null
+
+    items.push({ title, price, precio_original: original, url })
+  }
+
+  return items
 }
 
 async function scrape() {
-  console.log('[padelproshop] Iniciando scraper (Shopify JSON API)…')
+  console.log('[padelproshop] Iniciando scraper (Section API v10)…')
 
   const allProducts = []
-  const seen = new Set()
-  let page = 1
+  const seen        = new Set()
+  let page          = 1
 
   while (true) {
-    const url = `${BASE_URL}?limit=${LIMIT}&page=${page}`
-    console.log(`[padelproshop] Página ${page}: ${url}`)
+    const url = `${BASE_URL}?page=${page}&section_id=${SECTION_ID}`
+    console.log(`[padelproshop] Página ${page}`)
 
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; HuntPadel/1.0)',
-        'Accept':     'application/json',
-      },
-    })
-
-    if (!res.ok) {
-      console.error(`[padelproshop] Error HTTP ${res.status} en página ${page}`)
+    let html
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept':          'text/html',
+          'Accept-Language': 'es-ES,es;q=0.9',
+          'Referer':         page > 1 ? `${BASE_URL}?page=${page - 1}` : BASE_URL,
+        },
+      })
+      if (!res.ok) { console.error(`[padelproshop] HTTP ${res.status}`); break }
+      html = await res.text()
+    } catch (err) {
+      console.error(`[padelproshop] Error:`, err.message)
       break
     }
 
-    const data = await res.json()
-    const products = data.products ?? []
-
-    if (products.length === 0) {
-      console.log(`[padelproshop] Página ${page} vacía — fin`)
-      break
-    }
-
+    const products = extractFromHtml(html)
     console.log(`[padelproshop]  → ${products.length} productos`)
 
+    if (products.length === 0) break
+
+    let added = 0
     for (const p of products) {
-      const variant = p.variants?.[0]
-      if (!variant) continue
-
-      const price    = parseFloat(variant.price)
-      const compare  = parseFloat(variant.compare_at_price)
-      const url      = `https://padelproshop.com/products/${p.handle}`
-
-      if (!p.title || isNaN(price) || price <= 0) continue
-      if (seen.has(url)) continue
-      seen.add(url)
-
-      allProducts.push({
-        title:           p.title,
-        price,
-        precio_original: (!isNaN(compare) && compare > price) ? compare : null,
-        url,
-      })
+      if (!seen.has(p.url)) {
+        seen.add(p.url)
+        allProducts.push(p)
+        added++
+      }
     }
 
-    if (products.length < LIMIT) {
-      console.log(`[padelproshop] Última página (${page}). Total: ${allProducts.length}`)
-      break
-    }
+    if (added === 0) break
 
     page++
     await sleep(DELAY_MS)
