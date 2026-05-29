@@ -428,23 +428,4 @@ async function main() {
     .not('external_id', 'in', `(${idsNuevos.map(id => `"${id}"`).join(',')})`)
 
   if (deleteErr) {
-    console.error('  ⚠️  Error borrando entradas antiguas:', deleteErr)
-  }
-
-  // Upsert del nuevo top
-  const { error: upsertErr } = await supabase
-    .from('top_oportunidades')
-    .upsert(topConTendencia, { onConflict: 'external_id' })
-
-  if (upsertErr) {
-    console.error('❌ Error guardando top_oportunidades:', upsertErr)
-    process.exit(1)
-  }
-
-  console.log(`✅ Top ${topConTendencia.length} guardado correctamente.`)
-}
-
-main().catch(err => {
-  console.error('❌ Error fatal:', err)
-  process.exit(1)
-})
+    console
