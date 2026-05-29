@@ -53,7 +53,7 @@ async function scrape() {
 
   try {
     console.log(`[padelnuestro] Abriendo ${BASE_URL} …`);
-    await page.goto(BASE_URL, { waitUntil: "networkidle2", timeout: 60_000 });
+    await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForSelector("div.product-item-info", { timeout: 30_000 });
 
     while (true) {
@@ -68,7 +68,7 @@ async function scrape() {
         break;
       }
 
-      await page.goto(nextUrl, { waitUntil: "networkidle2", timeout: 45_000 });
+      await page.goto(nextUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
       await page.waitForSelector("div.product-item-info", { timeout: 30_000 });
       pageNum++;
     }

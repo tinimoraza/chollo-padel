@@ -1,7 +1,7 @@
 // scripts/prices/scrapers/romasport.js
 const SOURCE_KEY   = 'romasport'
 const CATEGORY_URL = 'https://romasport.es/categoria-producto/padel/padel-palas/'
-const SCROLL_PAUSE_MS = 4000
+const SCROLL_PAUSE_MS = 2000
 const MAX_SCROLLS     = 100
 const STABLE_NEEDED   = 4   // scrolls sin cambio para considerar que llegamos al final
 

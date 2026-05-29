@@ -209,18 +209,22 @@ async function verificarUrlsNuevas(palaIds, sourceId) {
 
   if (!snaps || snaps.length === 0) return;
 
-  console.log(`[pipeline] Verificando ${snaps.length} URLs nuevas…`);
+  console.log(`[pipeline] Verificando ${snaps.length} URLs nuevas (concurrencia 8)…`);
   let rotas = 0;
-  for (const snap of snaps) {
-    const disponible = await checkUrlDisponible(snap.url_producto);
-    if (disponible === false) {
-      await supabase
-        .from('price_snapshots')
-        .update({ disponible: false })
-        .eq('id', snap.id);
-      console.log(`[pipeline] 🔴 URL rota → disponible=false: ${snap.url_producto}`);
-      rotas++;
-    }
+  const CONCURRENCY = 8;
+  for (let i = 0; i < snaps.length; i += CONCURRENCY) {
+    const batch = snaps.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async (snap) => {
+      const disponible = await checkUrlDisponible(snap.url_producto);
+      if (disponible === false) {
+        await supabase
+          .from('price_snapshots')
+          .update({ disponible: false })
+          .eq('id', snap.id);
+        console.log(`[pipeline] 🔴 URL rota → disponible=false: ${snap.url_producto}`);
+        rotas++;
+      }
+    }));
   }
   if (rotas > 0) console.log(`[pipeline] ${rotas} URLs marcadas como no disponibles.`);
 }
