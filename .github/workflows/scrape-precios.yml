@@ -54,9 +54,9 @@ jobs:
 
   # -- Grupo B: Playwright set 1 ------------------------------------------------
   scrape-grupo-b:
-    name: "Scrape B: romasport + padelcoronado + padeliberico + tiendapadelpoint + streetpadel"
+    name: "Scrape B: romasport + padelcoronado + padeliberico + tiendapadelpoint + streetpadel + zonadepadel"
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
@@ -79,6 +79,8 @@ jobs:
         run: node scripts/prices/pipeline.js tiendapadelpoint
       - name: Scrape Street Padel
         run: node scripts/prices/pipeline.js streetpadel
+      - name: Scrape Zona de Padel
+        run: node scripts/prices/pipeline.js zonadepadel
 
   # -- Grupo C: fetch + Playwright set 2 ----------------------------------------
   scrape-grupo-c:
