@@ -80,8 +80,8 @@ async function scrape() {
       const url = pageNum === 1 ? BASE_URL : `${BASE_URL}?page=${pageNum}`
       console.log(`[padelproshop] Página ${pageNum}: ${url}`)
 
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-      await page.waitForTimeout(2000)
+      await page.goto(url, { waitUntil: 'load', timeout: 40_000 })
+      await page.waitForTimeout(3000)
 
       // Cerrar cookies si aparece
       try {
