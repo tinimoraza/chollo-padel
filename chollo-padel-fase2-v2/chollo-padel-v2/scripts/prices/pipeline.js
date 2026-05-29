@@ -183,7 +183,9 @@ async function checkUrlDisponible(url) {
     });
     if (resp.status === 404) return false;
     // Si hubo redirección a una URL diferente → producto descatalogado/reemplazado
-    if (resp.redirected && resp.url !== url) {
+    // Excepción: Shopify redirige HEAD requests con parámetros extra — no es señal de baja
+    const isShopify = url.includes('/products/');
+    if (!isShopify && resp.redirected && resp.url !== url) {
       // Permitir redirecciones triviales (http→https, trailing slash)
       const norm = (u) => u.replace(/^http:/, 'https:').replace(/\/$/, '');
       if (norm(resp.url) !== norm(url)) return false;
