@@ -12,7 +12,7 @@ on:
 # Cada grupo tarda ~15-20 min. Total real: ~25 min en vez de 60+.
 #
 # Grupo A - Puppeteer (padelnuestro, padelzoom)
-# Grupo B - Playwright set 1 (romasport, padelcoronado, padeliberico)
+# Grupo B - Playwright set 1 (romasport, padelcoronado, padeliberico, tiendapadelpoint)
 # Grupo C - fetch + Playwright set 2 (padelproshop, tennispoint, miravia, amazon)
 
 env:
@@ -54,9 +54,9 @@ jobs:
 
   # -- Grupo B: Playwright set 1 ------------------------------------------------
   scrape-grupo-b:
-    name: "Scrape B: romasport + padelcoronado + padeliberico"
+    name: "Scrape B: romasport + padelcoronado + padeliberico + tiendapadelpoint"
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
@@ -75,6 +75,8 @@ jobs:
         run: node scripts/prices/pipeline.js padelcoronado
       - name: Scrape Padel Iberico
         run: node scripts/prices/pipeline.js padeliberico
+      - name: Scrape Tienda Padel Point
+        run: node scripts/prices/pipeline.js tiendapadelpoint
 
   # -- Grupo C: fetch + Playwright set 2 ----------------------------------------
   scrape-grupo-c:
