@@ -1,116 +1,66 @@
 // scripts/prices/scrapers/tennispoint.js
-// Scraper Tennis-Point ES — Playwright + paginación estándar
-// URL catálogo: https://www.tennis-point.es/padel/palas-de-padel/
+// v2 (2026-05-29): Shopify JSON API — filtra product_type='Padel rackets'
+// Tennis-Point migró a Shopify, URL antigua /padel/palas-de-padel/ da 404
 
-const SOURCE_KEY  = 'tennispoint'
-const BASE_URL    = 'https://www.tennis-point.es/padel/palas-de-padel/'
-const DELAY_MS    = 1500
+const SOURCE_KEY = 'tennispoint'
+const BASE_URL   = 'https://www.tennis-point.es/collections/padel/products.json'
+const LIMIT      = 250
+const DELAY_MS   = 600
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 async function scrape() {
-  console.log('[tennispoint] Iniciando scraper…')
-
-  let chromium
-  try {
-    ({ chromium } = require('playwright'))
-  } catch {
-    console.error('[tennispoint] playwright no instalado — npm install playwright')
-    return []
-  }
-
-  const browser = await chromium.launch({ headless: true })
-  const page    = await browser.newPage()
-
-  await page.setExtraHTTPHeaders({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept-Language': 'es-ES,es;q=0.9',
-  })
+  console.log('[tennispoint] Iniciando scraper (Shopify JSON API)…')
 
   const allProducts = []
-  let pageNum = 1
+  const seen = new Set()
+  let page = 1
 
-  try {
-    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 45_000 })
-    await page.waitForTimeout(2000)
+  while (true) {
+    const url = `${BASE_URL}?limit=${LIMIT}&page=${page}`
+    console.log(`[tennispoint] Página ${page}: ${url}`)
 
-    // Cerrar banner de cookies si aparece
-    try {
-      await page.waitForSelector('#usercentrics-root', { timeout: 4000 })
-      await page.evaluate(() => {
-        const shadow = document.querySelector('#usercentrics-root')?.shadowRoot
-        const btn = shadow?.querySelector('button[data-testid="uc-accept-all-button"]')
-        btn?.click()
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':     'application/json',
+      },
+    })
+
+    if (!res.ok) { console.error(`[tennispoint] HTTP ${res.status}`); break }
+
+    const data = await res.json()
+    const products = (data.products ?? []).filter(p => p.product_type === 'Padel rackets')
+
+    console.log(`[tennispoint]  → ${products.length} palas`)
+    if (products.length === 0) break
+
+    for (const p of products) {
+      const variant  = p.variants?.[0]
+      if (!variant) continue
+      const price    = parseFloat(variant.price)
+      const compare  = parseFloat(variant.compare_at_price)
+      const url      = `https://www.tennis-point.es/products/${p.handle}`
+      if (isNaN(price) || price < 30 || seen.has(url)) continue
+      // Excluir palas de test (precio ~15€, titulo con "test")
+      if (/\btest\b/i.test(p.title)) continue
+      seen.add(url)
+      allProducts.push({
+        title:           p.title,
+        price,
+        precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+        url,
       })
-      await page.waitForTimeout(1000)
-    } catch { /* sin banner */ }
-
-    while (true) {
-      await page.waitForSelector('.ProductListPage__products', { timeout: 20_000 })
-      console.log(`[tennispoint] Extrayendo página ${pageNum}…`)
-
-      const products = await page.evaluate(() => {
-        function parsePrice(text) {
-          if (!text) return NaN
-          return parseFloat(text.replace(/[^0-9,]/g, '').replace(',', '.'))
-        }
-
-        const cards = Array.from(document.querySelectorAll('.ProductCardInfo'))
-        return cards.map(card => {
-          const title = card.querySelector('.ProductCardInfo__name')?.textContent?.trim()
-          const url   = card.closest('a')?.href
-          const priceEl = card.querySelector('.ProductPrice__current, .price-current')
-          const price = parsePrice(priceEl?.textContent ?? '')
-          const origEl = card.querySelector('.ProductPrice__original, .price-old')
-          const original = parsePrice(origEl?.textContent ?? '')
-
-          if (!title || !url || isNaN(price) || price <= 0) return null
-          return {
-            title,
-            price,
-            precio_original: (!isNaN(original) && original > price) ? original : null,
-            url,
-          }
-        }).filter(Boolean)
-      })
-
-      console.log(`[tennispoint]  → ${products.length} palas`)
-      allProducts.push(...products)
-
-      // Siguiente página
-      const nextUrl = await page.evaluate((currentPage) => {
-        const next = document.querySelector('a[rel="next"], .Pagination__next:not(.disabled) a, li.next a')
-        if (!next?.href) return null
-        // Anti-loop: verificar que el número de página aumenta
-        const match = next.href.match(/[?&]page=(\d+)/)
-        if (match && parseInt(match[1]) <= currentPage) return null
-        return next.href
-      }, pageNum)
-
-      if (!nextUrl) {
-        console.log(`[tennispoint] Última página (${pageNum}). Total: ${allProducts.length}`)
-        break
-      }
-
-      await page.goto(nextUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
-      await page.waitForTimeout(DELAY_MS)
-      pageNum++
     }
-  } catch (err) {
-    console.error('[tennispoint] Error:', err.message)
-  } finally {
-    await browser.close()
+
+    if ((data.products ?? []).length < LIMIT) break
+    page++
+    await sleep(DELAY_MS)
   }
 
-  // Deduplicar por URL
-  const seen = new Set()
-  const unique = allProducts.filter(p => {
-    if (seen.has(p.url)) return false
-    seen.add(p.url)
-    return true
-  })
-
-  console.log(`[tennispoint] Total palas únicas: ${unique.length}`)
+  console.log(`[tennispoint] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return unique.map(p => ({
+  return allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
