@@ -149,10 +149,10 @@ export async function GET() {
     )
   }
 
-  // 2. Deduplicar por pala_id + source_id — precio mas bajo del dia
+  // 2. Deduplicar por pala_id — quedarse con el precio más bajo entre todas las tiendas
   const byKey = new Map<string, typeof snapshots[0]>()
   for (const snap of snapshots) {
-    const key = `${snap.pala_id}__${snap.source_id}`
+    const key = snap.pala_id
     const existing = byKey.get(key)
     if (!existing || snap.precio < existing.precio) {
       byKey.set(key, snap)
