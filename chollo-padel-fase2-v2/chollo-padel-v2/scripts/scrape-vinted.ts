@@ -294,7 +294,7 @@ async function scrapeKeywordPage(
   })
 
   try {
-    const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4482`  // 4482 = categoría pádel
+    const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4597`  // 4597 = categoría pádel (palas)
     const res = await fetch(url, {
       headers: {
         'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',

@@ -101,7 +101,13 @@ const EXCLUIR_PALABRAS = [
   // Modelos tenis específicos
   'ultra 99', 'ultra 100', 'ultra tour', 'bela tour',
   'head prestige', 'padel shoes', 'padel shoe',
+  // Modelos de zapatilla de marcas de pádel (Bullpadel flow, etc.)
+  'hybrid fly', 'flow hybrid', 'flow speed', 'flow control', 'flow fast',
 ]
+
+// Regex para detectar tallas de calzado: número entre 35 y 48 (con o sin ,5/.5)
+// Ej: "37,5" "38" "44.5" → zapatilla. "3.3" "2.0" → versión de pala (false negativo → no coincide)
+const TALLA_CALZADO_RE = /(?<![0-9])(3[5-9]|4[0-8])[,.]5?(?![0-9])/
 
 // Marcas que fabrican TANTO tenis como pádel.
 // Si el título contiene "raqueta" pero NO "padel"/"pala" → probable raqueta de tenis.
@@ -229,6 +235,9 @@ async function main() {
   for (const item of items as CacheItem[]) {
     const titleLower = item.title.toLowerCase()
     if (EXCLUIR_PALABRAS.some(p => titleLower.includes(p))) continue
+
+    // Guard: tallas de calzado (35–48) → zapatilla
+    if (TALLA_CALZADO_RE.test(item.title)) continue
 
     // Guard: marcas multideporte (Head, Wilson, Babolat, Adidas, Dunlop).
     // Si el título dice "raqueta" pero NO "padel"/"pala" → es raqueta de tenis, descartar.
