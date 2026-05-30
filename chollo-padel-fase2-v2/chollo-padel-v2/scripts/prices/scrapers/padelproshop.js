@@ -33,7 +33,7 @@ function extractFromHtml(html) {
     const priceStrs = chunk.match(/[\d]+[,.]?\d*\s*€/g) || []
     const prices = priceStrs
       .map(s => parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')))
-      .filter(n => !isNaN(n) && n > 0)
+      .filter(n => !isNaN(n) && n >= 40 && n <= 2000)  // rango de precio de pala — evita capturar "Ahorra 30€" o "Envío 5€"
 
     if (prices.length === 0) continue
 

@@ -77,9 +77,8 @@ async function scrape() {
 
       const original = parseFloat(p.price?.originalValue ?? p.crossedOutPrice ?? 0)
       const slug = p.slug ?? p.modelCode ?? p.id
-      const url  = slug
-        ? `https://www.decathlon.es/es/p/${slug}/${p.id ?? ''}`.replace(/\/$/, '')
-        : null
+      if (!slug || slug === 'undefined') continue  // evitar URL basura tipo /es/p/undefined/12345
+      const url  = `https://www.decathlon.es/es/p/${slug}/${p.id ?? ''}`.replace(/\/$/, '')
       if (!url) continue
 
       allProducts.push({

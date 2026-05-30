@@ -358,7 +358,10 @@ async function fuzzyMatch(productTitle, productUrl) {
   // Ej: Padel Coronado title="Bullpadel Neuron", URL="/pala-bullpadel-neuron-02/"
   // Sin "02" en tokens el matcher elige el modelo más reciente sin generación (Neuron 2025)
   // en lugar del correcto (Neuron 02 2026). Inyectar "02" resuelve el desempate.
-  const generacionUrl = extraerGeneracionDeUrl(productUrl);
+  // Inyección de generación solo para Bullpadel: Vertex 04, Hack 03, Neuron 02...
+  // Otras marcas (Head, Babolat, Adidas) usan segmentos 0X en URLs por otros motivos
+  // (colorways, tallas, IDs internos) → falsos tokens si se inyectan.
+  const generacionUrl = brandDetected === 'Bullpadel' ? extraerGeneracionDeUrl(productUrl) : [];
   if (generacionUrl.length > 0) {
     const tituloSet = new Set(tokensTitle);
     const nuevos = generacionUrl.filter(g => !tituloSet.has(g));
