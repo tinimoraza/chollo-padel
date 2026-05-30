@@ -50,10 +50,13 @@ const MAX_SPREAD  = 2.5     // si precio_maximo/precio_minimo > 2.5, datos conta
 const MIN_ANO = new Date().getFullYear() - 2  // solo palas de los ultimos 2 años (ej: 2026 -> min 2024)
 
 // Colisiones conocidas: [fragmento_en_url, fragmento_en_modelo_catalogo]
+// Si la URL contiene urlFrag Y el modelo contiene modelFrag → match incorrecto, descartar.
 const URL_MODEL_COLISIONES: [string, string][] = [
-  ['counter-origin',  'counter veron'],
-  ['counter-viper',   'counter veron'],
-  ['extreme-motion',  'extreme tour'],
+  ['counter-origin',    'counter veron'],
+  ['counter-viper',     'counter veron'],
+  ['extreme-motion',    'extreme tour'],
+  ['counter-viper-apt', 'counter viper'],  // APT es variante/modelo distinto al Counter Viper estandar
+  ['arrow-hit-hexagon', 'arrow hit'],      // Hexagon es variante distinta al Arrow Hit estandar
 ]
 
 function esDescartadoPorGuardias(
@@ -150,12 +153,14 @@ export async function GET() {
     )
   }
 
-  // 2. Deduplicar por pala_id — quedarse con el precio más bajo entre todas las tiendas
+  // 2. Deduplicar por pala_id+tienda — quedarse con el snapshot MÁS RECIENTE por combinación.
+  //    Usar fecha (no precio) evita que un precio antiguo/erróneo tape al precio actual correcto.
+  //    Luego, entre tiendas distintas para la misma pala, se mostrará la de mayor descuento.
   const byKey = new Map<string, typeof snapshots[0]>()
   for (const snap of snapshots) {
-    const key = snap.pala_id
+    const key = `${snap.pala_id}__${snap.source_id}`
     const existing = byKey.get(key)
-    if (!existing || snap.precio < existing.precio) {
+    if (!existing || snap.scraped_at > existing.scraped_at) {
       byKey.set(key, snap)
     }
   }
