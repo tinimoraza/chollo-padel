@@ -112,7 +112,9 @@ function esDescartadoPorGuardias(
     const mCode = url.match(/-(2\d{2})(?:[^\d]|$)/)
     if (mCode) {
       const codeYear = 2000 + parseInt(mCode[1].slice(1), 10)
-      if (codeYear !== palaAno) {
+      if (codeYear < 2018 || codeYear > 2030) {
+        // año fuera de rango valido — ignorar la guardia para no descartar chollos por falso positivo
+      } else if (codeYear !== palaAno) {
         return `E: codigo padelproshop -${mCode[1]} = ${codeYear} != catalogo ${palaAno}`
       }
     }

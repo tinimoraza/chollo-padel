@@ -257,6 +257,7 @@ async function recalculatePriceReference(palaIds) {
       .select('precio, source_id, url_producto')
       .eq('pala_id', palaId)
       .eq('disponible', true)
+      .gte('match_confidence', 0.95)  // excluir matches dudosos (0.92-0.94) que distorsionan la referencia
       .gte('scraped_at', since);
 
     if (!snaps || snaps.length === 0) continue;
