@@ -396,7 +396,10 @@ function matchearItem(
   // Ej: "Nox AT10 18K 2025 Agustín Tapia" → el catálogo tiene "AT10 Genius 18K Alum 2025"
   // v11: si el año del título no existe en catálogo para AT10 18K, ignorar año (vendedor pone año actual)
   const AT10_18K_ACTIVO = marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('18k')
-  if (AT10_18K_ACTIVO) {
+  // Inyectar genius+alum solo si hay un único modelo AT10 18K en catálogo.
+  // Si Nox lanza un segundo modelo 18K, la inyección causaría falsos positivos → dejar caer en ambiguous.
+  const modelos18k = (palasPorMarca.get('nox') ?? []).filter(p => p.tokens.includes('at10') && p.tokens.includes('18k'))
+  if (AT10_18K_ACTIVO && modelos18k.length === 1) {
     if (!tokensTitle.includes('genius')) tokensTitle = [...tokensTitle, 'genius']
     if (!tokensTitle.includes('alum')) tokensTitle = [...tokensTitle, 'alum']
   }

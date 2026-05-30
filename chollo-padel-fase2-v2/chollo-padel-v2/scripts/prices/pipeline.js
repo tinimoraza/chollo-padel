@@ -228,7 +228,16 @@ async function verificarUrlsNuevas(palaIds, sourceId) {
       }
     }));
   }
-  if (rotas > 0) console.log(`[pipeline] ${rotas} URLs marcadas como no disponibles.`);
+  if (rotas > 0) {
+    console.log(`[pipeline] ${rotas} URLs marcadas como no disponibles.`);
+    // Recalcular referencia de las palas afectadas: si la URL rota era el precio más barato,
+    // la referencia queda obsoleta hasta el próximo scrape si no la recalculamos ahora.
+    const rotasPalaIds = snaps
+      .filter((_, idx) => idx < rotas)  // aproximación — recalcular todas las palaIds verificadas
+      .map(s => s.pala_id ?? null).filter(Boolean);
+    const rotasUnique = [...new Set(palaIds)];  // usar palaIds que ya tenemos del caller
+    await recalculatePriceReference(rotasUnique);
+  }
 }
 
 // ─── Mediana ──────────────────────────────────────────────────────────────────

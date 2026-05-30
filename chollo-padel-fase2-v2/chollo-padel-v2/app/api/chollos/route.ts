@@ -64,7 +64,6 @@ function esDescartadoPorGuardias(
   urlProducto: string,
   palaAno: number,
   palaModelo: string,
-  urlsConMismaPala: Set<string>,
   palaIdsConMismaUrl: Set<string>
 ): string | null {
 
@@ -239,7 +238,6 @@ export async function GET() {
       snap.url_producto,
       pala['año'],
       pala.modelo,
-      new Set(),
       palaIdsEnEstaUrl
     )
 

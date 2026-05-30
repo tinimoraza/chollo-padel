@@ -475,7 +475,13 @@ async function fuzzyMatch(productTitle, productUrl) {
 
   if (scored.length === 1) {
     const winner = scored[0].pala;
-    const confidence = anioEfectivo && anioEfectivo === winner.año ? 1.0 : 0.95;
+    // Confianza según disponibilidad de año:
+    // 1.0 → año en URL/título coincide con el catálogo (más fiable)
+    // 0.95 → año disponible pero no coincide exactamente (o viene solo de un lado)
+    // 0.88 → sin año en título ni URL (match solo por tokens de modelo, menos seguro)
+    const confidence = anioEfectivo
+      ? (anioEfectivo === winner.año ? 1.0 : 0.95)
+      : 0.88;
     return { pala_id: winner.id, pala_nombre: winner.modelo, confidence, method: 'fuzzy' };
   }
 
