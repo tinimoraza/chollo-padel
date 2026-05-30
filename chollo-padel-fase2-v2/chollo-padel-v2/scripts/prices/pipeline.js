@@ -174,14 +174,33 @@ async function upsertCandidata(title, sourceSlug, precio, url) {
 // silenciosamente a otra página. Detectamos esto comparando la URL final
 // de la respuesta con la URL que guardamos. Si son distintas → descatalogado.
 async function checkUrlDisponible(url) {
+  const HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml',
+    'Accept-Language': 'es-ES,es;q=0.9',
+  };
   try {
     const resp = await fetch(url, {
       method: 'HEAD',
       redirect: 'follow',
       signal: AbortSignal.timeout(8000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HuntPadel/1.0)' },
+      headers: HEADERS,
     });
-    if (resp.status === 404) return false;
+    // Si HEAD devuelve 404, algunos servidores (ej: PadelVice) bloquean HEAD pero
+    // sirven GET correctamente → verificar con GET antes de marcar como rota.
+    if (resp.status === 404) {
+      try {
+        const respGet = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow',
+          signal: AbortSignal.timeout(10000),
+          headers: HEADERS,
+        });
+        if (respGet.ok) return true;   // HEAD mentía, GET funciona → URL válida
+        if (respGet.status === 404) return false;
+      } catch { /* si GET falla también, caer al return false original */ }
+      return false;
+    }
     // Si hubo redirección a una URL diferente → producto descatalogado/reemplazado
     // Excepción: Shopify redirige HEAD requests con parámetros extra — no es señal de baja
     const isShopify = url.includes('/products/');
