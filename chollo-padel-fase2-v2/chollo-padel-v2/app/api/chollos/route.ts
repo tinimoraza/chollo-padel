@@ -47,6 +47,7 @@ const UMBRAL_OFERTA = 0.82  // precio_actual <= 82% de referencia = >=18% dto
 const MIN_REFERENCIA = 50   // ignorar palas con precio_referencia < 50 (datos insuficientes)
 const MIN_FUENTES = 2       // referencia valida solo si viene de >=2 tiendas distintas
 const MAX_SPREAD  = 2.5     // si precio_maximo/precio_minimo > 2.5, datos contaminados por bad matches
+const MIN_ANO = new Date().getFullYear() - 2  // solo palas de los ultimos 2 años (ej: 2026 -> min 2024)
 
 // Colisiones conocidas: [fragmento_en_url, fragmento_en_modelo_catalogo]
 const URL_MODEL_COLISIONES: [string, string][] = [
@@ -197,6 +198,9 @@ export async function GET() {
     const fuente = snap.price_sources as any
 
     if (!pala || !fuente) continue
+
+    // Filtro de antigüedad: solo palas de los ultimos 2 años
+    if (pala['año'] < MIN_ANO) continue
 
     // Referencia desde price_reference (no palas.precio_referencia)
     const priceRef = priceRefMap.get(snap.pala_id)
