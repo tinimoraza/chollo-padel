@@ -475,10 +475,32 @@ async function fuzzyMatch(productTitle, productUrl) {
 
   if (scored.length === 1) {
     const winner = scored[0].pala;
-    // Confianza según disponibilidad de año:
+
+    // ── Cálculo de confianza ─────────────────────────────────────────────────
     // 1.0 → año en URL/título coincide con el catálogo (más fiable)
-    // 0.95 → año no disponible o no coincide (match por tokens de modelo)
-    const confidence = anioEfectivo && anioEfectivo === winner.año ? 1.0 : 0.95;
+    // 0.95 → hay año efectivo pero no coincide, o no hay año y el modelo es único en catálogo
+    // 0.88 → sin año efectivo Y existen múltiples versiones (años distintos) del mismo
+    //         modelo base en catálogo → match ambiguo, va a candidatas para revisión
+    let confidence;
+    if (anioEfectivo && anioEfectivo === winner.año) {
+      confidence = 1.0;
+    } else if (anioEfectivo) {
+      confidence = 0.95;
+    } else {
+      // Sin año: comprobar si hay otros modelos de la misma marca con los mismos tokens base
+      // (ignorando año). Si hay más de uno → el match es ambiguo entre versiones.
+      const tokensWinner = winner.tokens;
+      const modelosAmbiguos = candidates.filter(c =>
+        c.id !== winner.id &&
+        tokensWinner.every(t => c.tokens.includes(t)) &&
+        c.tokens.every(t => tokensWinner.includes(t))
+      );
+      confidence = modelosAmbiguos.length > 0 ? 0.88 : 0.95;
+      if (modelosAmbiguos.length > 0) {
+        console.log(`[fuzzy] ⚠️  Match ambiguo sin año: "${winner.modelo}" vs ${modelosAmbiguos.map(m => `"${m.modelo}"`).join(', ')} → conf=0.88`);
+      }
+    }
+
     return { pala_id: winner.id, pala_nombre: winner.modelo, confidence, method: 'fuzzy' };
   }
 

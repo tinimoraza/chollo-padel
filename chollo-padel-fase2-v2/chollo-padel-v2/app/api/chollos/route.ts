@@ -58,6 +58,7 @@ const URL_MODEL_COLISIONES: [string, string][] = [
   ['counter-viper-apt', 'counter viper'],  // APT es variante/modelo distinto al Counter Viper estandar
   ['arrow-hit-hexagon', 'arrow hit'],      // Hexagon es variante distinta al Arrow Hit estandar
   ['match-light-3-2',   'match light 2026'], // version 3.2 (modelo antiguo) != Match Light 2026
+  ['cross-it-light',    'cross it light 2026'], // Cross It Light generico (sin año/jugador) != Cross IT Light 2026 Martita Ortega
 ]
 
 function esDescartadoPorGuardias(
@@ -231,6 +232,15 @@ export async function GET() {
 
     const ref = priceRef.precio_referencia
     if (!ref || ref < MIN_REFERENCIA) continue
+
+    // GUARDIA PRECIO MINIMO: si el precio actual esta mas de un 25% por debajo del precio
+    // minimo historico de la pala, casi seguro es un producto distinto mal matcheado.
+    // Ej: Cross It Light 2026 (min 248€) matcheada a una URL que vende la version 2024 a 170€.
+    // Ratio: 170/248 = 0.69, por debajo de 0.75 → falso chollo.
+    if (priceRef.precio_minimo > 0 && snap.precio / priceRef.precio_minimo < 0.75) {
+      console.log(`[chollos:skip] precio ${snap.precio}€ < 75% de minimo ${priceRef.precio_minimo}€ → probable bad match | ${pala.modelo}`)
+      continue
+    }
 
     const palaIdsEnEstaUrl = urlToPalaIds.get(snap.url_producto) ?? new Set([snap.pala_id])
 

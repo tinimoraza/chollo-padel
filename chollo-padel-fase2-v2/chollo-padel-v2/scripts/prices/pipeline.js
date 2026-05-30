@@ -261,13 +261,30 @@ async function recalculatePriceReference(palaIds) {
 
   for (const palaId of palaIds) {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 días
-    const { data: snaps } = await supabase
+    // Traer snapshots con año confirmado (confidence=1.0) primero.
+    // Si hay suficientes (>=2), usar solo esos para la referencia: son los más fiables
+    // porque el año en URL/título coincide con el catálogo → eliminamos precios de
+    // versiones antiguas del mismo modelo que se colan por URL sin año.
+    // Si no hay suficientes confirmados, caer en todos los >=0.95 (comportamiento anterior).
+    const { data: snapsConfirmados } = await supabase
       .from('price_snapshots')
-      .select('precio, source_id, url_producto')
+      .select('precio, source_id, url_producto, match_confidence')
       .eq('pala_id', palaId)
       .eq('disponible', true)
-      .gte('match_confidence', 0.95)  // excluir matches dudosos (0.92-0.94) que distorsionan la referencia
+      .eq('match_confidence', 1.0)
       .gte('scraped_at', since);
+
+    const { data: snapsTodos } = await supabase
+      .from('price_snapshots')
+      .select('precio, source_id, url_producto, match_confidence')
+      .eq('pala_id', palaId)
+      .eq('disponible', true)
+      .gte('match_confidence', 0.95)
+      .gte('scraped_at', since);
+
+    // Usar confirmados si hay >=2 fuentes distintas con año verificado; si no, usar todos
+    const snapsConfSrcs = new Set((snapsConfirmados ?? []).map(s => s.source_id));
+    const snaps = snapsConfSrcs.size >= 2 ? snapsConfirmados : snapsTodos;
 
     if (!snaps || snaps.length === 0) continue;
 
