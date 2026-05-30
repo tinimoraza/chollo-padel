@@ -98,6 +98,7 @@ const TOKENS_DIFERENCIADORES = new Set([
   'st1', 'st2', 'st3', 'st4',
   'apt',      // Babolat Counter Viper APT es modelo distinto al Counter Viper estandar
   'hexagon',  // Adidas Arrow Hit Hexagon es variante distinta al Arrow Hit estandar
+  'veron',    // Babolat Veron != Viper — evitar confusion entre familias con nombres similares
   // v4: Colores como diferenciadores
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
