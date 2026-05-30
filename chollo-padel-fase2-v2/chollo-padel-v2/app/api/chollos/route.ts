@@ -57,6 +57,7 @@ const URL_MODEL_COLISIONES: [string, string][] = [
   ['extreme-motion',    'extreme tour'],
   ['counter-viper-apt', 'counter viper'],  // APT es variante/modelo distinto al Counter Viper estandar
   ['arrow-hit-hexagon', 'arrow hit'],      // Hexagon es variante distinta al Arrow Hit estandar
+  ['match-light-3-2',   'match light 2026'], // version 3.2 (modelo antiguo) != Match Light 2026
 ]
 
 function esDescartadoPorGuardias(
@@ -153,15 +154,24 @@ export async function GET() {
     )
   }
 
-  // 2. Deduplicar por pala_id+tienda — quedarse con el snapshot MÁS RECIENTE por combinación.
-  //    Usar fecha (no precio) evita que un precio antiguo/erróneo tape al precio actual correcto.
-  //    Luego, entre tiendas distintas para la misma pala, se mostrará la de mayor descuento.
-  const byKey = new Map<string, typeof snapshots[0]>()
+  // 2. Deduplicar en dos pasos:
+  //    Paso A: por pala_id+tienda → snapshot MÁS RECIENTE por tienda.
+  //            Evita que un precio antiguo/erróneo (ej: Bea González 173€ vs 209€ real) tape al actual.
+  //    Paso B: por pala_id → tienda con MENOR PRECIO.
+  //            Evita que la misma pala aparezca varias veces (una por cada tienda que la tenga de oferta).
+  const byTienda = new Map<string, typeof snapshots[0]>()
   for (const snap of snapshots) {
     const key = `${snap.pala_id}__${snap.source_id}`
-    const existing = byKey.get(key)
+    const existing = byTienda.get(key)
     if (!existing || snap.scraped_at > existing.scraped_at) {
-      byKey.set(key, snap)
+      byTienda.set(key, snap)
+    }
+  }
+  const byKey = new Map<string, typeof snapshots[0]>()
+  for (const snap of Array.from(byTienda.values())) {
+    const existing = byKey.get(snap.pala_id)
+    if (!existing || snap.precio < existing.precio) {
+      byKey.set(snap.pala_id, snap)
     }
   }
 
