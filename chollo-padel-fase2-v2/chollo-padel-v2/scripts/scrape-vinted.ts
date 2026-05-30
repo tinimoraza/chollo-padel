@@ -602,4 +602,5 @@ async function main() {
 
 main().catch(err => {
   console.error('💥 Error fatal:', err)
-  process.exi
+  process.exit(1)
+})
