@@ -4,11 +4,11 @@ import { usePathname } from 'next/navigation'
 export default function BottomNav() {
   const pathname = usePathname()
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href)
+    href === '/buscar' ? pathname === '/buscar' : pathname.startsWith(href)
 
   return (
     <nav className="bottom-nav">
-      <a href="/" className={`bottom-nav-item ${isActive('/') ? 'active' : ''}`}>
+      <a href="/buscar" className={`bottom-nav-item ${isActive('/buscar') ? 'active' : ''}`}>
         <span className="bottom-nav-icon">🔍</span>
         <span className="bottom-nav-label">Buscar</span>
       </a>

@@ -11,7 +11,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
   const pathname = usePathname()
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href)
+    href === '/buscar' ? pathname === '/buscar' || pathname === '/' : pathname.startsWith(href)
 
   return (
     <>
@@ -22,7 +22,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
         </a>
 
         <nav className="hp-nav">
-          <a href="/" className={`hp-nav-link ${isActive('/') ? 'active' : ''}`}>Buscador</a>
+          <a href="/buscar" className={`hp-nav-link ${isActive('/') ? 'active' : ''}`}>Buscador</a>
           <a href="/palas" className={`hp-nav-link ${isActive('/palas') ? 'active' : ''}`}>Palas</a>
           <a href="/top" className={`hp-nav-link nav-top ${isActive('/top') ? 'active' : ''}`}>🏆 Top</a>
           <a href="/alertas" className={`hp-nav-link ${isActive('/alertas') ? 'active' : ''}`}>Alertas</a>
@@ -57,7 +57,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
             <button className="hp-drawer-close" onClick={() => setMenuOpen(false)}>✕</button>
           </div>
 
-          <a href="/" className={isActive('/') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
+          <a href="/buscar" className={isActive('/') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
             <span>🔍</span> Buscador
           </a>
           <a href="/palas" className={isActive('/palas') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
