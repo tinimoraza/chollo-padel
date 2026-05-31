@@ -409,10 +409,14 @@ async function isVintedItemActive(externalId: string, auth: { cookie: string; to
         'Authorization': `Bearer ${auth.token}`,
       },
     })
-    if (res.status === 404) return false
+    if (res.status === 404 || res.status === 410) return false
     if (!res.ok) return true // Si falla por otro motivo, lo dejamos
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) return false // Página de error HTML → vendido/retirado
     const data = await res.json()
-    return data?.item?.can_be_sold !== false
+    // can_be_sold=false o item inexistente → no disponible
+    if (!data?.item) return false
+    return data.item.can_be_sold !== false
   } catch {
     return true // Si falla la verificación, dejamos el anuncio
   }
@@ -529,9 +533,9 @@ async function main() {
     .gte('last_seen_at', threeDaysAgo)
 
   if (enBD && enBD.length > 0) {
-    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id)).slice(0, 50)
+    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id)).slice(0, 200)
     if (noVistos.length > 0) {
-      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted (cap 50)...`)
+      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted (cap 200)...`)
       const toDeleteAggressive: string[] = []
 
       for (const { external_id } of noVistos) {
@@ -559,7 +563,7 @@ async function main() {
     .select('external_id')
     .eq('platform', 'vinted')
     .lt('last_seen_at', oneDayAgo)
-    .limit(50)
+    .limit(200)
 
   if (!staleError && stale && stale.length > 0) {
     console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
