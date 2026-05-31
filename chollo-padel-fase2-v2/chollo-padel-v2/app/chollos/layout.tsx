@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     url: 'https://huntpadel.com/chollos',
     siteName: 'HuntPadel',
     type: 'website',
-    images: [{ url: 'https://huntpadel.com/og-image.png', width: 1200, height: 630 }],
+    images: [{ url: 'https://huntpadel.com/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Chollos de palas de pádel — HuntPadel',
     description: 'Bajadas de precio en tiempo real en las mejores tiendas.',
-    images: ['https://huntpadel.com/og-image.png'],
+    images: ['https://huntpadel.com/opengraph-image'],
   },
   alternates: { canonical: 'https://huntpadel.com/chollos' },
 }

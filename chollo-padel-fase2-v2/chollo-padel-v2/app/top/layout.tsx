@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     url: 'https://huntpadel.com/top',
     siteName: 'HuntPadel',
     type: 'website',
-    images: [{ url: 'https://huntpadel.com/og-image.png', width: 1200, height: 630 }],
+    images: [{ url: 'https://huntpadel.com/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Top oportunidades de pádel — HuntPadel',
     description: 'El ranking de las mejores palas de segunda mano. Actualizado cada hora.',
-    images: ['https://huntpadel.com/og-image.png'],
+    images: ['https://huntpadel.com/opengraph-image'],
   },
   alternates: { canonical: 'https://huntpadel.com/top' },
 }

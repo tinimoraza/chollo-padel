@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     url: 'https://huntpadel.com/palas',
     siteName: 'HuntPadel',
     type: 'website',
-    images: [{ url: 'https://huntpadel.com/og-image.png', width: 1200, height: 630 }],
+    images: [{ url: 'https://huntpadel.com/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Catálogo de palas de pádel — HuntPadel',
     description: 'Compara precios de más de 200 modelos.',
-    images: ['https://huntpadel.com/og-image.png'],
+    images: ['https://huntpadel.com/opengraph-image'],
   },
   alternates: { canonical: 'https://huntpadel.com/palas' },
 }

@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     url: 'https://huntpadel.com/buscar',
     siteName: 'HuntPadel',
     type: 'website',
-    images: [{ url: 'https://huntpadel.com/og-image.png', width: 1200, height: 630 }],
+    images: [{ url: 'https://huntpadel.com/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Buscador de palas de pádel — HuntPadel',
     description: 'Wallapop + Vinted en un solo buscador.',
-    images: ['https://huntpadel.com/og-image.png'],
+    images: ['https://huntpadel.com/opengraph-image'],
   },
   alternates: { canonical: 'https://huntpadel.com/buscar' },
 }
