@@ -15,6 +15,11 @@
  *     Si hay varios matches → elige el de más tokens (más específico)
  *     Si hay empate → no asigna (ambiguo)
  *
+ * v17 (2026-05-31):
+ *  - tokenizar: normaliza "c.6"/"c 6" → "c6" (Nox X-One C.6 se escribía con punto en Vinted)
+ *  - KEEP_WORDS + TOKENS_DIFERENCIADORES: añadido "c6"
+ *    Fix: anuncios "Nox X-One C.6" se asignaban a "Nox X-One 2025" en vez de "Nox X-One C6 2023"
+ *
  * v16 (2026-05-26):
  *  - KEEP_WORDS: añadidos colores (black, blue, grey, white, red, green, orange, pink, yellow, purple, gold, silver, navy, lime)
  *    Problema: "Adidas Drive Black 2026" y "Adidas Drive Blue 2026" eran indistinguibles
@@ -83,6 +88,7 @@ const KEEP_WORDS = new Set([
   'proplus', // Oxdog Ultimate Pro+ vs Pro
   'woman',   // Bullpadel versión femenina (W normalizado → woman)
   'sft',     // Joma Blast Pro SFT vs HRD
+  'c6',      // Nox X-One C6 vs X-One 2025
   // v16: Colores — diferencian variantes de una misma familia
   // Ej: Adidas Drive Black 2026 vs Drive Blue 2026 vs Drive Grey 2026
   // Ej: Vibora Yarara Pro White 2.0 vs otras variantes
@@ -129,6 +135,7 @@ const TOKENS_DIFERENCIADORES = new Set([
   'st1', 'st2', 'st3', 'st4',  // Siux Electra ST2/ST3/ST4 vs Electra Pro/Go/Elite
   'advance',    // Bullpadel Vertex Advance vs Vertex 04/05
   'jr',         // Bullpadel Hack JR (Junior) vs Hack 04/03
+  'c6',         // Nox X-One C6 vs X-One 2025
   // v16: Colores como diferenciadores
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
@@ -241,6 +248,7 @@ function tokenizar(texto: string): string[] {
     .replace(/\bpro\s+line\b/g, 'line') // v11: "pro line" → "line" (mismo compuesto con espacio)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
     .replace(/\bhibrid\b/g, 'hybrid')       // Kuikma typo frecuente: Hibrid → Hybrid
+    .replace(/\bc[.\s](\d)\b/g, 'c$1')    // normalizar "c.6"/"c 6" → "c6" (Nox X-One C6)
     .replace(/\b(hack|vertex|flow)\s+(\d)\b/g, '$1 0$2') // "Hack 3" → "Hack 03", "Vertex 4" → "Vertex 04"
     .replace(/\b(hack|vertex|flow)(0[1-9])\b/g, '$1 $2') // v10: "hack03" → "hack 03" (pegados sin espacio)
     .replace(/\b(hack|vertex|flow)(\s+\w+)\s+(\d)\b/g, '$1$2 0$3') // v11: "Hack Hybrid 3" → "Hack Hybrid 03"
