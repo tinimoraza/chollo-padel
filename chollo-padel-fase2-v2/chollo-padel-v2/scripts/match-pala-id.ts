@@ -175,6 +175,13 @@ const EXCLUIR_ACCESORIOS = new Set([
   'ultra 99', 'ultra 100', 'ultra tour',
   // Vinted: listings de calzado padel (zapatillas, no palas)
   'padel shoes', 'padel shoe', 'padel boots',
+  // Italiano
+  'zaino', 'zainetto', 'maglietta', 'calzini', 'monospalla', 'porta racchetta',
+  'portaracchetta', 'fodero', 'tracolla', 'racchette',
+  // Holandés
+  'rugzak', 'padeltas',
+  // Francés
+  'sac à dos', 'sac a dos',
 ])
 
 // Versiones de generación estilo "3.4", "2.0", "1.5" — se extraen del modelo
@@ -520,6 +527,17 @@ function matchearItem(
   }
 
   if (scored.length === 0) return 'noMatch'
+
+  // ── Guard: modelo demasiado genérico sin año en título ────────────────────
+  if (scored.length === 1 && scored[0].pala.tokens.length <= 2 && anioTitulo === null) {
+    const baseTokens = scored[0].pala.tokens
+    const candidatas2 = palasPorMarca.get(marcaNorm!) ?? []
+    const sibling = candidatas2.filter(p =>
+      p.id !== scored[0].pala.id &&
+      baseTokens.every(t => p.tokens.includes(t))
+    )
+    if (sibling.length > 0) return 'ambiguous'
+  }
 
   // ── Desempate 1: fix HRD+→base, Team→base ─────────────────────────────────
   if (difEnTitulo.size > 0) {
