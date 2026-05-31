@@ -4,6 +4,33 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'HuntPadel — Encuentra tu pala al mejor precio',
   description: 'Buscador de palas de pádel de segunda mano. Rastreamos Wallapop y Vinted en tiempo real para que no te pierdas ningún chollo.',
+  alternates: { canonical: 'https://huntpadel.com' },
+}
+
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://huntpadel.com/#website',
+      url: 'https://huntpadel.com',
+      name: 'HuntPadel',
+      description: 'Buscador de palas de pádel de segunda mano en Wallapop y Vinted',
+      inLanguage: 'es',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: 'https://huntpadel.com/buscar?q={search_term_string}' },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://huntpadel.com/#organization',
+      name: 'HuntPadel',
+      url: 'https://huntpadel.com',
+      description: 'Plataforma de búsqueda de palas de pádel de segunda mano',
+    },
+  ],
 }
 
 const MARCAS = [
@@ -32,6 +59,10 @@ const HOW_IT_WORKS = [
 export default function LandingPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)', fontFamily: "-apple-system, 'Helvetica Neue', Arial, sans-serif" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+      />
 
       {/* ── NAV ── */}
       <nav style={{ background: 'var(--bg2)', borderBottom: '0.5px solid var(--border)', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
