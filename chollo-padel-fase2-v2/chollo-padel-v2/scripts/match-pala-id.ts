@@ -1072,7 +1072,10 @@ async function main() {
   console.log(`\n✅ ${applied} actualizaciones aplicadas.`)
 }
 
-main().catch(err => {
-  console.error('❌ Error fatal:', err)
-  process.exit(1)
-})
+// Solo ejecutar main() cuando se lanza directamente (no cuando Next.js importa el módulo durante el build)
+if (!process.env.NEXT_PHASE && !process.env.NEXT_RUNTIME) {
+  main().catch(err => {
+    console.error('❌ Error fatal:', err)
+    process.exit(1)
+  })
+}

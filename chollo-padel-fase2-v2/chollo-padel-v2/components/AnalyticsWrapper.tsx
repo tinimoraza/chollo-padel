@@ -1,15 +1,14 @@
 'use client'
 import { Analytics } from '@vercel/analytics/next'
+import { useEffect } from 'react'
 
 export default function AnalyticsWrapper() {
-  return (
-    <Analytics
-      beforeSend={(event) => {
-        if (typeof window !== 'undefined' && localStorage.getItem('hp_owner') === '1') {
-          return null
-        }
-        return event
-      }}
-    />
-  )
+  useEffect(() => {
+    // Si hp_owner está activo, bloqueamos el script de analytics directamente
+    if (localStorage.getItem('hp_owner') === '1') {
+      window.__va_disable = true
+    }
+  }, [])
+
+  return <Analytics />
 }
