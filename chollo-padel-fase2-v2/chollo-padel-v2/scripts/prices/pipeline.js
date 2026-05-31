@@ -278,81 +278,91 @@ async function recalculatePriceReference(palaIds) {
   if (!palaIds.length) return;
   console.log(`[pipeline] Recalculando precio_referencia para ${palaIds.length} palas...`);
 
-  for (const palaId of palaIds) {
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 días
-    // Traer snapshots con año confirmado (confidence=1.0) primero.
-    // Si hay suficientes (>=2), usar solo esos para la referencia: son los más fiables
-    // porque el año en URL/título coincide con el catálogo → eliminamos precios de
-    // versiones antiguas del mismo modelo que se colan por URL sin año.
-    // Si no hay suficientes confirmados, caer en todos los >=0.95 (comportamiento anterior).
-    const { data: snapsConfirmados } = await supabase
-      .from('price_snapshots')
-      .select('precio, source_id, url_producto, match_confidence')
-      .eq('pala_id', palaId)
-      .eq('disponible', true)
-      .eq('match_confidence', 1.0)
-      .gte('scraped_at', since);
+  const FUENTES_EXCLUIR_DE_REFERENCIA = new Set([2, 9]); // 2 = PadelZoom, 9 = Roma Sport
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: snapsTodos } = await supabase
+  // ── v9: BULK — 1 query por lote en lugar de 4 queries por pala ──────────────
+  // Antes: 555 palas × 4 queries = 2.220 requests → timeout en GH Actions
+  // Ahora: 2 queries bulk + 1 upsert bulk + 1 update bulk → ~4 requests totales
+  const CHUNK = 500; // Supabase .in() acepta hasta ~500 IDs por query
+  const allSnaps = [];
+
+  for (let i = 0; i < palaIds.length; i += CHUNK) {
+    const chunk = palaIds.slice(i, i + CHUNK);
+    const { data: snapsChunk } = await supabase
       .from('price_snapshots')
-      .select('precio, source_id, url_producto, match_confidence')
-      .eq('pala_id', palaId)
+      .select('pala_id, precio, source_id, url_producto, match_confidence')
+      .in('pala_id', chunk)
       .eq('disponible', true)
       .gte('match_confidence', 0.95)
       .gte('scraped_at', since);
+    if (snapsChunk) allSnaps.push(...snapsChunk);
+  }
 
-    // Usar confirmados si hay >=2 fuentes distintas con año verificado; si no, usar todos
-    const snapsConfSrcs = new Set((snapsConfirmados ?? []).map(s => s.source_id));
-    const snaps = snapsConfSrcs.size >= 2 ? snapsConfirmados : snapsTodos;
+  // Agrupar por pala_id
+  const byPala = new Map();
+  for (const s of allSnaps) {
+    if (!byPala.has(s.pala_id)) byPala.set(s.pala_id, { confirmados: [], todos: [] });
+    byPala.get(s.pala_id).todos.push(s);
+    if (s.match_confidence === 1.0) byPala.get(s.pala_id).confirmados.push(s);
+  }
 
-    if (!snaps || snaps.length === 0) continue;
+  const refRows = [];
+  const palaRows = [];
+  const now = new Date().toISOString();
 
-    // v6: Excluir Roma Sport (source_id=9) del cálculo de referencia.
-    // Roma Sport publica precios inflados de catálogo que distorsionan la mediana
-    // cuando es la única fuente o cuando sus precios son mucho mayores que el mercado.
-    // v8: Excluir también PadelZoom (source_id=2): es un agregador que muestra precios
-    // ya bajados de otras tiendas. Si entra en la referencia, baja la mediana
-    // artificialmente → lo que ya estaba barato en otras tiendas aparece como "chollo".
-    // PadelZoom ya está excluido del display de chollos; ahora también de la referencia.
-    const FUENTES_EXCLUIR_DE_REFERENCIA = new Set([2, 9]); // 2 = PadelZoom, 9 = Roma Sport
+  for (const palaId of palaIds) {
+    const grupo = byPala.get(palaId);
+    if (!grupo || grupo.todos.length === 0) continue;
+
+    // Usar confirmados si hay >=2 fuentes con año verificado; si no, todos
+    const snapsConfSrcs = new Set(grupo.confirmados.map(s => s.source_id));
+    const snaps = snapsConfSrcs.size >= 2 ? grupo.confirmados : grupo.todos;
+
     const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR_DE_REFERENCIA.has(s.source_id));
-    const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps; // fallback a todos si no hay otras fuentes
+    const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps;
 
     // Deduplicar por url_producto — quedarse con el precio más bajo por URL
     const byUrl = new Map();
     for (const s of snapsFuente) {
-      const key = s.url_producto;
-      if (!byUrl.has(key) || s.precio < byUrl.get(key).precio) {
-        byUrl.set(key, s);
+      if (!byUrl.has(s.url_producto) || s.precio < byUrl.get(s.url_producto).precio) {
+        byUrl.set(s.url_producto, s);
       }
     }
     const unique = [...byUrl.values()];
-
     const precios = unique.map(s => s.precio);
+    if (precios.length === 0) continue;
+
+    const precio_referencia = calcularMediana(precios);
     const precio_minimo = Math.min(...precios);
     const precio_maximo = Math.max(...precios);
-
-    // v5: MEDIANA en lugar de media aritmética
-    const precio_referencia = calcularMediana(precios);
     const fuentes_count = new Set(unique.map(s => s.source_id)).size;
 
-    console.log(`[pipeline]   pala ${palaId}: ${precios.length} precios → mediana ${precio_referencia}€ (min ${precio_minimo}€, max ${precio_maximo}€)`);
-
-    await supabase.from('price_reference').upsert({
-      pala_id: palaId,
-      precio_referencia,
-      precio_minimo,
-      precio_maximo,
-      fuentes_count,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'pala_id' });
-
-    await supabase.from('palas').update({
-      precio_referencia,
-      precio_minimo_tiendas: precio_minimo,
-      precios_updated_at: new Date().toISOString(),
-    }).eq('id', palaId);
+    refRows.push({ pala_id: palaId, precio_referencia, precio_minimo, precio_maximo, fuentes_count, updated_at: now });
+    palaRows.push({ id: palaId, precio_referencia, precio_minimo_tiendas: precio_minimo, precios_updated_at: now });
   }
+
+  console.log(`[pipeline] Actualizando price_reference para ${refRows.length} palas...`);
+
+  // Upsert bulk en lotes de 200
+  const BATCH = 200;
+  for (let i = 0; i < refRows.length; i += BATCH) {
+    await supabase.from('price_reference')
+      .upsert(refRows.slice(i, i + BATCH), { onConflict: 'pala_id' });
+  }
+
+  // Update palas en lotes (upsert por id)
+  for (let i = 0; i < palaRows.length; i += BATCH) {
+    for (const row of palaRows.slice(i, i + BATCH)) {
+      await supabase.from('palas').update({
+        precio_referencia:      row.precio_referencia,
+        precio_minimo_tiendas:  row.precio_minimo_tiendas,
+        precios_updated_at:     row.precios_updated_at,
+      }).eq('id', row.id);
+    }
+  }
+
+  console.log(`[pipeline] ✅ precio_referencia actualizado para ${refRows.length} palas`);
 
   console.log(`[pipeline] Recálculo completado.`);
 }
