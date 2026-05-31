@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import Header from '@/components/Header'
+import BottomNav from '@/components/BottomNav'
 import SearchPanel from '@/components/SearchPanel'
 import Sidebar from '@/components/Sidebar'
 import AlertModal from '@/components/AlertModal'
@@ -15,27 +17,12 @@ export default function Home() {
 
   return (
     <>
-      <div className="app-shell">
-        <header className="header">
-         <a className="logo" href="/">
-			<img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-			</a>
-          <nav className="nav">
-            <a className="nav-link active" href="/">BUSCADOR</a>
-            <a className="nav-link" href="/palas">PALAS</a>
-            <a className="nav-link" href="/top" style={{ color: '#FFB800' }}>🏆 TOP</a>
-            <a className="nav-link" href="/alertas">MIS ALERTAS</a>
-            <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-          </nav>
-          <button className="btn-alert-top" onClick={() => openModal()}>
-            + NUEVA ALERTA
-          </button>
-        </header>
-        <div className="layout">
-          <Sidebar onOpenModal={openModal} />
-          <SearchPanel onOpenModal={openModal} />
-        </div>
+      <Header onNewAlert={() => openModal()} />
+      <div className="hp-layout">
+        <Sidebar onOpenModal={openModal} />
+        <SearchPanel onOpenModal={openModal} />
       </div>
+      <BottomNav />
       {modalOpen && (
         <AlertModal
           prefillQuery={prefillQuery}

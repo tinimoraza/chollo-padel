@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Header from '@/components/Header'
+import BottomNav from '@/components/BottomNav'
 
 const CONDITION_LABEL: Record<string, string> = {
   new:              'Nuevo',
@@ -85,19 +87,8 @@ export default function AlertasPage() {
 
   return (
     <div style={styles.page}>
-      {/* Header */}
-      <header style={styles.header}>
-      <a href="/" style={styles.logo}>
-		<img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-		</a>
-        <nav style={styles.nav}>
-          <a href="/" style={styles.navLink}>BUSCADOR</a>
-          <a href="/palas" style={styles.navLink}>PALAS</a>
-          <a href="/top" style={{ ...styles.navLink, color: '#FFB800' }}>🏆 TOP</a>
-          <a href="/alertas" style={{ ...styles.navLink, ...styles.navLinkActive }}>MIS ALERTAS</a>
-          <a href="/chollos" style={{ ...styles.navLink, color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-        </nav>
-      </header>
+      <Header />
+      <BottomNav />
 
       <div style={styles.content}>
         <div style={styles.pageTitle}>MIS ALERTAS</div>

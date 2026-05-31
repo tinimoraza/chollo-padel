@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import Header from '@/components/Header'
+import BottomNav from '@/components/BottomNav'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -369,20 +371,9 @@ export default function PalasPage() {
 
   return (
     <div className="app-shell">
-      <header className="header">
-        <a className="logo" href="/">
-          <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-        </a>
-        <nav className="nav">
-          <a className="nav-link" href="/">BUSCADOR</a>
-          <a className="nav-link active" href="/palas">PALAS</a>
-          <a className="nav-link" href="/top" style={{ color: '#FFB800' }}>🏆 TOP</a>
-          <a className="nav-link" href="/alertas">MIS ALERTAS</a>
-          <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-        </nav>
-      </header>
-
-      <div className="layout">
+      <Header />
+      <BottomNav />
+      <div className="hp-layout">
         <FilterSidebar filters={filters} setFilters={setFilters} marcas={marcas} total={filtered.length} />
 
         <main style={{ padding: '2rem', minHeight: 'calc(100vh - 54px)', overflowY: 'auto' }}>

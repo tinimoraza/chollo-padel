@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Header from '@/components/Header'
+import BottomNav from '@/components/BottomNav'
 
 interface TopItem {
   external_id:       string
@@ -336,18 +338,8 @@ export default function TopPage() {
 
   return (
     <div className="app-shell">
-      <header className="header">
-        <a className="logo" href="/">
-          <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-        </a>
-        <nav className="nav">
-          <a className="nav-link" href="/">BUSCADOR</a>
-          <a className="nav-link" href="/palas">PALAS</a>
-          <a className="nav-link active" href="/top" style={{ color: '#FFB800', borderBottomColor: '#FFB800' }}>🏆 TOP OPORTUNIDADES</a>
-          <a className="nav-link" href="/alertas">MIS ALERTAS</a>
-          <a className="nav-link" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-        </nav>
-      </header>
+      <Header />
+      <BottomNav />
 
       <main style={styles.main}>
         <div style={styles.header}>

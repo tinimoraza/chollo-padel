@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import type { CholloTienda } from '@/app/api/chollos/route'
+import Header from '@/components/Header'
+import BottomNav from '@/components/BottomNav'
 
 type Filtro = 'todos' | 'CHOLLO' | 'OFERTA'
 
@@ -48,19 +50,8 @@ export default function ChollosPage() {
 
   return (
     <div className="app-shell">
-      <header className="header">
-        <a className="logo" href="/">
-          <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} />
-        </a>
-        <nav className="nav">
-          <a className="nav-link" href="/">BUSCADOR</a>
-          <a className="nav-link" href="/palas">PALAS</a>
-          <a className="nav-link" href="/top" style={{ color: '#FFB800' }}>🏆 TOP</a>
-          <a className="nav-link" href="/alertas">MIS ALERTAS</a>
-          <a className="nav-link active" href="/chollos" style={{ color: '#FF5F1F' }}>🔥 CHOLLOS</a>
-        </nav>
-        <a href="/alertas" className="btn-alert-top">+ NUEVA ALERTA</a>
-      </header>
+      <Header />
+      <BottomNav />
 
       <main style={s.main}>
         {/* Cabecera */}
