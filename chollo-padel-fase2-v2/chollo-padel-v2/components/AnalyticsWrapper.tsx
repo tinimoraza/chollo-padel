@@ -6,7 +6,7 @@ export default function AnalyticsWrapper() {
   useEffect(() => {
     // Si hp_owner está activo, bloqueamos el script de analytics directamente
     if (localStorage.getItem('hp_owner') === '1') {
-      window.__va_disable = true
+      (window as any).__va_disable = true
     }
   }, [])
 
