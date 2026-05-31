@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Analytics } from '@vercel/analytics/next'
+import AnalyticsWrapper from '@/components/AnalyticsWrapper'
 
 export const metadata: Metadata = {
   title: {
@@ -40,14 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="bg-black text-white antialiased">
         {children}
-        <Analytics
-          beforeSend={(event) => {
-            if (typeof window !== 'undefined' && localStorage.getItem('hp_owner') === '1') {
-              return null
-            }
-            return event
-          }}
-        />
+        <AnalyticsWrapper />
       </body>
     </html>
   )
