@@ -22,8 +22,8 @@ Tiendas con catálogo amplio de palas, tráfico alto en España y alta probabili
 |---|--------|-----|---------------------|-------|
 | 1 | Zona de Padel | zonadepadel.es | **PrestaShop** (confirmado) | líder España, +3000 refs, PrestaShop premiado 2016 — igual patrón que Padelzoom |
 | 2 | Padel Ibérico | padeliberico.es | PrestaShop probable | 10K reseñas Trustpilot, "precios más bajos del mercado", stock real |
-| 3 | Padel Market | padelmarket.com | WooCommerce probable | tienda de Paquito Navarro, 5K reseñas, muy competitivo en precio |
-| 4 | TiendaPadelPoint | tiendapadelpoint.com | PrestaShop probable | físico + online, internacional, muy competitivo |
+| 3 | Padel Market | padelmarket.com | WooCommerce probable | tienda de Paquito Navarro, 5K reseñas, muy competitivo en precio. URL confirmada: padelmarket.com |
+| 4 | TiendaPadelPoint | tiendapadelpoint.com | PrestaShop probable | físico + online, internacional, muy competitivo. URL confirmada: tiendapadelpoint.com |
 | 5 | PadelPROShop | padelproshop.com | **Shopify** (URL /collections/ confirma Shopify) | 6K reseñas, descuentos agresivos (hasta -48%), exclusivas propias |
 | 6 | Time2Padel | time2padel.com | PrestaShop probable | gran catálogo, fuerte en Europa |
 | 7 | Ofertas de Pádel | ofertasdepadel.com | PrestaShop probable | 575 reseñas, especializado en outlet y ofertas — clave para chollos |
@@ -54,7 +54,8 @@ Importante para tener el **precio oficial** como techo de descuento, no para seg
 
 | # | Tienda | URL | Notas |
 |---|--------|-----|-------|
-| 1 | Street Padel | streetpadel.com | buena cobertura multimarca |
+| 1 | Street Padel | streetpadel.com | buena cobertura multimarca. URL confirmada: streetpadel.com |
+| 0 | Padel Vice | padelvice.com | pendiente inspección | URL confirmada: padelvice.com |
 | 2 | Mister Padel | misterpadel.com | Italia + España, buen precio |
 | 3 | PadelShop | padelshop.com | 3K reseñas, 4.8★ Trustpilot |
 | 4 | PadelKiwi | padelkiwi.com | 2K reseñas, 4.6★ |

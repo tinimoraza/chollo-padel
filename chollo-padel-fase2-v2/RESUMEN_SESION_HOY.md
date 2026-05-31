@@ -139,4 +139,4 @@ git push
 | tennispoint   | ✅ OK    | fetch (Shopify JSON) | 241 palas       |
 | decathlon     | ❌ BAJA  | Cloudflare bloqueado | Eliminado       |
 | miravia       | ⚠️ ?    | Playwright           | No verificado   |
-| amazon        | ⚠️ ?    | P
+| amazon        | ⚠️ ?    | Playwright           | No verificado   |
