@@ -59,6 +59,7 @@ const URL_MODEL_COLISIONES: [string, string][] = [
   ['arrow-hit-hexagon', 'arrow hit'],      // Hexagon es variante distinta al Arrow Hit estandar
   ['match-light-3-2',   'match light 2026'], // version 3.2 (modelo antiguo) != Match Light 2026
   ['cross-it-light',    'cross it light 2026'], // Cross It Light generico (sin año/jugador) != Cross IT Light 2026 Martita Ortega
+  ['x-one-c6',          'x-one 2025'],          // Street Padel URL del C6 no es el X-One 2025
 ]
 
 function esDescartadoPorGuardias(
