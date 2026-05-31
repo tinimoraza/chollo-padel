@@ -537,10 +537,15 @@ async function main() {
     if (noVistos.length > 0) {
       console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted (cap 200)...`)
       const toDeleteAggressive: string[] = []
+      const toRefreshAggressive: string[] = []
 
       for (const { external_id } of noVistos) {
         const active = await isVintedItemActive(external_id, auth)
-        if (!active) toDeleteAggressive.push(external_id)
+        if (!active) {
+          toDeleteAggressive.push(external_id)
+        } else {
+          toRefreshAggressive.push(external_id)
+        }
         await sleep(300) // throttle
       }
 
@@ -550,7 +555,20 @@ async function main() {
           .delete()
           .in('external_id', toDeleteAggressive)
         if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
-      } else {
+      }
+
+      if (toRefreshAggressive.length > 0) {
+        const now = new Date().toISOString()
+        for (let i = 0; i < toRefreshAggressive.length; i += 100) {
+          await supabase
+            .from('wallapop_cache')
+            .update({ last_seen_at: now })
+            .in('external_id', toRefreshAggressive.slice(i, i + 100))
+        }
+        console.log(`♻️  [Agresivo] Refrescados ${toRefreshAggressive.length} anuncios activos`)
+      }
+
+      if (toDeleteAggressive.length === 0 && toRefreshAggressive.length === 0) {
         console.log('✅ [Agresivo] Todos los no vistos siguen activos en Vinted')
       }
     }
@@ -568,10 +586,16 @@ async function main() {
   if (!staleError && stale && stale.length > 0) {
     console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
     const toDelete: string[] = []
+    const toRefresh: string[] = []
 
     for (const item of stale) {
       const active = await isVintedItemActive(item.external_id, auth)
-      if (!active) toDelete.push(item.external_id)
+      if (!active) {
+        toDelete.push(item.external_id)
+      } else {
+        // Refrescar last_seen_at para sacarlo de la cola — evita reverificar el mismo item en cada run
+        toRefresh.push(item.external_id)
+      }
       await sleep(300) // throttle
     }
 
@@ -581,7 +605,21 @@ async function main() {
         .delete()
         .in('external_id', toDelete)
       if (!delErr) console.log(`🗑️  Eliminados ${toDelete.length} anuncios vendidos/eliminados`)
-    } else {
+    }
+
+    if (toRefresh.length > 0) {
+      const now = new Date().toISOString()
+      // Actualizar en batches de 100
+      for (let i = 0; i < toRefresh.length; i += 100) {
+        await supabase
+          .from('wallapop_cache')
+          .update({ last_seen_at: now })
+          .in('external_id', toRefresh.slice(i, i + 100))
+      }
+      console.log(`♻️  Refrescados ${toRefresh.length} anuncios activos (last_seen_at actualizado)`)
+    }
+
+    if (toDelete.length === 0 && toRefresh.length === 0) {
       console.log('✅ Todos siguen activos')
     }
   }
