@@ -142,20 +142,61 @@ const KEYWORDS = [
   'joma slam pro iconic',
   'joma tournament pro iconic',
 
-  // ── MARCAS MEDIAS ──────────────────────────────────────────────────────
-  'pala black crown',
+  // ── SIUX (ampliado) ────────────────────────────────────────────────────
+  'siux fenix',
+  'siux trilogy',
+  'siux valkiria',
+  'siux gea',
+  'siux spyder',
+
+  // ── VIBORA (ampliado) ─────────────────────────────────────────────────
+  'vibora black mamba',
+  'vibora king cobra',
+  'vibor-a yarara',
+
+  // ── DROP SHOT (ampliado) ──────────────────────────────────────────────
+  'drop shot axion',
+  'drop shot conqueror',
+  'drop shot canyon',
+  'drop shot explorer',
+
+  // ── BLACK CROWN (ampliado) ────────────────────────────────────────────
+  'black crown piton',
+  'black crown patron',
+  'black crown gladius',
+
+  // ── MARCAS MEDIAS ─────────────────────────────────────────────────────
   'pala royal padel',
-  'pala drop shot',
   'pala dunlop',
   'pala tecnifibre',
   'pala puma padel',
   'pala munich padel',
   'pala akkeron',
   'pala vairo',
-  'pala lotto padel',
   'pala kuikma',
   'pala volt padel',
-  'pala tamanaco',
+  'pala alkemia',
+  'kombat fuji',
+  'kombat galeras',
+  'kombat krakatoa',
+  'kombat etna',
+  'pala kombat',
+  'enebe mustang',
+  'enebe spitfire',
+  'enebe response',
+  'pala enebe',
+  'lok be',
+  'pala padel lok',
+  'pala hirostar',
+  'racket project padel',
+  'slazenger padel',
+  'pala cork padel',
+  'pala sane padel',
+  'pala rs padel',
+  'pala cartri padel',
+  'pala endless padel',
+  'tactical padel',
+  'pala pallap',
 
 ]
 
