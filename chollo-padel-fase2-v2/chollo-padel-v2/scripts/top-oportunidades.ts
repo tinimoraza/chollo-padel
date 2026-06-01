@@ -219,7 +219,7 @@ async function main() {
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
     .not('pala_id', 'is', null)
-    .gte('match_confidence', 0.95)
+    .or('match_confidence.gte.0.95,match_confidence.is.null')
 
   if (error || !items) {
     console.error('❌ Error leyendo wallapop_cache:', error)
