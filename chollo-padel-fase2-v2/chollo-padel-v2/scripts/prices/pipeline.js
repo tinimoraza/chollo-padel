@@ -1,4 +1,13 @@
 // scripts/prices/pipeline.js
+// v8 (2026-06-01):
+//   FIX 1 — Umbral de confianza: 0.92 → 0.95 en runPipeline.
+//     El pipeline ya usaba 0.95 para recalculatePriceReference pero aceptaba
+//     snapshots con confidence >= 0.92. Unificado a 0.95 en ambos sitios.
+//   FIX 2 — Sanity check precio_pvp en recalculatePriceReference.
+//     Si la mediana calculada es > 1.4× o < 0.5× el precio_pvp oficial del
+//     catálogo, hay un bad match en los snapshots. En ese caso se usa precio_pvp
+//     como fallback y se loguea el incidente para revisión.
+//     Esto evita que matches incorrectos generen chollos o top-oportunidades falsos.
 // v7 (2026-05-27):
 //   FIX 1 — insertSnapshot: segundo check anti-dup por pala_id+source_id+día
 //     (independiente de la URL). Evita que slugs alternativos del mismo producto
@@ -281,6 +290,22 @@ async function recalculatePriceReference(palaIds) {
   const FUENTES_EXCLUIR_DE_REFERENCIA = new Set([2, 9]); // 2 = PadelZoom, 9 = Roma Sport
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
+  // FIX v8: cargar precio_pvp oficial del catálogo para sanity check posterior
+  const pvpPorPalaId = new Map();
+  const CHUNK_PVP = 500;
+  for (let i = 0; i < palaIds.length; i += CHUNK_PVP) {
+    const chunk = palaIds.slice(i, i + CHUNK_PVP);
+    const { data: pvpData } = await supabase
+      .from('palas')
+      .select('id, precio_pvp')
+      .in('id', chunk);
+    if (pvpData) {
+      for (const p of pvpData) {
+        if (p.precio_pvp > 0) pvpPorPalaId.set(p.id, p.precio_pvp);
+      }
+    }
+  }
+
   // ── v9: BULK — 1 query por lote en lugar de 4 queries por pala ──────────────
   // Antes: 555 palas × 4 queries = 2.220 requests → timeout en GH Actions
   // Ahora: 2 queries bulk + 1 upsert bulk + 1 update bulk → ~4 requests totales
@@ -333,10 +358,22 @@ async function recalculatePriceReference(palaIds) {
     const precios = unique.map(s => s.precio);
     if (precios.length === 0) continue;
 
-    const precio_referencia = calcularMediana(precios);
+    let precio_referencia = calcularMediana(precios);
     const precio_minimo = Math.min(...precios);
     const precio_maximo = Math.max(...precios);
     const fuentes_count = new Set(unique.map(s => s.source_id)).size;
+
+    // FIX v8: sanity check contra precio_pvp oficial del catálogo.
+    // Si la mediana difiere más de un 40% del pvp, hay un bad match en los snapshots.
+    // Fallback: usar precio_pvp como referencia y loguear para revisión.
+    const pvpOficial = pvpPorPalaId.get(palaId);
+    if (pvpOficial && precio_referencia) {
+      const ratio = precio_referencia / pvpOficial;
+      if (ratio > 1.4 || ratio < 0.5) {
+        console.warn(`[pipeline] ⚠️  precio_ref sospechoso para ${palaId}: mediana=${precio_referencia}€ vs pvp=${pvpOficial}€ (ratio=${ratio.toFixed(2)}) → usando pvp como fallback`);
+        precio_referencia = pvpOficial;
+      }
+    }
 
     refRows.push({ pala_id: palaId, precio_referencia, precio_minimo, precio_maximo, fuentes_count, updated_at: now });
     palaRows.push({ id: palaId, precio_referencia, precio_minimo_tiendas: precio_minimo, precios_updated_at: now });
@@ -452,8 +489,8 @@ async function runPipeline(sourceSlug) {
       if (match?.pala_id) {
         matches_encontrados++;
 
-        if (match.confidence < 0.92) {
-          console.log(`[pipeline] ⚠️  Match rechazado (conf ${match.confidence.toFixed(3)} < 0.92): "${p.title}" → ${match.pala_id}`);
+        if (match.confidence < 0.95) {
+          console.log(`[pipeline] ⚠️  Match rechazado (conf ${match.confidence.toFixed(3)} < 0.95): "${p.title}" → ${match.pala_id}`);
           await upsertCandidata(p.title, sourceSlug, p.precio, p.url_producto);
           candidatas_nuevas++;
         } else {
@@ -501,6 +538,8 @@ async function runPipeline(sourceSlug) {
   console.log(`   Candidatas:  ${candidatas_nuevas}`);
   console.log(`   Errores:     ${errores}`);
 }
+
+module.exports = { recalculatePriceReference };
 
 const slug = process.argv[2];
 if (!slug) {
