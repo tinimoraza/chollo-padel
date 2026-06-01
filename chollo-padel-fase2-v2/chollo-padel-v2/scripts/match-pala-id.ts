@@ -295,16 +295,23 @@ function tokenizar(texto: string): string[] {
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2') // preservar versiones X.Y como token único antes de quitar puntuación: 3.3 → v3p3
     .replace(/[^\w\s]/g, ' ')          // quitar toda puntuación
     .split(/\s+/)
-    .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t))  // preservar 'x' y dígitos simples (Siux Pro 3, Pro 4...)
+    .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t) || /^\d{3,4}$/.test(t))  // preservar 'x' y dígitos simples (Siux Pro 3, Pro 4...)
     .filter(t =>
       KEEP_WORDS.has(t) ||
-      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t)))
+      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t) || (/^\d{3,4}$/.test(t) && !/^20(1[89]|2[0-9])$/.test(t))))
     )  // preservar 01-09, dígitos simples, y versiones vXpY
 }
 
 function extraerAnio(texto: string): number | null {
   const m = texto.match(/\b(20(1[89]|2[0-9]))\b/)
-  return m ? parseInt(m[1]) : null
+  if (m) return parseInt(m[1])
+  // Año de 2 dígitos al final: "EVO 25" → 2025
+  const m2 = texto.match(/\s(2[0-9])(?:\s|$)/)
+  if (m2) {
+    const y = 2000 + parseInt(m2[1])
+    if (y >= 2020 && y <= 2030) return y
+  }
+  return null
 }
 
 // Jugadores conocidos — se eliminan del modelo del catálogo para tokenizar,

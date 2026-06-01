@@ -208,16 +208,24 @@ function tokenizar(texto) {
     .replace(/\b(\d+)\.(\d+)\b/g, 'v$1p$2')
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t))
+    .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t) || /^\d{3,4}$/.test(t))
     .filter(t =>
       KEEP_WORDS.has(t) ||
-      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t)))
+      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t) || (/^\d{3,4}$/.test(t) && !/^20(1[89]|2[0-9])$/.test(t))))
     );
 }
 
 function extraerAnio(texto) {
+  // Año de 4 dígitos: 2018-2029
   const m = texto.match(/\b(20(1[89]|2[0-9]))\b/);
-  return m ? parseInt(m[1]) : null;
+  if (m) return parseInt(m[1]);
+  // Año de 2 dígitos al final del título: "EVO 25", "BP10 26" → 2025, 2026
+  const m2 = texto.match(/\s(2[0-9])(?:\s|$)/);
+  if (m2) {
+    const y = 2000 + parseInt(m2[1]);
+    if (y >= 2020 && y <= 2030) return y;
+  }
+  return null;
 }
 
 function extraerVersion(texto) {
@@ -252,6 +260,12 @@ function extraerAnioDeUrl(url) {
   const m = url.match(/[_-](2[0-9])[_-]/);
   if (m) {
     const year = 2000 + parseInt(m[1]);
+    if (year >= 2018 && year <= 2030) return year;
+  }
+  // También al final de segmento: "/bp10-evo-25/" o "/bp10-evo-25"
+  const mEnd = url.match(/[_-](2[0-9])(?=[\/?#]|$)/);
+  if (mEnd) {
+    const year = 2000 + parseInt(mEnd[1]);
     if (year >= 2018 && year <= 2030) return year;
   }
   // Tambien puede aparecer el anyo completo en la URL
