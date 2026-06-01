@@ -83,6 +83,9 @@ const KEEP_WORDS = new Set([
   // Ej: Adidas Drive Black 2026 vs Drive Blue 2026 vs Drive Grey 2026
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  // Español (para preservar en tokenizado de catálogo)
+  'negro', 'rojo', 'azul', 'blanco', 'verde', 'naranja', 'rosa',
+  'amarillo', 'gris', 'dorado', 'plateado', 'morado', 'violeta', 'turquesa',
 ]);
 
 const TOKENS_DIFERENCIADORES = new Set([
@@ -110,6 +113,17 @@ const TOKENS_DIFERENCIADORES = new Set([
   // También mejora los casos Bullpadel: "Hack 03" no matchea "Hack 05" cuando la URL
   // no aclara la generación.
   '01', '02', '03', '04', '05', '06', '07', '08', '09',
+]);
+
+// Colores opcionales: presencia en el catálogo no bloquea el match si el título
+// no los menciona. Solo discriminan si el TÍTULO también tiene un color distinto.
+const TOKENS_COLOR = new Set([
+  // Inglés (ya en KEEP_WORDS/TOKENS_DIFERENCIADORES)
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  // Español (variantes de catálogo: Negro-Rojo, Azul-Verde, etc.)
+  'negro', 'rojo', 'azul', 'blanco', 'verde', 'naranja', 'rosa',
+  'amarillo', 'gris', 'dorado', 'plateado', 'morado', 'violeta', 'turquesa',
 ]);
 
 const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso)\b/gi;
@@ -433,11 +447,18 @@ async function fuzzyMatch(productTitle, productUrl) {
     scored = candidates
       .map(pala => {
         if (pala.tokens.length === 0) return null;
-        const missing = pala.tokens.filter(t => !tokensTitle.includes(t));
-        if (missing.length > 0) return null;
-        const difModelo = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t));
+        // Tokens no-color: deben estar TODOS en el título
+        const tokensReq = pala.tokens.filter(t => !TOKENS_COLOR.has(t));
+        if (tokensReq.some(t => !tokensTitle.includes(t))) return null;
+        // Colores: solo discriminan si el título tiene un color diferente
+        const colorsTitulo = tokensTitle.filter(t => TOKENS_COLOR.has(t));
+        const colorsCatalogo = pala.tokens.filter(t => TOKENS_COLOR.has(t));
+        if (colorsTitulo.length > 0 && colorsCatalogo.length > 0) {
+          if (!colorsTitulo.some(c => colorsCatalogo.includes(c))) return null;
+        }
+        const difModelo = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t) && !TOKENS_COLOR.has(t));
         if (!difModelo.every(t => difEnTitulo.has(t))) return null;
-        const difExtra = [...difEnTitulo].filter(d => !pala.tokens.includes(d));
+        const difExtra = [...difEnTitulo].filter(d => !pala.tokens.includes(d) && !TOKENS_COLOR.has(d));
         if (difExtra.length > 0) return null;
         return { pala, score: pala.tokens.length };
       })

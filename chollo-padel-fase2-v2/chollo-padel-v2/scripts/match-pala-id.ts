@@ -94,6 +94,9 @@ const KEEP_WORDS = new Set([
   // Ej: Vibora Yarara Pro White 2.0 vs otras variantes
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  // Español (variantes de catálogo: Negro-Rojo, Azul-Verde…)
+  'negro', 'rojo', 'azul', 'blanco', 'verde', 'naranja', 'rosa',
+  'amarillo', 'gris', 'dorado', 'plateado', 'morado', 'violeta', 'turquesa',
 ])
 
 // Tokens que diferencian variantes dentro de una misma familia.
@@ -139,8 +142,20 @@ const TOKENS_DIFERENCIADORES = new Set([
   // v16: Colores como diferenciadores
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  // Español (variantes de catálogo)
+  'negro', 'rojo', 'azul', 'blanco', 'verde', 'naranja', 'rosa',
+  'amarillo', 'gris', 'dorado', 'plateado', 'morado', 'violeta', 'turquesa',
 ])
 
+
+// Colores opcionales en matching: si están en el CATÁLOGO pero no en el título,
+// no bloquean el match. Solo discriminan si el título tiene un color diferente.
+const TOKENS_COLOR = new Set<string>([
+  'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
+  'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  'negro', 'rojo', 'azul', 'blanco', 'verde', 'naranja', 'rosa',
+  'amarillo', 'gris', 'dorado', 'plateado', 'morado', 'violeta', 'turquesa',
+])
 // Palabras que indican que el anuncio NO es una pala
 const EXCLUIR_ACCESORIOS = new Set([
   // Accesorios pádel
@@ -453,9 +468,16 @@ function matchearItem(
       // v11: para AT10 18K, ignorar año del título (vendedores ponen año actual aunque la pala sea 2023/2024)
       if (anioTitulo !== null && pala.año !== anioTitulo && !AT10_18K_ACTIVO) return null
       if (pala.tokens.length === 0) return null
-      const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
-      if (tokensMatch.length < pala.tokens.length) return null
-      const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
+      // Tokens no-color: deben estar TODOS en el título
+      const tokensReq = pala.tokens.filter(t => !TOKENS_COLOR.has(t))
+      if (tokensReq.some(t => !tokensTitle.includes(t))) return null
+      // Colores: solo discriminan si el título tiene un color diferente
+      const colorsTituloF1 = tokensTitle.filter(t => TOKENS_COLOR.has(t))
+      const colorsCatalogoF1 = pala.tokens.filter(t => TOKENS_COLOR.has(t))
+      if (colorsTituloF1.length > 0 && colorsCatalogoF1.length > 0) {
+        if (!colorsTituloF1.some(c => colorsCatalogoF1.includes(c))) return null
+      }
+      const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t) && !TOKENS_COLOR.has(t))
       if (!tokensDif.every(t => tokensTitle.includes(t))) return null
       return { pala, score: pala.tokens.length, partial: false }
     })
@@ -508,16 +530,24 @@ function matchearItem(
           if (numerosModPala.length > 0) return null
         }
 
-        const tokensMatch = pala.tokens.filter(t => tokensTitle.includes(t))
-        const ratio = tokensMatch.length / pala.tokens.length
-        if (ratio < threshold) return null
-        // Los diferenciadores del modelo SÍ deben estar en el título
-        const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t))
+        // Ratio basado en tokens no-color (para no penalizar por colores del catálogo)
+        const tokensReqF2 = pala.tokens.filter(t => !TOKENS_COLOR.has(t))
+        const tokensMatchF2 = pala.tokens.filter(t => tokensTitle.includes(t))
+        const ratioBase = tokensReqF2.length > 0 ? tokensReqF2.filter(t => tokensTitle.includes(t)).length / tokensReqF2.length : 1
+        if (ratioBase < threshold) return null
+        // Colores: solo discriminan si el título tiene un color diferente
+        const colorsTituloF2 = tokensTitle.filter(t => TOKENS_COLOR.has(t))
+        const colorsCatalogoF2 = pala.tokens.filter(t => TOKENS_COLOR.has(t))
+        if (colorsTituloF2.length > 0 && colorsCatalogoF2.length > 0) {
+          if (!colorsTituloF2.some(c => colorsCatalogoF2.includes(c))) return null
+        }
+        // Los diferenciadores no-color del modelo SÍ deben estar en el título
+        const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t) && !TOKENS_COLOR.has(t))
         if (!tokensDif.every(t => tokensTitle.includes(t))) return null
-        // Los diferenciadores del título NO pueden apuntar a otro modelo
-        const difExtra = Array.from(difEnTitulo).filter(d => !pala.tokens.includes(d))
+        // Los diferenciadores no-color del título NO pueden apuntar a otro modelo
+        const difExtra = Array.from(difEnTitulo).filter(d => !pala.tokens.includes(d) && !TOKENS_COLOR.has(d))
         if (difExtra.length > 0) return null
-        return { pala, score: tokensMatch.length, partial: true }
+        return { pala, score: tokensMatchF2.length, partial: true }
       })
       .filter(Boolean) as { pala: PalaCatalogo; score: number; partial: boolean }[]
 
