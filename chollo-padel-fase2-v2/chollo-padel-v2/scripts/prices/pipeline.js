@@ -269,18 +269,11 @@ async function verificarUrlsNuevas(palaIds, sourceId) {
 }
 
 // ─── Mediana ──────────────────────────────────────────────────────────────────
-// FIX v5: sustituye la media aritmética para precio_referencia.
-// Motivo: Roma Sport tiene precios outlier (ej. 280€ cuando el mercado está
-// a 75€). La media se dispara a 163€, generando referencias irreales.
-// La mediana es robusta frente a outliers y refleja el precio real de mercado.
+// Media aritmética de los precios — suma / número de tiendas
 function calcularMediana(precios) {
   if (precios.length === 0) return null;
-  const sorted = [...precios].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return parseFloat(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(2));
-  }
-  return parseFloat(sorted[mid].toFixed(2));
+  const suma = precios.reduce((a, b) => a + b, 0);
+  return parseFloat((suma / precios.length).toFixed(2));
 }
 
 async function recalculatePriceReference(palaIds) {
@@ -369,8 +362,10 @@ async function recalculatePriceReference(palaIds) {
     const pvpOficial = pvpPorPalaId.get(palaId);
     if (pvpOficial && precio_referencia) {
       const ratio = precio_referencia / pvpOficial;
-      if (ratio > 1.4 || ratio < 0.5) {
-        console.warn(`[pipeline] ⚠️  precio_ref sospechoso para ${palaId}: mediana=${precio_referencia}€ vs pvp=${pvpOficial}€ (ratio=${ratio.toFixed(2)}) → usando pvp como fallback`);
+      // Solo upper-bound: si la mediana es >1.4× el pvp hay un bad match arriba (ej: Lapi Edition)
+      // NO lower-bound: palas con descuento real del 50%+ no deben bloquearse (Siux ST4, etc.)
+      if (ratio > 1.4) {
+        console.warn(`[pipeline] ⚠️  precio_ref inflado para ${palaId}: mediana=${precio_referencia}€ vs pvp=${pvpOficial}€ (ratio=${ratio.toFixed(2)}) → usando pvp como fallback`);
         precio_referencia = pvpOficial;
       }
     }
