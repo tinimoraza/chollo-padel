@@ -209,6 +209,11 @@ const EXCLUIR_SCRAPER = [
   // Ropa europea (francés/italiano)
   'maillot', 'maglia', 'vêtements', 'chaussure', 'scarpe', 'pantaloni',
   'jersey ', 'shirt ', 't-shirt', 'tshirt', 'ensemble ', 'ensemble col',
+  // Italiano — ropa y calzado (Vinted IT trae mucho)
+  'felpa', 'tuta ', 'maglietta', 'leggings', 'leggins', 'costume',
+  'cappello', 'giacca', 'ciabatte', 'canotta', 'vestito', 'borsa ',
+  'scarpa', 'sneakers', 'stivali', 'sandali', 'calzini', 'pantaloncini',
+  'completo ', 'gonna ', 'maglione', 'pile ', 'giubbotto', 'piumino',
   // Coleccionismo / lujo / otros
   'gucci', 'oakley', 'ray-ban', 'porsche design',
   // Videojuegos / otros

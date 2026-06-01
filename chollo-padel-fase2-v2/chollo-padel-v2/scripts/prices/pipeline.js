@@ -541,13 +541,14 @@ async function runPipeline(sourceSlug) {
 
 module.exports = { recalculatePriceReference };
 
-const slug = process.argv[2];
-if (!slug) {
-  console.error('Uso: node scripts/prices/pipeline.js <store-slug>');
-  process.exit(1);
+if (require.main === module) {
+  const slug = process.argv[2];
+  if (!slug) {
+    console.error('Uso: node scripts/prices/pipeline.js <store-slug>');
+    process.exit(1);
+  }
+  runPipeline(slug).catch(err => {
+    console.error('[pipeline] Error fatal:', err);
+    process.exit(1);
+  });
 }
-
-runPipeline(slug).catch(err => {
-  console.error('[pipeline] Error fatal:', err);
-  process.exit(1);
-});
