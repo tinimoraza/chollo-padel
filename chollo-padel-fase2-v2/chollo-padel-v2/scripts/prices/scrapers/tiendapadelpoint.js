@@ -61,11 +61,16 @@ function extractProductsFromPage(page) {
       }
 
       if (isNaN(price) || price < 30) continue
-      // tiendapadelpoint muestra precios CON IVA en el listado — NO aplicar multiplicador
+      // tiendapadelpoint muestra precios SIN IVA en el listado → aplicar IVA del 21%
+      const IVA = 1.21
+      const priceConIVA    = Math.round(price * IVA * 100) / 100
+      const originalConIVA = (!isNaN(original) && original > price)
+        ? Math.round(original * IVA * 100) / 100
+        : NaN
       items.push({
         title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
+        price:           priceConIVA,
+        precio_original: !isNaN(originalConIVA) ? originalConIVA : null,
         url,
       })
     }
