@@ -10,7 +10,12 @@ async function extractProducts(page) {
     const els = Array.from(document.querySelectorAll('li.product, .type-product, article.product'))
     els.forEach(el => {
       const titleEl = el.querySelector('.woocommerce-loop-product__title, h2, h3, .product-title')
-      const priceEl = el.querySelector('.price ins .amount, .price .amount, .woocommerce-Price-amount')
+      // WooCommerce con oferta: <del>precio_original</del><ins>precio_oferta</ins>
+      // querySelector devuelve el primero en DOM → podría coger el del (tachado).
+      // Fix: preferir ins explícitamente; si no hay oferta, coger el último .amount.
+      const allAmounts = Array.from(el.querySelectorAll('.price .amount'))
+      const insEl   = el.querySelector('.price ins .amount')
+      const priceEl = insEl ?? allAmounts[allAmounts.length - 1] ?? null
       const origEl  = el.querySelector('.price del .amount')
       const linkEl  = el.querySelector('a')
 
