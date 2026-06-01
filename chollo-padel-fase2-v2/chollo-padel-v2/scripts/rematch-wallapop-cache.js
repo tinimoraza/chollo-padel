@@ -21,6 +21,7 @@
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 const { fuzzyMatch } = require('./prices/fuzzy-matcher');
+const { embeddingMatch } = require('./prices/embedding-matcher');
 const { recalculatePriceReference } = require('./prices/pipeline');
 
 const supabase = createClient(
@@ -96,9 +97,21 @@ async function main() {
 
     for (const item of batch) {
       try {
-        const result = await fuzzyMatch(item.title, item.url || null);
+        // ── 1. Fuzzy matcher (rápido, reglas) ──────────────────────────────
+        let result = await fuzzyMatch(item.title, item.url || null);
 
-        const teniaBuenMatch = item.pala_id && item.match_confidence >= MIN_CONFIDENCE;
+        // ── 2. Fallback a embedding matcher si fuzzy no resuelve ──────────
+        const fuzzyFailed = !result.pala_id || result.confidence < MIN_CONFIDENCE;
+        if (fuzzyFailed) {
+          try {
+            const embResult = await embeddingMatch(item.title);
+            if (embResult.pala_id && embResult.confidence >= MIN_CONFIDENCE) {
+              result = embResult;
+              stats.porEmbedding = (stats.porEmbedding || 0) + 1;
+            }
+          } catch (_) { /* falla silenciosamente */ }
+        }
+
         const nuevoMatchBueno = result.pala_id && result.confidence >= MIN_CONFIDENCE;
 
         if (nuevoMatchBueno) {
@@ -147,30 +160,43 @@ async function main() {
   console.log('\n');
 
   // ── 3. Escribir updates en BD ───────────────────────────────────────────────
+  // Usamos UPDATE (no upsert) para no violar el NOT NULL de otras columnas
   if (!DRY_RUN) {
     console.log(`💾 Escribiendo ${updates.length} updates en wallapop_cache...`);
-    const WRITE_BATCH = 100;
+
+    // Separar nullificaciones (pueden hacerse en lote por .in()) de asignaciones
+    const nullificaciones = updates.filter(u => u.pala_id === null);
+    const asignaciones    = updates.filter(u => u.pala_id !== null);
+
     let escritos = 0;
-    for (let i = 0; i < updates.length; i += WRITE_BATCH) {
-      const batch = updates.slice(i, i + WRITE_BATCH);
-      // Upsert en lote — wallapop_cache tiene external_id como PK
+
+    // Nullificaciones en lote de 500 IDs
+    const NULL_BATCH = 500;
+    for (let i = 0; i < nullificaciones.length; i += NULL_BATCH) {
+      const ids = nullificaciones.slice(i, i + NULL_BATCH).map(u => u.external_id);
       const { error } = await supabase
         .from('wallapop_cache')
-        .upsert(
-          batch.map(u => ({
-            external_id:      u.external_id,
-            pala_id:          u.pala_id,
-            match_confidence: u.match_confidence,
-          })),
-          { onConflict: 'external_id' }
-        );
-      if (error) {
-        console.error(`Error escribiendo batch ${i}-${i + WRITE_BATCH}:`, error.message);
-      } else {
-        escritos += batch.length;
-      }
+        .update({ pala_id: null, match_confidence: null })
+        .in('external_id', ids);
+      if (error) console.error(`Error nullificando batch:`, error.message);
+      else escritos += ids.length;
       process.stdout.write(`\r💾 Escritos ${escritos}/${updates.length}...`);
     }
+
+    // Asignaciones individuales (cada una tiene pala_id distinto)
+    const ASSIGN_BATCH = 50;
+    for (let i = 0; i < asignaciones.length; i += ASSIGN_BATCH) {
+      const batch = asignaciones.slice(i, i + ASSIGN_BATCH);
+      await Promise.all(batch.map(u =>
+        supabase
+          .from('wallapop_cache')
+          .update({ pala_id: u.pala_id, match_confidence: u.match_confidence })
+          .eq('external_id', u.external_id)
+      ));
+      escritos += batch.length;
+      process.stdout.write(`\r💾 Escritos ${escritos}/${updates.length}...`);
+    }
+
     console.log('\n');
   } else {
     console.log(`[DRY RUN] Se habrían escrito ${updates.length} updates`);
@@ -195,6 +221,7 @@ async function main() {
   console.log(`🔄 Mejorados:        ${stats.mejorados}    (match incorrecto → nuevo match correcto)`);
   console.log(`🚫 Nullificados:     ${stats.nullificados} (match dudoso → sin match, mejor así)`);
   console.log(`⚪ Sin match:        ${stats.sinMatch}     (no matcheaban y siguen sin matchear)`);
+  console.log(`🧠 Por embedding:    ${stats.porEmbedding || 0}    (rescatados por el modelo semántico)`);
   console.log(`❌ Errores:          ${stats.errores}`);
   console.log('════════════════════════════════════════\n');
 }
