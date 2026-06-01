@@ -1,5 +1,23 @@
 import type { Metadata } from 'next'
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SearchResultsPage',
+  '@id': 'https://huntpadel.com/buscar',
+  url: 'https://huntpadel.com/buscar',
+  name: 'Buscador de palas de pádel de segunda mano — HuntPadel',
+  description: 'Busca palas de pádel de segunda mano en Wallapop y Vinted al mismo tiempo. Bullpadel, Adidas, Nox, Head, Babolat y más de 29 marcas.',
+  inLanguage: 'es',
+  isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
+  breadcrumb: {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'HuntPadel', item: 'https://huntpadel.com' },
+      { '@type': 'ListItem', position: 2, name: 'Buscador', item: 'https://huntpadel.com/buscar' },
+    ],
+  },
+}
+
 export const metadata: Metadata = {
   title: 'Buscador de palas de pádel de segunda mano — HuntPadel',
   description: 'Busca palas de pádel de segunda mano en Wallapop y Vinted al mismo tiempo. Bullpadel, Adidas, Nox, Head, Babolat y más de 29 marcas. Filtra por precio y estado.',
@@ -22,5 +40,10 @@ export const metadata: Metadata = {
 }
 
 export default function BuscarLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {children}
+    </>
+  )
 }

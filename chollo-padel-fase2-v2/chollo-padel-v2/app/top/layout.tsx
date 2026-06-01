@@ -1,5 +1,23 @@
 import type { Metadata } from 'next'
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  '@id': 'https://huntpadel.com/top',
+  url: 'https://huntpadel.com/top',
+  name: 'Top oportunidades de pádel — HuntPadel',
+  description: 'Las mejores palas de pádel de segunda mano ahora mismo. Ranking actualizado cada hora con los mayores descuentos respecto al precio de tienda.',
+  inLanguage: 'es',
+  isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
+  breadcrumb: {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'HuntPadel', item: 'https://huntpadel.com' },
+      { '@type': 'ListItem', position: 2, name: 'Top oportunidades', item: 'https://huntpadel.com/top' },
+    ],
+  },
+}
+
 export const metadata: Metadata = {
   title: 'Top oportunidades de pádel — Las mejores palas de segunda mano | HuntPadel',
   description: 'Las 10 mejores palas de pádel de segunda mano ahora mismo. Ranking actualizado cada hora con los mayores descuentos respecto al precio de tienda.',
@@ -22,5 +40,10 @@ export const metadata: Metadata = {
 }
 
 export default function TopLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {children}
+    </>
+  )
 }
