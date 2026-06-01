@@ -1,0 +1,52 @@
+name: Embedding Rematch (diario)
+
+# Aplica el matcher semántico (embeddings) a los anuncios que el fuzzy matcher
+# no pudo resolver (no_match, ambiguous). Corre una vez al día para recuperar
+# matches que de otra forma se perderían.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC diario (hora de poco tráfico)
+  workflow_dispatch:       # también ejecutable manualmente
+
+jobs:
+  embedding-rematch:
+    name: Embedding rematch de items sin match
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: chollo-padel-fase2-v2/chollo-padel-v2/package-lock.json
+
+      - name: Cache modelo de embeddings
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: embedding-model-multilingual-minilm-l12-v2
+          restore-keys: embedding-model-
+
+      - name: Install dependencies
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+        run: npm ci
+
+      - name: Regenerar embeddings del catálogo
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/generate-catalog-embeddings.js
+
+      - name: Run embedding rematch
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/embedding-rematch-daily.js
