@@ -71,6 +71,8 @@ const EXCLUIR_SCRAPER = [
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
   'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
+  // Modelos viejos — nunca serán un chollo
+  '2018', '2019', '2020', '2021', '2022', '2023',
   // Coleccionismo / fútbol / otros deportes
   'mundial', 'euro 20', 'champions', 'match worn', 'player version',
   'original históri', 'original histori', 'camp nou',

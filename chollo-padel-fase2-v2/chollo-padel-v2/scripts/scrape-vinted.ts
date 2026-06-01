@@ -232,6 +232,8 @@ const EXCLUIR_SCRAPER = [
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
   'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
+  // Modelos viejos — nunca serán un chollo
+  '2018', '2019', '2020', '2021', '2022', '2023',
   // Ropa italiana (Vinted italiano)
   'hoodie', 'trackjacket', 'track jacket', 'trackpant', 'jogger', 'gilet',
   'berretto', 'cappello', 'felpa', 'tuta ', 'gonna', 'canottiera', 'giubbino',
