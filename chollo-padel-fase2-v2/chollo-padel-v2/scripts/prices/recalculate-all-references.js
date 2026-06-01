@@ -17,12 +17,8 @@ const supabase = createClient(
 
 function calcularMediana(precios) {
   if (precios.length === 0) return null;
-  const sorted = [...precios].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return parseFloat(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(2));
-  }
-  return parseFloat(sorted[mid].toFixed(2));
+  const suma = precios.reduce((a, b) => a + b, 0);
+  return parseFloat((suma / precios.length).toFixed(2));
 }
 
 async function run() {
