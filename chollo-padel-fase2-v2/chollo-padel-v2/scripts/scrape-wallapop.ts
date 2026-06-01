@@ -30,6 +30,7 @@ const KEYWORDS = [
   'pala starvie',
   'pala vibora padel',
   'pala dunlop padel',
+  'pala kuikma',
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel

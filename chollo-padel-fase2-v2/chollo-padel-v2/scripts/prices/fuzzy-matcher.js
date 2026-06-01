@@ -134,6 +134,7 @@ const MARCAS_CONOCIDAS = {
   'black crown': 'Black Crown',
   'varlion': 'Varlion',
   'joma': 'Joma',
+  'kuikma': 'Kuikma',
   'jhayber': 'Jhayber',
   'harlem': 'Harlem',
   'kombat': 'Kombat',
