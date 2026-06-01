@@ -221,6 +221,22 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'vibor-a':    'Vibora',
   'kombat':     'Kombat',
   'kaitt':      'Kaitt',
+  'alkemia':    'Alkemia',
+  'munich':     'Munich',
+  'puma':       'Puma',
+  'enebe':      'Enebe',
+  'lok':        'Lok',
+  'slazenger':  'Slazenger',
+  'hirostar':   'Hirostar',
+  'cartri':     'Cartri',
+  'cork':       'Cork',
+  'sane':       'Sane',
+  'endless':    'Endless',
+  'pallap':     'Pallap',
+  'tactical padel': 'Tactical Padel',
+  'racket project': 'Racket Project',
+  'rs padel':   'RS Padel',
+  'nzn':        'NZN',
   // v10: alias de modelo → marca (títulos sin nombre de marca explícito)
   'vertex':     'Bullpadel',  // "Vertex 05 2026" → Bullpadel
   'hack':       'Bullpadel',  // "Hack 04 Hybrid" → Bullpadel
