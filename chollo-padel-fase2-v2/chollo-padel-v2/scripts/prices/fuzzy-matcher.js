@@ -522,9 +522,11 @@ async function fuzzyMatch(productTitle, productUrl) {
         tokensWinner.every(t => c.tokens.includes(t)) &&
         c.tokens.every(t => tokensWinner.includes(t))
       );
-      confidence = modelosAmbiguos.length > 0 ? 0.88 : 0.95;
+      // 0.92 → sin año pero modelo bien identificado, solo ambigüedad de versión/año.
+      //        Se guarda en wallapop_cache y aparece en buscador, pero NO en top/chollos (umbral 0.95).
+      confidence = modelosAmbiguos.length > 0 ? 0.92 : 0.95;
       if (modelosAmbiguos.length > 0) {
-        console.log(`[fuzzy] ⚠️  Match ambiguo sin año: "${winner.modelo}" vs ${modelosAmbiguos.map(m => `"${m.modelo}"`).join(', ')} → conf=0.88`);
+        console.log(`[fuzzy] ⚠️  Match ambiguo sin año: "${winner.modelo}" vs ${modelosAmbiguos.map(m => `"${m.modelo}"`).join(', ')} → conf=0.92`);
       }
     }
 

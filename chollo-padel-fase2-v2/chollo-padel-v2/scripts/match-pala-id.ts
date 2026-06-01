@@ -364,10 +364,11 @@ interface CacheItem {
 // ─── Lógica central de matching (reutilizada por main y matchPalaIds) ─────────
 
 interface MatchResult {
-  external_id: string
-  pala_id:     string
-  titulo:      string
-  modelo:      string
+  external_id:  string
+  pala_id:      string
+  titulo:       string
+  modelo:       string
+  yearAmbiguous?: boolean  // true → buen match pero año incierto (múltiples versiones)
 }
 
 // Umbral de match parcial: % mínimo de tokens del modelo que deben estar en el título
@@ -544,7 +545,9 @@ function matchearItem(
 
   if (scored.length === 0) return 'noMatch'
 
-  // ── Guard: modelo demasiado genérico sin año en título ────────────────────
+  // ── Guard: modelo genérico sin año → asignar al más reciente con flag yearAmbiguous ──
+  // Antes retornaba 'ambiguous' (pala_id=null). Ahora asigna al año más reciente con
+  // match_method='fuzzy_year_ambiguous' para que aparezca en el buscador aunque no en top.
   if (scored.length === 1 && scored[0].pala.tokens.length <= 2 && anioTitulo === null) {
     const baseTokens = scored[0].pala.tokens
     const candidatas2 = palasPorMarca.get(marcaNorm!) ?? []
@@ -552,7 +555,12 @@ function matchearItem(
       p.id !== scored[0].pala.id &&
       baseTokens.every(t => p.tokens.includes(t))
     )
-    if (sibling.length > 0) return 'ambiguous'
+    if (sibling.length > 0) {
+      // Asignar al año más reciente entre todos los candidatos con esos tokens
+      const todos = [scored[0].pala, ...sibling]
+      const masReciente = todos.reduce((a, b) => (b.año > a.año ? b : a))
+      return { external_id: item.external_id, pala_id: masReciente.id, titulo: item.title, modelo: masReciente.modelo, yearAmbiguous: true }
+    }
   }
 
   // ── Desempate 1: fix HRD+→base, Team→base ─────────────────────────────────
@@ -758,10 +766,10 @@ export async function matchPalaIds(
     fromCache += PAGE_CACHE
   }
 
-  let matched = 0, ambiguous = 0, noMatch = 0
-  const updates:       { external_id: string; pala_id: string }[] = []
-  const noMatchIds:    string[] = []
-  const ambiguousIds:  string[] = []
+  let matched = 0, ambiguous = 0, noMatch = 0, yearAmbiguous = 0
+  const updates:            { external_id: string; pala_id: string; method: string }[] = []
+  const noMatchIds:         string[] = []
+  const ambiguousIds:       string[] = []
 
   for (const item of items) {
     const result = matchearItem(item, palasPorMarca)
@@ -775,8 +783,9 @@ export async function matchPalaIds(
       ambiguousIds.push(item.external_id)
       continue
     }
-    matched++
-    updates.push({ external_id: result.external_id, pala_id: result.pala_id })
+    if (result.yearAmbiguous) yearAmbiguous++
+    else matched++
+    updates.push({ external_id: result.external_id, pala_id: result.pala_id, method: result.yearAmbiguous ? 'fuzzy_year_ambiguous' : 'fuzzy_auto' })
   }
 
   const BATCH = 100
@@ -787,7 +796,7 @@ export async function matchPalaIds(
       for (const u of updates.slice(i, i + BATCH)) {
         await supabase
           .from('wallapop_cache')
-          .update({ pala_id: u.pala_id, match_method: 'fuzzy_auto' })
+          .update({ pala_id: u.pala_id, match_method: u.method })
           .eq('external_id', u.external_id)
       }
     }
@@ -812,7 +821,7 @@ export async function matchPalaIds(
   }
 
   if (verbose) {
-    console.log(`  ✅ Match pala_id: ${matched} asignados, ${ambiguous} ambiguos, ${noMatch} sin match`)
+    console.log(`  ✅ Match pala_id: ${matched} asignados, ${yearAmbiguous} año-ambiguos (buscador), ${ambiguous} ambiguos, ${noMatch} sin match`)
   }
 
   return { matched, ambiguous, noMatch }
