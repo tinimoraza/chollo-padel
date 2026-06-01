@@ -1103,46 +1103,4 @@ if (!process.env.NEXT_PHASE && !process.env.NEXT_RUNTIME) {
     console.error('❌ Error fatal:', err)
     process.exit(1)
   })
-}        }
-      } else {
-        console.log(`    ↔ (empate en desempates finales — mismos tokens y año)`)
-      }
-      console.log()
-    }
-  }
-
-  if (DRY_RUN) {
-    console.log(`🔍 DRY RUN — se aplicarían ${updates.length} actualizaciones.`)
-    return
-  }
-
-  // ── 4. Aplicar en batches ───────────────────────────────────────────
-  const BATCH_SIZE = 100
-  let applied = 0
-  for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-    for (const u of updates.slice(i, i + BATCH_SIZE)) {
-      const { error } = await supabase
-        .from('wallapop_cache')
-        .update({ pala_id: u.pala_id, match_method: u.yearAmbiguous ? 'fuzzy_year_ambiguous' : 'fuzzy_auto' })
-        .eq('external_id', u.external_id)
-      if (error) {
-        console.error(`❌ Error actualizando ${u.external_id}:`, error)
-      } else {
-        applied++
-      }
-    }
-  }
-
-  console.log(`\n✅ ${applied} actualizaciones aplicadas.`)
-}
-
-// Solo ejecutar main() cuando se lanza directamente
-if (!process.env.NEXT_PHASE && !process.env.NEXT_RUNTIME) {
-  main().catch(err => {
-    console.error('❌ Error fatal:', err)
-    process.exit(1)
-  })
-}
-
-  })
 }
