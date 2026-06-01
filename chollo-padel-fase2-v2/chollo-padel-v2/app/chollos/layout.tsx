@@ -6,7 +6,7 @@ const jsonLd = {
   '@id': 'https://huntpadel.com/chollos',
   url: 'https://huntpadel.com/chollos',
   name: 'Chollos de palas de pádel en tiendas — HuntPadel',
-  description: 'Palas de pádel con descuento en tiendas físicas y online. Detectamos bajadas de precio en tiempo real comparando con el precio de referencia del mercado.',
+  description: 'Palas de pádel con descuento en tiendas físicas y online.',
   inLanguage: 'es',
   isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
   breadcrumb: {

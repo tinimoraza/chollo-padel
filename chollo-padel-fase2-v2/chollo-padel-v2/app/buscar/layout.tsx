@@ -6,7 +6,7 @@ const jsonLd = {
   '@id': 'https://huntpadel.com/buscar',
   url: 'https://huntpadel.com/buscar',
   name: 'Buscador de palas de pádel de segunda mano — HuntPadel',
-  description: 'Busca palas de pádel de segunda mano en Wallapop y Vinted al mismo tiempo. Bullpadel, Adidas, Nox, Head, Babolat y más de 29 marcas.',
+  description: 'Busca palas de pádel de segunda mano en Wallapop y Vinted al mismo tiempo.',
   inLanguage: 'es',
   isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
   breadcrumb: {

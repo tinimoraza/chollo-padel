@@ -6,7 +6,7 @@ const jsonLd = {
   '@id': 'https://huntpadel.com/palas',
   url: 'https://huntpadel.com/palas',
   name: 'Catálogo de palas de pádel — Precios y comparativa | HuntPadel',
-  description: 'Catálogo completo de palas de pádel con precio de referencia de tienda. Compara modelos de Bullpadel, Adidas, Nox, Head, Babolat, Siux y más de 29 marcas.',
+  description: 'Catálogo completo de palas de pádel con precio de referencia de tienda.',
   inLanguage: 'es',
   isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
   breadcrumb: {

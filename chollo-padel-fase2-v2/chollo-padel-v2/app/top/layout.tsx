@@ -6,7 +6,7 @@ const jsonLd = {
   '@id': 'https://huntpadel.com/top',
   url: 'https://huntpadel.com/top',
   name: 'Top oportunidades de pádel — HuntPadel',
-  description: 'Las mejores palas de pádel de segunda mano ahora mismo. Ranking actualizado cada hora con los mayores descuentos respecto al precio de tienda.',
+  description: 'Las mejores palas de pádel de segunda mano ahora mismo.',
   inLanguage: 'es',
   isPartOf: { '@type': 'WebSite', '@id': 'https://huntpadel.com/#website' },
   breadcrumb: {
