@@ -58,6 +58,7 @@ function scoreAnio(title: string): number {
   return 0.65
 }
 
+
 function scoreRecencia(scrapedAt: string | null): number {
   if (!scrapedAt) return 0.85
   const dias = (Date.now() - new Date(scrapedAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -214,10 +215,11 @@ async function main() {
   console.log('📦 Leyendo wallapop_cache (solo anuncios con pala_id)...')
   const { data: items, error } = await supabase
     .from('wallapop_cache')
-    .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca, scraped_at')
+    .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca, scraped_at, match_confidence')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
     .not('pala_id', 'is', null)
+    .gte('match_confidence', 0.95)
 
   if (error || !items) {
     console.error('❌ Error leyendo wallapop_cache:', error)

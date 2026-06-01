@@ -102,6 +102,14 @@ const TOKENS_DIFERENCIADORES = new Set([
   // v4: Colores como diferenciadores
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
+  // v8: Números de generación 01-09 como diferenciadores.
+  // "Metalbone 09" no debe matchear "Metalbone 2026 Ale Galán" — el 09 en el título
+  // activa difExtra si la pala del catálogo no tiene "09" en sus tokens → falla el match.
+  // Si la pala "Metalbone 09" existe en catálogo con token "09" → match correcto.
+  // Si no existe → no_match (mejor que asignar al modelo incorrecto).
+  // También mejora los casos Bullpadel: "Hack 03" no matchea "Hack 05" cuando la URL
+  // no aclara la generación.
+  '01', '02', '03', '04', '05', '06', '07', '08', '09',
 ]);
 
 const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso)\b/gi;
