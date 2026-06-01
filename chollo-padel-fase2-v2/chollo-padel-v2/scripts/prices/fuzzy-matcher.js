@@ -185,6 +185,7 @@ function tokenizar(texto) {
     .replace(/pro\s*\+/g, 'proplus')
     .replace(/\bpro plus\b/g, 'proplus')
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2')
+    .replace(/(\d)w\b/g, '$1 woman')    // "04w" → "04 woman" (Bullpadel Vertex 04W)
     .replace(/\bw\b(?=\s|$)/g, 'woman')
     .replace(/\bproline\b/g, 'line')
     .replace(/\bpro\s+line\b/g, 'line')

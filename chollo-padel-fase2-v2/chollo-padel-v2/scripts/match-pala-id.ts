@@ -266,7 +266,8 @@ function tokenizar(texto: string): string[] {
     .replace(/pro\s*\+/g, 'proplus')   // normalizar "pro +" / "pro+" → proplus (Oxdog)
     .replace(/\bpro plus\b/g, 'proplus') // normalizar "pro plus" → proplus
     .replace(/\b(st|electra st)\s+(\d)\b/g, '$1$2') // normalizar "ST 2" → "st2", "Electra ST 2" → "electra st2"
-    .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina Bullpadel)
+    .replace(/(\d)w\b/g, '$1 woman')    // "04w" → "04 woman" (Bullpadel Vertex 04W, Hack 03W…)
+    .replace(/\bw\b(?=\s|$)/g, 'woman') // normalizar "W" → "woman" (versión femenina standalone)
     .replace(/\bproline\b/g, 'line') // normalizar "proline" → "line" (Bullpadel Flow Pro Line → Flow Line)
     .replace(/\bpro\s+line\b/g, 'line') // v11: "pro line" → "line" (mismo compuesto con espacio)
     .replace(/\btechnivap\b/g, 'technical') // normalizar "technivap" (typo común) → "technical"
@@ -1096,6 +1097,7 @@ async function main() {
 
   console.log(`\n✅ ${applied} actualizaciones aplicadas.`)
 }
+
 
 // Solo ejecutar main() cuando se lanza directamente (no cuando Next.js importa el módulo durante el build)
 if (!process.env.NEXT_PHASE && !process.env.NEXT_RUNTIME) {
