@@ -232,6 +232,22 @@ const EXCLUIR_SCRAPER = [
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
   'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
+  // Ropa italiana (Vinted italiano)
+  'hoodie', 'trackjacket', 'track jacket', 'trackpant', 'jogger', 'gilet',
+  'berretto', 'cappello', 'felpa', 'tuta ', 'gonna', 'canottiera', 'giubbino',
+  'reggiseno', 'borsone', 'capispalla', 'completino', 'pantaloncini',
+  'taglia xs', 'taglia s', 'taglia m', 'taglia l', 'taglia xl',
+  // Ropa francesa
+  'veste ', 'chemise', 'legging', 'vêtement', 'sweat ', 'pointure', 'taille ',
+  // Moda vintage/streetwear
+  'hoodie', 'y2k', 'vintage black', 'vintage white', 'tracksuit', 'windbreaker',
+  // Zapatillas concretas (modelos non-padel)
+  'anthony edwards', 'hoops 3', 'hoops 2', 'supernova', 'solar drive', 'solar glide',
+  'copa pure', 'prophere', 'forum xlg', 'forum low', 'bad bunny', 'ultraboost',
+  'nmd_', 'yeezy', 'stan smith', 'gazelle', 'samba ', 'adios pro', 'adizero',
+  'air max', 'air force', 'dunk ', 'jordan ', 'react ', 'pegasus',
+  // Baloncesto, fútbol
+  'basketball', 'baloncesto', 'football boot', 'crampons', 'tacos futbol','''
   // Coleccionismo / fútbol / otros deportes
   'mundial', 'euro 20', 'champions', 'match worn', 'player version',
   'original históri', 'original histori', 'camp nou',
@@ -533,7 +549,7 @@ async function main() {
     const PALABRAS_PADEL = [
       'padel', 'pádel', 'pala', 'raqueta', 'racchetta', 'raquette', 'racket',
       'metalbone', 'adipower', 'vertex', 'hack', 'viper', 'metalbone',
-      'at10', 'ml10', 'zephyr', 'extreme', 'prestige', 'speed', 'radical',
+      'at10', 'ml10', 'zephyr', 'delta', 'flash', 'alpha',
       'bullpadel', 'nox', 'starvie', 'star vie', 'vibora', 'siux', 'babolat',
       'yarara', 'electra', 'fenix', 'neuron', 'indiga', 'cosmos', 'count',
     ]
