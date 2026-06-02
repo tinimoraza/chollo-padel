@@ -252,7 +252,7 @@ const EXCLUIR_SCRAPER = [
   'nmd_', 'yeezy', 'stan smith', 'gazelle', 'samba ', 'adios pro', 'adizero',
   'air max', 'air force', 'dunk ', 'jordan ', 'react ', 'pegasus',
   // Baloncesto, fútbol
-  'basketball', 'baloncesto', 'football boot', 'crampons', 'tacos futbol','''
+  'basketball', 'baloncesto', 'football boot', 'crampons', 'tacos futbol',
   // Coleccionismo / fútbol / otros deportes
   'mundial', 'euro 20', 'champions', 'match worn', 'player version',
   'original históri', 'original histori', 'camp nou',
