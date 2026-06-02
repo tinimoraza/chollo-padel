@@ -372,9 +372,10 @@ async function scrapeCategory(
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const params = new URLSearchParams({
-      per_page: String(PER_PAGE),
-      page:     String(page),
-      order:    'newest_first',
+      search_text: 'pala padel',  // necesario para activar filtro de catalog en la API
+      per_page:    String(PER_PAGE),
+      page:        String(page),
+      order:       'newest_first',
     })
     const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4597`
 
