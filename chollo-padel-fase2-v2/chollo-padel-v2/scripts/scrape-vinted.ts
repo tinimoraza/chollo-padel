@@ -359,7 +359,7 @@ const PALABRAS_PALA = [
 ]
 
 const PER_PAGE            = 96  // máximo estable que acepta la API de Vinted
-const MAX_PAGES_PER_KW    = 15  // límite de seguridad por keyword (15 × 96 = 1440 items)
+const MAX_PAGES_PER_KW    = 10  // Vinted corta en ~pág 10-11 con HTTP 400
 const GAP_CATCHUP_MIN     = 30  // minutos sin scraping → no limitamos páginas por fecha
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
@@ -461,6 +461,8 @@ async function scrapeKeyword(
     try {
       const res = await fetch(url, { headers: vintedHeaders(auth) })
       if (!res.ok) {
+        // 400/429 = límite de paginación de Vinted → fin de resultados, no error
+        if (res.status === 400 || res.status === 429) break
         console.error(`  ❌ "${keyword}" pág ${page}: HTTP ${res.status}`)
         break
       }
