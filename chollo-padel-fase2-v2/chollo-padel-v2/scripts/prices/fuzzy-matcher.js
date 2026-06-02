@@ -193,6 +193,7 @@ function tokenizar(texto) {
     .replace(/hrd\+/g, 'hrd')
     .replace(/\bhard\b/g, 'hrd')
     .replace(/\bsoft\b/g, 'sft')
+    .replace(/\bhyb\b/g, 'hybrid')    // Tennis-Point abrevia Hybrid → Hyb
     .replace(/\bctr\b/g, 'ctrl')
     .replace(/\bcontrol\b/g, 'ctrl')
     .replace(/\bpwr\b/g, 'power')    // Bullpadel: "Indiga PWR" → "Indiga Power" (evita que "power" en título no matchee "pwr" en catálogo)
