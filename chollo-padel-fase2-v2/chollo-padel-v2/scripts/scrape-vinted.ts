@@ -538,25 +538,13 @@ async function main() {
   } else {
     // ── Deduplicar y filtrar basura ────────────────────────────────────────
     const seen = new Set<string>()
-    // Filtro positivo: el título debe contener al menos una señal de que es una pala de pádel.
-    // Vinted ignora catalog[]=4597 cuando hay search_text, por lo que devuelve ropa,
-    // zapatillas y otros artículos de la misma marca. Este check elimina esa basura antes de
-    // guardar en BD — sin esperar al fuzzy matcher.
-    const PALABRAS_PADEL = [
-      'padel', 'pádel', 'pala', 'raqueta', 'racchetta', 'raquette', 'racket',
-      'metalbone', 'adipower', 'vertex', 'hack', 'viper', 'metalbone',
-      'at10', 'ml10', 'zephyr', 'delta', 'flash', 'alpha',
-      'bullpadel', 'nox', 'starvie', 'star vie', 'vibora', 'siux', 'babolat',
-      'yarara', 'electra', 'fenix', 'neuron', 'indiga', 'cosmos', 'count',
-    ]
-
+    // Solo filtro negativo (EXCLUIR_SCRAPER) — el catalog[]=4597 sin search_text
+    // ya garantiza que todos los items son de la categoría "Palas de pádel".
     const unique = allItems.filter(item => {
       if (!item.external_id || seen.has(item.external_id)) return false
       seen.add(item.external_id)
       const tl = (item.title ?? '').toLowerCase()
       if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
-      // Filtro positivo: debe contener alguna señal de pádel
-      if (!PALABRAS_PADEL.some(w => tl.includes(w))) return false
       return true
     })
 
