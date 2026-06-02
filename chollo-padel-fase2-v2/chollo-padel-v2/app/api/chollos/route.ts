@@ -60,6 +60,7 @@ const URL_MODEL_COLISIONES: [string, string][] = [
   ['match-light-3-2',   'match light 2026'], // version 3.2 (modelo antiguo) != Match Light 2026
   ['cross-it-light',    'cross it light 2026'], // Cross It Light generico (sin año/jugador) != Cross IT Light 2026 Martita Ortega
   ['x-one-c6',          'x-one 2025'],          // Street Padel URL del C6 no es el X-One 2025
+  ['lapi-edition',      'tournament pro iconic'], // Lapi Edition es variante jugadora distinta al Tournament Pro Iconic estandar
 ]
 
 function esDescartadoPorGuardias(
@@ -234,12 +235,18 @@ export async function GET() {
     const ref = priceRef.precio_referencia
     if (!ref || ref < MIN_REFERENCIA) continue
 
-    // GUARDIA PRECIO MINIMO: si el precio actual esta mas de un 25% por debajo del precio
-    // minimo historico de la pala, casi seguro es un producto distinto mal matcheado.
+    // GUARDIA PRECIO MINIMO: si el precio actual esta muy por debajo del precio minimo
+    // historico, casi seguro es un producto distinto mal matcheado.
     // Ej: Cross It Light 2026 (min 248€) matcheada a una URL que vende la version 2024 a 170€.
-    // Ratio: 170/248 = 0.69, por debajo de 0.75 → falso chollo.
-    if (priceRef.precio_minimo > 0 && snap.precio / priceRef.precio_minimo < 0.75) {
-      console.log(`[chollos:skip] precio ${snap.precio}€ < 75% de minimo ${priceRef.precio_minimo}€ → probable bad match | ${pala.modelo}`)
+    //
+    // Umbral adaptativo segun fuentes_count:
+    //   - fuentes_count >= 3: historial fiable → umbral estricto 0.75
+    //   - fuentes_count == 2: historial limitado → umbral relajado 0.65
+    //     (evita falsos negativos en palas nuevas cuyo unico minimo historico ES el PVP,
+    //      como Joma Blast/Hyper Pro 2026 que debutan en oferta a -33%)
+    const umbralMinimo = priceRef.fuentes_count >= 3 ? 0.75 : 0.65
+    if (priceRef.precio_minimo > 0 && snap.precio / priceRef.precio_minimo < umbralMinimo) {
+      console.log(`[chollos:skip] precio ${snap.precio}€ < ${umbralMinimo*100}% de minimo ${priceRef.precio_minimo}€ (fuentes:${priceRef.fuentes_count}) → probable bad match | ${pala.modelo}`)
       continue
     }
 
