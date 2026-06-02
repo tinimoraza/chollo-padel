@@ -89,6 +89,12 @@ const KEEP_WORDS = new Set([
   'woman',   // Bullpadel versión femenina (W normalizado → woman)
   'sft',     // Joma Blast Pro SFT vs HRD
   'c6',      // Nox X-One C6 vs X-One 2025
+  // Nombres de modelo (para que tokenizar no los descarte)
+  'trilogy', 'triton', 'metheora', 'raptor', 'basalto', 'drax', 'kenta', 'aquila', 'brava',
+  'fenix', 'diablo', 'gea', 'spyder', 'yarara', 'mamba', 'titan',
+  'axion', 'conqueror', 'canyon', 'explorer',
+  'piton', 'patron', 'gladius',
+  'summum',
   // v16: Colores — diferencian variantes de una misma familia
   // Ej: Adidas Drive Black 2026 vs Drive Blue 2026 vs Drive Grey 2026
   // Ej: Vibora Yarara Pro White 2.0 vs otras variantes
@@ -139,6 +145,34 @@ const TOKENS_DIFERENCIADORES = new Set([
   'advance',    // Bullpadel Vertex Advance vs Vertex 04/05
   'jr',         // Bullpadel Hack JR (Junior) vs Hack 04/03
   'c6',         // Nox X-One C6 vs X-One 2025
+  // Nombres de modelo que deben actuar como diferenciadores fuertes
+  // Si el título dice "Trilogy" y el catálogo no tiene "Trilogy" → no_match
+  'trilogy',    // Siux Trilogy vs Gea/Electra/Pegasus
+  'triton',     // StarVie Triton vs Raptor/Drax/Metheora
+  'metheora',   // StarVie Metheora vs Triton/Raptor
+  'raptor',     // StarVie Raptor vs Triton/Drax
+  'basalto',    // StarVie Basalto
+  'drax',       // StarVie Drax vs Kenta
+  'kenta',      // StarVie Kenta vs Drax
+  'aquila',     // StarVie Aquila
+  'brava',      // StarVie Brava
+  'fenix',      // Siux Fenix vs Diablo/Electra
+  'diablo',     // Siux Diablo vs Fenix
+  'gea',        // Siux Gea vs Trilogy/Diablo
+  'spyder',     // Siux Spyder
+  'yarara',     // Vibora Yarara vs Black Mamba
+  'mamba',      // Vibora Black Mamba
+  'titan',      // Vibora Titan vs Yarara
+  'axion',      // Drop Shot Axion vs Explorer/Canyon
+  'conqueror',  // Drop Shot Conqueror
+  'canyon',     // Drop Shot Canyon
+  'explorer',   // Drop Shot Explorer
+  'piton',      // Black Crown Piton vs Patron/Gladius
+  'patron',     // Black Crown Patron vs Piton
+  'gladius',    // Black Crown Gladius
+  'delta',      // Head Delta (modelo antiguo, NO es Speed Pro ni Zephyr)
+  'alpha',      // Head Alpha vs Delta/Zephyr
+  'summum',     // Varlion Summum vs LF/Avant
   // v16: Colores como diferenciadores
   'black', 'blue', 'grey', 'white', 'red', 'green', 'orange', 'pink',
   'yellow', 'purple', 'gold', 'silver', 'navy', 'lime',
@@ -486,6 +520,9 @@ function matchearItem(
       }
       const tokensDif = pala.tokens.filter(t => TOKENS_DIFERENCIADORES.has(t) && !TOKENS_COLOR.has(t))
       if (!tokensDif.every(t => tokensTitle.includes(t))) return null
+      // FASE 1: también rechazar si el título tiene diferenciadores que el modelo no tiene
+      const difExtra1 = Array.from(difEnTitulo).filter(d => !pala.tokens.includes(d) && !TOKENS_COLOR.has(d))
+      if (difExtra1.length > 0) return null
       return { pala, score: pala.tokens.length, partial: false }
     })
     .filter(Boolean) as { pala: PalaCatalogo; score: number; partial: boolean }[]
