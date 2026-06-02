@@ -252,6 +252,14 @@ const EXCLUIR_SCRAPER = [
   // Lotes y conjuntos (precio no comparable)
   'lote palas', 'lote pádel', 'conjunto padel', 'set padel',
   '2 palas', '2 raquetas', '3 palas', '4 palas',
+  '3 raquetes', 'lot 3', 'lote 3',
+  // Frontenis / otros derivados
+  'frontenis', 'raquetero', 'porta raqueta',
+  // Beach tennis (se cuela mucho en Vinted)
+  'beach tennis',
+  // Ropa de pádel (marcas que también hacen ropa)
+  'falda ', 'skort', 'longsleeve', 'salopette', 'saia ',
+  'vestido', 'conjunto pádel', 'conjunto padel',
   // Ropa y calzado
   'camiseta', 'camisetas', ' talla ', 'talla s', 'talla m', 'talla l', 'talla xl',
   'talla xs', 'zapatilla', 'zapatillas', 'botas ', 'botines', 'calcetines',
@@ -342,6 +350,13 @@ const CONDITION_MAP_REVERSE: Record<string, string> = {
   'Bueno':               'good',
   'Satisfactorio':       'fair',
 }
+
+// Filtro positivo: al menos una de estas palabras debe estar en el título.
+// Evita ropa, zapatillas, raquetas de tenis y otros items que pasan el catalog[]=4597.
+const PALABRAS_PALA = [
+  'pala', 'padel', 'pádel', 'racchetta padel', 'raquette padel',
+  'racket padel', 'raqueta padel', 'raqueta de padel', 'raqueta de pádel',
+]
 
 const PER_PAGE            = 96  // máximo estable que acepta la API de Vinted
 const MAX_PAGES_PER_KW    = 15  // límite de seguridad por keyword (15 × 96 = 1440 items)
@@ -464,8 +479,15 @@ async function scrapeKeyword(
       if (idsEnBD.has(externalId)) { foundKnown = true; break }
 
       const tl = (item.title ?? '').toLowerCase()
+
+      // Filtro negativo
       if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) continue
       if (parseFloat(item.price?.amount ?? '0') < 15) continue
+
+      // Filtro positivo: el título debe contener al menos un término de pala de pádel.
+      // Necesario porque catalog[]=4597 en Vinted es categoría amplia (ropa, calzado, accesorios)
+      // y la búsqueda por keyword trae resultados de texto sin restricción estricta de subcategoría.
+      if (!PALABRAS_PALA.some(w => tl.includes(w))) continue
 
       result.push(mapItem(item, keyword))
     }
