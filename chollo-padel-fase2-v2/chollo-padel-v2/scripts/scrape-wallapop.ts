@@ -35,6 +35,13 @@ const KEYWORDS = [
   'kombat galeras',
   'kombat krakatoa',
   'pala kombat padel',
+  // Marcas con cobertura insuficiente
+  'pala tecnifibre',
+  'pala joma padel',
+  'pala varlion',
+  'pala black crown',
+  'pala royal padel',
+  'pala oxdog',
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel

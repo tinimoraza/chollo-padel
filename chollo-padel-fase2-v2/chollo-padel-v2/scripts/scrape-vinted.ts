@@ -5,15 +5,18 @@
  * Lo ejecuta GitHub Actions cada hora.
  * Guarda los resultados en Supabase tabla wallapop_cache con platform='vinted'.
  *
- * v3 (2026-05-24):
- *  - Keywords Star Vie: añadidas 'star vie X' (con espacio) para todos los modelos
- *    + starvie drax/kenta/astrum/titania/aquila/brava/exodus/black titan
- *  - Keywords Joma: añadidas variantes específicas HRD/SFT/Iconic 2026
+ * v4 (2026-06-02):
+ *  - REDISEÑO: en vez de iterar por keywords, se pagina la categoría
+ *    completa catalog[]=4597 (Palas de pádel) sin search_text.
+ *    Así se captura TODO el mercado de segunda mano sin depender de
+ *    una lista de keywords que siempre estará incompleta.
+ *    El match a palas del catálogo se hace igual con matchPalaIds.
+ *  - MAX_PAGES subido a 50 (~4800 items por run) para cubrir toda la categoría.
+ *    El sistema incremental (para al encontrar IDs conocidos) evita procesar
+ *    items que ya están en BD.
  *
- * v2 (2026-05-24):
- *  - Paginación incremental: carga IDs ya en BD antes de scrapear.
- *    Por cada keyword pagina hasta encontrar un ID conocido → para.
- *    Primera ejecución trae todo. Siguientes solo lo nuevo.
+ * v3 (2026-05-24): keywords por marca/modelo
+ * v2 (2026-05-24): paginación incremental
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/scrape-vinted.ts
@@ -279,6 +282,21 @@ const EXCLUIR_SCRAPER = [
   'jeux video', 'playstation', 'xbox', 'nintendo',
   // Golf específico
   'série club', 'serie club', 'ping ', 'titleist', 'callaway',
+  // Zapatillas Adidas (se cuelan por keyword adidas/joma)
+  'adidas campus', 'adidas spezial', 'adidas terrex', 'adidas samba',
+  'adidas superstar', 'adidas forum', 'adidas stan smith', 'adidas gazelle',
+  'adidas nmd', 'adidas zx', 'adidas yeezy', 'adidas solar',
+  'adidas prophere', 'adidas equipment',
+  // Zapatillas/ropa Joma
+  'joma tennis', 'joma ace', 'joma open court', 'joma running',
+  // Tenis (modelos específicos que se cuelan)
+  'ae 1', 'ae1 ', 'ae 2', 'ae2 ', 'anthony edwards',
+  // Herramientas / electrónica / otros
+  'bosch', 'makita', 'dewalt', 'pc gaming', 'ordenador', 'monitor',
+  // Equipaciones fútbol/basket
+  'kids set', 'home set', 'away set', 'third set',
+  // Otros coleccionismo
+  'neos grandioso', 'levi\'s', 'levis ',
 ]
 
 // Vinted devuelve el ID numérico de condición en item.status_id (o item.status como número).
@@ -299,8 +317,8 @@ const CONDITION_MAP_REVERSE: Record<string, string> = {
   'Satisfactorio':       'fair',
 }
 
-const PER_PAGE = 96  // máximo estable que acepta la API de Vinted
-const MAX_PAGES = 20 // techo de seguridad: nunca más de 20 páginas por keyword (~1920 items)
+const PER_PAGE = 96   // máximo estable que acepta la API de Vinted
+const MAX_PAGES = 50  // 50 págs × 96 items = 4800 items por run (cubre toda la categoría)
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -342,87 +360,59 @@ async function getVintedToken(): Promise<{ cookie: string; token: string } | nul
   }
 }
 
-// ── Búsqueda de una página ───────────────────────────────────────────────────
+// ── Scrape de la categoría completa catalog[]=4597 (Palas de pádel) ──────────
+// No usa search_text — coge TODO lo que Vinted tiene en esa categoría.
+// Para cuando encuentra un ID ya conocido en BD (orden newest_first).
 
-async function scrapeKeywordPage(
-  keyword: string,
-  auth: { cookie: string; token: string },
-  page: number
-): Promise<any[]> {
-  const params = new URLSearchParams({
-    search_text: keyword,
-    per_page:    String(PER_PAGE),
-    page:        String(page),
-    order:       'newest_first',
-
-  })
-
-  try {
-    const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4597`  // 4597 = categoría pádel (palas)
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept':          'application/json, text/plain, */*',
-        'Accept-Language': 'es-ES,es;q=0.9',
-        'Referer':         'https://www.vinted.es/',
-        'Cookie':          auth.cookie,
-        'Authorization':   `Bearer ${auth.token}`,
-      },
-    })
-
-    if (!res.ok) {
-      console.error(`  ❌ HTTP ${res.status} para "${keyword}" pág ${page}`)
-      return []
-    }
-
-    const data = await res.json()
-    return data.items ?? []
-  } catch (err) {
-    console.error(`  ❌ Error en "${keyword}" pág ${page}:`, err)
-    return []
-  }
-}
-
-// ── Búsqueda paginada con parada incremental ─────────────────────────────────
-// Pagina hasta que encuentra un ID ya conocido en BD (idsEnBD) o no hay más resultados.
-
-async function scrapeKeyword(
-  keyword: string,
+async function scrapeCategory(
   auth: { cookie: string; token: string },
   idsEnBD: Set<string>
 ): Promise<any[]> {
-  // Con keywords por familia (ej: 'bullpadel hack'), Vinted ya filtra por relevancia.
-  // No re-filtramos por título — un anuncio "Hack 04 2026" sin repetir "bullpadel" es válido.
-  const brandWords: string[] = []
-
   const result: any[] = []
-  let totalPaginas = 0
 
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const rawItems = await scrapeKeywordPage(keyword, auth, page)
+    const params = new URLSearchParams({
+      per_page: String(PER_PAGE),
+      page:     String(page),
+      order:    'newest_first',
+    })
+    const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4597`
 
-    if (rawItems.length === 0) {
-      // No hay más resultados
+    let rawItems: any[] = []
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept':          'application/json, text/plain, */*',
+          'Accept-Language': 'es-ES,es;q=0.9',
+          'Referer':         'https://www.vinted.es/',
+          'Cookie':          auth.cookie,
+          'Authorization':   `Bearer ${auth.token}`,
+        },
+      })
+      if (!res.ok) {
+        console.error(`  ❌ HTTP ${res.status} en página ${page}`)
+        break
+      }
+      const data = await res.json()
+      rawItems = data.items ?? []
+    } catch (err) {
+      console.error(`  ❌ Error en página ${page}:`, err)
       break
     }
 
-    totalPaginas = page
-    let encontradoConocido = false
+    if (rawItems.length === 0) break
 
+    let encontradoConocido = false
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
-
-      // Si encontramos un ID que ya está en BD, todos los siguientes también lo estarán
-      // (orden newest_first) — paramos esta keyword
       if (idsEnBD.has(externalId)) {
         encontradoConocido = true
         break
       }
 
-      const titleLower = (item.title ?? '').toLowerCase()
-
-      const img = item.photo?.url ?? item.photos?.[0]?.url ?? null
-      const ts  = item.photo?.high_resolution?.timestamp
+      const img  = item.photo?.url ?? item.photos?.[0]?.url ?? null
+      const ts   = item.photo?.high_resolution?.timestamp
       const date = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
       const price = parseFloat(item.price?.amount ?? '0')
       const conditionId = String(item.status_id ?? item.status ?? '')
@@ -438,25 +428,28 @@ async function scrapeKeyword(
         url:         item.url ?? `https://www.vinted.es/items/${item.id}`,
         city:        'Europa',
         date,
-        keyword,
+        keyword:     'categoria:palas-padel',
         platform:    'vinted',
-        marca:       detectarMarca(item.title ?? '', keyword),
+        marca:       detectarMarca(item.title ?? '', ''),
       })
     }
 
+    process.stdout.write(`\r  Página ${page}/${MAX_PAGES} — ${result.length} items nuevos`)
+
     if (encontradoConocido) {
-      console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s) — parado al encontrar ID conocido`)
-      return result
+      console.log(`\n  ✅ Parado en pág ${page} al encontrar ID conocido`)
+      break
     }
 
-    // Si la página vino incompleta, es la última
-    if (rawItems.length < PER_PAGE) break
+    if (rawItems.length < PER_PAGE) {
+      console.log(`\n  ✅ Categoría completa en ${page} páginas`)
+      break
+    }
 
-    // Pausa entre páginas para no martillear la API
-    await sleep(800)
+    await sleep(600)
   }
 
-  console.log(`  ✅ "${keyword}": ${result.length} nuevos en ${totalPaginas} pág(s)`)
+  console.log()
   return result
 }
 
@@ -533,17 +526,11 @@ async function main() {
   const idsEnBD = new Set<string>((bdRows ?? []).map(r => r.external_id))
   console.log(`✅ ${idsEnBD.size} IDs de Vinted ya en BD\n`)
 
-  // ── Scraping paginado por keyword ────────────────────────────────────────
-  const allItems: any[] = []
+  // ── Scraping de la categoría completa ────────────────────────────────────
+  console.log('🔍 Scrapeando categoría completa: Palas de Pádel (catalog[]=4597)...')
+  const allItems = await scrapeCategory(auth, idsEnBD)
 
-  for (const keyword of KEYWORDS) {
-    console.log(`🔍 Buscando: "${keyword}"`)
-    const items = await scrapeKeyword(keyword, auth, idsEnBD)
-    allItems.push(...items)
-    await sleep(1500) // pausa entre keywords
-  }
-
-  console.log(`\n📊 Total items scrapeados: ${allItems.length}`)
+  console.log(`📊 Total items nuevos scrapeados: ${allItems.length}`)
 
   if (allItems.length === 0) {
     console.log('⚠️  Sin resultados nuevos — BD ya estaba al día.')
