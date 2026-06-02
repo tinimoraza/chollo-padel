@@ -494,207 +494,56 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
-  // ── Invalidar search_cache al INICIO (no al final, por si el job muere por timeout) ──
-  const { error: cacheErrorInicio } = await supabase
-    .from('search_cache')
-    .delete()
-    .neq('cache_key', '')
-  if (cacheErrorInicio) console.error('⚠️  Error invalidando search_cache:', cacheErrorInicio.message)
-  else console.log('🗑️  search_cache invalidada')
+  // ── Invalidar search_cache ────────────────────────────────────────────────
+  await supabase.from('search_cache').delete().neq('cache_key', '')
+  console.log('🗑️  search_cache invalidada')
 
   console.log('🔑 Obteniendo token de Vinted...')
   const auth = await getVintedToken()
-  if (!auth) {
-    console.error('💥 No se pudo obtener token. Abortando.')
-    process.exit(1)
-  }
+  if (!auth) { console.error('💥 No se pudo obtener token. Abortando.'); process.exit(1) }
   console.log('✅ Token obtenido\n')
 
-  // ── Cargar IDs ya en BD ANTES de scrapear ───────────────────────────────
-  // Esto permite parar la paginación en cuanto encontramos anuncios conocidos.
-  console.log('📋 Cargando IDs de Vinted ya en BD...')
-  const { data: bdRows, error: bdError } = await supabase
-    .from('wallapop_cache')
-    .select('external_id')
-    .eq('platform', 'vinted')
-
-  if (bdError) {
-    console.error('⚠️  Error cargando IDs de BD:', bdError)
-    // No abortamos — en el peor caso scrapeamos todo como si fuera la primera vez
-  }
-
-  const idsEnBD = new Set<string>((bdRows ?? []).map(r => r.external_id))
-  console.log(`✅ ${idsEnBD.size} IDs de Vinted ya en BD\n`)
-
-  // ── Scraping de la categoría completa ────────────────────────────────────
+  // ── Scraping categoría completa (sin parada incremental) ─────────────────
+  // Pasamos un Set vacío para que scrapeCategory NO pare al encontrar IDs conocidos.
+  // Cada run actualiza last_seen_at de TODOS los items activos.
   console.log('🔍 Scrapeando categoría completa: Palas de Pádel (catalog[]=4597)...')
-  const allItems = await scrapeCategory(auth, idsEnBD)
+  const allItems = await scrapeCategory(auth, new Set())
+  console.log(`📊 Total items scrapeados: ${allItems.length}`)
 
-  console.log(`📊 Total items nuevos scrapeados: ${allItems.length}`)
-
-  if (allItems.length === 0) {
-    console.log('⚠️  Sin resultados nuevos — BD ya estaba al día.')
-    // No abortamos: seguimos con la limpieza de vendidos
-  } else {
-    // ── Deduplicar y filtrar basura ────────────────────────────────────────
+  if (allItems.length > 0) {
+    // Filtro negativo únicamente — la categoría ya garantiza palas de pádel
     const seen = new Set<string>()
-    // Solo filtro negativo (EXCLUIR_SCRAPER) — el catalog[]=4597 sin search_text
-    // ya garantiza que todos los items son de la categoría "Palas de pádel".
     const unique = allItems.filter(item => {
       if (!item.external_id || seen.has(item.external_id)) return false
       seen.add(item.external_id)
       const tl = (item.title ?? '').toLowerCase()
-      if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) return false
-      return true
+      return !EXCLUIR_SCRAPER.some(w => tl.includes(w))
     })
+    console.log(`📊 Tras filtro: ${unique.length} (${allItems.length - unique.length} descartados)`)
 
-    const filtrados = allItems.length - unique.length
-    console.log(`📊 Items únicos: ${unique.length} (${filtrados} filtrados como no-pádel)`)
-
-    if (unique.length === 0) {
-      console.log('⚠️  0 items únicos tras filtrar — abortando upsert para proteger BD.')
-    } else {
-      // ── Upsert en BD ────────────────────────────────────────────────────
-      const now = new Date().toISOString()
-      const BATCH = 100
-      let inserted = 0
-
-      for (let i = 0; i < unique.length; i += BATCH) {
-        const batch = unique.slice(i, i + BATCH).map(item => ({
-          ...item,
-          scraped_at:   now,
-          last_seen_at: now,
-        }))
-
-        const { error } = await supabase
-          .from('wallapop_cache')
-          .upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
-
-        if (error) {
-          console.error(`❌ Error en upsert batch ${i / BATCH + 1}:`, error)
-        } else {
-          inserted += batch.length
-        }
-      }
-
-      console.log(`\n✅ Guardados ${inserted} items en Supabase.`)
+    const now = new Date().toISOString()
+    const BATCH = 100
+    let upserted = 0
+    for (let i = 0; i < unique.length; i += BATCH) {
+      const batch = unique.slice(i, i + BATCH).map(item => ({ ...item, scraped_at: now, last_seen_at: now }))
+      const { error } = await supabase.from('wallapop_cache').upsert(batch, { onConflict: 'external_id', ignoreDuplicates: false })
+      if (error) console.error(`❌ Error upsert batch ${i / BATCH + 1}:`, error)
+      else upserted += batch.length
     }
+    console.log(`✅ ${upserted} items guardados/actualizados en BD.`)
   }
 
-  // ── Verificación AGRESIVA: anuncios en BD que NO aparecieron en este scrape ──
-  // Si Vinted deja de devolverlos, casi siempre es porque están vendidos/retirados.
-  const idsEncontrados = new Set<string>(allItems.map(i => i.external_id))
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-
-  const { data: enBD } = await supabase
+  // ── TTL: borrar items no vistos en las últimas 48h ───────────────────────
+  // Si un item no aparece en 2 scrapes consecutivos (~2h) probablemente está
+  // vendido o retirado. Con 48h de margen cubrimos posibles caídas temporales.
+  const ttlAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  const { error: ttlError, count } = await supabase
     .from('wallapop_cache')
-    .select('external_id')
+    .delete({ count: 'exact' })
     .eq('platform', 'vinted')
-    .gte('last_seen_at', threeDaysAgo)
+    .lt('last_seen_at', ttlAgo)
 
-  if (enBD && enBD.length > 0) {
-    const noVistos = enBD.filter(r => !idsEncontrados.has(r.external_id)).slice(0, 200)
-    if (noVistos.length > 0) {
-      console.log(`\n🔍 Verificación agresiva: ${noVistos.length} anuncios Vinted (cap 200)...`)
-      const toDeleteAggressive: string[] = []
-      const toRefreshAggressive: string[] = []
-
-      for (const { external_id } of noVistos) {
-        const active = await isVintedItemActive(external_id, auth)
-        if (!active) {
-          toDeleteAggressive.push(external_id)
-        } else {
-          toRefreshAggressive.push(external_id)
-        }
-        await sleep(300) // throttle
-      }
-
-      if (toDeleteAggressive.length > 0) {
-        const { error: delErr } = await supabase
-          .from('wallapop_cache')
-          .delete()
-          .in('external_id', toDeleteAggressive)
-        if (!delErr) console.log(`🗑️  [Agresivo] Eliminados ${toDeleteAggressive.length} anuncios Vinted vendidos/retirados`)
-      }
-
-      if (toRefreshAggressive.length > 0) {
-        const now = new Date().toISOString()
-        for (let i = 0; i < toRefreshAggressive.length; i += 100) {
-          await supabase
-            .from('wallapop_cache')
-            .update({ last_seen_at: now })
-            .in('external_id', toRefreshAggressive.slice(i, i + 100))
-        }
-        console.log(`♻️  [Agresivo] Refrescados ${toRefreshAggressive.length} anuncios activos`)
-      }
-
-      if (toDeleteAggressive.length === 0 && toRefreshAggressive.length === 0) {
-        console.log('✅ [Agresivo] Todos los no vistos siguen activos en Vinted')
-      }
-    }
-  }
-
-  // ── Verificar anuncios Vinted que llevan 1+ día sin aparecer ──
-  const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: stale, error: staleError } = await supabase
-    .from('wallapop_cache')
-    .select('external_id')
-    .eq('platform', 'vinted')
-    .lt('last_seen_at', oneDayAgo)
-    .limit(500)
-
-  if (!staleError && stale && stale.length > 0) {
-    console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
-    const toDelete: string[] = []
-    const toRefresh: string[] = []
-
-    for (const item of stale) {
-      const active = await isVintedItemActive(item.external_id, auth)
-      if (!active) {
-        toDelete.push(item.external_id)
-      } else {
-        // Refrescar last_seen_at para sacarlo de la cola — evita reverificar el mismo item en cada run
-        toRefresh.push(item.external_id)
-      }
-      await sleep(300) // throttle
-    }
-
-    if (toDelete.length > 0) {
-      const { error: delErr } = await supabase
-        .from('wallapop_cache')
-        .delete()
-        .in('external_id', toDelete)
-      if (!delErr) console.log(`🗑️  Eliminados ${toDelete.length} anuncios vendidos/eliminados`)
-    }
-
-    if (toRefresh.length > 0) {
-      const now = new Date().toISOString()
-      // Actualizar en batches de 100
-      for (let i = 0; i < toRefresh.length; i += 100) {
-        await supabase
-          .from('wallapop_cache')
-          .update({ last_seen_at: now })
-          .in('external_id', toRefresh.slice(i, i + 100))
-      }
-      console.log(`♻️  Refrescados ${toRefresh.length} anuncios activos (last_seen_at actualizado)`)
-    }
-
-    if (toDelete.length === 0 && toRefresh.length === 0) {
-      console.log('✅ Todos siguen activos')
-    }
-  }
-
-  // ── Borrar anuncios Vinted con más de 30 días sin actividad ──
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const { error: deleteError } = await supabase
-    .from('wallapop_cache')
-    .delete()
-    .eq('platform', 'vinted')
-    .lt('last_seen_at', thirtyDaysAgo)
-
-  if (deleteError) {
-    console.error('⚠️  Error borrando registros viejos:', deleteError)
-  }
+  if (!ttlError) console.log(`🗑️  TTL: eliminados ${count ?? 0} items no vistos en 48h`)
 
   // ── Match pala_id automático ─────────────────────────────────────────────
   await matchPalaIds(supabase)
