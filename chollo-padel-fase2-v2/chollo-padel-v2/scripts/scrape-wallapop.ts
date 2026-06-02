@@ -46,7 +46,8 @@ const KEYWORDS = [
 
 // Palabras que indican que el anuncio NO es una pala de pádel
 // Se filtran ANTES del upsert para no contaminar la BD
-const MAX_RESULTS_PER_KEYWORD = 40
+const STEP = 40          // items por página (máximo estable de Wallapop)
+const MAX_PAGES = 5      // máx 5 páginas por keyword = 200 items
 
 const EXCLUIR_SCRAPER = [
   // Raquetas de tenis
@@ -102,67 +103,79 @@ interface WallapopRaw {
 
 async function scrapeKeyword(
   page: any,
-  keyword: string
+  keyword: string,
+  idsEnBD: Set<string>
 ): Promise<WallapopRaw[]> {
-  const params = new URLSearchParams({
-    keywords:  keyword,
-    latitude:  '40.4168',
-    longitude: '-3.7038',
-    order_by:  'newest',
-    start:     '0',
-    step:      String(MAX_RESULTS_PER_KEYWORD),
-  })
+  const allItems: WallapopRaw[] = []
 
-  const apiUrl = `https://api.wallapop.com/api/v3/general/search?${params}`
+  for (let pageNum = 0; pageNum < MAX_PAGES; pageNum++) {
+    const params = new URLSearchParams({
+      keywords:  keyword,
+      latitude:  '40.4168',
+      longitude: '-3.7038',
+      order_by:  'newest',
+      start:     String(pageNum * STEP),
+      step:      String(STEP),
+    })
+    const apiUrl = `https://api.wallapop.com/api/v3/general/search?${params}`
 
-  try {
-    const result = await page.evaluate(async (url: string) => {
-      const res = await fetch(url, {
-        headers: {
-          'Accept':          'application/json',
-          'Accept-Language': 'es-ES,es;q=0.9',
-          'DeviceOS':        '0',
-          'MPlatform':       'WEB',
-        },
-      })
-      if (!res.ok) return { ok: false, status: res.status, items: [] }
-      const data = await res.json()
-      return {
-        ok:    true,
-        items: data?.search_objects ?? data?.items ?? [],
-      }
-    }, apiUrl)
-
-    if (!result.ok) {
-      console.error(`  ❌ HTTP ${result.status} para "${keyword}"`)
-      return []
+    let result: { ok: boolean; status?: number; items: any[] }
+    try {
+      result = await page.evaluate(async (url: string) => {
+        const res = await fetch(url, {
+          headers: {
+            'Accept':          'application/json',
+            'Accept-Language': 'es-ES,es;q=0.9',
+            'DeviceOS':        '0',
+            'MPlatform':       'WEB',
+          },
+        })
+        if (!res.ok) return { ok: false, status: res.status, items: [] }
+        const data = await res.json()
+        return { ok: true, items: data?.search_objects ?? data?.items ?? [] }
+      }, apiUrl)
+    } catch (err) {
+      console.error(`  ❌ Error en "${keyword}" pág ${pageNum}:`, err)
+      break
     }
 
-    console.log(`  ✅ "${keyword}": ${result.items.length} items`)
+    if (!result.ok) {
+      console.error(`  ❌ HTTP ${result.status} para "${keyword}" pág ${pageNum}`)
+      break
+    }
 
-    return result.items.map((item: any) => ({
-      id:        String(item.id ?? ''),
-      title:     item.title ?? '',
-      price:     item.sale_price ?? item.price ?? 0,
-      currency:  'EUR',
-      condition: item.condition ?? '',
-      img:       item.main_image_url
-                 ?? item.images?.[0]?.urls?.medium
-                 ?? item.images?.[0]?.urls?.big
-                 ?? item.images?.[0]?.medium
-                 ?? null,
-      url:       `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
-      city:      item.location?.city ?? '',
-      date:      item.modification_date
-        ? new Date(item.modification_date * 1000).toISOString()
-        : new Date().toISOString(),
-      keyword,
-    }))
+    if (result.items.length === 0) break
 
-  } catch (err) {
-    console.error(`  ❌ Error en "${keyword}":`, err)
-    return []
+    let foundKnown = false
+    for (const item of result.items) {
+      const externalId = String(item.id ?? '')
+      if (idsEnBD.has(externalId)) { foundKnown = true; break }
+
+      allItems.push({
+        id:        externalId,
+        title:     item.title ?? '',
+        price:     item.sale_price ?? item.price ?? 0,
+        currency:  'EUR',
+        condition: item.condition ?? '',
+        img:       item.main_image_url
+                   ?? item.images?.[0]?.urls?.medium
+                   ?? item.images?.[0]?.urls?.big
+                   ?? item.images?.[0]?.medium
+                   ?? null,
+        url:       `https://es.wallapop.com/item/${item.web_slug ?? item.id}`,
+        city:      item.location?.city ?? '',
+        date:      item.modification_date
+          ? new Date(item.modification_date * 1000).toISOString()
+          : new Date().toISOString(),
+        keyword,
+      })
+    }
+
+    if (foundKnown || result.items.length < STEP) break
   }
+
+  console.log(`  ✅ "${keyword}": ${allItems.length} items nuevos`)
+  return allItems
 }
 
 async function main() {
@@ -195,11 +208,19 @@ async function main() {
   await page.goto('https://es.wallapop.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(2000)
 
+  // Cargar IDs ya en BD para parada incremental
+  const { data: bdRows } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'wallapop')
+  const idsEnBD = new Set<string>((bdRows ?? []).map((r: any) => r.external_id))
+  console.log(`📋 ${idsEnBD.size} IDs de Wallapop ya en BD\n`)
+
   const allItems: WallapopRaw[] = []
 
   for (const keyword of KEYWORDS) {
     console.log(`🔍 Buscando: "${keyword}"`)
-    const items = await scrapeKeyword(page, keyword)
+    const items = await scrapeKeyword(page, keyword, idsEnBD)
     allItems.push(...items)
     await page.waitForTimeout(1500)
   }
