@@ -61,11 +61,28 @@ function extractProductsFromPage(page) {
       }
 
       if (isNaN(price) || price < 30) continue
-      // tiendapadelpoint muestra precios CON IVA incluido en el listado
+
+      // tiendapadelpoint es inconsistente: algunos productos en el listing
+      // muestran precio SIN IVA y otros CON IVA según configuración OpenCart.
+      // Heurística: si price × 1.21 da un número "de retail" (decimal .90-.99 o .00-.05),
+      // el listing muestra sin IVA → aplicar IVA. Si no, ya incluye IVA.
+      function aplicarIVAsiNecesario(p) {
+        if (isNaN(p) || p <= 0) return p
+        const conIVA = Math.round(p * 1.21 * 100) / 100
+        const cents = Math.round((conIVA % 1) * 100)
+        const esRetail = cents >= 90 || cents <= 5 || cents === 50
+        return esRetail ? conIVA : p
+      }
+
+      const finalPrice    = aplicarIVAsiNecesario(price)
+      const finalOriginal = (!isNaN(original) && original > price)
+        ? aplicarIVAsiNecesario(original)
+        : NaN
+
       items.push({
         title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
+        price:           finalPrice,
+        precio_original: !isNaN(finalOriginal) ? finalOriginal : null,
         url,
       })
     }
