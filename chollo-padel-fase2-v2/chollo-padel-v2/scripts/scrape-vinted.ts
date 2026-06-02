@@ -478,9 +478,16 @@ async function isVintedItemActive(externalId: string, auth: { cookie: string; to
     const contentType = res.headers.get('content-type') ?? ''
     if (!contentType.includes('application/json')) return false // Página de error HTML → vendido/retirado
     const data = await res.json()
-    // can_be_sold=false o item inexistente → no disponible
+    // item inexistente → no disponible
     if (!data?.item) return false
-    return data.item.can_be_sold !== false
+    const item = data.item
+    // can_be_sold=false → vendido
+    if (item.can_be_sold === false) return false
+    // is_visible=false → eliminado por el vendedor
+    if (item.is_visible === false || item.is_visible === 0) return false
+    // status numérico: Vinted usa 0=activo, otros valores=vendido/reservado/eliminado
+    if (typeof item.status === 'number' && item.status !== 0) return false
+    return true
   } catch {
     return true // Si falla la verificación, dejamos el anuncio
   }
@@ -659,7 +666,7 @@ async function main() {
     .select('external_id')
     .eq('platform', 'vinted')
     .lt('last_seen_at', oneDayAgo)
-    .limit(200)
+    .limit(500)
 
   if (!staleError && stale && stale.length > 0) {
     console.log(`\n🔍 Verificando ${stale.length} anuncios Vinted sin actividad en 24h+...`)
