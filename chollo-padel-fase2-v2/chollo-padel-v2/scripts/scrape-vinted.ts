@@ -31,16 +31,47 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 const KEYWORDS = [
 
+  // ── COBERTURA GENERAL ──────────────────────────────────────────────────
+  'pala padel',
+
   // ── BULLPADEL ──────────────────────────────────────────────────────────
   'bullpadel hack',
   'bullpadel vertex',
-  'bullpadel count',
-  'bullpadel spike',
-  'bullpadel flow',
-  'bullpadel gold',
-  'bullpadel legend',
-  'bullpadel indiga',
+  'bullpadel neuron',
   'bullpadel cosmos',
+  'bullpadel indiga',
+  'bullpadel flow',
+  'bullpadel spike',
+  'bullpadel gold',
+  'bullpadel ionic',
+
+  // ── BABOLAT ────────────────────────────────────────────────────────────
+  'babolat viper',
+  'babolat vertuo',
+  'babolat juan lebron',
+  'babolat veron',
+
+  // ── ADIDAS ─────────────────────────────────────────────────────────────
+  'adidas metalbone',
+  'adidas adipower',
+  'adidas drive padel',
+  'adidas match padel',
+  'adidas rx padel',
+  'adidas cross padel',
+  'adidas arrow padel',
+
+  // ── HEAD ───────────────────────────────────────────────────────────────
+  // extreme/speed/radical etc. son también tenis → añadir "padel"
+  'head extreme padel',
+  'head speed padel',
+  'head radical padel',
+  'head instinct padel',
+  'head gravity padel',
+  'head alpha padel',
+  'head delta padel',
+  'head flash padel',
+  'head zephyr',
+  'head coello',
 
   // ── NOX ────────────────────────────────────────────────────────────────
   'nox at10',
@@ -50,156 +81,151 @@ const KEYWORDS = [
   'nox x-one',
   'nox joker',
   'nox nerbo',
-  'nox luxury',
-  'nox pro',
-
-  // ── ADIDAS ─────────────────────────────────────────────────────────────
-  'adidas metalbone',
-  'adidas adipower',
-  'adidas match',
-  'adidas drive',
-  'adidas rx',
-  'adidas carbon',
-  'adidas cross',
-  'adidas arrow',
-
-  // ── HEAD ───────────────────────────────────────────────────────────────
-  'head alpha',
-  'head delta',
-  'head zephyr',
-  'head flash',
-  'head speed',
-  'head extreme',
-  'head prestige',
-  'head radical',
-
-  // ── WILSON ─────────────────────────────────────────────────────────────
-  'wilson bela',
-  'wilson carbon',
-  'wilson ultra',
-  'wilson blade',
-
-  // ── BABOLAT ────────────────────────────────────────────────────────────
-  'babolat viper',
-  'babolat technical',
-  'babolat air',
-  'babolat counter',
+  'nox ea10',
 
   // ── SIUX ───────────────────────────────────────────────────────────────
   'siux diablo',
   'siux electra',
   'siux pegasus',
-  'siux titan',
+  'siux fenix',
+  'siux trilogy',
+  'siux valkiria',
+  'siux gea',
+  'siux spyder',
+  'siux astra',
+  'siux beat',
 
-  // ── STAR VIE ───────────────────────────────────────────────────────────
-  'star vie triton',
-  'star vie raptor',
-  'star vie drax',
-  'star vie kenta',
-  'star vie astrum',
-  'star vie metheora',
-  'star vie basalto',
-  'star vie titania',
-  'star vie aquila',
-  'star vie brava',
-  'star vie exodus',
-  'star vie black titan',
+  // ── WILSON ─────────────────────────────────────────────────────────────
+  'wilson bela',
+  'wilson endure',
+  'wilson optix',
+  'wilson defy',
+  'wilson blade padel',
+  'wilson carbon padel',
+
+  // ── STARVIE / STAR VIE ─────────────────────────────────────────────────
   'starvie triton',
   'starvie raptor',
+  'starvie metheora',
   'starvie drax',
   'starvie kenta',
-  'starvie astrum',
-  'starvie metheora',
+  'starvie aquila',
   'starvie basalto',
+  'starvie exodus',
+  'starvie brava',
+  'starvie nyra',
+  'starvie radar',
+  'star vie triton',
+  'star vie raptor',
 
   // ── VIBORA ─────────────────────────────────────────────────────────────
-  'vibora titan',
   'vibora yarara',
-  'vibora botero',
   'vibora black mamba',
+  'vibora titan',
+  'vibora king cobra',
+  'vibora botero',
+  'vibor-a yarara',
+  'vibor-a black mamba',
+
+  // ── DROP SHOT ──────────────────────────────────────────────────────────
+  'drop shot axion',
+  'drop shot explorer',
+  'drop shot conqueror',
+  'drop shot canyon',
+  'drop shot revenge',
+  'drop shot furia',
+  'drop shot bora',
+  'drop shot ioniq',
+  'drop shot x-drive',
+
+  // ── BLACK CROWN ────────────────────────────────────────────────────────
+  'black crown piton',
+  'black crown patron',
+  'black crown gladius',
+  'black crown rebel',
+  'black crown coyote',
+
+  // ── DUNLOP ─────────────────────────────────────────────────────────────
+  'dunlop blitz padel',
+  'dunlop speed padel',
+  'dunlop inferno padel',
+
+  // ── JOMA ───────────────────────────────────────────────────────────────
+  'joma tournament',
+  'joma slam padel',
+  'joma gold padel',
+  'joma valkiria padel',
+  'joma blast padel',
+  'joma hyper padel',
+
+  // ── VARLION ────────────────────────────────────────────────────────────
+  'varlion summum',
+  'varlion lf padel',
+  'varlion avant',
+
+  // ── TECNIFIBRE ─────────────────────────────────────────────────────────
+  'tecnifibre wall',
+  'tecnifibre curva',
+  'tecnifibre bomba',
 
   // ── OXDOG ──────────────────────────────────────────────────────────────
   'oxdog hyper',
   'oxdog pure',
   'oxdog ultimate',
   'oxdog hive',
+  'oxdog avalon',
 
-  // ── VARLION ────────────────────────────────────────────────────────────
-  'varlion summum',
-  'varlion lf',
-  'varlion avant',
+  // ── ROYAL PADEL ────────────────────────────────────────────────────────
+  'royal padel m27',
+  'royal padel m29',
+  'royal padel control',
 
-  // ── JOMA ───────────────────────────────────────────────────────────────
-  'joma gold pro',
-  'joma slam pro',
-  'joma tournament',
-  'joma valkiria',
-  'joma hyper pro',
-  'joma blast pro',
-  'joma blast pro hrd',
-  'joma blast pro sft',
-  'joma hyper pro hrd',
-  'joma hyper pro soft',
-  'joma valkiria pro hrd',
-  'joma valkiria pro soft',
-  'joma slam pro iconic',
-  'joma tournament pro iconic',
-
-  // ── SIUX (ampliado) ────────────────────────────────────────────────────
-  'siux fenix',
-  'siux trilogy',
-  'siux valkiria',
-  'siux gea',
-  'siux spyder',
-
-  // ── VIBORA (ampliado) ─────────────────────────────────────────────────
-  'vibora black mamba',
-  'vibora king cobra',
-  'vibor-a yarara',
-
-  // ── DROP SHOT (ampliado) ──────────────────────────────────────────────
-  'drop shot axion',
-  'drop shot conqueror',
-  'drop shot canyon',
-  'drop shot explorer',
-
-  // ── BLACK CROWN (ampliado) ────────────────────────────────────────────
-  'black crown piton',
-  'black crown patron',
-  'black crown gladius',
-
-  // ── MARCAS MEDIAS ─────────────────────────────────────────────────────
-  'pala royal padel',
-  'pala dunlop',
-  'pala tecnifibre',
-  'pala puma padel',
-  'pala munich padel',
-  'pala akkeron',
-  'pala vairo',
-  'pala kuikma',
-  'pala volt padel',
-  'pala alkemia',
-  'kombat fuji',
-  'kombat galeras',
-  'kombat krakatoa',
-  'kombat etna',
-  'pala kombat',
+  // ── ENEBE ──────────────────────────────────────────────────────────────
+  'enebe space',
   'enebe mustang',
   'enebe spitfire',
   'enebe response',
-  'pala enebe',
-  'lok be',
-  'pala padel lok',
-  'pala hirostar',
-  'racket project padel',
+
+  // ── KUIKMA ─────────────────────────────────────────────────────────────
+  'kuikma padel',
+
+  // ── PUMA PADEL ─────────────────────────────────────────────────────────
+  'puma novablitz',
+  'puma solarblaze',
+
+  // ── AKKERON ────────────────────────────────────────────────────────────
+  'akkeron padel',
+
+  // ── VAIRO ──────────────────────────────────────────────────────────────
+  'vairo padel',
+
+  // ── LOK ────────────────────────────────────────────────────────────────
+  'lok be padel',
+  'lok maxx padel',
+
+  // ── KOMBAT ─────────────────────────────────────────────────────────────
+  'kombat padel',
+
+  // ── MUNICH / SLAZENGER / PRINCE / VOLT / KAITT ─────────────────────────
+  'munich padel',
   'slazenger padel',
-  'pala cork padel',
-  'pala sane padel',
-  'pala rs padel',
-  'pala cartri padel',
-  'pala endless padel',
+  'prince padel',
+  'volt padel',
+  'kaitt padel',
+
+  // ── MARCAS NICHO ───────────────────────────────────────────────────────
+  'alkemia padel',
+  'hirostar padel',
+  'racket project padel',
+  'cork padel',
+  'sane padel',
+  'rs padel',
+  'cartri padel',
+  'nzn padel',
+  'vision padel',
+  'endless padel',
   'tactical padel',
-  'pala pallap',
+  'pallap padel',
 
 ]
 
@@ -317,8 +343,9 @@ const CONDITION_MAP_REVERSE: Record<string, string> = {
   'Satisfactorio':       'fair',
 }
 
-const PER_PAGE = 96   // máximo estable que acepta la API de Vinted
-const MAX_PAGES = 50  // 50 págs × 96 items = 4800 items por run (cubre toda la categoría)
+const PER_PAGE            = 96  // máximo estable que acepta la API de Vinted
+const MAX_PAGES_PER_KW    = 15  // límite de seguridad por keyword (15 × 96 = 1440 items)
+const GAP_CATCHUP_MIN     = 30  // minutos sin scraping → no limitamos páginas por fecha
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -360,19 +387,55 @@ async function getVintedToken(): Promise<{ cookie: string; token: string } | nul
   }
 }
 
-// ── Scrape de la categoría completa catalog[]=4597 (Palas de pádel) ──────────
-// No usa search_text — coge TODO lo que Vinted tiene en esa categoría.
-// Para cuando encuentra un ID ya conocido en BD (orden newest_first).
+// ── Cabeceras comunes para la API de Vinted ──────────────────────────────────
+function vintedHeaders(auth: { cookie: string; token: string }) {
+  return {
+    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept':          'application/json, text/plain, */*',
+    'Accept-Language': 'es-ES,es;q=0.9',
+    'Referer':         'https://www.vinted.es/',
+    'Cookie':          auth.cookie,
+    'Authorization':   `Bearer ${auth.token}`,
+  }
+}
 
-async function scrapeCategory(
+// ── Convertir item crudo de Vinted a fila de BD ───────────────────────────────
+function mapItem(item: any, keyword: string): object {
+  const img         = item.photo?.url ?? item.photos?.[0]?.url ?? null
+  const ts          = item.photo?.high_resolution?.timestamp
+  const date        = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
+  const price       = parseFloat(item.price?.amount ?? '0')
+  const conditionId = String(item.status_id ?? item.status ?? '')
+  const condition   = CONDITION_MAP_REVERSE[conditionId] ?? conditionId
+
+  return {
+    external_id: `vinted_${item.id}`,
+    title:       item.title ?? '',
+    price,
+    currency:    item.price?.currency_code ?? 'EUR',
+    condition,
+    img,
+    url:         item.url ?? `https://www.vinted.es/items/${item.id}`,
+    city:        'Europa',
+    date,
+    keyword,
+    platform:    'vinted',
+    marca:       detectarMarca(item.title ?? '', ''),
+  }
+}
+
+// ── Scrape de un keyword: pagina newest_first y para al encontrar ID conocido ─
+// Equivalente al scrapeKeyword() de la extensión de Wallapop.
+async function scrapeKeyword(
+  keyword: string,
   auth: { cookie: string; token: string },
-  idsEnBD: Set<string>
+  idsEnBD: Set<string>,
 ): Promise<any[]> {
   const result: any[] = []
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  for (let page = 1; page <= MAX_PAGES_PER_KW; page++) {
     const params = new URLSearchParams({
-      search_text: 'pala padel',  // necesario para activar filtro de catalog en la API
+      search_text: keyword,
       per_page:    String(PER_PAGE),
       page:        String(page),
       order:       'newest_first',
@@ -381,76 +444,44 @@ async function scrapeCategory(
 
     let rawItems: any[] = []
     try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept':          'application/json, text/plain, */*',
-          'Accept-Language': 'es-ES,es;q=0.9',
-          'Referer':         'https://www.vinted.es/',
-          'Cookie':          auth.cookie,
-          'Authorization':   `Bearer ${auth.token}`,
-        },
-      })
+      const res = await fetch(url, { headers: vintedHeaders(auth) })
       if (!res.ok) {
-        console.error(`  ❌ HTTP ${res.status} en página ${page}`)
+        console.error(`  ❌ "${keyword}" pág ${page}: HTTP ${res.status}`)
         break
       }
       const data = await res.json()
       rawItems = data.items ?? []
     } catch (err) {
-      console.error(`  ❌ Error en página ${page}:`, err)
+      console.error(`  ❌ "${keyword}" pág ${page}:`, err)
       break
     }
 
     if (rawItems.length === 0) break
 
-    let encontradoConocido = false
+    let foundKnown = false
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
-      if (idsEnBD.has(externalId)) {
-        encontradoConocido = true
-        break
-      }
+      if (idsEnBD.has(externalId)) { foundKnown = true; break }
 
-      const img  = item.photo?.url ?? item.photos?.[0]?.url ?? null
-      const ts   = item.photo?.high_resolution?.timestamp
-      const date = ts ? new Date(ts * 1000).toISOString() : new Date().toISOString()
-      const price = parseFloat(item.price?.amount ?? '0')
-      const conditionId = String(item.status_id ?? item.status ?? '')
-      const condition = CONDITION_MAP_REVERSE[conditionId] ?? conditionId
+      const tl = (item.title ?? '').toLowerCase()
+      if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) continue
+      if (parseFloat(item.price?.amount ?? '0') < 15) continue
 
-      result.push({
-        external_id: externalId,
-        title:       item.title ?? '',
-        price,
-        currency:    item.price?.currency_code ?? 'EUR',
-        condition,
-        img,
-        url:         item.url ?? `https://www.vinted.es/items/${item.id}`,
-        city:        'Europa',
-        date,
-        keyword:     'categoria:palas-padel',
-        platform:    'vinted',
-        marca:       detectarMarca(item.title ?? '', ''),
-      })
+      result.push(mapItem(item, keyword))
     }
 
-    process.stdout.write(`\r  Página ${page}/${MAX_PAGES} — ${result.length} items nuevos`)
-
-    if (encontradoConocido) {
-      console.log(`\n  ✅ Parado en pág ${page} al encontrar ID conocido`)
+    if (foundKnown) {
+      console.log(`  ✅ "${keyword}": parado en pág ${page} (ID conocido) — ${result.length} nuevos`)
       break
     }
-
     if (rawItems.length < PER_PAGE) {
-      console.log(`\n  ✅ Categoría completa en ${page} páginas`)
+      console.log(`  ✅ "${keyword}": fin en pág ${page} — ${result.length} nuevos`)
       break
     }
 
-    await sleep(600)
+    await sleep(500)
   }
 
-  console.log()
   return result
 }
 
@@ -504,23 +535,57 @@ async function main() {
   if (!auth) { console.error('💥 No se pudo obtener token. Abortando.'); process.exit(1) }
   console.log('✅ Token obtenido\n')
 
-  // ── Scraping categoría completa (sin parada incremental) ─────────────────
-  // Pasamos un Set vacío para que scrapeCategory NO pare al encontrar IDs conocidos.
-  // Cada run actualiza last_seen_at de TODOS los items activos.
-  console.log('🔍 Scrapeando categoría completa: Palas de Pádel (catalog[]=4597)...')
-  const allItems = await scrapeCategory(auth, new Set())
-  console.log(`📊 Total items scrapeados: ${allItems.length}`)
+  // ── Cargar IDs ya en BD para parada incremental ───────────────────────────
+  const { data: existingRows } = await supabase
+    .from('wallapop_cache')
+    .select('external_id')
+    .eq('platform', 'vinted')
+    .limit(100000)
+  const idsEnBD = new Set<string>((existingRows ?? []).map((r: any) => r.external_id))
+  console.log(`📦 IDs en BD: ${idsEnBD.size}`)
+
+  // ── Detectar gap para loguear modo ───────────────────────────────────────
+  const { data: lastRow } = await supabase
+    .from('wallapop_cache')
+    .select('scraped_at')
+    .eq('platform', 'vinted')
+    .order('scraped_at', { ascending: false })
+    .limit(1)
+    .single()
+  const lastScrapedAt  = lastRow?.scraped_at ? new Date(lastRow.scraped_at) : null
+  const minutesSince   = lastScrapedAt ? (Date.now() - lastScrapedAt.getTime()) / 60000 : 9999
+  const modeLabel      = minutesSince > GAP_CATCHUP_MIN ? `⚡ Catch-up (${Math.round(minutesSince)} min)` : '✔ Normal (incremental)'
+  console.log(`🕐 Modo: ${modeLabel}\n`)
+
+  // ── Scraping por keywords ─────────────────────────────────────────────────
+  console.log(`🔍 Scrapeando ${KEYWORDS.length} keywords...\n`)
+  const allItems: any[] = []
+
+  for (const keyword of KEYWORDS) {
+    try {
+      const items = await scrapeKeyword(keyword, auth, idsEnBD)
+      if (items.length > 0) {
+        allItems.push(...items)
+        // Añadir al Set para que keywords siguientes no reprocesen los mismos
+        items.forEach(i => idsEnBD.add(i.external_id))
+      }
+      await sleep(400)
+    } catch (err) {
+      console.error(`  ❌ Error en "${keyword}":`, err)
+    }
+  }
+
+  console.log(`\n📊 Total nuevos: ${allItems.length}`)
 
   if (allItems.length > 0) {
-    // Filtro negativo únicamente — la categoría ya garantiza palas de pádel
+    // Deduplicar (un item puede aparecer en varios keywords)
     const seen = new Set<string>()
     const unique = allItems.filter(item => {
       if (!item.external_id || seen.has(item.external_id)) return false
       seen.add(item.external_id)
-      const tl = (item.title ?? '').toLowerCase()
-      return !EXCLUIR_SCRAPER.some(w => tl.includes(w))
+      return true
     })
-    console.log(`📊 Tras filtro: ${unique.length} (${allItems.length - unique.length} descartados)`)
+    console.log(`📊 Tras dedup: ${unique.length}`)
 
     const now = new Date().toISOString()
     const BATCH = 100
