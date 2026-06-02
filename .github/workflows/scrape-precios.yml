@@ -70,16 +70,22 @@ jobs:
       - name: Instalar Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Scrape Roma Sport
+        continue-on-error: true
         run: node scripts/prices/pipeline.js romasport
       - name: Scrape Padel Coronado
+        continue-on-error: true
         run: node scripts/prices/pipeline.js padelcoronado
       - name: Scrape Padel Iberico
+        continue-on-error: true
         run: node scripts/prices/pipeline.js padeliberico
       - name: Scrape Tienda Padel Point
+        continue-on-error: true
         run: node scripts/prices/pipeline.js tiendapadelpoint
       - name: Scrape Street Padel
+        continue-on-error: true
         run: node scripts/prices/pipeline.js streetpadel
       - name: Scrape Zona de Padel
+        continue-on-error: true
         run: node scripts/prices/pipeline.js zonadepadel
 
   # -- Grupo C: fetch + Playwright set 2 ----------------------------------------

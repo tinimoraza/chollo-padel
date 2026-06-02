@@ -91,7 +91,7 @@ async function scrape() {
   let pageNum = 1
 
   // Primera carga para establecer sesión y conocer total de páginas
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await page.waitForTimeout(2000)
 
   // Cerrar cookies si aparece
@@ -111,7 +111,7 @@ async function scrape() {
 
   while (pageNum <= totalPages) {
     if (pageNum > 1) {
-      await page.goto(`${BASE_URL}?page=${pageNum}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.goto(`${BASE_URL}?page=${pageNum}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await page.waitForTimeout(1500)
     }
 
