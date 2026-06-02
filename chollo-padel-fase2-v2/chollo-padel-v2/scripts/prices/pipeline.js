@@ -458,6 +458,13 @@ async function runPipeline(sourceSlug) {
       continue;
     }
 
+    // Filtrar variantes de jugador que contaminan referencias de modelos base
+    // Ej: Lapi Edition (281€) no debe mezclarse con Tournament Pro Iconic (120€)
+    if (/lapi[- ]edition/i.test(p.url_producto || '') || /lapi[- ]edition/i.test(p.title)) {
+      console.log(`[pipeline] Descartando variante jugador (Lapi Edition): "${p.title}"`);
+      continue;
+    }
+
     // Filtrar ediciones World Cup y países
     if (/\b(world[- ]?cup|wc[-\s]?202[56]|argentina|alemania|espa[ñn]a|usa|england|colombia|france|belgium|netherland|multination|italia)\b/i.test(p.title) ||
         /\b(world[- ]?cup|wc-202[56])\b/i.test(p.url_producto || '')) {
