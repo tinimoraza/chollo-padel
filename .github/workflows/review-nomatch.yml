@@ -1,0 +1,34 @@
+name: Review No-Match Diario
+
+# Genera cada mañana un resumen de los anuncios sin pala_id asignado
+# para detectar marcas/modelos que faltan en el catálogo.
+# Corre a las 07:00 UTC (09:00 España verano).
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  review-nomatch:
+    name: Resumen anuncios sin match
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Resumen no-match
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/review-nomatch.ts

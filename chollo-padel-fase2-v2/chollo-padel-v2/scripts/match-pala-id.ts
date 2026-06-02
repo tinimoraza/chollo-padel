@@ -423,6 +423,7 @@ interface CacheItem {
 interface MatchResult {
   external_id:  string
   pala_id:      string
+  año:          number
   titulo:       string
   modelo:       string
   yearAmbiguous?: boolean  // true → buen match pero año incierto (múltiples versiones)
@@ -432,9 +433,9 @@ interface MatchResult {
 // Se reduce a 0.5 cuando el título contiene año + jugador conocido (identificadores fuertes
 // que compensan un nombre abreviado, ej: "Nox AT10 18K 2025 Agustín Tapia")
 // Se reduce a 0.4 cuando el título es corto (≤5 tokens útiles) — títulos tipo "Vertex 05 2026"
-const PARTIAL_MATCH_THRESHOLD      = 0.6
-const PARTIAL_MATCH_THRESHOLD_SOFT = 0.5  // con año + jugador en título
-const PARTIAL_MATCH_THRESHOLD_MIN  = 0.4  // título corto (≤5 tokens útiles)
+const PARTIAL_MATCH_THRESHOLD      = 0.75  // subido de 0.6 → menor permisividad
+const PARTIAL_MATCH_THRESHOLD_SOFT = 0.65  // con año + jugador en título (antes 0.5)
+const PARTIAL_MATCH_THRESHOLD_MIN  = 0.55  // título corto ≤5 tokens (antes 0.4)
 
 function matchearItem(
   item: CacheItem,
@@ -634,7 +635,7 @@ function matchearItem(
       // Asignar al año más reciente entre todos los candidatos con esos tokens
       const todos = [scored[0].pala, ...sibling]
       const masReciente = todos.reduce((a, b) => (b.año > a.año ? b : a))
-      return { external_id: item.external_id, pala_id: masReciente.id, titulo: item.title, modelo: masReciente.modelo, yearAmbiguous: true }
+      return { external_id: item.external_id, pala_id: masReciente.id, año: masReciente.año, titulo: item.title, modelo: masReciente.modelo, yearAmbiguous: true }
     }
   }
 
@@ -647,7 +648,7 @@ function matchearItem(
   if (scored.length === 0) return 'noMatch'
   if (scored.length === 1) {
     const winner = scored[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   // ── Desempate 1c: más diferenciadores del título coinciden con el modelo ──
@@ -680,7 +681,7 @@ function matchearItem(
   if (scored.length === 0) return 'noMatch'
   if (scored.length === 1) {
     const winner = scored[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   // ── Desempate 1b: jugador en título (Juan Lebron, Ale Galan…) ────────────
@@ -714,7 +715,7 @@ function matchearItem(
   if (scored.length === 0) return 'noMatch'
   if (scored.length === 1) {
     const winner = scored[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   // ── Desempate 2: número de versión X.Y ───────────────────────────────────
@@ -725,7 +726,7 @@ function matchearItem(
 
   if (scored.length === 1) {
     const winner = scored[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   // ── Desempate 3: especificidad de tokens ──────────────────────────────────
@@ -743,7 +744,7 @@ function matchearItem(
 
   if (topSinExtra.length === 1) {
     const winner = topSinExtra[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   // ── Desempate 4: año más reciente ─────────────────────────────────────────
@@ -752,7 +753,7 @@ function matchearItem(
 
   if (topRecientes.length === 1) {
     const winner = topRecientes[0].pala
-    return { external_id: item.external_id, pala_id: winner.id, titulo: item.title, modelo: winner.modelo }
+    return { external_id: item.external_id, pala_id: winner.id, año: winner.año, titulo: item.title, modelo: winner.modelo }
   }
 
   return 'ambiguous'
@@ -842,7 +843,7 @@ export async function matchPalaIds(
   }
 
   let matched = 0, ambiguous = 0, noMatch = 0, yearAmbiguous = 0
-  const updates:            { external_id: string; pala_id: string; method: string }[] = []
+  const updates:            { external_id: string; pala_id: string; año: number; method: string }[] = []
   const noMatchIds:         string[] = []
   const ambiguousIds:       string[] = []
 
@@ -860,7 +861,7 @@ export async function matchPalaIds(
     }
     if (result.yearAmbiguous) yearAmbiguous++
     else matched++
-    updates.push({ external_id: result.external_id, pala_id: result.pala_id, method: result.yearAmbiguous ? 'fuzzy_year_ambiguous' : 'fuzzy_auto' })
+    updates.push({ external_id: result.external_id, pala_id: result.pala_id, año: result.año, method: result.yearAmbiguous ? 'fuzzy_year_ambiguous' : 'fuzzy_auto' })
   }
 
   const BATCH = 100
@@ -871,7 +872,7 @@ export async function matchPalaIds(
       for (const u of updates.slice(i, i + BATCH)) {
         await supabase
           .from('wallapop_cache')
-          .update({ pala_id: u.pala_id, match_method: u.method })
+          .update({ pala_id: u.pala_id, año: u.año, match_method: u.method })
           .eq('external_id', u.external_id)
       }
     }
@@ -1159,7 +1160,7 @@ async function main() {
     for (const u of updates.slice(i, i + BATCH_SIZE)) {
       const { error } = await supabase
         .from('wallapop_cache')
-        .update({ pala_id: u.pala_id, match_method: 'fuzzy_auto' })
+        .update({ pala_id: u.pala_id, año: u.año, match_method: 'fuzzy_auto' })
         .eq('external_id', u.external_id)
       if (error) {
         console.error(`❌ Error actualizando ${u.external_id}:`, error)

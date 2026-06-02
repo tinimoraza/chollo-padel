@@ -251,6 +251,10 @@ async function main() {
       !titleLower.includes('pala')
     ) continue
 
+    // Filtro duro: solo palas de 2024 en adelante
+    const anioAnuncio = extraerAnio(item.title)
+    if (anioAnuncio !== null && anioAnuncio < 2024) continue
+
     // Precio oficial de tienda para esta pala
     const precioTienda = preciosPorPalaId.get(item.pala_id)
     if (!precioTienda) {
