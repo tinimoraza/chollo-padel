@@ -1,17 +1,17 @@
-name: Match Wallapop
+name: Match Segunda Mano
 
-# Asigna pala_id a los items de wallapop_cache que aún no tienen match.
-# Solo opera sobre datos en Supabase — no llama a la API de Wallapop.
-# Se ejecuta cada hora a :05 (la extensión Chrome scrapeó durante los minutos previos).
+# Asigna pala_id a los items de wallapop_cache (Wallapop + Vinted) sin match.
+# Corre cada 30 min a :15 y :45 — después del scrape de Vinted (:05/:35)
+# y antes del Top Oportunidades (:25/:55).
 
 on:
   schedule:
-    - cron: '15,45 * * * *'   # Cada 30 min a :15 y :45
+    - cron: '15,45 * * * *'
   workflow_dispatch:
 
 jobs:
-  match-wallapop:
-    name: Matchear items Wallapop sin pala_id
+  match-segunda-mano:
+    name: Asignar pala_id a anuncios sin matchear
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

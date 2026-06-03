@@ -1,13 +1,18 @@
-name: Embedding Rematch (diario)
+name: Embedding Rematch
 
 # Aplica el matcher semántico (embeddings) a los anuncios que el fuzzy matcher
-# no pudo resolver (no_match, ambiguous). Corre una vez al día para recuperar
-# matches que de otra forma se perderían.
+# no pudo resolver (no_match, ambiguous). Segunda capa de matching con ML.
+# Guarda log en logs/embedding-rematch/ para monitorización.
+# Horario: 07:30 y 18:30 UTC (después del fuzzy match a :15/:45)
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 03:00 UTC diario (hora de poco tráfico)
-  workflow_dispatch:       # también ejecutable manualmente
+    - cron: '30 7 * * *'
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   embedding-rematch:
@@ -16,11 +21,11 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -44,9 +49,20 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/generate-catalog-embeddings.js
 
-      - name: Run embedding rematch
+      - name: Run embedding rematch (con log)
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/embedding-rematch-daily.js
+        run: |
+          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
+          mkdir -p ../../logs/embedding-rematch
+          node scripts/embedding-rematch-daily.js 2>&1 | tee ../../logs/embedding-rematch/${FECHA}.txt
+
+      - name: Commit log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/embedding-rematch/
+          git diff --cached --quiet || git commit -m "log: embedding-rematch $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

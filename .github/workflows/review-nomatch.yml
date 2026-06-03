@@ -6,7 +6,7 @@ name: Review No-Match Diario
 
 on:
   schedule:
-    - cron: '0 7 * * *'
+    - cron: '15 8 * * *'
   workflow_dispatch:
 
 permissions:

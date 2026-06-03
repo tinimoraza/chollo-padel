@@ -1,29 +1,73 @@
 name: Audit Matches
 
-# Audita matches del TOP y CHOLLOS cada hora a :20.
-# Corre después de match-wallapop (:05) y top-oportunidades (:15)
-# para que los datos estén frescos antes de auditar.
+# Audita la calidad de los matches del TOP y CHOLLOS.
+# Auto-corrige bad matches: pala_id=NULL en wallapop_cache, disponible=false en price_snapshots.
+# Guarda log en logs/audit-matches/ para análisis posterior.
+# Horario: 07:00 y 18:00 UTC
 
 on:
   schedule:
-    - cron: '20 * * * *'
+    - cron: '0 7 * * *'
+    - cron: '0 18 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   audit-matches:
-    name: Auditar matches TOP y CHOLLOS
+    name: Auditar y corregir matches TOP y CHOLLOS
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Llamar endpoint audit-matches en Vercel
         run: |
+          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
+          mkdir -p logs/audit-matches
+
+          echo "⏰ $(date -u '+%Y-%m-%d %H:%M UTC') — Iniciando audit-matches..." | tee logs/audit-matches/${FECHA}.txt
+
           STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -X GET "https://www.huntpadel.com/api/cron/audit-matches" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          cat /tmp/response.json
-          echo "HTTP status: $STATUS"
+
+          echo "HTTP status: $STATUS" | tee -a logs/audit-matches/${FECHA}.txt
+          echo "" >> logs/audit-matches/${FECHA}.txt
+          cat /tmp/response.json | python3 -m json.tool 2>/dev/null || cat /tmp/response.json | tee -a logs/audit-matches/${FECHA}.txt
+          echo "" >> logs/audit-matches/${FECHA}.txt
+
+          # Extraer métricas clave del JSON para resumen legible
+          python3 - <<'EOF' >> logs/audit-matches/${FECHA}.txt 2>/dev/null || true
+import json, sys
+with open('/tmp/response.json') as f:
+    d = json.load(f)
+print("\n=== RESUMEN AUDIT ===")
+print(f"TOP auditados:    {d.get('topAudited', '?')}")
+print(f"CHOLLOS auditados:{d.get('chollosAudited', '?')}")
+logs = d.get('logs', [])
+issues = [l for l in logs if l.get('action') not in ('ok', None)]
+print(f"Issues detectados:{len(issues)}")
+print(f"Auto-correcciones:{len([l for l in issues if 'reset' in str(l.get('action',''))])}")
+if issues:
+    print("\nDetalle issues:")
+    for l in issues[:20]:
+        print(f"  [{l.get('check','')}] {l.get('titulo','')[:60]} → {l.get('action','')}")
+EOF
+
           if [ "$STATUS" != "200" ]; then
-            echo "Error: HTTP $STATUS"
+            echo "❌ Error: HTTP $STATUS" | tee -a logs/audit-matches/${FECHA}.txt
             exit 1
           fi
+
+      - name: Commit log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/audit-matches/
+          git diff --cached --quiet || git commit -m "log: audit-matches $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
