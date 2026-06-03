@@ -2,7 +2,7 @@ name: Scraper Vinted
 
 on:
   schedule:
-    - cron: '5,35 * * * *'   # Cada 30 min a :05 y :35
+    - cron: '5 * * * *'   # Cada hora a :05
   workflow_dispatch:
 
 jobs:
