@@ -310,7 +310,8 @@ function tokenizar(texto: string): string[] {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // v10: quitar tildes ANTES de tokenizar (élite→elite, pádel→padel, González→gonzalez)
     .toLowerCase()
     .replace(/hrd\+/g, 'hrd')          // normalizar hrd+ → hrd
-    .replace(/\bhdr\+?/g, 'hrd')       // normalizar hdr/hdr+ → hrd (typo común en Vinted)
+    .replace(/\bhdr\+?(?=\d)/g, 'hrd ')  // normalizar hdr+2026 → hrd 2026 (typo común en Vinted, sin espacio)
+    .replace(/\bhdr\+?/g, 'hrd')         // normalizar hdr/hdr+ → hrd (typo común en Vinted)
     .replace(/\bhard\b/g, 'hrd')       // v13: normalizar "hard" → "hrd" (Vinted usa "Blast Pro Hard")
     .replace(/\bsoft\b/g, 'sft')       // v13: normalizar "soft" → "sft" (Joma SFT = Soft)
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
@@ -707,7 +708,12 @@ function matchearItem(
       const conJugador = scored.filter(s => {
         const modeloNorm = s.pala.modelo.toLowerCase()
           .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        return jugadoresTitulo.some(j => modeloNorm.includes(j))
+        // Alias: "marta ortega" en título busca también "martita ortega" en modelo
+        const JUGADOR_ALIAS: Record<string, string[]> = { 'marta ortega': ['martita ortega', 'marta ortega'] }
+        return jugadoresTitulo.some(j => {
+          const aliases = JUGADOR_ALIAS[j] ?? [j]
+          return aliases.some(a => modeloNorm.includes(a))
+        })
       })
       if (conJugador.length > 0 && conJugador.length < scored.length) scored = conJugador
     } else {
