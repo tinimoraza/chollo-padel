@@ -269,6 +269,7 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'harlem':     'Harlem',
   'vibor-a':    'Vibora',
   'kombat':     'Kombat',
+  'oxdog':      'Oxdog',
   'kaitt':      'Kaitt',
   'alkemia':    'Alkemia',
   'munich':     'Munich',
@@ -292,6 +293,7 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'indiga':     'Bullpadel',
   'hack ctrl':  'Bullpadel',
   'at10':       'Nox',        // "AT10 Genius 18K" → Nox
+  'ea10':       'Nox',        // "EA10 Ventus Hybrid" → Nox
   'ml10':       'Nox',
   'metalbone':  'Adidas',     // "Metalbone 3.4 HRD+" → Adidas
   'metagame':   'Adidas',
