@@ -1,8 +1,8 @@
-name: Scraper Vinted
+﻿name: Scraper Vinted
 
 on:
   schedule:
-    - cron: '5 * * * *'   # Cada hora a :05
+    - cron: '5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
 
     steps:
-      - name: Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -29,9 +29,9 @@ jobs:
       - name: Ejecutar scraper Vinted
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: npx tsx scripts/scrape-vinted.ts
 
       - name: Resumen
         if: always()
-        run: echo "✅ Scraper Vinted finalizado — $(date)"
+        run: echo "Scraper Vinted finalizado"
