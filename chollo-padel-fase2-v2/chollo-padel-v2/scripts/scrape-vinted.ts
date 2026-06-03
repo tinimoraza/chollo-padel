@@ -40,7 +40,7 @@ const KEYWORDS = [
   'bullpadel neuron',
   'bullpadel cosmos',
   'bullpadel indiga',
-  'bullpadel flow',
+  // 'bullpadel flow', // eliminado: "Flow" es también la línea de calzado Bullpadel → trae zapatillas masivamente
   'bullpadel spike',
   'bullpadel gold',
   'bullpadel ionic',
@@ -256,10 +256,18 @@ const EXCLUIR_SCRAPER = [
   'talla xs', 'zapatilla', 'zapatillas', 'botas ', 'botines', 'calcetines',
   'pantalon', 'pantalón', 'chaqueta', 'sudadera', 'equipacion', 'equipación',
   'chandal', 'chándal', 'shorts', 'polo ',
+  // Zapatillas (bambas/basket en varios idiomas)
+  'bambas ', 'zapatilla', 'zapatillas', 'schoenen', 'padelschoen', 'scarpe padel',
+  'basket padel', 'basket bullpadel', 'basket joma', 'basket munich',
+  'chaussure padel', 'chaussures padel', 'scarpe', 'sneaker', 'shoes',
   // Pelotas y accesorios
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
+  'tubes padel', 'balles padel', 'botes padel', 'padel balls',
   'mochila', 'paletero', 'bolsa ', ' bolsa', 'grip ', 'overgrip',
   'protector', 'muñequera', 'munequera', 'presurizador',
+  'bracciale', 'pulsera', 'zaino ', 'beauty case',
+  // Lotes con otros artículos
+  '+ ballen', '+ balls', 'racchette da padel –', '2x racchette', '2x palas',
   // Modelos viejos — nunca serán un chollo
   '2018', '2019', '2020', '2021', '2022', '2023',
   // Ropa italiana (Vinted italiano)
