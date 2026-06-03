@@ -40,8 +40,9 @@ async function main() {
     }
 
     // Detectar año del título (ej: "2025", "2026")
+    // Si no hay año explícito → NULL (no asumir el año actual, podría ser un modelo antiguo)
     const añoMatch = c.titulo.match(/\b(20\d{2})\b/)
-    const año = añoMatch ? parseInt(añoMatch[1]) : new Date().getFullYear()
+    const año = añoMatch ? parseInt(añoMatch[1]) : null
 
     // Construir slug url-friendly
     const slug = c.titulo_normalizado
