@@ -25,44 +25,45 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Instalar jq
+        run: sudo apt-get install -y jq
+
       - name: Llamar endpoint audit-matches en Vercel
         run: |
           FECHA=$(date -u +"%Y-%m-%d_%H-%M")
           mkdir -p logs/audit-matches
+          LOG=logs/audit-matches/${FECHA}.txt
 
-          echo "⏰ $(date -u '+%Y-%m-%d %H:%M UTC') — Iniciando audit-matches..." | tee logs/audit-matches/${FECHA}.txt
+          echo "⏰ $(date -u '+%Y-%m-%d %H:%M UTC') — Iniciando audit-matches..." | tee "$LOG"
 
           STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -X GET "https://www.huntpadel.com/api/cron/audit-matches" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
 
-          echo "HTTP status: $STATUS" | tee -a logs/audit-matches/${FECHA}.txt
-          echo "" >> logs/audit-matches/${FECHA}.txt
-          cat /tmp/response.json | python3 -m json.tool 2>/dev/null || cat /tmp/response.json | tee -a logs/audit-matches/${FECHA}.txt
-          echo "" >> logs/audit-matches/${FECHA}.txt
+          echo "HTTP status: $STATUS" | tee -a "$LOG"
+          echo "" >> "$LOG"
 
-          # Extraer métricas clave del JSON para resumen legible
-          python3 - <<'EOF' >> logs/audit-matches/${FECHA}.txt 2>/dev/null || true
-import json, sys
-with open('/tmp/response.json') as f:
-    d = json.load(f)
-print("\n=== RESUMEN AUDIT ===")
-print(f"TOP auditados:    {d.get('topAudited', '?')}")
-print(f"CHOLLOS auditados:{d.get('chollosAudited', '?')}")
-logs = d.get('logs', [])
-issues = [l for l in logs if l.get('action') not in ('ok', None)]
-print(f"Issues detectados:{len(issues)}")
-print(f"Auto-correcciones:{len([l for l in issues if 'reset' in str(l.get('action',''))])}")
-if issues:
-    print("\nDetalle issues:")
-    for l in issues[:20]:
-        print(f"  [{l.get('check','')}] {l.get('titulo','')[:60]} → {l.get('action','')}")
-EOF
+          # Resumen legible con jq
+          jq -r '
+            "\n=== RESUMEN AUDIT ===",
+            "TOP auditados:     \(.topAudited // "?")",
+            "CHOLLOS auditados: \(.chollosAudited // "?")",
+            "Issues detectados: \([ .logs[]? | select(.action != null and .action != "ok") ] | length)",
+            "Auto-correcciones: \([ .logs[]? | select(.action // "" | test("reset")) ] | length)",
+            "",
+            "--- DETALLE ISSUES ---",
+            ( .logs[]? | select(.action != null and .action != "ok") |
+              "[\(.check // "")] \(.titulo // "" | .[0:60]) → \(.action // "")" )
+          ' /tmp/response.json >> "$LOG" 2>/dev/null || jq . /tmp/response.json >> "$LOG" 2>/dev/null || cat /tmp/response.json >> "$LOG"
+
+          echo "" >> "$LOG"
 
           if [ "$STATUS" != "200" ]; then
-            echo "❌ Error: HTTP $STATUS" | tee -a logs/audit-matches/${FECHA}.txt
+            echo "❌ Error: HTTP $STATUS" | tee -a "$LOG"
             exit 1
           fi
+
+          echo "✅ Audit completado" | tee -a "$LOG"
 
       - name: Commit log
         run: |
