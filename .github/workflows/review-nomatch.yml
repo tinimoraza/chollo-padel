@@ -50,4 +50,4 @@ jobs:
           git add ../../logs/review-nomatch/
           git diff --cached --quiet || git commit -m "log: review-nomatch $(date -u +"%Y-%m-%d %H:%M UTC")"
           git push
-        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2

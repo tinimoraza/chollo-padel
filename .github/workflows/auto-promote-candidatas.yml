@@ -35,17 +35,4 @@ jobs:
 
       - name: Auto-promover palas candidatas (con log)
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: |
-          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
-          mkdir -p ../../logs/auto-promote
-          npx tsx scripts/auto-promote-candidatas.ts 2>&1 | tee ../../logs/auto-promote/${FECHA}.txt
-
-      - name: Commit log
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git -C ../.. add logs/auto-promote/
-          git -C ../.. diff --cached --quiet || git -C ../.. commit -m "log: auto-promote $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git -C ../.. push
+          NEXT_PUBL

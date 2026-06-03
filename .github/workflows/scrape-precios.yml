@@ -135,6 +135,4 @@ jobs:
         with:
           node-version: '22'
       - name: Instalar dependencias
-        run: npm install
-      - name: Recalcular Top Oportunidades
-        run: npx tsx scripts/top-oportunidades.ts
+        run: npm inst
