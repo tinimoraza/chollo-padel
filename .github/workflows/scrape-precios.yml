@@ -1,11 +1,12 @@
 name: Scrape Precios Tiendas
 
 on:
-  schedule:
-    - cron: '0 7 * * *'
-    - cron: '0 13 * * *'
-    - cron: '0 19 * * *'
-    - cron: '0 23 * * *'
+  # Scrape automático desactivado temporalmente — lanzar a mano con workflow_dispatch
+  # schedule:
+  #   - cron: '0 7 * * *'
+  #   - cron: '0 13 * * *'
+  #   - cron: '0 19 * * *'
+  #   - cron: '0 23 * * *'
   workflow_dispatch:
 
 # Scraper dividido en 3 jobs paralelos para evitar timeout de 60 min.
