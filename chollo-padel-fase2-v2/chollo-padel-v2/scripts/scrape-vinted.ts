@@ -206,32 +206,23 @@ const KEYWORDS = [
   // ── KOMBAT ─────────────────────────────────────────────────────────────
   'kombat padel',
 
-  // ── MUNICH / SLAZENGER / PRINCE / VOLT / KAITT ─────────────────────────
-  'munich padel',
-  'slazenger padel',
-  'prince padel',
-  'volt padel',
-  'kaitt padel',
-
-  // ── MARCAS NICHO ───────────────────────────────────────────────────────
+  // ── MARCAS NICHO (solo las que tienen catálogo y precio referencia) ──────
   'alkemia padel',
-  'hirostar padel',
   'racket project padel',
-  'cork padel',
-  'sane padel',
   'rs padel',
-  'cartri padel',
-  'nzn padel',
-  'vision padel',
-  'endless padel',
-  'tactical padel',
-  'pallap padel',
+
+  // Excluidas por 0% match y sin catálogo:
+  // munich, slazenger, prince, volt, kaitt, cork, sane, cartri, nzn, vision, endless, tactical, pallap, hirostar
 
 ]
 
 // Palabras que indican que el anuncio NO es una pala de pádel
 // Se filtran ANTES del upsert para no contaminar la BD
 const EXCLUIR_SCRAPER = [
+  // Títulos genéricos sin modelo (imposibles de matchear)
+  // Vinted europeo devuelve muchos "Racchetta padel", "Raquette de padel" sin info de modelo
+  // Solo excluimos si el título ES exactamente esa frase (títulos muy cortos/genéricos)
+
   // Raquetas de tenis
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
@@ -487,9 +478,13 @@ async function scrapeKeyword(
       if (parseFloat(item.price?.amount ?? '0') < 15) continue
 
       // Filtro positivo: el título debe contener al menos un término de pala de pádel.
-      // Necesario porque catalog[]=4597 en Vinted es categoría amplia (ropa, calzado, accesorios)
-      // y la búsqueda por keyword trae resultados de texto sin restricción estricta de subcategoría.
       if (!PALABRAS_PALA.some(w => tl.includes(w))) continue
+
+      // Filtro de calidad: títulos con < 4 palabras son genéricos sin modelo
+      // Ej: "Racchette padel", "Raquette de padel", "Pala padel", "Babolat Padel"
+      // Son imposibles de matchear y contaminan la BD.
+      const wordCount = tl.trim().split(/\s+/).filter(w => w.length > 0).length
+      if (wordCount < 4) continue
 
       result.push(mapItem(item, keyword))
     }
