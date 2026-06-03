@@ -621,9 +621,10 @@ function matchearItem(
 
   if (scored.length === 0) return 'noMatch'
 
-  // ── Guard: modelo genérico sin año → asignar al más reciente con flag yearAmbiguous ──
-  // Antes retornaba 'ambiguous' (pala_id=null). Ahora asigna al año más reciente con
-  // match_method='fuzzy_year_ambiguous' para que aparezca en el buscador aunque no en top.
+  // ── Guard: modelo genérico sin año → NO asignar ──────────────────────────
+  // Si el modelo matcheado tiene ≤2 tokens Y el título no tiene año, es demasiado
+  // genérico ("Pala bullpadel", "Pala Nox"...) y asignaría al modelo más reciente
+  // aunque sea incorrecto. Mejor dejarlo como noMatch para no contaminar el TOP.
   if (scored.length === 1 && scored[0].pala.tokens.length <= 2 && anioTitulo === null) {
     const baseTokens = scored[0].pala.tokens
     const candidatas2 = palasPorMarca.get(marcaNorm!) ?? []
@@ -631,12 +632,7 @@ function matchearItem(
       p.id !== scored[0].pala.id &&
       baseTokens.every(t => p.tokens.includes(t))
     )
-    if (sibling.length > 0) {
-      // Asignar al año más reciente entre todos los candidatos con esos tokens
-      const todos = [scored[0].pala, ...sibling]
-      const masReciente = todos.reduce((a, b) => (b.año > a.año ? b : a))
-      return { external_id: item.external_id, pala_id: masReciente.id, año: masReciente.año, titulo: item.title, modelo: masReciente.modelo, yearAmbiguous: true }
-    }
+    if (sibling.length > 0) return 'noMatch'  // genérico con múltiples candidatos → descartar
   }
 
   // ── Desempate 1: fix HRD+→base, Team→base ─────────────────────────────────
@@ -842,7 +838,7 @@ export async function matchPalaIds(
     fromCache += PAGE_CACHE
   }
 
-  let matched = 0, ambiguous = 0, noMatch = 0, yearAmbiguous = 0
+  let matched = 0, ambiguous = 0, noMatch = 0
   const updates:            { external_id: string; pala_id: string; año: number; method: string }[] = []
   const noMatchIds:         string[] = []
   const ambiguousIds:       string[] = []
@@ -859,9 +855,8 @@ export async function matchPalaIds(
       ambiguousIds.push(item.external_id)
       continue
     }
-    if (result.yearAmbiguous) yearAmbiguous++
-    else matched++
-    updates.push({ external_id: result.external_id, pala_id: result.pala_id, año: result.año, method: result.yearAmbiguous ? 'fuzzy_year_ambiguous' : 'fuzzy_auto' })
+    matched++
+    updates.push({ external_id: result.external_id, pala_id: result.pala_id, año: result.año, method: 'fuzzy_auto' })
   }
 
   const BATCH = 100
@@ -897,7 +892,7 @@ export async function matchPalaIds(
   }
 
   if (verbose) {
-    console.log(`  ✅ Match pala_id: ${matched} asignados, ${yearAmbiguous} año-ambiguos (buscador), ${ambiguous} ambiguos, ${noMatch} sin match`)
+    console.log(`  ✅ Match pala_id: ${matched} asignados, ${ambiguous} ambiguos, ${noMatch} sin match`)
   }
 
   return { matched, ambiguous, noMatch }
@@ -1104,20 +1099,47 @@ async function main() {
     }
 
     if (debugNomatch.sinMarca.length > 0) {
-      console.log(`  🔴 Muestra sin marca (primeros 10):`)
-      for (const t of debugNomatch.sinMarca.slice(0, 10)) {
-        console.log(`     "${t.substring(0, 65)}"`)
+      console.log(`  🔴 Muestra sin marca (primeros 20):`)
+      for (const t of debugNomatch.sinMarca.slice(0, 20)) {
+        console.log(`     "${t.substring(0, 80)}"`)
       }
       console.log()
     }
 
     if (debugNomatch.descartDif.length > 0) {
-      console.log(`  🟡 Muestra descartados por diferenciador (primeros 10):`)
-      for (const t of debugNomatch.descartDif.slice(0, 10)) {
-        console.log(`     "${t.substring(0, 65)}"`)
+      console.log(`  🟡 Muestra descartados por diferenciador (primeros 20):`)
+      for (const t of debugNomatch.descartDif.slice(0, 20)) {
+        console.log(`     "${t.substring(0, 80)}"`)
       }
       console.log()
     }
+
+    if (debugNomatch.ratioInsuf.length > 0) {
+      console.log(`  ⚫ Muestra ratio insuficiente (primeros 20):`)
+      for (const t of debugNomatch.ratioInsuf.slice(0, 20)) {
+        console.log(`     "${t.substring(0, 80)}"`)
+      }
+      console.log()
+    }
+
+    // Escribir informe completo a fichero para análisis
+    const { writeFileSync } = await import('fs')
+    const report = {
+      fecha:        new Date().toISOString(),
+      totales: {
+        sinMarca:    debugNomatch.sinMarca.length,
+        sinCatalogo: debugNomatch.sinCatalogo.length,
+        descartDif:  debugNomatch.descartDif.length,
+        ratioInsuf:  debugNomatch.ratioInsuf.length,
+      },
+      sinMarca:    debugNomatch.sinMarca,
+      sinCatalogo: debugNomatch.sinCatalogo,
+      descartDif:  debugNomatch.descartDif,
+      ratioInsuf:  debugNomatch.ratioInsuf,
+    }
+    const outFile = 'debug-nomatch.json'
+    writeFileSync(outFile, JSON.stringify(report, null, 2), 'utf-8')
+    console.log(`  💾 Informe completo guardado en ${outFile}`)
   }
 
   if (updates.length === 0) {

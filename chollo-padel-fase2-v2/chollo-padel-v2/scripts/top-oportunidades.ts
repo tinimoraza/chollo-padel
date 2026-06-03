@@ -52,10 +52,10 @@ function extraerAnio(title: string): number | null {
 
 function scoreAnio(title: string): number {
   const anio = extraerAnio(title)
-  if (anio === null) return 0.85
-  if (anio >= 2024)  return 1.15
-  if (anio === 2023) return 0.90
-  return 0.65
+  // Solo llegan aquí items con año >= 2024 (filtro duro previo)
+  if (anio === null) return 1.00  // no debería ocurrir, fallback neutro
+  if (anio >= 2025)  return 1.15
+  return 1.00  // 2024
 }
 
 
@@ -219,7 +219,9 @@ async function main() {
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
     .not('pala_id', 'is', null)
-    .or('match_confidence.gte.0.95,match_confidence.is.null')
+    // Solo matches específicos: fuzzy_auto (Wallapop) y fuzzy_auto/fuzzy_match (Vinted)
+    // Excluir fuzzy_year_ambiguous (genéricos sin año → asignados al modelo más reciente, poco fiable)
+    .or('match_method.eq.fuzzy_auto,match_method.is.null')
 
   if (error || !items) {
     console.error('❌ Error leyendo wallapop_cache:', error)
@@ -251,9 +253,9 @@ async function main() {
       !titleLower.includes('pala')
     ) continue
 
-    // Filtro duro: solo palas de 2024 en adelante
+    // Filtro duro: el título DEBE incluir año 2024+ (sin año = excluido)
     const anioAnuncio = extraerAnio(item.title)
-    if (anioAnuncio !== null && anioAnuncio < 2024) continue
+    if (anioAnuncio === null || anioAnuncio < 2024) continue
 
     // Precio oficial de tienda para esta pala
     const precioTienda = preciosPorPalaId.get(item.pala_id)
