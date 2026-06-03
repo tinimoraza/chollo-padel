@@ -310,6 +310,7 @@ function tokenizar(texto: string): string[] {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // v10: quitar tildes ANTES de tokenizar (élite→elite, pádel→padel, González→gonzalez)
     .toLowerCase()
     .replace(/hrd\+/g, 'hrd')          // normalizar hrd+ → hrd
+    .replace(/\bhdr\+?/g, 'hrd')       // normalizar hdr/hdr+ → hrd (typo común en Vinted)
     .replace(/\bhard\b/g, 'hrd')       // v13: normalizar "hard" → "hrd" (Vinted usa "Blast Pro Hard")
     .replace(/\bsoft\b/g, 'sft')       // v13: normalizar "soft" → "sft" (Joma SFT = Soft)
     .replace(/\bctr\b/g, 'ctrl')       // normalizar ctr → ctrl (Bullpadel usa CTR)
@@ -502,6 +503,11 @@ function matchearItem(
   // AT10 Attack sin 18K → en catálogo siempre es "Genius Attack"
   if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('attack') && !tokensTitle.includes('genius')) {
     tokensTitle = [...tokensTitle, 'genius']
+  }
+  // AT10 Genius Attack: los modelos del catálogo llevan 12k+alum pero los títulos no siempre
+  if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('attack')) {
+    if (!tokensTitle.includes('12k'))  tokensTitle = [...tokensTitle, '12k']
+    if (!tokensTitle.includes('alum')) tokensTitle = [...tokensTitle, 'alum']
   }
   // AT10 12K sin "genius" → inyectar genius (AT10 Genius 12K es el modelo estándar)
   if (marcaNorm === 'nox' && tokensTitle.includes('at10') && tokensTitle.includes('12k') && !tokensTitle.includes('genius')) {
