@@ -1,4 +1,0 @@
-# ELIMINADO — duplicado de match-wallapop.yml (renombrado a "Match Segunda Mano")
-# Ambos hacen lo mismo: matchPalaIds(). Solo conservamos match-wallapop.yml.
-# Este fichero queda vacío para no romper el historial de git.
-# Puedes borrarlo manualmente cuando quieras.
