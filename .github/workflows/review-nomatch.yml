@@ -1,7 +1,7 @@
 name: Review No-Match Diario
 
-# Genera cada mañana un resumen de los anuncios sin pala_id asignado
-# para detectar marcas/modelos que faltan en el catálogo.
+# Genera cada mañana un resumen de calidad del matching.
+# Guarda el log en logs/review-nomatch/ y lo commitea al repo.
 # Corre a las 07:00 UTC (09:00 España verano).
 
 on:
@@ -21,9 +21,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Instalar dependencias
         run: npm install
 
@@ -31,4 +35,16 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: npx tsx scripts/review-nomatch.ts
+        run: |
+          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
+          mkdir -p ../../logs/review-nomatch
+          npx tsx scripts/review-nomatch.ts 2>&1 | tee ../../logs/review-nomatch/${FECHA}.txt
+
+      - name: Commit log al repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ../../logs/review-nomatch/
+          git diff --cached --quiet || git commit -m "log: review-nomatch $(date -u +"%Y-%m-%d %H:%M UTC")"
+          git push
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
