@@ -55,4 +55,18 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
-          FECHA=$(date -u 
+          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
+          mkdir -p ../../logs/embedding-rematch
+          echo "=== EMBEDDING REMATCH - $(date -u) ===" > ../../logs/embedding-rematch/${FECHA}.txt
+          echo "" >> ../../logs/embedding-rematch/${FECHA}.txt
+          npx tsx scripts/match-pala-id.ts --method=embedding 2>&1 | tee -a ../../logs/embedding-rematch/${FECHA}.txt
+          echo "" >> ../../logs/embedding-rematch/${FECHA}.txt
+          echo "=== FIN $(date -u) ===" >> ../../logs/embedding-rematch/${FECHA}.txt
+
+      - name: Commit log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/embedding-rematch/
+          git diff --cached --quiet || git commit -m "log: embedding-rematch $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

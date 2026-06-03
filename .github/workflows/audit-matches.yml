@@ -32,4 +32,40 @@ jobs:
         run: |
           FECHA=$(date -u +"%Y-%m-%d_%H-%M")
           mkdir -p logs/audit-matches
-          LOG=logs/audit-matches/${FECHA}
+
+          echo "=== AUDIT MATCHES - $(date -u) ===" > logs/audit-matches/${FECHA}.txt
+          echo "" >> logs/audit-matches/${FECHA}.txt
+
+          STATUS=$(curl -s -o /tmp/audit_response.json -w "%{http_code}" \
+            -X GET "https://www.huntpadel.com/api/cron/audit-matches" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --max-time 300)
+
+          echo "HTTP Status: $STATUS" >> logs/audit-matches/${FECHA}.txt
+          echo "" >> logs/audit-matches/${FECHA}.txt
+
+          if [ "$STATUS" = "200" ]; then
+            echo "--- RESUMEN ---" >> logs/audit-matches/${FECHA}.txt
+            cat /tmp/audit_response.json | jq '{
+              total_auditados: .total,
+              bad_matches_encontrados: .bad_matches,
+              corregidos: .fixed,
+              items_top_auditados: .top_count,
+              items_chollos_auditados: .chollos_count
+            }' 2>/dev/null >> logs/audit-matches/${FECHA}.txt || cat /tmp/audit_response.json >> logs/audit-matches/${FECHA}.txt
+            echo "" >> logs/audit-matches/${FECHA}.txt
+            echo "--- RESPUESTA COMPLETA ---" >> logs/audit-matches/${FECHA}.txt
+            cat /tmp/audit_response.json | jq '.' 2>/dev/null >> logs/audit-matches/${FECHA}.txt || cat /tmp/audit_response.json >> logs/audit-matches/${FECHA}.txt
+          else
+            echo "ERROR: HTTP $STATUS" >> logs/audit-matches/${FECHA}.txt
+            cat /tmp/audit_response.json >> logs/audit-matches/${FECHA}.txt
+            exit 1
+          fi
+
+      - name: Commit log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/audit-matches/
+          git diff --cached --quiet || git commit -m "log: audit-matches $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
