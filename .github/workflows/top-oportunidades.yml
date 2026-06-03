@@ -8,7 +8,7 @@ name: Top Oportunidades
 
 on:
   schedule:
-    - cron: '15 * * * *'   # Cada hora a :15 (después del scrape de Wallapop a :00)
+    - cron: '25,55 * * * *'   # Cada 30 min a :25 y :55
   workflow_dispatch:        # Permite lanzarlo manualmente desde GitHub UI
 
 jobs:

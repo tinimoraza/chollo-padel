@@ -2,7 +2,7 @@ name: Scraper Vinted
 
 on:
   schedule:
-    - cron: '30 * * * *'   # Cada hora a :30 (offset respecto a Wallapop que va a :00)
+    - cron: '5,35 * * * *'   # Cada 30 min a :05 y :35
   workflow_dispatch:
 
 jobs:
