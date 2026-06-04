@@ -1,9 +1,9 @@
 name: Embedding Rematch
 
-# Aplica el matcher semántico (embeddings) a los anuncios que el fuzzy matcher
+# Aplica el matcher semÃ¡ntico (embeddings) a los anuncios que el fuzzy matcher
 # no pudo resolver (no_match, ambiguous). Segunda capa de matching con ML.
-# Guarda log en logs/embedding-rematch/ para monitorización.
-# Horario: 07:30 y 18:30 UTC (después del fuzzy match a :15/:45)
+# Guarda log en logs/embedding-rematch/ para monitorizaciÃ³n.
+# Horario: 07:30 y 18:30 UTC (despuÃ©s del fuzzy match a :15/:45)
 
 on:
   schedule:
@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: chollo-padel-fase2-v2/chollo-padel-v2/package-lock.json
 
@@ -42,7 +42,7 @@ jobs:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
         run: npm ci
 
-      - name: Regenerar embeddings del catálogo
+      - name: Regenerar embeddings del catÃ¡logo
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
