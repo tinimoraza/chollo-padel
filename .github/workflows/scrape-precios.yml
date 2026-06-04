@@ -139,5 +139,7 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
+      - name: Recalcular precio_referencia (todas las palas)
+        run: node scripts/prices/recalculate-all-references.js
       - name: Recalcular Top Oportunidades
         run: npx tsx scripts/top-oportunidades.ts
