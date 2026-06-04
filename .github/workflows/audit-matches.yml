@@ -47,11 +47,12 @@ jobs:
           if [ "$STATUS" = "200" ]; then
             echo "--- RESUMEN ---" >> logs/audit-matches/${FECHA}.txt
             cat /tmp/audit_response.json | jq '{
-              total_auditados: .total,
-              bad_matches_encontrados: .bad_matches,
-              corregidos: .fixed,
-              items_top_auditados: .top_count,
-              items_chollos_auditados: .chollos_count
+              top_auditados: .summary.top_auditados,
+              chollos_auditados: .summary.chollos_auditados,
+              errores: .summary.errores_encontrados,
+              warnings: .summary.warnings_encontrados,
+              auto_corregidos: .summary.auto_corregidos,
+              checks_disparados: .summary.por_check
             }' 2>/dev/null >> logs/audit-matches/${FECHA}.txt || cat /tmp/audit_response.json >> logs/audit-matches/${FECHA}.txt
             echo "" >> logs/audit-matches/${FECHA}.txt
             echo "--- RESPUESTA COMPLETA ---" >> logs/audit-matches/${FECHA}.txt
