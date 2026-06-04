@@ -34,6 +34,13 @@ const MARCAS = [
   { regex: /\bmunich\b/i,          marca: 'Munich' },
   { regex: /\bpuma\b/i,            marca: 'Puma' },
   { regex: /ocho.?padel/i,        marca: 'Ocho Padel' },
+  { regex: /hirostar/i,           marca: 'Hirostar' },
+  { regex: /\bcork\b/i,           marca: 'Cork' },
+  { regex: /xcalion/i,            marca: 'Xcalion' },
+  { regex: /\bquad\b/i,           marca: 'Quad' },
+  { regex: /vibor-a/i,            marca: 'Vibora' },
+  { regex: /tactical.?padel/i,    marca: 'Tactical Padel' },
+  { regex: /\bslazenger\b/i,      marca: 'Slazenger' },
 ]
 
 export function detectarMarca(title: string, keyword?: string): string | null {

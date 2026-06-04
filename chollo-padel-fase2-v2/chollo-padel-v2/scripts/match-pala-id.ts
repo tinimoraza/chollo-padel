@@ -283,6 +283,8 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'sane':       'Sane',
   'endless':    'Endless',
   'pallap':     'Pallap',
+  'xcalion':        'Xcalion',
+  'quad':           'Quad',
   'tactical padel': 'Tactical Padel',
   'racket project': 'Racket Project',
   'rs padel':   'RS Padel',
@@ -301,6 +303,12 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'yarara':     'Vibora',
   'electra':    'Siux',       // "Electra ST2" → Siux
   'pegasus':    'Siux',
+  'alien pro':  'Hirostar',   // "Alien Pro 26" → Hirostar
+  'alien core': 'Hirostar',
+  'blackstone': 'Hirostar',
+  'redstone':   'Hirostar',
+  'unum':       'Xcalion',    // "Unum+ H1" → Xcalion
+  'infinity h1':'Xcalion',
 }
 
 // ─── Funciones de parsing ──────────────────────────────────────────────────────
