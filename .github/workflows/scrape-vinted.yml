@@ -15,7 +15,7 @@ jobs:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
 
     steps:
-      - name: Checkout codigo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -31,7 +31,3 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: npx tsx scripts/scrape-vinted.ts
-
-      - name: Resumen
-        if: always()
-        run: echo "Scraper Vinted finalizado"
