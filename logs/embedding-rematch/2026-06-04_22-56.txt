@@ -1,0 +1,27 @@
+=== EMBEDDING REMATCH - Thu Jun  4 22:56:34 UTC 2026 ===
+
+🔗 HUNTPADEL — Match pala_id
+📅 2026-06-04T22:56:35.426Z
+
+📚 Cargando catálogo de palas...
+  2555 palas cargadas, 38 marcas
+
+🔍 Debug tokens de palas clave:
+  "ADIDAS METALBONE HRD+ 3.4 2025": tokens:[metalbone, hrd, v3p4] versión:3.4
+  "ADIDAS METALBONE 3.3 2024 - ALE GALÁN": tokens:[metalbone, v3p3] versión:3.3
+  "Pala Adidas Metalbone 3.4 2025": tokens:[adidas, metalbone, v3p4] versión:3.4
+  "Babolat Technical Viper 2024": tokens:[technical, viper] versión:ninguna
+  "Bullpadel Vertex 03 2023": tokens:[vertex, 03] versión:ninguna
+
+📦 Cargando wallapop_cache sin pala_id...
+  2369 anuncios sin pala_id
+
+📊 Resultados del matching:
+  ✅ Matches claros:  0
+  ⚠️  Ambiguos:       33
+  ❌ Sin match:       2233
+  🚫 Accesorios:      103
+
+⚠️  Sin actualizaciones que aplicar.
+
+=== FIN Thu Jun  4 22:56:37 UTC 2026 ===
