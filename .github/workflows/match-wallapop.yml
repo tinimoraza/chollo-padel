@@ -5,7 +5,7 @@ name: Match Segunda Mano
 
 on:
   schedule:
-    - cron: '15 * * * *'
+    - cron: '15,45 * * * *'
   workflow_dispatch:
 
 jobs:

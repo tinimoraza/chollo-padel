@@ -8,7 +8,7 @@ name: Top Oportunidades
 
 on:
   schedule:
-    - cron: '25 * * * *'   # Cada hora a :25
+    - cron: '25,55 * * * *'   # Cada hora a :25
   workflow_dispatch:        # Permite lanzarlo manualmente desde GitHub UI
 
 jobs:
