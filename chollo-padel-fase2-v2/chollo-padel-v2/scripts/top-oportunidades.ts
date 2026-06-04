@@ -221,7 +221,7 @@ async function main() {
     .not('pala_id', 'is', null)
     // Solo matches específicos: fuzzy_auto (Wallapop) y fuzzy_auto/fuzzy_match (Vinted)
     // Excluir fuzzy_year_ambiguous (genéricos sin año → asignados al modelo más reciente, poco fiable)
-    .or('match_method.eq.fuzzy_auto,match_method.is.null')
+    .or('match_method.eq.fuzzy_auto,match_method.eq.manual_fix,match_method.is.null')
 
   if (error || !items) {
     console.error('❌ Error leyendo wallapop_cache:', error)
