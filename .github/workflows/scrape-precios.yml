@@ -88,6 +88,9 @@ jobs:
       - name: Scrape Zona de Padel
         continue-on-error: true
         run: node scripts/prices/pipeline.js zonadepadel
+      - name: Scrape Ofertas de Padel
+        continue-on-error: true
+        run: node scripts/prices/pipeline.js ofertasdepadel
 
   # -- Grupo C: fetch + Playwright set 2 ----------------------------------------
   scrape-grupo-c:

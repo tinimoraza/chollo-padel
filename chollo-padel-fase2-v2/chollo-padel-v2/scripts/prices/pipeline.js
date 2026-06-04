@@ -356,18 +356,23 @@ async function recalculatePriceReference(palaIds) {
     const precio_maximo = Math.max(...precios);
     const fuentes_count = new Set(unique.map(s => s.source_id)).size;
 
-    // FIX v8: sanity check contra precio_pvp oficial del catálogo.
-    // Si la mediana difiere más de un 40% del pvp, hay un bad match en los snapshots.
-    // Fallback: usar precio_pvp como referencia y loguear para revisión.
+    // v9: Precio de referencia dinámico
+    // - < 3 tiendas con el producto → usar precio_pvp del fabricante (más fiable)
+    // - ≥ 3 tiendas → usar mediana de precios actuales (refleja el mercado real, incluye bajadas)
+    // - Solo bloquear si la mediana es >1.4× el pvp (bad match arriba, ej: edición especial)
     const pvpOficial = pvpPorPalaId.get(palaId);
     if (pvpOficial && precio_referencia) {
       const ratio = precio_referencia / pvpOficial;
-      // Solo upper-bound: si la mediana es >1.4× el pvp hay un bad match arriba (ej: Lapi Edition)
-      // NO lower-bound: palas con descuento real del 50%+ no deben bloquearse (Siux ST4, etc.)
-      if (ratio > 1.4) {
+      if (fuentes_count < 3) {
+        // Pocas tiendas → precio de tiendas poco fiable, usar pvp fabricante
+        console.log(`[pipeline] ℹ️  ${palaId}: solo ${fuentes_count} fuente(s) → usando pvp fabricante ${pvpOficial}€ como referencia`);
+        precio_referencia = pvpOficial;
+      } else if (ratio > 1.4) {
+        // Bad match arriba (ej: edición especial matcheada a pala barata)
         console.warn(`[pipeline] ⚠️  precio_ref inflado para ${palaId}: mediana=${precio_referencia}€ vs pvp=${pvpOficial}€ (ratio=${ratio.toFixed(2)}) → usando pvp como fallback`);
         precio_referencia = pvpOficial;
       }
+      // Si ≥ 3 tiendas y ratio <= 1.4 → usar mediana (puede ser mucho menor que pvp original, es correcto)
     }
 
     refRows.push({ pala_id: palaId, precio_referencia, precio_minimo, precio_maximo, fuentes_count, updated_at: now });
