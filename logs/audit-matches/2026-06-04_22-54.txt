@@ -1,0 +1,76 @@
+=== AUDIT MATCHES - Thu Jun  4 22:54:14 UTC 2026 ===
+
+HTTP Status: 200
+
+--- RESUMEN ---
+{
+  "top_auditados": 10,
+  "chollos_auditados": 1000,
+  "errores": 0,
+  "warnings": 4,
+  "auto_corregidos": 0,
+  "checks_disparados": {
+    "M2_LOW_COVERAGE": 1,
+    "C4_LOW_URL_COVERAGE": 3
+  }
+}
+
+--- RESPUESTA COMPLETA ---
+{
+  "ok": true,
+  "summary": {
+    "top_auditados": 10,
+    "chollos_auditados": 1000,
+    "errores_encontrados": 0,
+    "warnings_encontrados": 4,
+    "auto_corregidos": 0,
+    "por_check": {
+      "M2_LOW_COVERAGE": 1,
+      "C4_LOW_URL_COVERAGE": 3
+    }
+  },
+  "logs": [
+    {
+      "source": "top",
+      "severity": "warning",
+      "check_code": "M2_LOW_COVERAGE",
+      "external_id": "9jdwqex02d6k",
+      "pala_id": "81f22d93-3cca-4d21-8670-32a86a753cc6",
+      "pala_modelo": "NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2026",
+      "titulo": "Pala Nox AT10 18K 2026",
+      "descripcion": "Solo 33% de los tokens del modelo \"NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2026\" aparecen en el título. Tokens esperados: [at10, genius, 18k, alum, agustin, tapia]. Encontrados: [at10, 18k].",
+      "auto_corregido": false
+    },
+    {
+      "source": "chollos",
+      "severity": "warning",
+      "check_code": "C4_LOW_URL_COVERAGE",
+      "pala_id": "5364fed2-c802-4389-bbb7-9696e3981aea",
+      "pala_modelo": "Adidas Match Light 2026",
+      "titulo": "https://www.padelnuestro.com/catalog/product/view/id/5385/s/adidas-match-light-3-2/category/6/",
+      "descripcion": "Solo 0% de tokens clave del modelo \"Adidas Match Light 2026\" [match, light] aparecen en la URL \"6\". Posible match incorrecto.",
+      "auto_corregido": false
+    },
+    {
+      "source": "chollos",
+      "severity": "warning",
+      "check_code": "C4_LOW_URL_COVERAGE",
+      "pala_id": "ff43dad0-9e50-424c-a3d3-c0aa95a0c143",
+      "pala_modelo": "Adidas Match 3.2 2023",
+      "titulo": "https://www.padelnuestro.com/catalog/product/view/id/5383/s/adidas-match-3-2-2023-32322-p/category/6/",
+      "descripcion": "Solo 0% de tokens clave del modelo \"Adidas Match 3.2 2023\" [match, v3p2] aparecen en la URL \"6\". Posible match incorrecto.",
+      "auto_corregido": false
+    },
+    {
+      "source": "chollos",
+      "severity": "warning",
+      "check_code": "C4_LOW_URL_COVERAGE",
+      "pala_id": "9c024702-e2f4-4b6c-90f4-540c826abc6a",
+      "pala_modelo": "Siux Valkiria Elite 2025",
+      "titulo": "https://www.padelnuestro.com/catalog/product/view/id/1566812/s/siux-valkiria-elite/category/6/",
+      "descripcion": "Solo 0% de tokens clave del modelo \"Siux Valkiria Elite 2025\" [valkiria, elite] aparecen en la URL \"6\". Posible match incorrecto.",
+      "auto_corregido": false
+    }
+  ],
+  "checked_at": "2026-06-04T22:54:15.857Z"
+}
