@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY!
 )
 
-const MIN_FUENTES = 2   // mínimo de tiendas distintas para promover
+const MIN_FUENTES = 1   // mínimo de tiendas distintas para promover
 const MIN_PRECIO  = 30  // descartar accesorios baratos (grips, bolsas...)
 
 async function main() {
