@@ -1,0 +1,439 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+🔗 HUNTPADEL — Match pala_id
+📅 2026-06-04T08:03:38.464Z
+
+📚 Cargando catálogo de palas...
+📋 REVIEW CALIDAD MATCHING
+📅 2026-06-04T08:03:38.483Z
+
+  1762 palas cargadas, 32 marcas
+
+🔍 Debug tokens de palas clave:
+  "ADIDAS METALBONE HRD+ 3.4 2025": tokens:[metalbone, hrd, v3p4] versión:3.4
+  "ADIDAS METALBONE 3.3 2024 - ALE GALÁN": tokens:[metalbone, v3p3] versión:3.3
+  "Adidas Metalbone 3.4 HRD+ 2025": tokens:[metalbone, v3p4, hrd] versión:3.4
+  "Babolat Technical Viper 2024": tokens:[technical, viper] versión:ninguna
+  "Bullpadel Vertex 03 2023": tokens:[vertex, 03] versión:ninguna
+
+📦 Cargando wallapop_cache sin pala_id...
+📚 Catálogo: 1762 palas
+
+
+══════════════════════════════════════════════════════════════════════
+✅  PARTE 1 — QUÉ MATCHEÓ (fuzzy_auto, últimos 500)
+══════════════════════════════════════════════════════════════════════
+
+Total matchados: 500
+
+📊 Matches por marca:
+  Bullpadel: 87
+  Adidas: 61
+  Nox: 59
+  Head: 43
+  Babolat: 42
+  Siux: 32
+  Star Vie: 30
+  Drop Shot: 25
+  Dunlop: 15
+  Joma: 15
+  Oxdog: 15
+  Enebe: 12
+  Black Crown: 10
+  Wilson: 8
+  tecnifibre: 7
+  Vibora: 7
+  Royal Padel: 5
+  Tecnifibre: 4
+  Kuikma: 4
+  Varlion: 4
+  Lok: 4
+  enebe: 3
+  Alkemia: 1
+  Akkeron: 1
+  bullpadel: 1
+  Kombat: 1
+  nox: 1
+  lok: 1
+  babolat: 1
+  dunlop: 1
+
+⚠️  MATCHES SOSPECHOSOS (≤2 tokens en común): 317
+   (título y modelo asignado comparten muy pocos tokens — posible match incorrecto)
+
+  💰 550€ [vinted] overlap:1
+     Título:  "Bullpadel Neuron Edge Roma"
+     Modelo:  Bullpadel Neuron 2026 [2026]
+
+  💰 350€ [vinted] overlap:1
+     Título:  "Bullpadel Neuron Edge Chingotto"
+     Modelo:  Bullpadel Neuron 2026 [2026]
+
+  💰 299.99€ [vinted] overlap:2
+     Título:  "Racchetta / pala da Padel Babolat Viper Lebron 2026 - 502 - 240"
+     Modelo:  PALA BABOLAT TECHNICAL VIPER 3.0 2026 [2026]
+
+  💰 299€ [vinted] overlap:2
+     Título:  "Oxdog Ultimate Pro+ 2026 – NEW | Invoice Included | Premium Padel Rack"
+     Modelo:  Oxdog Ultimate Pro+ 2026 [2026]
+
+  💰 285€ [vinted] overlap:1
+     Título:  "Neuron padel p1 2026 BullPadel"
+     Modelo:  Bullpadel Neuron 2026 [2026]
+
+  💰 270€ [vinted] overlap:1
+     Título:  "Racchetta Padel Bullpadel Neuron 2026 Fede Chingotto"
+     Modelo:  Bullpadel Neuron 2026 [2026]
+
+  💰 265€ [wallapop] overlap:1
+     Título:  "ADIDAS METALBONE RESERVE EDT 2026"
+     Modelo:  Adidas Metalbone 2026 - Ale Galan [2026]
+
+  💰 260€ [wallapop] overlap:2
+     Título:  "Pala Padel Adidas Metalbone HRD 2026"
+     Modelo:  Adidas Metalbone HRD+ 2026 - Ale Galan [2026]
+
+  💰 260€ [vinted] overlap:2
+     Título:  "Racchetta padel Oxdog Pure Pro +"
+     Modelo:  Oxdog Pure Pro+ 2026 [2026]
+
+  💰 260€ [wallapop] overlap:1
+     Título:  "Pala Adidas Metalbone EDT 2026"
+     Modelo:  Adidas Metalbone 2026 - Ale Galan [2026]
+
+  💰 259€ [vinted] overlap:2
+     Título:  "Pala de Pádel Royal Pádel M27 light 2026"
+     Modelo:  Royal Padel M27 Light 2026 [2026]
+
+  💰 250€ [vinted] overlap:2
+     Título:  "Raquette Padel Babolat Viper 3.0 Juan Lebron"
+     Modelo:  Babolat Viper 3.0 2026 Juan Lebron [2026]
+
+  💰 250€ [vinted] overlap:2
+     Título:  "Bullpadel vertex geo PP26"
+     Modelo:  Bullpadel Vertex Geo Premier 2026 [2026]
+
+  💰 240€ [wallapop] overlap:2
+     Título:  "Head Pro Stock Extreme PT 333.2"
+     Modelo:  Head Extreme Pro 2026 [2026]
+
+  💰 239€ [vinted] overlap:2
+     Título:  "Pala de pádel Royal Pádel m27 Race light 2026"
+     Modelo:  Royal Padel M27 Light 2026 [2026]
+
+  💰 239€ [vinted] overlap:1
+     Título:  "Raquette padel Babolat Viper Lebrón Édition"
+     Modelo:  Babolat Technical Viper 2025 [2025]
+
+  💰 230€ [wallapop] overlap:2
+     Título:  "Pala de pádel Babolat Air Viper 2026"
+     Modelo:  Babolat Air Viper 2026 [2026]
+
+  💰 220€ [vinted] overlap:1
+     Título:  "Pala iconic black crown"
+     Modelo:  BLACK CROWN ICONIC [null]
+
+  💰 219€ [vinted] overlap:2
+     Título:  "Racchetta padel Tecnifibre Bomba Max"
+     Modelo:  TECNIFIBRE BOMBA MAX [null]
+
+  💰 210€ [wallapop] overlap:2
+     Título:  "Siux Valkiria Pro Padel Racket"
+     Modelo:  Siux Valkiria Pro 2026 [2026]
+
+  💰 209€ [wallapop] overlap:2
+     Título:  "Nox AT10 18K 2026"
+     Modelo:  NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2026 [2026]
+
+  💰 200€ [wallapop] overlap:2
+     Título:  "Pala Nox AT10 12K 2026"
+     Modelo:  NOX AT10 12K 2026 [2026]
+
+  💰 200€ [wallapop] overlap:2
+     Título:  "Pala Nox AT10 18K 2026"
+     Modelo:  NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2026 [2026]
+
+  💰 200€ [vinted] overlap:2
+     Título:  "Racchetta padel Adidas Arrow Hit 2026"
+     Modelo:  Adidas Arrow Hit 2026 [2026]
+
+  💰 200€ [vinted] overlap:2
+     Título:  "Racchetta padel Adidas metalbone Hrd + 20026"
+     Modelo:  Adidas Metalbone HRD+ 2024 [2024]
+
+  💰 200€ [vinted] overlap:2
+     Título:  "Pala de pádel Starvie Metheora Warrior"
+     Modelo:  Star Vie Metheora Warrior 2022 [2022]
+
+  💰 200€ [wallapop] overlap:2
+     Título:  "Babolat Counter Viper 2026"
+     Modelo:  Babolat Counter Viper 2026 [2026]
+
+  💰 200€ [vinted] overlap:2
+     Título:  "NIEUW padelracket siux Valkiria Elite 2026"
+     Modelo:  Siux Valkiria Elite 2 2026 [2026]
+
+  💰 199€ [wallapop] overlap:2
+     Título:  "Pala de pádel adulto adidas Metalbone HDR+ 2026  Ale Galán"
+     Modelo:  Adidas Metalbone HRD+ 2026 - Ale Galan [2026]
+
+  💰 195€ [vinted] overlap:1
+     Título:  "Raquette de padel Bullpadel Pearl 2026"
+     Modelo:  Bullpadel Pearl 2026 [2026]
+
+
+📋 Muestra top 30 por precio (para revisión manual):
+  550€ | vinted
+     Título:  "Bullpadel Neuron Edge Roma"
+     → Bullpadel Neuron 2026 [2026]
+
+  379€ | vinted
+     Título:  "Bullpadel Neuron 02 Edge ROMA Nuova"
+     → Bullpadel Neuron 02 Edge 2026 [2026]
+
+  350€ | vinted
+     Título:  "Bullpadel Neuron Edge Chingotto"
+     → Bullpadel Neuron 2026 [2026]
+
+  320€ | wallapop
+     Título:  "Adidas Arrow Hit CTRL 2026 Pala Pádel"
+     → Adidas Arrow Hit CTRL 2026 [2026]
+
+  319€ | wallapop
+     Título:  "Pala Padel Adidas Metalbone Pro EDT 2026"
+     → Adidas Metalbone Pro EDT 2026 Ale Galan [2026]
+
+  315€ | vinted
+     Título:  "Pala bullpadel neuron 02 edge premier padel Milano"
+     → Bullpadel Neuron 02 Edge 2026 [2026]
+
+  300€ | vinted
+     Título:  "Bullpadel vertex 05 GEO"
+     → BULLPADEL VERTEX 05 GEO [null]
+
+  299.99€ | vinted
+     Título:  "Racchetta / pala da Padel Babolat Viper Lebron 2026 - 502 - 240"
+     → PALA BABOLAT TECHNICAL VIPER 3.0 2026 [2026]
+
+  299€ | vinted
+     Título:  "Oxdog Ultimate Pro+ 2026 – NEW | Invoice Included | Premium Padel Rack"
+     → Oxdog Ultimate Pro+ 2026 [2026]
+
+  289€ | vinted
+     Título:  "Babolat Viper Soft 3.0 2026 – Racchetta da Padel Nuova"
+     → Babolat Viper Soft 3.0 2026 Juan Lebron [2026]
+
+  289€ | wallapop
+     Título:  "ADIDAS METALBONE PRO EDT 2026"
+     → Adidas Metalbone Pro EDT 2026 Ale Galan [2026]
+
+  285€ | vinted
+     Título:  "Neuron padel p1 2026 BullPadel"
+     → Bullpadel Neuron 2026 [2026]
+
+  285€ | wallapop
+     Título:  "ADIDAS ARROW HIT PRO EDT 2026"
+     → Adidas Arrow Hit Pro EDT 2026 [2026]
+
+  279.95€ | vinted
+     Título:  "Pala víbora yarara pro white 2.0 3k"
+     → Vibora Yarara Pro White 2.0 2026 [2026]
+
+  270€ | vinted
+     Título:  "Racchetta Padel Bullpadel Neuron 2026 Fede Chingotto"
+     → Bullpadel Neuron 2026 [2026]
+
+  265€ | wallapop
+     Título:  "ADIDAS METALBONE RESERVE EDT 2026"
+     → Adidas Metalbone 2026 - Ale Galan [2026]
+
+  260€ | wallapop
+     Título:  "Pala Padel Adidas Metalbone HRD 2026"
+     → Adidas Metalbone HRD+ 2026 - Ale Galan [2026]
+
+  260€ | vinted
+     Título:  "Racchetta padel Oxdog Pure Pro +"
+     → Oxdog Pure Pro+ 2026 [2026]
+
+  260€ | vinted
+     Título:  "Pala pádel Black mamba vibor-a evo pro black"
+     → Vibora Black Mamba EVO Pro Black 2026 [2026]
+
+  260€ | wallapop
+     Título:  "Pala Adidas Metalbone EDT 2026"
+     → Adidas Metalbone 2026 - Ale Galan [2026]
+
+  259.95€ | vinted
+     Título:  "Pala Drop Shot Lucas Campagnolo Explorer Pro Attack 1.5 2025"
+     → Drop Shot Explorer Pro Attack 1.5 2025 Lucas Campagnolo [2025]
+
+  259€ | vinted
+     Título:  "Pala de Pádel Royal Pádel M27 light 2026"
+     → Royal Padel M27 Light 2026 [2026]
+
+  259€ | wallapop
+     Título:  "Pala de padel Adidas Metalbone 2026 Pro EDT"
+     → Adidas Metalbone Pro EDT 2026 Ale Galan [2026]
+
+  250€ | vinted
+     Título:  "Raquette Padel Babolat Viper 3.0 Juan Lebron"
+     → Babolat Viper 3.0 2026 Juan Lebron [2026]
+
+  250€ | vinted
+     Título:  "Bullpadel vertex geo PP26"
+     → Bullpadel Vertex Geo Premier 2026 [2026]
+
+  240€ | wallapop
+     Título:  "Head Pro Stock Extreme PT 333.2"
+     → Head Extreme Pro 2026 [2026]
+
+  239€ | vinted
+     Título:  "Pala de pádel Royal Pádel m27 Race light 2026"
+     → Royal Padel M27 Light 2026 [2026]
+
+  239€ | vinted
+     Título:  "Raquette padel Babolat Viper Lebrón Édition"
+     → Babolat Technical Viper 2025 [2025]
+
+  239€ | vinted
+     Título:  "Racchetta da padel Oxdog Pure Tour X"
+     → Oxdog Pure Tour X 2026 [2026]
+
+  230€ | vinted
+     Título:  "Pala Joma Padel Tournament Pro Iconic LAPI Edición Limitada Nueva"
+     → Joma Tournament Pro Iconic 2026 [2026]
+
+
+══════════════════════════════════════════════════════════════════════
+❌  PARTE 2 — QUÉ NO MATCHEÓ Y POR QUÉ
+══════════════════════════════════════════════════════════════════════
+
+Total sin pala_id: 1000
+
+📊 Por estado:
+  no_match: 978
+  ambiguous: 20
+  sin_intentar: 2
+
+📊 Motivos de no-match:
+  🔴 Sin marca detectada:          154
+  🟠 Marca sin palas en catálogo:  34
+  🟡 Bloqueado por diferenciador:  293
+  ⚫ Ratio tokens insuficiente:    492
+  🚫 Accesorios/excluidos:         27
+
+  🟠 Marcas sin catálogo (anuncios afectados):
+     prince: 10 anuncios
+     slazenger: 4 anuncios
+     volt: 4 anuncios
+     cork: 4 anuncios
+     hirostar: 3 anuncios
+     pallap: 2 anuncios
+     kaitt: 2 anuncios
+     jhayber: 1 anuncios
+     rs padel: 1 anuncios
+     tactical padel: 1 anuncios
+     cartri: 1 anuncios
+     sane: 1 anuncios
+
+  🔴 Sin marca (muestra 20):
+     "Pala de tenis de mesa Butterfly"
+     "Pala de pádel NB"
+     "Mooi padel/tennis set Nike Dri Fit/RS Sports maat S"
+     "Pala de pádel MATCH"
+     "Palas para Reparação (inclui todas)"
+     "Lot de 13 raquettes de Pádel a reparer( hs) PADEL71710"
+     "Pala Pádel Bbaolat Counter Viper"
+     "Vendo racchetta da padel"
+     "Dunrop Samurai Padel racket"
+     "Raquette padel Rs Pro Simon Vasquez Carbone"
+     "Pala de pádel NB RS"
+     "Pala Varilon cañón ti 6.7 junior"
+     "Padel tecnifobre bomba speed"
+     "Bourne Summum Prisma Premium Padel Racket"
+     "Robe padel/ tennis/ golf"
+     "Racchetta Padel Air Viper"
+     "Pala viper tecnical Juan Lebrón 2025"
+     "Racchetta padel babaolat counter Veron nuova con cartellino"
+     "Pala de pádel Carbon Hype FDB"
+     "Ross Hybrid Carbon"
+
+  🟡 Bloqueados por diferenciador (muestra 20):
+     "Racchetta da Padel Dunlop Rocket nera e verde Pro Touch"
+     "Drop Shot Explorer 5.0 racchetta padel ottime condizioni + custodia"
+     "Racchetta Padel Oxdog Ultimate Match HES-Carbon (355g)"
+     "Pala de padel dunlop inferno elite"
+     "Racchetta padel dunlop Inferno élite ltd power"
+     "Raquette de padel Adultes-Wilson endure V1"
+     "Racchetta Padel Dunlop Infinity Pro G1 HI Silver"
+     "Raquette de padel Adidas Metalbone 09 2025"
+     "Pala pádel nox ml10 bahia"
+     "Pala de Pádel Akkeron Armageddon 26 Luxury 12K."
+     "Siux pro electra 15k raquette Padel"
+     "Pala Adipower adidas lite"
+     "Dunlop infinity pro G1 Hl padel (carbon eva pro)"
+     "Racchetta padell Wilson bela team"
+     "Racchetta Padel Drop Shot Explorer Pro Soft"
+     "Pala de Pádel Adidas Adipower Multiweight"
+     "Starvie titania ultra speed soft padelracket"
+     "Raquette de Padel neuve Wilson Endure pro 2026"
+     "Tenis Bullpadel Pearl Vibram 26V"
+     "Pala de pádel Drop Shot Explorer Attack NUEVA"
+
+  ⚫ Ratio insuficiente (muestra 20):
+     "Pala wilson Nueva 2026"
+     "Racchetta padel Joma Blast Juanlu Esbri"
+     "Adidas match 2026 padel racket"
+     "Pala de pádel Dunlop PRIZE"
+     "Pala pádel Adidas match iniciación"
+     "Pala de pádel Wilson nueva"
+     "Raquette de padel Wilson endure neuf"
+     "Raquette de padel Black Crown + housse"
+     "Sapatilhas Bullpadel Hack Vibram 25I 🧡🤍 Tamanho 43.5 – Como Novas"
+     "Pala de pádel Vibor-A Yarara Rota"
+     "Sapatilhas de Padel - Bullpadel"
+     "Ténis bullpadel modelo Maxi Sanchez"
+     "Pala siux nueva sin usar"
+     "Padel Adidas Match 3.0"
+     "Joma World Padel Tour"
+     "Pala Nox ML10 12k Lamperti"
+     "Pala padel racchetta Drop shot"
+     "Racchetta padel siux beat"
+     "Dunlop padel racket Titan LTD"
+     "Pala de pádel Nox"
+
+💎 Items ≥100€ sin match (potenciales chollos perdidos):
+  600€ | wallapop | "Palas de pádel Kombat"
+  450€ | wallapop | "Pala Bullpadel Vertex"
+  350€ | wallapop | "Raquetas HEAD Gravity MP (2 unidades)"
+  340€ | vinted | "Bullpadel Vertex 05 Light Brussels Premier Padel 2026 racket – Li"
+  300€ | wallapop | "Raqueta de pádel Metalbone 3.5 Pro EDT 2026"
+  290€ | vinted | "Pala de Pádel Akkeron Armageddon 26 Luxury 12K."
+  290€ | vinted | "Pala de Pádel Akkeron Poseidon 26 Luxury 12K."
+  275€ | vinted | "Pala de Pádel Akkeron Fenix 26 Luxury 12k."
+  275€ | vinted | "Pala de Pádel Akkeron Vega 26 Luxury 12K."
+  269€ | vinted | "Pala pádel Xcalion Unum+ H1 2026 nueva a estrenar. Somos tienda. "
+  267€ | vinted | "Pala pádel Xcalion Unum+ H1 2026 nueva a estrenar. Somos tienda. "
+  259€ | vinted | "Pala de Pádel Royal Pádel m27 2026"
+  250€ | wallapop | "Pala pádel Joma Tournament Lapi ElPozo"
+  250€ | vinted | "Vendo lotto Quad Padel"
+  250€ | vinted | "Pala Bullpadel Neuron MX LTD Chingotto + funda"
+  250€ | wallapop | "Raqueta Cork Premium Hybrid III"
+  250€ | wallapop | "ADIDAS CROSS IT LIGHT PRO EDT 2026"
+  249€ | vinted | "Pala de Pádel Akkeron Atlas 26 Luxury 12K."
+  249€ | vinted | "Pala de Pádel Akkeron Andromeda 26 Luxury 12k."
+  245€ | vinted | "Pala de pádel NOX Edición Limitada (Agustín tapia )"
+
+📊 Sin match por plataforma:
+  wallapop: 268
+  vinted: 732
+
+✅ Review completado.
+  2086 anuncios sin pala_id
+
+📊 Resultados del matching:
+  ✅ Matches claros:  0
+  ⚠️  Ambiguos:       27
+  ❌ Sin match:       1986
+  🚫 Accesorios:      73
+
+⚠️  Sin actualizaciones que aplicar.
