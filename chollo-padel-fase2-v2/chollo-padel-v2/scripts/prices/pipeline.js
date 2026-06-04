@@ -363,8 +363,8 @@ async function recalculatePriceReference(palaIds) {
     const pvpOficial = pvpPorPalaId.get(palaId);
     if (pvpOficial && precio_referencia) {
       const ratio = precio_referencia / pvpOficial;
-      if (fuentes_count < 3) {
-        // Pocas tiendas → precio de tiendas poco fiable, usar pvp fabricante
+      if (fuentes_count < 2) {
+        // Solo 1 tienda → poco fiable, usar pvp fabricante como referencia
         console.log(`[pipeline] ℹ️  ${palaId}: solo ${fuentes_count} fuente(s) → usando pvp fabricante ${pvpOficial}€ como referencia`);
         precio_referencia = pvpOficial;
       } else if (ratio > 1.4) {
