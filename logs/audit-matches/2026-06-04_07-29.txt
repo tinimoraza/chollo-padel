@@ -1,0 +1,52 @@
+=== AUDIT MATCHES - Thu Jun  4 07:29:56 UTC 2026 ===
+
+HTTP Status: 200
+
+--- RESUMEN ---
+{
+  "total_auditados": null,
+  "bad_matches_encontrados": null,
+  "corregidos": null,
+  "items_top_auditados": null,
+  "items_chollos_auditados": null
+}
+
+--- RESPUESTA COMPLETA ---
+{
+  "ok": true,
+  "summary": {
+    "top_auditados": 4,
+    "chollos_auditados": 453,
+    "errores_encontrados": 0,
+    "warnings_encontrados": 2,
+    "auto_corregidos": 0,
+    "por_check": {
+      "M2_LOW_COVERAGE": 1,
+      "C4_LOW_URL_COVERAGE": 1
+    }
+  },
+  "logs": [
+    {
+      "source": "top",
+      "severity": "warning",
+      "check_code": "M2_LOW_COVERAGE",
+      "external_id": "vinted_9020942050",
+      "pala_id": "6036e063-aa58-4548-a696-476b0645fb4e",
+      "pala_modelo": "Adidas Metalbone 2026 - Ale Galan",
+      "titulo": "Raquette Padel Adidas Metalbone 3.5 2026",
+      "descripcion": "Solo 33% de los tokens del modelo \"Adidas Metalbone 2026 - Ale Galan\" aparecen en el título. Tokens esperados: [metalbone, ale, galan]. Encontrados: [metalbone].",
+      "auto_corregido": false
+    },
+    {
+      "source": "chollos",
+      "severity": "warning",
+      "check_code": "C4_LOW_URL_COVERAGE",
+      "pala_id": "9c024702-e2f4-4b6c-90f4-540c826abc6a",
+      "pala_modelo": "Siux Valkiria Elite 2025",
+      "titulo": "https://www.padelnuestro.com/catalog/product/view/id/1566812/s/siux-valkiria-elite/category/6/",
+      "descripcion": "Solo 0% de tokens clave del modelo \"Siux Valkiria Elite 2025\" [valkiria, elite] aparecen en la URL \"6\". Posible match incorrecto.",
+      "auto_corregido": false
+    }
+  ],
+  "checked_at": "2026-06-04T07:29:56.937Z"
+}
