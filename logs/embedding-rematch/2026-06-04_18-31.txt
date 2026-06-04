@@ -1,0 +1,150 @@
+=== EMBEDDING REMATCH - Thu Jun  4 18:31:16 UTC 2026 ===
+
+🔗 HUNTPADEL — Match pala_id
+📅 2026-06-04T18:31:17.928Z
+
+📚 Cargando catálogo de palas...
+  2555 palas cargadas, 38 marcas
+
+🔍 Debug tokens de palas clave:
+  "ADIDAS METALBONE HRD+ 3.4 2025": tokens:[metalbone, hrd, v3p4] versión:3.4
+  "ADIDAS METALBONE 3.3 2024 - ALE GALÁN": tokens:[metalbone, v3p3] versión:3.3
+  "Pala Adidas Metalbone 3.4 2025": tokens:[adidas, metalbone, v3p4] versión:3.4
+  "Babolat Technical Viper 2024": tokens:[technical, viper] versión:ninguna
+  "Bullpadel Vertex 03 2023": tokens:[vertex, 03] versión:ninguna
+
+📦 Cargando wallapop_cache sin pala_id...
+  2287 anuncios sin pala_id
+
+📊 Resultados del matching:
+  ✅ Matches claros:  4
+  ⚠️  Ambiguos:       29
+  ❌ Sin match:       2157
+  🚫 Accesorios:      97
+
+📋 Muestra de matches (primeros 20):
+  "Pala Padel Babolat Air Viper"
+    → Babolat Air Viper 2026
+
+  "Pala pádel Adidas Metalbone 3.3 HRD"
+    → Adidas Metalbone HRD+ 2024
+
+  "Pala Padel Head Delta Pro 2022"
+    → Head Delta Pro 2022
+
+  "Adidas Metalbone HRD+ 2026 Ale Galán"
+    → Adidas Metalbone HRD+ 2026 - Ale Galan
+
+
+⚠️  Detalle ambiguos (29 casos):
+  "racchetta padel bolt head"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Raquete padel Kuikma PR530"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Raquette padel adidas Match 2.0"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala Padel Nox Pack At Genius Limited"
+    ↔ NOX AT GENIUS LIMITED EDITION 2023 [2023] tokens:[at, genius, limited]
+    ↔ NOX AT GENIUS LIMITED EDITION 2023 [2023] tokens:[at, genius, limited]
+
+  "Pala pádel Xcalion Unum+ H1 2026 nueva a estrenar. Somos tie"
+    ↔ Unum+ H1 [2026] tokens:[unum, h1]
+    ↔ Unum H1 [2026] tokens:[unum, h1]
+
+  "Pala Padel Dunlop Strike Verde"
+    ↔ DUNLOP STRIKE VERDE [null] tokens:[strike, verde]
+    ↔ DUNLOP STRIKE VERDE [null] tokens:[strike, verde]
+
+  "Racchetta Padel Head Bolt"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala Joma Hyper Pro"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Racchetta padel Joma valkiria pro Carolina Navarro"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala pádel Adidas match iniciación"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Racchetta da padel adidas metalbone hrd plus 3.4"
+    ↔ ADIDAS METALBONE HRD+ 3.4 2025 [2025] tokens:[metalbone, hrd, v3p4]
+    ↔ Pala Adidas Metalbone 3.4 2025 [2025] tokens:[adidas, metalbone, v3p4]
+    ↔ Pala Adidas Ale Galan Metalbone 3.4 2025 [2025] tokens:[adidas, metalbone, v3p4]
+    ↔ Pala Adidas Ale Galan Metalbone HRD+ 3.4 2025 [2025] tokens:[adidas, metalbone, hrd, v3p4]
+    ↔ Adidas Metalbone HRD+ 2026 - Ale Galan [2026] tokens:[metalbone, hrd]
+    ↔ Adidas Metalbone 2026 - Ale Galan [2026] tokens:[metalbone]
+    ↔ Adidas Metalbone HRD+ 2024 [2024] tokens:[metalbone, hrd]
+    ↔ Adidas Metalbone 3.4 HRD+ 2025 [2025] tokens:[metalbone, v3p4, hrd]
+    ↔ Adidas Metalbone 3.4 2025 - Ale Galan [2025] tokens:[metalbone, v3p4]
+
+  "Racchetta Padel Dunlop Blast Elite 99"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Racchetta da Padel Adidas Drive Evo 1.9 – Usata"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala Adidas Match 2026"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "head one ultralight"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "adidas Racchetta da padel Metalbone hrd+ 3.4 2025"
+    ↔ ADIDAS METALBONE HRD+ 3.4 2025 [2025] tokens:[metalbone, hrd, v3p4]
+    ↔ Pala Adidas Metalbone 3.4 2025 [2025] tokens:[adidas, metalbone, v3p4]
+    ↔ Pala Adidas Ale Galan Metalbone 3.4 2025 [2025] tokens:[adidas, metalbone, v3p4]
+    ↔ Pala Adidas Ale Galan Metalbone HRD+ 3.4 2025 [2025] tokens:[adidas, metalbone, hrd, v3p4]
+    ↔ Adidas Metalbone HRD+ 2026 - Ale Galan [2026] tokens:[metalbone, hrd]
+    ↔ Adidas Metalbone 2026 - Ale Galan [2026] tokens:[metalbone]
+    ↔ Adidas Metalbone HRD+ 2024 [2024] tokens:[metalbone, hrd]
+    ↔ Adidas Metalbone 3.4 HRD+ 2025 [2025] tokens:[metalbone, v3p4, hrd]
+    ↔ Adidas Metalbone 3.4 2025 - Ale Galan [2025] tokens:[metalbone, v3p4]
+
+  "Pala de pádel HEAD Bolt"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Dunlop Rocket Ultra Padel"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Racchetta padel adidas match"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala pádel Xcalion Unum+ H1 2026 nueva a estrenar. Somos tie"
+    ↔ Unum+ H1 [2026] tokens:[unum, h1]
+    ↔ Unum H1 [2026] tokens:[unum, h1]
+
+  "Racchetta padel Adidas Match 1.9"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala Adidas RX Series Roja 2024"
+    ↔ Adidas RX Series 2026 [2026] tokens:[rx]
+
+  "Adidas match 2026 padel racket"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Conjunto ténis ou padel Mel Match Tank adidas"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala de pádel Adidas Match 3.0"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Adidas Match 3.3 padelracket"
+    ↔ Pala Adidas Match Light 3.3 2024 [2024] tokens:[adidas, match, light, v3p3]
+
+  "Racchetta Pala Padel Head Bolt 2025 Nuova"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Pala Adidas drive nueva"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+  "Raquete de Padel Dunlop Rocket – Excelente estado"
+    ↔ (empate en desempates finales — mismos tokens y año)
+
+
+✅ 4 actualizaciones aplicadas.
+
+=== FIN Thu Jun  4 18:31:21 UTC 2026 ===
