@@ -41,6 +41,10 @@ const MARCAS = [
   { regex: /vibor-a/i,            marca: 'Vibora' },
   { regex: /tactical.?padel/i,    marca: 'Tactical Padel' },
   { regex: /\bslazenger\b/i,      marca: 'Slazenger' },
+  // Alias de modelo → marca (cuando el vendedor no menciona la marca)
+  { regex: /\bventus\b/i,         marca: 'Nox' },       // ML10 Ventus = Nox
+  { regex: /\bflow\b/i,           marca: 'Bullpadel' }, // Flow / Flow Legend = Bullpadel
+  { regex: /\bxplo\b/i,           marca: 'Bullpadel' }, // XPLO = Bullpadel
 ]
 
 export function detectarMarca(title: string, keyword?: string): string | null {

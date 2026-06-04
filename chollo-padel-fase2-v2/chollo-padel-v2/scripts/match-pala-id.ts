@@ -309,6 +309,10 @@ const MARCAS_CONOCIDAS: Record<string, string> = {
   'redstone':   'Hirostar',
   'unum':       'Xcalion',    // "Unum+ H1" → Xcalion
   'infinity h1':'Xcalion',
+  'ventus':     'Nox',        // "ML10 Ventus 2026" → Nox
+  'flow':       'Bullpadel',  // "Flow 2026" / "Flow Legend" → Bullpadel
+  'xplo':       'Bullpadel',  // "XPLO 2025" → Bullpadel
+  'flow legend':'Bullpadel',
 }
 
 // ─── Funciones de parsing ──────────────────────────────────────────────────────
