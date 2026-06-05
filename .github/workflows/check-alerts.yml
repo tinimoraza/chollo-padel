@@ -14,10 +14,10 @@ name: Check Alerts
 #   VERCEL_APP_URL  → https://huntpadel.com  (sin barra final)
 
 on:
-  schedule:
-    - cron: '0 8 * * *'   # Mañana
-    - cron: '0 13 * * *'  # Mediodía
-    - cron: '0 19 * * *'  # Noche
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '0 8 * * *'   # Mañana
+    # [PAUSADO] - cron: '0 13 * * *'  # Mediodía
+    # [PAUSADO] - cron: '0 19 * * *'  # Noche
   workflow_dispatch:       # Permite lanzarlo manualmente desde GitHub UI
 
 jobs:

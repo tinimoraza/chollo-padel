@@ -7,8 +7,8 @@ name: Top Oportunidades
 # para tener los datos más frescos posibles.
 
 on:
-  schedule:
-    - cron: '25,55 * * * *'   # Cada hora a :25
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '25,55 * * * *'   # Cada hora a :25
   workflow_dispatch:        # Permite lanzarlo manualmente desde GitHub UI
 
 jobs:

@@ -10,7 +10,7 @@
  *    completa catalog[]=4597 (Palas de pádel) sin search_text.
  *    Así se captura TODO el mercado de segunda mano sin depender de
  *    una lista de keywords que siempre estará incompleta.
- *    El match a palas del catálogo se hace igual con matchPalaIds.
+ *    El match a palas del catálogo está desactivado — pendiente nueva estrategia.
  *  - MAX_PAGES subido a 50 (~4800 items por run) para cubrir toda la categoría.
  *    El sistema incremental (para al encontrar IDs conocidos) evita procesar
  *    items que ya están en BD.
@@ -23,7 +23,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { matchPalaIds } from './match-pala-id'
+// import { matchPalaIds } from './match-pala-id'  // PAUSADO — pendiente nueva estrategia de matching
 import { detectarMarca } from './detect-marca'
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!

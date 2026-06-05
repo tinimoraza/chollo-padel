@@ -4,8 +4,8 @@ name: Match Segunda Mano
 # Corre cada 30 min a :15 y :45
 
 on:
-  schedule:
-    - cron: '15,45 * * * *'
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '15,45 * * * *'
   workflow_dispatch:
 
 jobs:

@@ -6,9 +6,9 @@ name: Embedding Rematch
 # Horario: 07:30 y 18:30 UTC (despuÃ©s del fuzzy match a :15/:45)
 
 on:
-  schedule:
-    - cron: '30 7 * * *'
-    - cron: '30 18 * * *'
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '30 7 * * *'
+    # [PAUSADO] - cron: '30 18 * * *'
   workflow_dispatch:
 
 permissions:

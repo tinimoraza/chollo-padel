@@ -5,8 +5,8 @@ name: Review No-Match Diario
 # Corre a las 07:00 UTC (09:00 España verano).
 
 on:
-  schedule:
-    - cron: '15 8 * * *'
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '15 8 * * *'
   workflow_dispatch:
 
 permissions:

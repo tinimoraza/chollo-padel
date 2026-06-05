@@ -4,8 +4,8 @@ name: Auto Promote Candidatas
 # Horario: 08:00 UTC diario
 
 on:
-  schedule:
-    - cron: '0 8 * * *'
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '0 8 * * *'
   workflow_dispatch:
 
 permissions:

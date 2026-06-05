@@ -6,9 +6,9 @@ name: Audit Matches
 # Horario: 07:00 y 18:00 UTC
 
 on:
-  schedule:
-    - cron: '0 7 * * *'
-    - cron: '0 18 * * *'
+  # [PAUSADO] schedule:
+    # [PAUSADO] - cron: '0 7 * * *'
+    # [PAUSADO] - cron: '0 18 * * *'
   workflow_dispatch:
 
 permissions:
