@@ -115,6 +115,7 @@ const TOKENS_DIFERENCIADORES = new Set([
   '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena',
   'sft',     // Joma Blast Pro SFT vs HRD
   'hybrid',  // Bullpadel Vertex 04 Hybrid vs Vertex 04 Comfort — diferenciador de subfamilia
+  'hyb',     // abreviatura de hybrid (Vertex 05 HYB vs Vertex 05)
   'lite',    // Nox AT10 Xtreme Lite vs Xtreme
   'x',       // Head Speed Pro X vs Speed Pro
   'proplus', // Oxdog Ultimate Pro+ vs Pro
@@ -367,7 +368,7 @@ function extraerAnio(texto: string): number | null {
 
 // Jugadores conocidos — se eliminan del modelo del catálogo para tokenizar,
 // pero se usan como tokens de desempate cuando aparecen en el título del anuncio.
-const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|marta ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso)\b/gi
+const JUGADORES_PATTERN = /\b(juan lebron|lebron|ale galan|ale gal[aá]n|martita ortega|marta ortega|alex ruiz|agust[ií]n tapia|arturo coello|paquito navarro|coki nieto|stupa|momo gonz[aá]lez|chingotto|franco chingotto|edu alonso|eduardo alonso|pablo cardona|cardona|delfi brea|brea|bea gonz[aá]lez|tolito aguirre|aguirre|carolina navarro|juanlu esbr[ií])\b/gi
 
 function extraerTokensModelo(modelo: string, marca: string): string[] {
   const sinMarca   = modelo.replace(new RegExp(`^${marca}\\s+`, 'i'), '')
