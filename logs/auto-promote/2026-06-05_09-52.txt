@@ -1,0 +1,21 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+Error: Transform failed with 1 error:
+/home/runner/work/chollo-padel/chollo-padel/chollo-padel-fase2-v2/chollo-padel-v2/scripts/auto-promote-candidatas.ts:85:9: ERROR: Expected identifier but found end of file
+    at failureErrorWithLog (/home/runner/.npm/_npx/fd45a72a545557e9/node_modules/esbuild/lib/main.js:1748:15)
+    at /home/runner/.npm/_npx/fd45a72a545557e9/node_modules/esbuild/lib/main.js:1017:50
+    at responseCallbacks.<computed> (/home/runner/.npm/_npx/fd45a72a545557e9/node_modules/esbuild/lib/main.js:884:9)
+    at handleIncomingPacket (/home/runner/.npm/_npx/fd45a72a545557e9/node_modules/esbuild/lib/main.js:939:12)
+    at Socket.readFromStdout (/home/runner/.npm/_npx/fd45a72a545557e9/node_modules/esbuild/lib/main.js:862:7)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23) {
+  name: 'TransformError'
+}
+
+Node.js v22.22.3
