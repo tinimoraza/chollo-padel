@@ -260,6 +260,8 @@ const EXCLUIR_SCRAPER = [
   'bambas ', 'zapatilla', 'zapatillas', 'schoenen', 'padelschoen', 'scarpe padel',
   'basket padel', 'basket bullpadel', 'basket joma', 'basket munich',
   'chaussure padel', 'chaussures padel', 'scarpe', 'sneaker', 'shoes',
+  // Portugués — zapatillas (Vinted PT trae mucho calzado de pádel)
+  'sapatilha', 'sapatilhas', 'ténis ', 'tenis ',
   // Pelotas y accesorios
   'pelotas', 'pelota ', 'bolas ', ' bolas', 'balón', 'balon ',
   'tubes padel', 'balles padel', 'botes padel', 'padel balls',
