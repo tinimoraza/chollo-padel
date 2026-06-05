@@ -1,5 +1,6 @@
 // scripts/auto-promote-candidatas.ts
-// Cron diario: promueve a la tabla `palas` las candidatas vistas en ≥2 fuentes distintas.
+// v2 (2026-06-05): filtro esPala() — descarta ropa, zapatillas y accesorios antes de promover
+// Cron diario: promueve a la tabla `palas` las candidatas vistas en ≥N fuentes distintas.
 // Ejecutar: npx tsx --env-file=.env.local scripts/auto-promote-candidatas.ts
 
 import { createClient } from '@supabase/supabase-js'
@@ -11,6 +12,35 @@ const supabase = createClient(
 
 const MIN_FUENTES = 1   // mínimo de tiendas distintas para promover
 const MIN_PRECIO  = 30  // descartar accesorios baratos (grips, bolsas...)
+
+// Palabras que indican que el producto NO es una pala de pádel.
+// IMPORTANTE: usar términos específicos para no hacer falsos positivos
+// (ej: evitar 'clay' porque hay palas con 'clay' en el nombre de color/variante)
+const NO_ES_PALA = [
+  // Calzado — términos inequívocos
+  'zapatilla', 'zapatillas', 'shoe', 'shoes', 'footwear',
+  'all court', 'gel challenger', 'gel resolution', 'solution speed',
+  'propulse fury', 'sprint pro', 'master 1000 niños',
+  'motion niños', 'motion team', 'neuron vibram',
+  // Ropa — términos inequívocos
+  'camiseta', 'falda', 'chándal', 'chandal',
+  'vestido', 'tights', 'legging', 'sudadera', 'chaqueta',
+  // "polo" y "short" con contexto para evitar falsos positivos
+  ' polo ', ' polo -', 'polo shirt',
+  ' short ', 'shorts -', '4in shorts', '9in shorts', '2in shorts',
+  // Nike/Adidas/Asics/Fila ropa explícita
+  'dri-fit', 'dri fit', 'freelift',
+  // Accesorios
+  'bolsa', 'mochila', 'paletero', 'funda', 'grip', 'overgrip',
+  'protector', 'muñequera', 'pelotas', 'pelota',
+  'antivibrador', 'raquetero',
+]
+
+// Devuelve true si el título parece ser una pala de pádel
+function esPala(titulo: string): boolean {
+  const t = titulo.toLowerCase()
+  return !NO_ES_PALA.some(w => t.includes(w))
+}
 
 async function main() {
   console.log('[auto-promote] Buscando candidatas para promover...')
@@ -39,58 +69,17 @@ async function main() {
       continue
     }
 
+    // Filtrar productos que no son palas (ropa, zapatillas, accesorios)
+    if (!esPala(c.titulo)) {
+      console.log(`[auto-promote] 🚫 No es pala, descartando: "${c.titulo}"`)
+      descartadas++
+      continue
+    }
+
     // Detectar año del título (ej: "2025", "2026")
     // Si no hay año explícito → NULL (no asumir el año actual, podría ser un modelo antiguo)
     const añoMatch = c.titulo.match(/\b(20\d{2})\b/)
     const año = añoMatch ? parseInt(añoMatch[1]) : null
 
     // Construir slug url-friendly
-    const slug = c.titulo_normalizado
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .slice(0, 100)
-
-    // Insertar en palas
-    const { data: nuevaPala, error: insertError } = await supabase
-      .from('palas')
-      .insert({
-        slug,
-        nombre: c.titulo,
-        modelo: c.titulo,
-        marca: c.marca_detectada || 'Desconocida',
-        brand_slug: (c.marca_detectada || 'desconocida').toLowerCase().replace(/\s+/g, '-'),
-        año,
-        precio_pvp: c.precio_max,   // precio más alto visto = precio PVP aproximado
-        precio_referencia: c.precio_min,
-        fuente: 'auto_promoted',
-      })
-      .select('id')
-      .single()
-
-    if (insertError) {
-      // Si ya existe (slug duplicado) lo ignoramos
-      if (insertError.code === '23505') {
-        console.log(`[auto-promote] ⚠️  Slug duplicado, ignorando: "${c.titulo}"`)
-      } else {
-        console.error(`[auto-promote] Error insertando "${c.titulo}":`, insertError.message)
-      }
-      continue
-    }
-
-    // Marcar candidata como promovida
-    await supabase
-      .from('palas_candidatas')
-      .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
-      .eq('id', c.id)
-
-    console.log(`[auto-promote] ✅ Promovida: "${c.titulo}" (${numFuentes} fuentes, id: ${nuevaPala.id})`)
-    promovidas++
-  }
-
-  console.log(`\n[auto-promote] Completado: ${promovidas} promovidas, ${descartadas} esperando más fuentes.`)
-}
-
-main().catch(err => {
-  console.error('[auto-promote] Error fatal:', err)
-  process.exit(1)
-})
+    const
