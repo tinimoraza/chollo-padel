@@ -80,7 +80,7 @@ async function main() {
     // Marcar candidata como promovida
     await supabase
       .from('palas_candidatas')
-      .update({ auto_promovida: true, updated_at: new Date().toISOString() })
+      .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
       .eq('id', c.id)
 
     console.log(`[auto-promote] ✅ Promovida: "${c.titulo}" (${numFuentes} fuentes, id: ${nuevaPala.id})`)
