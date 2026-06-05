@@ -41,7 +41,7 @@ const KEYWORDS = [
   'bullpadel cosmos',
   'bullpadel indiga',
   // 'bullpadel flow', // eliminado: "Flow" es también la línea de calzado Bullpadel → trae zapatillas masivamente
-  'bullpadel spike',
+  // 'bullpadel spike' eliminado: Spike es línea de zapatillas Bullpadel, no palas
   'bullpadel gold',
   'bullpadel ionic',
 
@@ -476,23 +476,38 @@ async function scrapeKeyword(
 
     if (rawItems.length === 0) break
 
+    // Debug: loguear campos de categoría del primer item de la primera página
+    if (page === 1 && result.length === 0 && rawItems.length > 0) {
+      const fi = rawItems[0]
+      console.log(`  [debug] catalog fields en item:`, {
+        catalog_id:   fi.catalog_id,
+        catalog:      fi.catalog,
+        category_id:  fi.category_id,
+        catalog_ids:  fi.catalog_ids,
+      })
+    }
+
     let foundKnown = false
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
       if (idsEnBD.has(externalId)) { foundKnown = true; break }
 
+      // ── Filtro de categoría: solo aceptar items en catalog 4597 (Palas de pádel) ──
+      // Aunque la búsqueda use catalog[]=4597, Vinted devuelve items de otras
+      // categorías si el keyword coincide. Verificamos el catalog_id del item.
+      const itemCatalogId = item.catalog_id ?? item.catalog?.[0]?.id ?? item.catalog?.[0]
+      if (itemCatalogId !== undefined && itemCatalogId !== null && Number(itemCatalogId) !== 4597) continue
+
       const tl = (item.title ?? '').toLowerCase()
 
-      // Filtro negativo
+      // Filtro negativo (ropa, calzado, accesorios, otros deportes)
       if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) continue
       if (parseFloat(item.price?.amount ?? '0') < 15) continue
 
-      // Filtro positivo: el título debe contener al menos un término de pala de pádel.
+      // Filtro positivo: título debe mencionar pala/padel
       if (!PALABRAS_PALA.some(w => tl.includes(w))) continue
 
       // Filtro de calidad: títulos con < 4 palabras son genéricos sin modelo
-      // Ej: "Racchette padel", "Raquette de padel", "Pala padel", "Babolat Padel"
-      // Son imposibles de matchear y contaminan la BD.
       const wordCount = tl.trim().split(/\s+/).filter(w => w.length > 0).length
       if (wordCount < 4) continue
 
