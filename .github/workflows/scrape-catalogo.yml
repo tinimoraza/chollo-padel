@@ -1,0 +1,38 @@
+name: Scrape Catálogo (Padelful + Padelzoom)
+
+# Scrape diario de las fuentes de verdad del catálogo canónico.
+# Padelful (API) + Padelzoom (scrape) → tabla `productos` + `producto_aliases`
+# Horario: 07:00 UTC
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-catalogo:
+    name: Importar catálogo canónico
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: chollo-padel-fase2-v2/chollo-padel-v2/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar import-catalogo (padelful + padelzoom)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/import-catalogo.ts
