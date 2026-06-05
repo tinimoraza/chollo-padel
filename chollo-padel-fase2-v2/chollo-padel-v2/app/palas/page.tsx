@@ -347,6 +347,7 @@ export default function PalasPage() {
         .from('palas')
         .select('*')
         .order('marca', { ascending: true })
+        .limit(5000)
       if (error) { console.error(error); setLoading(false); return }
       const list = (data ?? []) as Pala[]
       setPalas(list)
