@@ -28,6 +28,10 @@ export async function GET(req: NextRequest) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // PAUSADO — nueva estrategia de matching en desarrollo
+  // TODO: reactivar cuando el nuevo sistema esté listo
+  return NextResponse.json({ ok: false, message: 'PAUSADO — sistema en mantenimiento' }, { status: 503 })
+
 
   const startedAt = new Date().toISOString()
   console.log('[cron/match-wallapop] Iniciando...', startedAt)
