@@ -359,9 +359,9 @@ const PALABRAS_PALA = [
   'racket padel', 'raqueta padel', 'raqueta de padel', 'raqueta de pádel',
 ]
 
-const PER_PAGE         = 96   // máximo estable que acepta la API de Vinted
-const MAX_PAGES        = 60   // 60 × 96 = ~5760 items máx por run (toda la categoría)
-const GAP_CATCHUP_MIN  = 30   // minutos sin scraping → no limitamos páginas por fecha
+const PER_PAGE            = 96  // máximo estable que acepta la API de Vinted
+const MAX_PAGES_PER_KW    = 10  // Vinted corta en ~pág 10-11 con HTTP 400
+const GAP_CATCHUP_MIN     = 30  // minutos sin scraping → no limitamos páginas por fecha
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -440,23 +440,21 @@ function mapItem(item: any, keyword: string): object {
   }
 }
 
-// ── Scrape completo del catálogo 4597 (Palas de pádel) sin search_text ───────
-// Navega newest_first y para al encontrar un ID ya conocido (incremental).
-// Al no usar search_text, Vinted respeta el filtro de categoría y SOLO devuelve
-// items que el vendedor clasificó como "Palas de pádel".
-// Los filtros de marca/keyword se aplican localmente sobre los resultados.
-async function scrapeCatalog(
+// ── Scrape de un keyword: pagina newest_first y para al encontrar ID conocido ─
+// Equivalente al scrapeKeyword() de la extensión de Wallapop.
+async function scrapeKeyword(
+  keyword: string,
   auth: { cookie: string; token: string },
   idsEnBD: Set<string>,
 ): Promise<any[]> {
   const result: any[] = []
-  console.log(`  📂 Navegando catalog[]=4597 sin search_text...`)
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  for (let page = 1; page <= MAX_PAGES_PER_KW; page++) {
     const params = new URLSearchParams({
-      per_page: String(PER_PAGE),
-      page:     String(page),
-      order:    'newest_first',
+      search_text: keyword,
+      per_page:    String(PER_PAGE),
+      page:        String(page),
+      order:       'newest_first',
     })
     const url = `https://www.vinted.es/api/v2/catalog/items?${params}&catalog[]=4597`
 
@@ -464,14 +462,15 @@ async function scrapeCatalog(
     try {
       const res = await fetch(url, { headers: vintedHeaders(auth) })
       if (!res.ok) {
+        // 400/429 = límite de paginación de Vinted → fin de resultados, no error
         if (res.status === 400 || res.status === 429) break
-        console.error(`  ❌ catalog pág ${page}: HTTP ${res.status}`)
+        console.error(`  ❌ "${keyword}" pág ${page}: HTTP ${res.status}`)
         break
       }
       const data = await res.json()
       rawItems = data.items ?? []
     } catch (err) {
-      console.error(`  ❌ catalog pág ${page}:`, err)
+      console.error(`  ❌ "${keyword}" pág ${page}:`, err)
       break
     }
 
@@ -484,32 +483,31 @@ async function scrapeCatalog(
 
       const tl = (item.title ?? '').toLowerCase()
 
-      // Filtro negativo (ropa, calzado, accesorios, otros deportes)
+      // Filtro negativo
       if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) continue
       if (parseFloat(item.price?.amount ?? '0') < 15) continue
 
-      // Filtro positivo: título debe mencionar pala/padel/raqueta de pádel
+      // Filtro positivo: el título debe contener al menos un término de pala de pádel.
       if (!PALABRAS_PALA.some(w => tl.includes(w))) continue
 
-      // Filtro de calidad: títulos muy cortos son imposibles de matchear
+      // Filtro de calidad: títulos con < 4 palabras son genéricos sin modelo
+      // Ej: "Racchette padel", "Raquette de padel", "Pala padel", "Babolat Padel"
+      // Son imposibles de matchear y contaminan la BD.
       const wordCount = tl.trim().split(/\s+/).filter(w => w.length > 0).length
       if (wordCount < 4) continue
 
-      // keyword = marca detectada (para trazabilidad en BD)
-      const marcaDetectada = detectarMarca(item.title ?? '', '') ?? 'vinted'
-      result.push(mapItem(item, marcaDetectada))
+      result.push(mapItem(item, keyword))
     }
 
     if (foundKnown) {
-      console.log(`  ✅ Parado en pág ${page} (ID conocido) — ${result.length} nuevos`)
+      console.log(`  ✅ "${keyword}": parado en pág ${page} (ID conocido) — ${result.length} nuevos`)
       break
     }
     if (rawItems.length < PER_PAGE) {
-      console.log(`  ✅ Fin en pág ${page} — ${result.length} nuevos`)
+      console.log(`  ✅ "${keyword}": fin en pág ${page} — ${result.length} nuevos`)
       break
     }
 
-    if (page % 10 === 0) console.log(`  📄 Pág ${page}... (${result.length} hasta ahora)`)
     await sleep(500)
   }
 
@@ -588,17 +586,22 @@ async function main() {
   const modeLabel      = minutesSince > GAP_CATCHUP_MIN ? `⚡ Catch-up (${Math.round(minutesSince)} min)` : '✔ Normal (incremental)'
   console.log(`🕐 Modo: ${modeLabel}\n`)
 
-  // ── Scraping: navega catalog[]=4597 completo, sin search_text ───────────────
-  // Garantiza que solo entran items que el vendedor clasificó como "Palas de pádel".
-  console.log(`🔍 Navegando catálogo Vinted (catalog[]=4597)...\n`)
+  // ── Scraping por keywords ─────────────────────────────────────────────────
+  console.log(`🔍 Scrapeando ${KEYWORDS.length} keywords...\n`)
   const allItems: any[] = []
 
-  try {
-    const items = await scrapeCatalog(auth, idsEnBD)
-    allItems.push(...items)
-    console.log(`\n✅ Catálogo scrapeado: ${items.length} items nuevos\n`)
-  } catch (err) {
-    console.error(`  ❌ Error scrapeando catálogo:`, err)
+  for (const keyword of KEYWORDS) {
+    try {
+      const items = await scrapeKeyword(keyword, auth, idsEnBD)
+      if (items.length > 0) {
+        allItems.push(...items)
+        // Añadir al Set para que keywords siguientes no reprocesen los mismos
+        items.forEach(i => idsEnBD.add(i.external_id))
+      }
+      await sleep(400)
+    } catch (err) {
+      console.error(`  ❌ Error en "${keyword}":`, err)
+    }
   }
 
   console.log(`\n📊 Total nuevos: ${allItems.length}`)
