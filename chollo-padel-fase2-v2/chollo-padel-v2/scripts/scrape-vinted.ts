@@ -476,17 +476,6 @@ async function scrapeKeyword(
 
     if (rawItems.length === 0) break
 
-    // Debug: loguear campos de categoría del primer item de la primera página
-    if (page === 1 && result.length === 0 && rawItems.length > 0) {
-      const fi = rawItems[0]
-      console.log(`  [debug] catalog fields en item:`, {
-        catalog_id:   fi.catalog_id,
-        catalog:      fi.catalog,
-        category_id:  fi.category_id,
-        catalog_ids:  fi.catalog_ids,
-      })
-    }
-
     let foundKnown = false
     for (const item of rawItems) {
       const externalId = `vinted_${item.id}`
