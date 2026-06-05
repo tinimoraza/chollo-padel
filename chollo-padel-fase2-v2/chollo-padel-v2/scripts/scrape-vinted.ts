@@ -485,15 +485,14 @@ async function scrapeCatalog(
       const tl = (item.title ?? '').toLowerCase()
 
       // Filtro negativo (ropa, calzado, accesorios, otros deportes)
+      // La categoría 4597 ya garantiza "Palas de pádel" — no necesitamos
+      // filtro positivo de palabras como cuando usábamos search_text.
       if (EXCLUIR_SCRAPER.some(w => tl.includes(w))) continue
       if (parseFloat(item.price?.amount ?? '0') < 15) continue
 
-      // Filtro positivo: título debe mencionar pala/padel/raqueta de pádel
-      if (!PALABRAS_PALA.some(w => tl.includes(w))) continue
-
-      // Filtro de calidad: títulos muy cortos son imposibles de matchear
+      // Filtro de calidad: títulos muy cortos son genéricos e imposibles de matchear
       const wordCount = tl.trim().split(/\s+/).filter(w => w.length > 0).length
-      if (wordCount < 4) continue
+      if (wordCount < 3) continue
 
       // keyword = marca detectada (para trazabilidad en BD)
       const marcaDetectada = detectarMarca(item.title ?? '', '') ?? 'vinted'
