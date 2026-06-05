@@ -343,15 +343,23 @@ export default function PalasPage() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from('palas')
-        .select('*')
-        .order('marca', { ascending: true })
-        .limit(5000)
-      if (error) { console.error(error); setLoading(false); return }
-      const list = (data ?? []) as Pala[]
-      setPalas(list)
-      const uniqueMarcas = Array.from(new Set(list.map(p => p.marca).filter(Boolean))).sort()
+      // Supabase limita a 1000 filas por request — paginamos para obtener todas
+      const PAGE = 1000
+      let all: Pala[] = []
+      let from = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('palas')
+          .select('*')
+          .order('marca', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (error) { console.error(error); break }
+        all = all.concat((data ?? []) as Pala[])
+        if ((data ?? []).length < PAGE) break
+        from += PAGE
+      }
+      setPalas(all)
+      const uniqueMarcas = Array.from(new Set(all.map(p => p.marca).filter(Boolean))).sort()
       setMarcas(uniqueMarcas)
       setLoading(false)
     }
@@ -371,7 +379,7 @@ export default function PalasPage() {
   })
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={{ overflowX: 'hidden' }}>
       <Header />
       <BottomNav />
       <div className="hp-layout">
