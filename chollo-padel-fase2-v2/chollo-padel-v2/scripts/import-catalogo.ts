@@ -1,29 +1,24 @@
 /**
  * scripts/import-catalogo.ts
  * =============================================================================
- * Construye el catálogo canónico de palas desde Padelful (API) + Padelzoom (scrape).
+ * Construye el catálogo canónico de palas desde:
+ *   1. PADELZOOM (base) — catálogo más completo en España. Cada pala scrapeada
+ *      crea una entrada en `productos` con sus atributos estructurados.
+ *   2. PADELFUL  (enriquecimiento) — API con ratings y imágenes de calidad.
+ *      Busca cada pala de Padelful en `productos` por atributos.
+ *      → Si existe: actualiza ratings + imagen_url + añade alias.
+ *      → Si no existe: inserta como nuevo producto (con imagen).
  *
- * Estrategia:
- *   1. PADELFUL  — fuente primaria. API propia con datos estructurados
- *                  (marca, model, season, shape, balance, ratings, etc.)
- *                  Cada pala → extracción de atributos → INSERT en `productos`
- *                  → INSERT alias en `producto_aliases`
- *
- *   2. PADELZOOM — fuente complementaria. Rellena palas que Padelful no tiene.
- *                  Scrape FacetWP → ficha individual → extracción de atributos
- *                  → Si la pala YA existe (mismo marca+linea+modelo+variante+año) → solo añade alias
- *                  → Si NO existe → INSERT en `productos`
- *
- * Filosofía:
- *   - Un producto = una fila en `productos`. Nunca duplicar.
- *   - Cada nombre de tienda = un alias en `producto_aliases`.
- *   - La confianza del match posterior depende de la solidez de esta base.
+ * Anti-duplicados:
+ *   El constraint UNIQUE(marca, linea, modelo, variante, año) en BD impide
+ *   duplicados exactos. La búsqueda por atributos antes de insertar desde
+ *   Padelful evita duplicados semánticos (mismo producto, nombre distinto).
  *
  * Ejecutar:
  *   npx tsx --env-file=.env.local scripts/import-catalogo.ts
  *   npx tsx --env-file=.env.local scripts/import-catalogo.ts --dry-run
- *   npx tsx --env-file=.env.local scripts/import-catalogo.ts --solo padelful
  *   npx tsx --env-file=.env.local scripts/import-catalogo.ts --solo padelzoom
+ *   npx tsx --env-file=.env.local scripts/import-catalogo.ts --solo padelful
  * =============================================================================
  */
 
@@ -40,7 +35,7 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 const DRY_RUN = process.argv.includes('--dry-run')
 const SOLO    = process.argv.includes('--solo')
   ? process.argv[process.argv.indexOf('--solo') + 1]
-  : null  // 'padelful' | 'padelzoom' | null (ambos)
+  : null
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
@@ -60,9 +55,7 @@ function httpGet(url: string): Promise<string> {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return httpGet(res.headers.location).then(resolve).catch(reject)
       }
-      if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} → ${url}`))
-      }
+      if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode} → ${url}`))
       const chunks: Buffer[] = []
       res.on('data', (c: Buffer) => chunks.push(c))
       res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
@@ -101,175 +94,202 @@ function postJson(url: string, body: object): Promise<any> {
 
 // ─── BD helpers ───────────────────────────────────────────────────────────────
 
-async function upsertProducto(row: any): Promise<string | null> {
+function marcaCanonica(brand: string): string | null {
+  return Object.entries(MARCAS).find(
+    ([, v]) => v.toLowerCase() === brand?.toLowerCase()
+  )?.[1] ?? null
+}
+
+async function buscarPalaExistente(attrs: Atributos): Promise<string | null> {
+  const q = supabase
+    .from('palas')
+    .select('id')
+    .eq('marca', attrs.marca!)
+    .eq('linea', attrs.linea!)
+
+  if (attrs.modelo) q.eq('modelo', attrs.modelo)
+  else q.is('modelo', null)
+
+  if (attrs.variante) q.eq('variante', attrs.variante)
+  else q.is('variante', null)
+
+  if (attrs.año) q.eq('año', attrs.año)
+  else q.is('año', null)
+
+  const { data } = await q.maybeSingle()
+  return data?.id ?? null
+}
+
+async function insertarPala(row: any): Promise<string | null> {
   if (DRY_RUN) {
-    console.log(`  [DRY] ${row.nombre_canonico}`)
-    return 'dry-run-id'
+    console.log(`  [DRY] ${row.nombre}`)
+    return 'dry-id'
   }
-  // Intentar INSERT; si hay conflicto de unicidad (marca+linea+modelo+variante+año)
-  // devolvemos el id existente para añadir el alias igualmente.
   const { data, error } = await supabase
-    .from('productos')
-    .upsert(row, { onConflict: 'marca,linea,modelo,variante,año', ignoreDuplicates: false })
+    .from('palas')
+    .insert(row)
     .select('id')
     .single()
 
   if (error) {
-    // Conflicto de slug — intentar recuperar el id existente
-    const { data: existing } = await supabase
-      .from('productos')
-      .select('id')
-      .eq('marca', row.marca)
-      .eq('linea', row.linea)
-      .eq('modelo', row.modelo ?? '')
-      .eq('variante', row.variante ?? '')
-      .eq('año', row.año)
-      .maybeSingle()
-    return existing?.id ?? null
+    if (error.code === '23505') return null  // ya existe
+    console.error(`  ❌ INSERT error: ${error.message}`)
+    return null
   }
   return data?.id ?? null
 }
 
-async function insertAlias(productoId: string, textoOriginal: string, tienda: string, url?: string) {
+async function enriquecerPala(
+  id: string,
+  ratings: any,
+  imagenUrl: string | null,
+  pvp: number | null,
+  extras: Record<string, any> = {}
+) {
   if (DRY_RUN) return
+  const update: any = {}
+  if (ratings.global)          update.rating_global        = parseFloat(ratings.global)
+  if (ratings.power)           update.rating_potencia      = ratings.power
+  if (ratings.control)         update.rating_control       = ratings.control
+  if (ratings.rebound)         update.rating_rebote        = ratings.rebound
+  if (ratings.maneuverability) update.rating_manejabilidad = ratings.maneuverability
+  if (ratings.sweetSpot)       update.rating_punto_dulce   = ratings.sweetSpot
+  if (imagenUrl)               update.imagen_url           = imagenUrl
+  if (pvp)                     update.precio_pvp           = pvp
+  Object.assign(update, extras)
+  if (Object.keys(update).length > 0) {
+    await supabase.from('palas').update(update).eq('id', id)
+  }
+}
+
+async function insertAlias(palaId: string, textoOriginal: string, tienda: string, url?: string) {
+  if (DRY_RUN || !textoOriginal?.trim()) return
   const norm = normalizar(textoOriginal)
   await supabase.from('producto_aliases').upsert({
-    producto_id:      productoId,
-    texto_original:   textoOriginal,
+    pala_id:           palaId,
+    texto_original:    textoOriginal,
     texto_normalizado: norm,
     tienda,
-    fuente_url: url ?? null,
-    confianza:  1.0,  // fuente oficial → confianza máxima
+    fuente_url:  url ?? null,
+    confianza:   1.0,
   }, { onConflict: 'tienda,texto_normalizado', ignoreDuplicates: true })
 }
 
-// ─── PADELFUL ─────────────────────────────────────────────────────────────────
-
-interface PadelfulRacket {
-  slug: string
-  title: string
-  brand: string
-  brandSlug: string
-  model: string
-  season: number | null
-  shape: string | null
-  balance: string | null
-  feel: string | null
-  game: string | null
-  genre: string | null
-  weight: [number, number] | null
-  materials: { faces?: string; core?: string; frame?: string } | null
-  rating: string | null
-  ratings: Record<string, number> | null
-  pvp: number | null
-  image: string | null
-  players: string[] | null
+function limpiarModelo(text: string, brand: string): string {
+  return text
+    .replace(new RegExp(`^${brand}\\s*`, 'i'), '')
+    .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
-async function fetchPadelful(): Promise<PadelfulRacket[]> {
-  const BASE = 'https://padelful.com/api/v1/rackets'
-  const PAGE = 100
-  let offset = 0
-  let all: PadelfulRacket[] = []
-  let hasMore = true
+// ─── 1. PADELZOOM (base) ──────────────────────────────────────────────────────
 
-  while (hasMore) {
-    const url = `${BASE}?locale=es&limit=${PAGE}&offset=${offset}`
-    console.log(`  [padelful] offset ${offset}...`)
-    const res = await fetch(url)
-    const json = await res.json()
-    const rackets = json.data?.rackets ?? []
-    all = all.concat(rackets)
-    hasMore = json.data?.pagination?.hasMore ?? false
-    offset += PAGE
-    await sleep(500)
+interface PadelzoomProduct { title: string; price: number; url: string }
+
+function fwpRequest(page: number): Promise<any> {
+  return postJson('https://padelzoom.es/wp-json/facetwp/v1/refresh', {
+    action: 'facetwp_refresh',
+    data: {
+      facets:        {},
+      frozen_facets: {},
+      http_params: { uri: 'palas', url_vars: {} },
+      template:      'palas',
+      extras:        { sort: 'default' },
+      soft_refresh:  1,
+      is_bfcache:    0,
+      first_load:    0,
+      paged:         page,
+    },
+  })
+}
+
+function parsePadelzoomTemplate(html: string): PadelzoomProduct[] {
+  const $ = cheerio.load(html)
+  const products: PadelzoomProduct[] = []
+  $('div.col-md-pala').each((_, card) => {
+    const $link = $(card).children('a').first()
+    const url   = $link.attr('href')
+    if (!url || url === '#') return
+    const $text = $link.find('div.text-title-price')
+    const title = $text.find('p').first().text().trim()
+    if (!title) return
+    const priceRaw = $text.find('span.color-blue').text().trim()
+    const price    = parseFloat(priceRaw.replace(',', '.'))
+    if (!price || isNaN(price) || price < 20 || price > 2000) return
+    products.push({ title, price, url })
+  })
+  return products
+}
+
+async function importarPadelzoom(): Promise<{ ok: number; skip: number; err: number }> {
+  console.log('\n📥 PADELZOOM — construyendo catálogo base...')
+
+  // Página 1: obtener total de páginas
+  const first = await fwpRequest(1)
+  const totalPages = first?.settings?.pager?.total_pages ?? 1
+  const totalRows  = first?.settings?.pager?.total_rows  ?? '?'
+  console.log(`  → ${totalRows} palas · ${totalPages} páginas`)
+
+  const allProducts: PadelzoomProduct[] = []
+  const seen = new Set<string>()
+
+  const p1 = parsePadelzoomTemplate(first.template ?? '')
+  p1.forEach(p => { if (!seen.has(p.url)) { seen.add(p.url); allProducts.push(p) } })
+
+  for (let page = 2; page <= totalPages; page++) {
+    await sleep(800)
+    try {
+      const res = await fwpRequest(page)
+      const products = parsePadelzoomTemplate(res.template ?? '')
+      console.log(`  [padelzoom] página ${page}/${totalPages}: ${products.length} palas`)
+      products.forEach(p => { if (!seen.has(p.url)) { seen.add(p.url); allProducts.push(p) } })
+      if (products.length === 0) break
+    } catch (e: any) {
+      console.error(`  ⚠️  Error página ${page}: ${e.message}`)
+    }
   }
-  return all
-}
 
-async function importarPadelful(): Promise<{ ok: number; skip: number; err: number }> {
-  console.log('\n📥 PADELFUL — importando catálogo...')
-  const rackets = await fetchPadelful()
-  console.log(`  → ${rackets.length} palas obtenidas`)
+  console.log(`  → ${allProducts.length} palas únicas`)
 
   let ok = 0, skip = 0, err = 0
 
-  for (const r of rackets) {
+  for (const p of allProducts) {
     try {
-      // Padelful ya da marca y año estructurados — los usamos directamente.
-      // Extraemos línea, modelo y variante del campo `model` (más limpio que title).
-      const tituloParaExtraer = `${r.brand} ${r.model ?? r.title}`
-      const atributos = extraerAtributos(tituloParaExtraer)
-
-      // Si padelful da marca directa, la usamos (más fiable que la detección)
-      const marcaCanonica = Object.entries(MARCAS).find(
-        ([, v]) => v.toLowerCase() === r.brand?.toLowerCase()
-      )?.[1] ?? atributos.marca ?? r.brand
-
-      if (!marcaCanonica || !atributos.linea) {
-        console.warn(`  ⚠️  Sin marca/línea: "${r.title}" → skip`)
+      const atributos = extraerAtributos(p.title)
+      if (!atributos.marca || !atributos.linea) {
+        if (DRY_RUN) console.warn(`  ⚠️  Sin atributos: "${p.title}"`)
         skip++
         continue
       }
 
-      const año = r.season ?? atributos.año
-      const attrs: Atributos = {
-        marca:    marcaCanonica,
-        linea:    atributos.linea,
-        modelo:   atributos.modelo,
-        variante: atributos.variante,
-        año,
-      }
-
-      const canon = nombreCanonico(attrs)
-      const slug  = generarSlug(attrs)
+      const canon = nombreCanonico(atributos)
+      const slug  = generarSlug(atributos)
 
       const row = {
-        marca:    attrs.marca,
-        linea:    attrs.linea,
-        modelo:   attrs.modelo ?? null,
-        variante: attrs.variante ?? null,
-        año:      attrs.año ?? null,
-        nombre_canonico:     canon,
+        marca:    atributos.marca,
+        linea:    atributos.linea,
+        modelo:   atributos.modelo ?? null,
+        variante: atributos.variante ?? null,
+        año:      atributos.año ?? null,
+        nombre: canon,
+        brand_slug: marca.toLowerCase().replace(/\s+/g, '-'),
         slug,
-        forma:               r.shape ?? null,
-        balance:             r.balance ?? null,
-        tacto:               r.feel ?? null,
-        juego:               r.game ?? null,
-        genero:              r.genre ?? null,
-        peso_min:            r.weight?.[0] ?? null,
-        peso_max:            r.weight?.[1] ?? null,
-        material_cara:       r.materials?.faces ?? null,
-        material_nucleo:     r.materials?.core ?? null,
-        material_marco:      r.materials?.frame ?? null,
-        rating_global:       r.rating ? parseFloat(r.rating) : null,
-        rating_potencia:     r.ratings?.power ?? null,
-        rating_control:      r.ratings?.control ?? null,
-        rating_rebote:       r.ratings?.rebound ?? null,
-        rating_manejabilidad: r.ratings?.maneuverability ?? null,
-        rating_punto_dulce:  r.ratings?.sweetSpot ?? null,
-        precio_pvp:          r.pvp ?? null,
-        jugadores:           r.players ?? [],
-        imagen_url:          r.image ? `https://padelful.com${r.image}` : null,
-        fuente:              'padelful',
-        fuente_url:          `https://padelful.com/es/palas/${r.slug}`,
-        fuente_id:           r.slug,
-        updated_at:          new Date().toISOString(),
+        // precio_pvp inicial = precio mínimo de mercado que marca padelzoom
+        // Cuando ≥2 tiendas matcheen esta pala, se recalcula con la media
+        precio_pvp: p.price,
+        fuente:     'padelzoom',
+        updated_at: new Date().toISOString(),
       }
 
-      const id = await upsertProducto(row)
-      if (id && id !== 'dry-run-id') {
-        // Alias con el título original de padelful y con el título completo
-        await insertAlias(id, r.title, 'padelful', `https://padelful.com/es/palas/${r.slug}`)
-        if (r.model && r.model !== r.title) {
-          await insertAlias(id, `${r.brand} ${r.model}`, 'padelful')
-        }
+      const id = await insertarPala(row)
+      if (id && id !== 'dry-id') {
+        await insertAlias(id, p.title, 'padelzoom', p.url)
       }
 
-      console.log(`  ✅ ${canon}`)
       ok++
     } catch (e: any) {
-      console.error(`  ❌ "${r.title}": ${e.message}`)
+      console.error(`  ❌ "${p.title}": ${e.message}`)
       err++
     }
   }
@@ -277,135 +297,138 @@ async function importarPadelful(): Promise<{ ok: number; skip: number; err: numb
   return { ok, skip, err }
 }
 
-// ─── PADELZOOM ────────────────────────────────────────────────────────────────
+// ─── 2. PADELFUL (enriquecimiento) ───────────────────────────────────────────
 
-async function fetchPadelzoomUrls(): Promise<string[]> {
-  const FACETWP_URL = 'https://padelzoom.es/wp-json/facetwp/v1/refresh'
-  const urls: string[] = []
-  let page = 1
-
-  while (true) {
-    console.log(`  [padelzoom] página ${page}...`)
-    const body = {
-      action: 'facetwp_refresh',
-      data: {
-        facets: {},
-        template: 'wp_template',
-        query_args: { post_type: 'product', posts_per_page: 20 },
-        paged: page,
-        first_load: page === 1 ? 1 : 0,
-        soft_refresh: page > 1 ? 1 : 0,
-        is_bots: false,
-      },
-    }
-    const json = await postJson(FACETWP_URL, body)
-    const html = json.template ?? ''
-    const $ = cheerio.load(html)
-
-    const found: string[] = []
-    $('a[href*="padelzoom.es"]').each((_, el) => {
-      const href = $(el).attr('href')
-      if (href && href.includes('padelzoom.es/palas/') && !href.includes('categoria') && !href.includes('marca')) {
-        found.push(href)
-      }
-    })
-
-    if (found.length === 0) break
-    urls.push(...found)
-
-    const totalPages = parseInt(json.pager?.total_pages ?? '1')
-    if (page >= totalPages) break
-    page++
-    await sleep(800)
-  }
-
-  return [...new Set(urls)]
+interface PadelfulRacket {
+  slug: string; title: string; brand: string; brandSlug: string
+  model: string; season: number | null; shape: string | null
+  balance: string | null; feel: string | null; game: string | null
+  genre: string | null; weight: [number, number] | null
+  materials: { faces?: string; core?: string; frame?: string } | null
+  rating: string | null; ratings: Record<string, number> | null
+  pvp: number | null; image: string | null; players: string[] | null
 }
 
-async function fetchPadelzoomFicha(url: string): Promise<{ title: string; precio?: number } | null> {
-  try {
-    const html = await httpGet(url)
-    const $ = cheerio.load(html)
-    const title = $('h1.product_title, h1.entry-title').first().text().trim()
-    const precioText = $('.price .woocommerce-Price-amount').last().text().replace(/[^\d,.]/g, '').replace(',', '.')
-    const precio = parseFloat(precioText) || undefined
-    return title ? { title, precio } : null
-  } catch {
-    return null
+async function fetchPadelful(): Promise<PadelfulRacket[]> {
+  const BASE = 'https://padelful.com/api/v1/rackets'
+  const PAGE = 100; let offset = 0; let all: PadelfulRacket[] = []; let hasMore = true
+  while (hasMore) {
+    console.log(`  [padelful] offset ${offset}...`)
+    const res = await fetch(`${BASE}?locale=es&limit=${PAGE}&offset=${offset}`)
+    const json = await res.json()
+    all = all.concat(json.data?.rackets ?? [])
+    hasMore = json.data?.pagination?.hasMore ?? false
+    offset += PAGE
+    await sleep(500)
   }
+  return all
 }
 
-async function importarPadelzoom(): Promise<{ ok: number; alias: number; skip: number; err: number }> {
-  console.log('\n📥 PADELZOOM — importando catálogo...')
-  const urls = await fetchPadelzoomUrls()
-  console.log(`  → ${urls.length} URLs encontradas`)
+async function importarPadelful(): Promise<{ enriquecidas: number; nuevas: number; skip: number; err: number }> {
+  console.log('\n📥 PADELFUL — enriqueciendo con ratings e imágenes...')
+  const rackets = await fetchPadelful()
+  console.log(`  → ${rackets.length} palas de Padelful`)
 
-  let ok = 0, alias = 0, skip = 0, err = 0
+  let enriquecidas = 0, nuevas = 0, skip = 0, err = 0
 
-  for (const url of urls) {
+  for (const r of rackets) {
     try {
-      const ficha = await fetchPadelzoomFicha(url)
-      if (!ficha?.title) { skip++; continue }
+      const marca = marcaCanonica(r.brand)
+      if (!marca) { skip++; continue }
 
-      const atributos = extraerAtributos(ficha.title)
-      if (!atributos.marca || !atributos.linea) {
-        console.warn(`  ⚠️  Sin atributos: "${ficha.title}" → skip`)
+      const modelSinMarca = limpiarModelo(r.model ?? r.title ?? '', r.brand)
+      const atributos = extraerAtributos(`${marca} ${modelSinMarca}`)
+      atributos.marca = marca
+      if (r.season) atributos.año = r.season
+
+      if (!atributos.linea) {
+        console.warn(`  ⚠️  Sin línea: "${r.title}" → skip`)
         skip++
         continue
       }
 
-      // ¿Ya existe este producto en BD?
-      const { data: existente } = await supabase
-        .from('productos')
-        .select('id')
-        .eq('marca', atributos.marca)
-        .eq('linea', atributos.linea)
-        .is('modelo', atributos.modelo ? undefined : null)
-        .eq(atributos.modelo ? 'modelo' : 'id', atributos.modelo ?? 'x')
-        .is('variante', atributos.variante ? undefined : null)
-        .eq(atributos.variante ? 'variante' : 'id', atributos.variante ?? 'x')
-        .eq('año', atributos.año ?? 0)
-        .maybeSingle()
+      const imagenUrl = r.image ? `https://padelful.com${r.image}` : null
 
-      if (existente?.id) {
-        // Solo añadir alias nuevo
-        await insertAlias(existente.id, ficha.title, 'padelzoom', url)
-        console.log(`  ↩️  alias: "${ficha.title}"`)
-        alias++
+      if (!DRY_RUN) {
+        // Buscar si ya existe por atributos (desde padelzoom)
+        const idExistente = await buscarPalaExistente(atributos)
+
+        if (idExistente) {
+          // Ya existe desde padelzoom → enriquecer con ratings e imagen
+          await enriquecerPala(idExistente, {
+            global:          r.rating,
+            power:           r.ratings?.power,
+            control:         r.ratings?.control,
+            rebound:         r.ratings?.rebound,
+            maneuverability: r.ratings?.maneuverability,
+            sweetSpot:       r.ratings?.sweetSpot,
+          }, imagenUrl, null, {  // pvp de padelful NO sobreescribe — precio_pvp lo gestiona padelzoom + tiendas
+            // Campos técnicos que padelzoom no tiene
+            forma:            r.shape   ?? undefined,
+            balance:          r.balance ?? undefined,
+            tacto:            r.feel    ?? undefined,
+            juego:            r.game    ?? undefined,
+            genero:           r.genre   ?? undefined,
+            peso_min:         r.weight?.[0] ?? undefined,
+            peso_max:         r.weight?.[1] ?? undefined,
+            material_cara:    r.materials?.faces ?? undefined,
+            material_nucleo:  r.materials?.core  ?? undefined,
+            material_marco:   r.materials?.frame ?? undefined,
+            jugadores:        r.players?.length ? r.players : undefined,
+          })
+          await insertAlias(idExistente, r.title, 'padelful', `https://padelful.com/es/palas/${r.slug}`)
+          enriquecidas++
+        } else {
+          // No existe en padelzoom → insertar con todos los datos
+          const canon = nombreCanonico(atributos)
+          const row = {
+            marca:    atributos.marca,
+            linea:    atributos.linea,
+            modelo:   atributos.modelo ?? null,
+            variante: atributos.variante ?? null,
+            año:      atributos.año ?? null,
+            nombre:   canon,
+            brand_slug: atributos.marca!.toLowerCase().replace(/\s+/g, '-'),
+            slug: generarSlug(atributos),
+            forma:               r.shape ?? null,
+            balance:             r.balance ?? null,
+            tacto:               r.feel ?? null,
+            juego:               r.game ?? null,
+            genero:              r.genre ?? null,
+            peso_min:            r.weight?.[0] ?? null,
+            peso_max:            r.weight?.[1] ?? null,
+            material_cara:       r.materials?.faces ?? null,
+            material_nucleo:     r.materials?.core ?? null,
+            material_marco:      r.materials?.frame ?? null,
+            rating_global:       r.rating ? parseFloat(r.rating) : null,
+            rating_potencia:     r.ratings?.power ?? null,
+            rating_control:      r.ratings?.control ?? null,
+            rating_rebote:       r.ratings?.rebound ?? null,
+            rating_manejabilidad: r.ratings?.maneuverability ?? null,
+            rating_punto_dulce:  r.ratings?.sweetSpot ?? null,
+            precio_pvp:          r.pvp ?? null,
+            jugadores:           r.players ?? [],
+            imagen_url:          imagenUrl,
+            padelful_slug:       r.slug,
+            fuente:              'padelful',
+            updated_at:          new Date().toISOString(),
+          }
+          const id = await insertarPala(row)
+          if (id) {
+            await insertAlias(id, r.title, 'padelful', `https://padelful.com/es/palas/${r.slug}`)
+            nuevas++
+          }
+        }
       } else {
-        // Insertar nuevo producto
-        const canon = nombreCanonico(atributos)
-        const slug  = generarSlug(atributos)
-        const row = {
-          marca:    atributos.marca,
-          linea:    atributos.linea,
-          modelo:   atributos.modelo ?? null,
-          variante: atributos.variante ?? null,
-          año:      atributos.año ?? null,
-          nombre_canonico: canon,
-          slug,
-          precio_pvp: ficha.precio ?? null,
-          fuente:     'padelzoom',
-          fuente_url: url,
-          fuente_id:  url.split('/').filter(Boolean).pop() ?? '',
-          updated_at: new Date().toISOString(),
-        }
-        const id = await upsertProducto(row)
-        if (id && id !== 'dry-run-id') {
-          await insertAlias(id, ficha.title, 'padelzoom', url)
-        }
-        console.log(`  ✅ ${canon}`)
-        ok++
+        console.log(`  [DRY] ${nombreCanonico(atributos)} ${imagenUrl ? '🖼️' : ''}`)
       }
-
-      await sleep(1200)
     } catch (e: any) {
-      console.error(`  ❌ ${url}: ${e.message}`)
+      console.error(`  ❌ "${r.title}": ${e.message}`)
       err++
     }
   }
 
-  return { ok, alias, skip, err }
+  return { enriquecidas, nuevas, skip, err }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -415,24 +438,22 @@ async function main() {
   console.log(`📅 ${new Date().toISOString()}`)
   if (DRY_RUN) console.log('🔍 MODO DRY-RUN — no se escribe en BD\n')
 
-  let totalOk = 0
+  if (!SOLO || SOLO === 'padelzoom') {
+    const r = await importarPadelzoom()
+    console.log(`\n  Padelzoom: ✅${r.ok} productos base · ⚠️${r.skip} skip · ❌${r.err} err`)
+  }
 
   if (!SOLO || SOLO === 'padelful') {
     const r = await importarPadelful()
-    console.log(`\n  Padelful: ✅${r.ok} ⚠️${r.skip} ❌${r.err}`)
-    totalOk += r.ok
+    console.log(`\n  Padelful: 🔄${r.enriquecidas} enriquecidas · ✅${r.nuevas} nuevas · ⚠️${r.skip} skip · ❌${r.err} err`)
   }
 
-  if (!SOLO || SOLO === 'padelzoom') {
-    const r = await importarPadelzoom()
-    console.log(`\n  Padelzoom: ✅${r.ok} nuevo ↩️${r.alias} alias ⚠️${r.skip} ❌${r.err}`)
-    totalOk += r.ok
+  if (!DRY_RUN) {
+    const { count: p } = await supabase.from('palas').select('*', { count: 'exact', head: true })
+    const { count: a } = await supabase.from('producto_aliases').select('*', { count: 'exact', head: true })
+    const { count: sinImg } = await supabase.from('palas').select('*', { count: 'exact', head: true }).is('imagen_url', null)
+    console.log(`\n📊 BD: ${p} palas · ${a} aliases · ${sinImg} sin imagen`)
   }
-
-  // Resumen final en BD
-  const { count } = await supabase.from('productos').select('*', { count: 'exact', head: true })
-  const { count: aliasCount } = await supabase.from('producto_aliases').select('*', { count: 'exact', head: true })
-  console.log(`\n📊 BD: ${count} productos · ${aliasCount} aliases`)
 }
 
 main().catch(err => {
