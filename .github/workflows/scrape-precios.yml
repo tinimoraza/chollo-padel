@@ -9,12 +9,12 @@ on:
   #   - cron: '0 23 * * *'
   workflow_dispatch:
 
-# Scraper dividido en 3 jobs paralelos para evitar timeout de 60 min.
-# Cada grupo tarda ~15-20 min. Total real: ~25 min en vez de 60+.
+# Scraper de precios de tiendas — dividido en 3 jobs paralelos.
+# NOTA: padelzoom y padelful NO están aquí — son fuentes de catálogo (scrape-catalogo.yml).
 #
-# Grupo A - Puppeteer (padelnuestro, padelzoom)
-# Grupo B - Playwright set 1 (romasport, padelcoronado, padeliberico, tiendapadelpoint)
-# Grupo C - fetch + Playwright set 2 (padelproshop, tennispoint, miravia, amazon)
+# Grupo A - padelnuestro
+# Grupo B - Playwright set 1 (romasport, padelcoronado, padeliberico, tiendapadelpoint, streetpadel, zonadepadel)
+# Grupo C - fetch + Playwright set 2 (padelproshop, tennispoint, padelmarket, miravia, amazon)
 
 env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -24,8 +24,10 @@ env:
 jobs:
 
   # -- Grupo A: Puppeteer -------------------------------------------------------
+  # Nota: padelzoom eliminado — ahora es fuente de catálogo (scrape-catalogo.yml),
+  # no fuente de precios. Solo padelnuestro aquí.
   scrape-grupo-a:
-    name: "Scrape A: padelnuestro + padelzoom"
+    name: "Scrape A: padelnuestro"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -38,20 +40,8 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
-      - name: Limpiar cache confianza baja
-        run: |
-          node -e "
-          const { createClient } = require('@supabase/supabase-js');
-          const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
-          sb.from('price_match_cache').delete().lt('confidence', 0.92).then(({ error }) => {
-            if (error) { console.error('Error limpiando cache:', error.message); process.exit(1); }
-            console.log('[cache] Limpieza OK');
-          });
-          "
       - name: Scrape Padel Nuestro
         run: node scripts/prices/pipeline.js padelnuestro
-      - name: Scrape PadelZoom
-        run: node scripts/prices/pipeline.js padelzoom
 
   # -- Grupo B: Playwright set 1 ------------------------------------------------
   scrape-grupo-b:
