@@ -45,8 +45,11 @@ async function scrape() {
       // Excluir palas de test (precio ~15€, titulo con "test")
       if (/\btest\b/i.test(p.title)) continue
       seen.add(url)
+      // Shopify devuelve p.vendor con la marca (ej: "Wilson", "Bullpadel")
+      // Los títulos de Tennis-Point no incluyen la marca, lo añadimos aquí
+      const title = p.vendor ? `${p.vendor} ${p.title}` : p.title
       allProducts.push({
-        title:           p.title,
+        title,
         price,
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url,
