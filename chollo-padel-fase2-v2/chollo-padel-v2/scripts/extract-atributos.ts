@@ -102,61 +102,79 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   'Bullpadel': [
     'vertex', 'hack', 'spike', 'flow', 'neuron', 'indiga', 'ionic', 'wonder',
     'pearl', 'elite', 'legend', 'ava', 'bp10',
+    'game', 'discover', 'icon', 'raider', 'k2', 'black dragon',
   ],
   'Nox': [
-    'at10', 'ml10', 'x-one', 'x one', 'vk10', 'x-zero', 'x-hero', 'x-pro',
-    'future', 'equation', 'nextgen', 'tempo',
+    'at10', 'ml10', 'x-one', 'x one', 'vk10', 'tl10', 'la10', 'ea10',
+    'x-zero', 'x-hero', 'x-pro',
+    'future', 'equation', 'nextgen', 'tempo', 'ventus', 'quantum', 'ultimate',
   ],
   'Adidas': [
-    'metalbone', 'adipower', 'adipower multiweight', 'drive', 'match',
-    'rx series', 'rx', 'cross it', 'cross-it', 'arrow', 'essnova',
-    'neuvortx', 'ctrl team',
+    'metalbone', 'adipower multiweight', 'adipower carbon', 'adipower',
+    'drive', 'match', 'rx series', 'rx',
+    'cross it', 'cross-it', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
+    'velara', 'kardex',
   ],
   'Head': [
     'delta', 'extreme', 'speed', 'radical', 'flash', 'spark', 'bolt',
     'gravity', 'alpha', 'zephyr', 'instinct', 'tour',
+    'edge', 'vibe', 'evo', 'one', 'concord',
   ],
   'Babolat': [
-    'technical viper', 'viper', 'counter viper', 'air viper',
-    'technical veron', 'veron', 'air veron',
-    'xplo', 'vertuo',
+    'technical viper', 'counter viper', 'air viper', 'viper',
+    'technical veron', 'counter veron', 'air veron', 'veron',
+    'technical vertuo', 'counter vertuo', 'air vertuo', 'vertuo',
+    'xplo', 'dyna energy', 'stima vita', 'air origin', 'alioth', 'lamborghini',
   ],
   'Wilson': [
-    'bela', 'defy', 'optix', 'ultra', 'carbon force',
+    'bela', 'defy', 'optix', 'ultra', 'carbon force', 'endure', 'blade',
   ],
   'Star Vie': [
+    'black titan', 'black mamba',
     'triton', 'metheora', 'raptor', 'basalto', 'drax', 'kenta', 'aquila',
     'brava', 'gea', 'titania', 'astrum',
+    'polaris', 'nyra', 'arkos', 'radar', 'kraken', 'exodus', 'vesta',
   ],
   'Siux': [
     'electra', 'fenix', 'pegasus', 'diablo', 'adrenaline', 'savage',
+    'trilogy', 'spyder', 'velox', 'beat', 'gea', 'astra', 'valkiria',
+    'fusion', 'invicta',
   ],
   'Vibora': [
-    'yarara', 'mamba', 'black mamba', 'titan',
+    'black mamba', 'king cobra',
+    'yarara', 'mamba', 'titan', 'bamboo', 'boa', 'naya', 'vipera', 'lethal',
   ],
   'Drop Shot': [
     'explorer', 'axion', 'canyon', 'renegade', 'conqueror',
+    'quantum', 'bronco', 'blitz', 'cyber', 'flame', 'furia', 'prime', 'x-drive',
   ],
   'Black Crown': [
     'piton', 'hurricane', 'gladius', 'epic', 'iconic',
+    'special', 'patron', 'snake', 'wolf', 'rebel', 'win', 'shark', 'coyote', 'viva',
   ],
   'Dunlop': [
-    'rocket', 'blast', 'fury', 'elite', 'tristorm', 'strike', 'megamax',
+    'aero-star', 'tristorm',
+    'rocket', 'blast', 'fury', 'elite', 'strike', 'megamax',
+    'galactica', 'titan', 'inferno', 'nemesis', 'fx', 'galaxy',
+    'impact', 'infinity', 'samurai', 'fusion',
   ],
   'Joma': [
     'valkiria', 'master', 'open', 'slam', 'hyper', 'blast', 'recon',
   ],
   'Enebe': [
-    'suburban', 'break', 'spitfire', 'combat',
+    'suburban', 'spitfire', 'combat',
+    'response', 'mustang', 'supra', 'rsx', 'space', 'genius', 'massive',
+    'aerox', 'point', 'cross', 'astra', 'break',
   ],
   'Varlion': [
     'lethal', 'summum', 'carbon', 'baseline',
   ],
   'Royal Padel': [
     'aniversario', 'fury', 'r-ace', 'hi-lander', 'factor',
+    'whip', 'control', 'race',
   ],
   'Tecnifibre': [
-    'curva', 'wall breaker',
+    'wall breaker', 'wall master', 'curva', 'bomba',
   ],
   'Oxdog': [
     'ultimate', 'hyper tour',
@@ -202,6 +220,14 @@ const JUGADORES = [
   'bea gonzalez', 'bea gonzález',
   'ari sanchez', 'ariana sanchez',
   'lebron', 'galán', 'galan', 'tapia', 'coello',
+  // Jugadores adicionales
+  'tino libaak', 'libaak',
+  'aranzazu osoro', 'osoro',
+  'leo augsburger', 'augsburger',
+  'miguel lamperti', 'lamperti',
+  'jon sanz',
+  'franco dal bianco', 'dal bianco',
+  'moyano', 'yanguas',
 ]
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
@@ -245,9 +271,14 @@ export interface Atributos {
 export function extraerAtributos(titulo: string): Atributos {
   const norm = normalizar(titulo)
 
-  // 1. AÑO
-  const añoMatch = titulo.match(/\b(20[2-9]\d)\b/)
-  const año = añoMatch ? parseInt(añoMatch[1]) : null
+  // 1. AÑO — primero 4 dígitos, luego 2 dígitos al final (ej: "25" → 2025)
+  const añoMatch4 = titulo.match(/\b(20[2-9]\d)\b/)
+  const añoMatch2 = !añoMatch4
+    ? titulo.match(/\b(2[0-9])\b(?=\s|$)/)  // "25", "26" al final o antes de espacio
+    : null
+  const año = añoMatch4
+    ? parseInt(añoMatch4[1])
+    : añoMatch2 ? 2000 + parseInt(añoMatch2[1]) : null
 
   // 2. MARCA — buscar alias de más largo a más corto
   let marcaDetectada: string | null = null
@@ -264,6 +295,11 @@ export function extraerAtributos(titulo: string): Atributos {
   // 3. Limpiar título: quitar marca, año y jugadores
   let resto = quitarMarca(titulo, marcaDetectada)
   resto = quitarAño(resto)
+  // También quitar año corto de 2 dígitos si no había año de 4 dígitos
+  if (añoMatch2) {
+    const añoCorto = añoMatch2[1]
+    resto = resto.replace(new RegExp(`\\b${añoCorto}\\b`, 'g'), '').replace(/\s+/g, ' ').trim()
+  }
   resto = quitarJugadores(resto)
   const restoNorm = normalizar(resto)
 
@@ -295,13 +331,22 @@ export function extraerAtributos(titulo: string): Atributos {
     sinLinea = sinLinea.replace(lineaRe, '').replace(/\s+/g, ' ').trim()
   }
 
+  // Mapeo de alias de variante → nombre canónico
+  const VARIANTES_ALIAS: Record<string, string> = {
+    'mujer': 'WOMAN', 'mujeres': 'WOMAN', 'women': 'WOMAN',
+    'junior': 'JUNIOR', 'jr': 'JUNIOR',
+    'hrd+': 'HRD+', 'hrd': 'HRD',
+    'ctrl': 'CTRL', 'control': 'CTRL',
+  }
+
   // 6. VARIANTE — buscar en el texto restante (más específico primero)
   let varianteDetectada: string | null = null
   const sinLineaNorm = normalizar(sinLinea)
   for (const v of VARIANTES.sort((a, b) => b.length - a.length)) {
     const vNorm = normalizar(v)
     if (sinLineaNorm.includes(vNorm)) {
-      varianteDetectada = v.toUpperCase()
+      // Usar alias canónico si existe, si no uppercase del valor
+      varianteDetectada = VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
       sinLinea = sinLinea.replace(new RegExp(v, 'gi'), '').replace(/\s+/g, ' ').trim()
       break
     }
@@ -311,11 +356,14 @@ export function extraerAtributos(titulo: string): Atributos {
   // Ej: "04", "3.4", "Genius 18K", "Pro Cup"
   let modeloDetectado: string | null = sinLinea.trim() || null
 
-  // Normalizar modelo: quitar "pala", "padel", artículos sueltos
+  // Normalizar modelo: quitar "pala", "padel", artículos sueltos y caracteres sobrantes
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
       .replace(/\b(pala|padel|de|la|el|raqueta)\b/gi, '')
-      .replace(/\s+/g, ' ')
+      // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
+      .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
+      .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
+      .replace(/\s{2,}/g, ' ')
       .trim()
     if (!modeloDetectado) modeloDetectado = null
   }
