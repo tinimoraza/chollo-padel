@@ -23,7 +23,7 @@
 
 export function normalizar(texto: string): string {
   return texto
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // quitar acentos
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quitar acentos
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')                       // solo alfanumérico
     .replace(/\s+/g, ' ')
@@ -359,7 +359,7 @@ export function extraerAtributos(titulo: string): Atributos {
   // Normalizar modelo: quitar "pala", "padel", artículos sueltos y caracteres sobrantes
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
-      .replace(/\b(pala|padel|de|la|el|raqueta)\b/gi, '')
+      .replace(/\b(pala|padel|de|la|el|raqueta|edition|edicion)\b/gi, '')
       // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
@@ -388,7 +388,7 @@ export function nombreCanonico(a: Atributos): string {
 
 export function generarSlug(a: Atributos): string {
   return nombreCanonico(a)
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
