@@ -105,25 +105,43 @@ async function insertarAlias(palaId: string, textoOriginal: string, tienda: stri
 }
 
 async function insertarCandidata(producto: {
-  titulo: string; precio: number; url: string; tienda: string
-}, motivo: 'sin_match' | 'ambiguo', candidatos?: string[]) {
+  titulo: string; precio: number; url: string; tienda: string; imagen?: string | null
+}, motivo: 'sin_match' | 'ambiguo', attrs: ReturnType<typeof extraerAtributos>, candidatos?: { id: string }[]) {
   if (DRY_RUN) return
+
+  // "Borrador de pala" con todo lo extraído en el momento del scrap, para que
+  // al promocionar la candidata se pueda crear la pala sin volver a investigar.
+  const datosExtraidos = {
+    marca:           attrs.marca,
+    linea:           attrs.linea,
+    modelo:          attrs.modelo,
+    variante:        attrs.variante,
+    año:             attrs.año,
+    imagen_url:      producto.imagen ?? null,
+    precio_pvp:      producto.precio,
+    fuente:          producto.tienda,
+    url_origen:      producto.url,
+    candidatos_ids:  (candidatos ?? []).map(c => c.id),
+    extraido_at:     new Date().toISOString(),
+  }
+
   await supabase.from('palas_candidatas').upsert({
-    titulo:            producto.titulo,
+    titulo:             producto.titulo,
     titulo_normalizado: normalizar(producto.titulo),
-    precio_min:        producto.precio,
-    precio_max:        producto.precio,
-    fuentes:           [producto.tienda],
-    urls:              [producto.url],
-    estado:            motivo === 'ambiguo' ? 'ambiguo' : 'pendiente',
-    candidatos_ids:    candidatos ?? [],
-    updated_at:        new Date().toISOString(),
+    marca_detectada:    attrs.marca,
+    precio_min:         producto.precio,
+    precio_max:         producto.precio,
+    fuentes:            [producto.tienda],
+    urls:               [producto.url],
+    estado:             motivo === 'ambiguo' ? 'ambiguo' : 'pendiente',
+    datos_extraidos:    datosExtraidos,
+    updated_at:         new Date().toISOString(),
   }, { onConflict: 'titulo_normalizado', ignoreDuplicates: false })
 }
 
 // ─── Scraper ─────────────────────────────────────────────────────────────────
 
-async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string }[]> {
+async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null }[]> {
   const scraper = require(`./prices/scrapers/${tienda}.js`)
   return scraper.scrape ? await scraper.scrape() : await scraper()
 }
@@ -190,15 +208,16 @@ async function main() {
       if (DRY_RUN) {
         console.log(`  ⚠️  [ambiguo] ${p.title} (${candidatos.length} candidatos)`)
       } else {
-        await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA }, 'ambiguo', candidatos.map(c => c.id))
+        await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'ambiguo', attrs, candidatos)
       }
       ambiguos++
     } else {
       // Sin match → Gestor
       if (DRY_RUN) {
         console.log(`  ❌ [sin match] ${p.title}`)
+      } else {
+        await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)
       }
-      await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA }, 'sin_match')
       sinMatch++
     }
   }

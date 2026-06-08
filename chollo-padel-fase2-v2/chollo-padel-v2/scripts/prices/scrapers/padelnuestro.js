@@ -17,7 +17,9 @@ async function extractProducts(page) {
       const price = priceEl
         ? parseFloat(priceEl.getAttribute("data-price-amount"))
         : null;
-      return { title, price, url };
+      const imgEl = card.querySelector("img.product-image-photo, img");
+      const image = imgEl ? (imgEl.getAttribute("src") || "").split("?")[0] : null;
+      return { title, price, url, image };
     }).filter((p) => p.title && p.price && !isNaN(p.price));
   });
 }
@@ -77,13 +79,4 @@ async function scrape() {
   }
 
   const scraped_at = new Date().toISOString();
-  return allProducts.map((p) => ({
-    source_key: SOURCE_KEY,
-    title: p.title,
-    price: p.price,
-    url: p.url,
-    scraped_at,
-  }));
-}
-
-module.exports = { scrape, SOURCE_KEY };
+  return allProducts.map((p) =>
