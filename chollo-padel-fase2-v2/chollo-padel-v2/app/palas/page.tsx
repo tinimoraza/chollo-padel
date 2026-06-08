@@ -147,9 +147,9 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', width: 32, height: 32, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>✕</button>
 
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 0 }}>
-          <div style={{ background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ background: '#f4f4f2', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
             {pala.imagen_url
-              ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxWidth: '100%', maxHeight: 280, objectFit: 'contain' }} />
+              ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxWidth: '100%', maxHeight: 280, objectFit: 'contain', mixBlendMode: 'multiply' }} />
               : <div style={{ fontSize: 64 }}>🏓</div>
             }
           </div>
@@ -214,9 +214,9 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
     <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{ background: hovered ? '#161616' : '#111', border: `1px solid ${hovered ? 'rgba(200,255,0,0.2)' : 'rgba(255,255,255,0.07)'}`, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }}
     >
-      <div style={{ background: '#0A0A0A', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', padding: '1rem' }}>
+      <div style={{ background: '#f4f4f2', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', padding: '1rem' }}>
         {pala.imagen_url
-          ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', transition: 'transform 0.3s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+          ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transition: 'transform 0.3s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <span style={{ fontSize: 48 }}>🏓</span>
         }
       </div>
@@ -421,7 +421,4 @@ export default function PalasPage() {
         </main>
       </div>
 
-      {selected && <PalaModal pala={selected} onClose={() => setSelected(null)} />}
-    </div>
-  )
-}
+      {selected && <PalaModal pala={selected} onClose

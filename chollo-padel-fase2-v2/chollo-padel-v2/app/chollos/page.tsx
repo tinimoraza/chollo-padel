@@ -320,13 +320,14 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#1a1a1a',
+    background: '#f4f4f2',
     overflow: 'hidden',
   },
   img: {
     maxWidth: '100%',
     maxHeight: '100%',
     objectFit: 'contain',
+    mixBlendMode: 'multiply' as const,
     padding: 12,
   },
   imgPlaceholder: {
@@ -410,7 +411,4 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     letterSpacing: 0.5,
     color: 'rgba(255,255,255,0.18)',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-}
+    textAlign:
