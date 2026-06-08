@@ -411,4 +411,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     letterSpacing: 0.5,
     color: 'rgba(255,255,255,0.18)',
-    textAlign:
+    textAlign: 'center',
+    marginTop: 8,
+  },
+}

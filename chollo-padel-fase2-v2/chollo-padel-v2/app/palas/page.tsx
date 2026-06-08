@@ -421,4 +421,7 @@ export default function PalasPage() {
         </main>
       </div>
 
-      {selected && <PalaModal pala={selected} onClose
+      {selected && <PalaModal pala={selected} onClose={() => setSelected(null)} />}
+    </div>
+  )
+}
