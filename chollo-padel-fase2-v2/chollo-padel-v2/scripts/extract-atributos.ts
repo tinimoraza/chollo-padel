@@ -363,6 +363,10 @@ export function extraerAtributos(titulo: string): Atributos {
       // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
+      // "3.4+" / "3.4-" → "3.4" (signo PEGADO al número, sin espacio antes, seguido de espacio o fin)
+      .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
+      // tokens "+"/"-" sueltos como palabra completa en cualquier posición → fuera
+      .replace(/(^|\s)[+\-](?=\s|$)/g, '$1')
       .replace(/\s{2,}/g, ' ')
       .trim()
     if (!modeloDetectado) modeloDetectado = null
