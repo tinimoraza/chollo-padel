@@ -320,7 +320,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#f4f4f2',
+    background: '#cfcfcd',
     overflow: 'hidden',
   },
   img: {
