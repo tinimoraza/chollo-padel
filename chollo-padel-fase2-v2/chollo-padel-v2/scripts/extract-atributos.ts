@@ -305,7 +305,10 @@ export function extraerAtributos(titulo: string): Atributos {
 
   // 4. LÍNEA — buscar en el diccionario de esta marca (más específico primero)
   let lineaDetectada: string | null = null
-  const lineas = (LINEAS_POR_MARCA[marcaDetectada] || []).sort((a, b) => b.length - a.length)
+  // Respetar el orden curado del diccionario (mas especifico primero), NO reordenar por longitud:
+  // reordenar por longitud rompe casos como Nox, donde codigos de jugador cortos (la10, at10...)
+  // deben detectarse antes que nombres de tecnologia mas largos (quantum, ventus...)
+  const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
     if (restoNorm.includes(linea)) {
       lineaDetectada = linea
@@ -359,7 +362,7 @@ export function extraerAtributos(titulo: string): Atributos {
   // Normalizar modelo: quitar "pala", "padel", artículos sueltos y caracteres sobrantes
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
-      .replace(/\b(pala|padel|de|la|el|raqueta|edition|edicion)\b/gi, '')
+      .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion)\b/gi, '')
       // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
