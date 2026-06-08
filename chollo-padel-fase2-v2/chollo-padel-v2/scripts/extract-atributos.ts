@@ -198,8 +198,10 @@ export const VARIANTES: string[] = [
   '18k', '12k',
   // Materiales
   'carbon', 'alum', 'aluminium',
-  // Series especiales
-  'master final', 'premier padel', 'world padel tour', 'wpt',
+  // Series especiales (solo nombres que SI aparecen como variante en el catalogo;
+  // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
+  // no atributos de producto, y nunca existiran como variante en `palas`)
+  'master final', 'world padel tour',
   'gold edition', 'black edition', 'limited edition',
 ]
 
@@ -348,8 +350,10 @@ export function extraerAtributos(titulo: string): Atributos {
   for (const v of VARIANTES.sort((a, b) => b.length - a.length)) {
     const vNorm = normalizar(v)
     if (sinLineaNorm.includes(vNorm)) {
-      // Usar alias canónico si existe, si no uppercase del valor
-      varianteDetectada = VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
+      // Usar alias canónico si existe. Probar primero con "v" tal cual (p.ej. "hrd+",
+      // que normalizar() reduce a "hrd" y haría inalcanzable su alias "HRD+"),
+      // y si no existe esa clave, probar con la forma normalizada.
+      varianteDetectada = VARIANTES_ALIAS[v] ?? VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
       sinLinea = sinLinea.replace(new RegExp(v, 'gi'), '').replace(/\s+/g, ' ').trim()
       break
     }

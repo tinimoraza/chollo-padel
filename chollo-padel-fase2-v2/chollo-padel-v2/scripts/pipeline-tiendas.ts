@@ -53,6 +53,21 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
   return data?.pala_id ?? null
 }
 
+// Traduce la variante a una forma comun para comparar candidata vs catalogo,
+// sin importar si esta escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
+// OJO: esta tabla es una lista cerrada y controlada -- solo se anaden pares aqui
+// cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
+// que demostro que no todas las abreviaturas son intercambiables).
+const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
+  'control': 'ctrl', 'ctrl': 'ctrl',
+}
+
+function normalizarVariante(v: string | null): string | null {
+  if (!v) return null
+  const norm = v.toLowerCase().trim()
+  return VARIANTE_EQUIVALENCIAS[norm] ?? norm
+}
+
 async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): Promise<{ id: string }[]> {
   if (!attrs.marca || !attrs.linea) return []
 
@@ -62,19 +77,18 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
     .eq('marca', attrs.marca)
     .eq('linea', attrs.linea)
 
-  // ilike: case-insensitive exact match (evita fallos por mayúsculas padelnuestro vs padelzoom)
+  // ilike: case-insensitive exact match (evita fallos por mayusculas padelnuestro vs padelzoom)
   if (attrs.modelo)  q = q.ilike('modelo', attrs.modelo)
-  // Si modelo es null no filtramos — si hay múltiples → ambiguo; si hay 1 → match
+  // Si modelo es null no filtramos -- si hay multiples -> ambiguo; si hay 1 -> match
 
-  if (attrs.variante) q = q.eq('variante', attrs.variante)
-  else                q = q.is('variante', null)
-
-  if (attrs.año)     q = q.eq('año', attrs.año)
+  if (attrs.año) q = q.eq('año', attrs.año)
 
   const { data } = await q
-  return data ?? []
+  // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
+  // comparar el string literal -- evita falsos "sin match" por convenciones distintas
+  // entre como lo escribe la tienda y como esta guardado en el catalogo.
+  return (data ?? []).filter(p => normalizarVariante(p.variante) === normalizarVariante(attrs.variante))
 }
-
 async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   precio: number; precioOriginal?: number; url: string; titulo: string
 }) {
