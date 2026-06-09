@@ -415,6 +415,10 @@ export function extraerAtributos(titulo: string): Atributos {
   // "HRD+" se deja intacto porque no tiene espacio antes del +.
   titulo = titulo.replace(/(?<=\S) \+(?=\s|$)/g, ' PLUS').replace(/(?<=\s)\+(?=\s|$)/g, 'PLUS')
 
+  // Normalizar versiones de año tipo "2.6" → "2026" (Babolat usa X.Y como código de año)
+  // "2.4"→2024, "2.5"→2025, "2.6"→2026, etc.
+  titulo = titulo.replace(/\b2\.([4-9])\b/g, (_m, d) => String(2020 + parseInt(d)))
+
   const norm = normalizar(titulo)
 
   // 1. AÑO — primero 4 dígitos, luego 2 dígitos al final (ej: "25" → 2025)
