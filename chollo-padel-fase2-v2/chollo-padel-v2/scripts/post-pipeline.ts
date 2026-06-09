@@ -125,6 +125,7 @@ async function autoPromover(): Promise<number> {
   const usedSlugs = new Set(slugsData?.map(p => p.slug) ?? [])
 
   let insertadas = 0
+  let aliasResueltas = 0
 
   for (const c of candidatas) {
     const d = c.datos_extraidos as Record<string, any>
@@ -148,6 +149,7 @@ async function autoPromover(): Promise<number> {
           datos_extraidos: { ...d, pala_id_promovida: aliasExistente.pala_id },
         }).eq('id', c.id)
       }
+      aliasResueltas++
       continue
     }
 
@@ -215,7 +217,7 @@ async function autoPromover(): Promise<number> {
     insertadas++
   }
 
-  return insertadas
+  return { insertadas, aliasResueltas }
 }
 
 // ─── PASO 3: Reporte de pendientes restantes ──────────────────────────────────
@@ -264,8 +266,10 @@ async function main() {
 
   // Paso 2
   console.log('── Paso 2: Auto-promover nuevas ─────────────────────────')
-  const insertadas = await autoPromover()
-  console.log(`   → ${insertadas} palas nuevas insertadas\n`)
+  const { insertadas, aliasResueltas } = await autoPromover()
+  console.log(`   → ${insertadas} palas nuevas insertadas`)
+  if (aliasResueltas > 0) console.log(`   → ${aliasResueltas} resueltas por alias existente\n`)
+  else console.log()
 
   // Paso 3
   await reportarPendientes()
@@ -273,8 +277,9 @@ async function main() {
   // Resumen
   console.log(`\n${'─'.repeat(60)}`)
   console.log(`✅ False negatives resueltos: ${marcadas}`)
+  if (aliasResueltas > 0) console.log(`✅ Resueltas por alias:       ${aliasResueltas}`)
   console.log(`✅ Palas nuevas insertadas:   ${insertadas}`)
-  const restantes = (totalPendientes ?? 0) - marcadas - insertadas
+  const restantes = (totalPendientes ?? 0) - marcadas - insertadas - aliasResueltas
   if (restantes > 0) {
     console.log(`⚠️  Pendientes sin resolver:   ${restantes}  (revisar a mano)`)
   }

@@ -145,6 +145,18 @@ async function main() {
     }
   }
 
+  // Dos tokens son "compatibles" si son iguales o difieren solo en 1 carácter final
+  // (e.g., "xtrem"/"xtreme"). Solo aplica a tokens ≥4 chars.
+  function tokensCompatibles(a: string, b: string): boolean {
+    if (a === b) return true
+    if (a.length < 4 || b.length < 4) return false
+    if (Math.abs(a.length - b.length) === 1) return a.startsWith(b) || b.startsWith(a)
+    return false
+  }
+  function tokenIn(t: string, arr: string[]): boolean {
+    return arr.some(x => tokensCompatibles(t, x))
+  }
+
   // Fase 3: modelo-subconjunto (ej: "GENIUS 12K" ⊆ "Genius 12K Alum")
   const entradas = [...map.entries()]
   const eliminadas = new Set<string>()
@@ -162,7 +174,7 @@ async function main() {
       const [shortTok, shortKey, shortGrp, longKey] =
         t1.length <= t2.length ? [t1, c1, g1, c2] : [t2, c2, g2, c1]
       const longTok = longKey === c2 ? t2 : t1
-      if (shortTok.length > 0 && shortTok.every((t: string) => longTok.includes(t))) {
+      if (shortTok.length > 0 && shortTok.every((t: string) => tokenIn(t, longTok))) {
         map.get(longKey)!.push(...shortGrp)
         map.delete(shortKey)
         eliminadas.add(shortKey)

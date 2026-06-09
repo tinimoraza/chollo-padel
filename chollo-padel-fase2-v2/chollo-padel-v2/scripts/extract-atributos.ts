@@ -254,34 +254,122 @@ export const VARIANTES: string[] = [
 // Se eliminan del título antes de extraer la línea/modelo/variante
 
 const JUGADORES = [
-  'ale galan', 'ale galán', 'juan lebron', 'juan lebrón',
-  'arturo coello', 'agustin tapia', 'agustín tapia',
-  'martita ortega', 'marta ortega',
-  'paquito navarro', 'pablo cardona', 'juan tello',
-  'alex ruiz', 'alex galán',
-  'momo gonzalez', 'momo gonzález',
-  'franco chingotto', 'chingotto',
-  'stupa', 'edu alonso', 'coki nieto',
-  'gemma triay', 'mapi sanchez', 'mapi sánchez',
-  'carolina navarro', 'lucia sainz', 'lucía sainz',
-  'bea gonzalez', 'bea gonzález',
-  'ari sanchez', 'ariana sanchez',
-  'lebron', 'galán', 'galan', 'tapia',
-  // Jugadores adicionales
-  'tino libaak', 'libaak',
-  'aranzazu osoro', 'osoro',
-  'leo augsburger', 'augsburger',
-  'miguel lamperti', 'lamperti',
+  // ── FIP Top 50 Men (ranking junio 2026) ──────────────────────────────────
+  // #1-2
+  'arturo coello',          // ⚠️  NO 'coello' solo — es nombre del modelo Head Coello Pro
+  'agustin tapia', 'agustín tapia', 'agustin', 'agustín', 'tapia',
+  // #3-4
+  'ale galan', 'ale galán', 'alejandro galan', 'alejandro galán', 'galan', 'galán',
+  'federico chingotto', 'chingotto',
+  // #5-10
+  'juan lebron', 'juan lebrón', 'lebron',
+  'leo augsburger', 'leandro augsburger', 'augsburger',
+  'franco stupaczuk', 'stupaczuk', 'stupa',
+  'miguel yanguas', 'mike yanguas', 'yanguas',
+  'coki nieto', 'jorge nieto',
+  'paquito navarro', 'francisco navarro',
+  // #11-20
   'jon sanz',
-  'franco dal bianco', 'dal bianco',
-  'moyano', 'yanguas',
-  // Añadidos: nombres que aparecían sueltos (sin apellido o sin nombre) en
-  // algunos títulos y no se reconocían, generando palas duplicadas o con
-  // residuos en el modelo (caso real: "Agustín" suelto colaba en el modelo
-  // de varias Nox; "Di Nenno"/"Martin Di Nenno" generó dos filas para la
-  // misma Bullpadel Xplo porque ninguna de las dos formas estaba aquí).
   'martin di nenno', 'martín di nenno', 'di nenno',
-  'agustin', 'agustín',
+  'francisco guerrero', 'guerrero',
+  'jeronimo gonzalez', 'jerónimo gonzalez', 'momo gonzalez', 'momo gonzález',
+  'lucas bergamini', 'bergamini',
+  'edu alonso', 'eduardo alonso',
+  'javier leal',
+  'lucas campagnolo', 'campagnolo',
+  'javier garrido',
+  'juan tello', 'tello',
+  // #21-30
+  'alex ruiz', 'alejandro ruiz',
+  'javier garcia bernal',
+  'jairo bautista',
+  'juanlu esbri', 'esbri',
+  'javier barahona', 'barahona',
+  'alejandro arroyo',
+  'leo aguirre', 'leonel aguirre',
+  'alex chozas', 'chozas',
+  'david gala',
+  'gonzalo alfonso',
+  // #31-40
+  'pol hernandez',
+  'guillermo collado', 'collado',
+  'carlos gutierrez',
+  'jose jimenez casas',
+  'maxi arce',
+  'inigo jofre', 'jofre',
+  'aimar goni',
+  'pablo garcia belen',
+  'maxi sanchez blasco',
+  'victor ruiz benito',
+  // #41-50
+  'gonzalo rubio',
+  'jose antonio diestro', 'diestro',
+  'javier ruiz llorente',
+  'tino libaak', 'valentino libaak', 'libaak',
+  'pablo lijo', 'lijo',
+  'alvaro cepero', 'cepero',
+  'franco dal bianco', 'dal bianco',
+  'enzo jensen',
+  'pablo cardona',
+  // ── FIP Top 50 Women (ranking junio 2026) ────────────────────────────────
+  // #1-10
+  'gemma triay', 'triay',
+  'delfina brea', 'delfi brea', 'delfi',  // ⚠️  NO 'brea' solo — falso positivo en "Enebe Break"
+  'bea gonzalez', 'bea gonzález', 'beatriz gonzalez',
+  'paula josemaria', 'josemaria', 'josemaría',
+  'ari sanchez', 'ariana sanchez',
+  'claudia fernandez sanchez',
+  'andrea ustero', 'ustero',
+  'sofia araujo', 'araujo',
+  'tamara icardo', 'icardo',
+  'martita ortega', 'marta ortega',
+  // #11-20
+  'claudia jensen',
+  'alejandra salazar', 'ale salazar', 'salazar',
+  'martina calvo',
+  'alejandra alonso de villa',
+  'veronica virseda', 'virseda',
+  'marina guinart', 'guinart',
+  'beatriz caldera',
+  'carmen goenaga',
+  'aranzazu osoro', 'osoro',
+  'victoria iglesias',
+  // #21-30
+  'lucia sainz', 'lucía sainz',
+  'mapi sanchez', 'mapi sánchez',
+  'patricia llaguno', 'patty llaguno', 'llaguno',
+  'martina fassio', 'fassio',
+  'raquel eugenio',
+  'jessica castello',
+  'lorena rufo',
+  'jimena velasco',
+  'marta barrera',
+  'carolina orsi',
+  // #31-40
+  'giulia dal pozzo',
+  'virginia riera',
+  'alix collombon', 'collombon',
+  'noa canovas',
+  'araceli martinez arandia',
+  'agueda perez',
+  'lucia martinez gomez',
+  'julieta bidahorria',
+  'marta caparros',
+  'marta talavan', 'talavan',
+  // #41-50
+  'marta borrero',
+  'lara arruabarrena', 'arruabarrena',
+  'sofia saiz',
+  'jana montes',
+  'noemi aguilar',
+  'melania merino',
+  'ana catarina nogueira',
+  // ── Otros / nicknames ────────────────────────────────────────────────────
+  'alex galán',
+  'carolina navarro',
+  'miguel lamperti', 'lamperti',
+  'moyano',
+  'pablo lima', 'lima',
 ]
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────

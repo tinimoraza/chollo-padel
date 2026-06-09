@@ -82,6 +82,20 @@ const MODELO_DISCRIMINANTES = new Set([
 // del catálogo, o viceversa. Permite matchear "GENIUS 12K" con "Genius 12K Alum":
 // la tienda omitió "Alum" pero no contradice el catálogo.
 // Si no hay modelo extraído → no filtramos por modelo (cualquier modelo vale).
+
+// Dos tokens son "compatibles" si son iguales o difieren solo en 1 carácter final
+// (e.g., "xtrem"/"xtreme"). Solo aplica a tokens >=4 chars.
+function tokensCompatibles(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length < 4 || b.length < 4) return false
+  if (Math.abs(a.length - b.length) === 1) return a.startsWith(b) || b.startsWith(a)
+  return false
+}
+
+function tokenIn(t: string, arr: string[]): boolean {
+  return arr.some(x => tokensCompatibles(t, x))
+}
+
 function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
   // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
   // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
@@ -91,16 +105,14 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
     s.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
-  // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" ⊆ "Genius 12K Alum")
-  // Solo permitido si las palabras extra del catálogo no son discriminantes
-  // (e.g., "CTRL" diferencia el producto; "Alum" es solo material adicional)
-  if (tExt.every(t => tCat.includes(t))) {
-    const extra = tCat.filter(t => !tExt.includes(t))
+  // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
+  // Solo permitido si las palabras extra del catalogo no son discriminantes
+  if (tExt.every(t => tokenIn(t, tCat))) {
+    const extra = tCat.filter(t => !tokenIn(t, tExt))
     return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
   }
-  // Caso 2: tienda añade palabras (catálogo ⊆ tienda)
-  // e.g., catálogo tiene "Cup Hard" y tienda escribe "Cup Hard Pro Series"
-  if (tCat.every(t => tExt.includes(t))) return true
+  // Caso 2: tienda añade palabras (catálogo subset tienda)
+  if (tCat.every(t => tokenIn(t, tExt))) return true
   return false
 }
 
