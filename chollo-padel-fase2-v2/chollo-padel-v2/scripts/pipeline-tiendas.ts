@@ -45,12 +45,16 @@ async function getSourceId(slug: string): Promise<string> {
 }
 
 async function buscarPorAlias(textoNorm: string): Promise<string | null> {
+  // Usamos .limit(1) en lugar de .maybeSingle() porque el mismo texto puede estar
+  // aliaseado en varias tiendas (texto_normalizado no es unique solo — la clave única
+  // es (tienda, texto_normalizado)). Con maybeSingle(), si hay >1 fila devuelve null
+  // y el alias lookup falla silenciosamente aunque el alias exista.
   const { data } = await supabase
     .from('producto_aliases')
     .select('pala_id')
     .eq('texto_normalizado', textoNorm)
-    .maybeSingle()
-  return data?.pala_id ?? null
+    .limit(1)
+  return data?.[0]?.pala_id ?? null
 }
 
 // Traduce la variante a una forma común para comparar candidata vs catálogo,
