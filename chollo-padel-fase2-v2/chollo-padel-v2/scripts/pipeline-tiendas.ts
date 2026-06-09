@@ -181,7 +181,7 @@ async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   precio: number; precioOriginal?: number; url: string; titulo: string
 }) {
   if (DRY_RUN) return
-  await supabase.from('price_snapshots').upsert({
+  const { error } = await supabase.from('price_snapshots').upsert({
     pala_id:          palaId,
     source_id:        sourceId,
     precio:           producto.precio,
@@ -190,7 +190,8 @@ async function insertarSnapshot(palaId: string, sourceId: string, producto: {
     match_confidence: 1.0,
     disponible:       true,
     scraped_at:       new Date().toISOString(),
-  }, { onConflict: 'pala_id,source_id,url_producto' })
+  }, { onConflict: 'pala_id,source_id' })
+  if (error) console.error(`  ❌ [snapshot] ${producto.titulo}: ${error.message}`)
 }
 
 async function insertarAlias(palaId: string, textoOriginal: string, tienda: string, url?: string) {
