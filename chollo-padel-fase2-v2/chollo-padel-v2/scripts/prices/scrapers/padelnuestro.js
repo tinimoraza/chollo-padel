@@ -18,7 +18,12 @@ async function extractProducts(page) {
         ? parseFloat(priceEl.getAttribute("data-price-amount"))
         : null;
       const imgEl = card.querySelector("img.product-image-photo, img");
-      const image = imgEl ? (imgEl.getAttribute("src") || "").split("?")[0] : null;
+      // La web usa lazy-load: "src" empieza siendo un placeholder base64 (1x1 px
+      // transparente) y la URL real vive en "data-src" hasta que el navegador la
+      // copia a "src" al entrar en pantalla. Preferimos data-src; si no existe,
+      // usamos src pero descartando cualquier "data:" (placeholder, nunca foto real).
+      const rawImg = imgEl ? (imgEl.getAttribute("data-src") || imgEl.getAttribute("src") || "") : "";
+      const image = rawImg.startsWith("data:") ? null : (rawImg.split("?")[0] || null);
       return { title, price, url, image };
     }).filter((p) => p.title && p.price && !isNaN(p.price));
   });
@@ -79,4 +84,14 @@ async function scrape() {
   }
 
   const scraped_at = new Date().toISOString();
-  return allProducts.map((p) =>
+  return allProducts.map((p) => ({
+    source_key: SOURCE_KEY,
+    title: p.title,
+    price: p.price,
+    url: p.url,
+    image: p.image ?? null,
+    scraped_at,
+  }));
+}
+
+module.exports = { scrape, SOURCE_KEY };

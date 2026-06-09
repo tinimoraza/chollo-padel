@@ -23,7 +23,7 @@
 
 export function normalizar(texto: string): string {
   return texto
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quitar acentos
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // quitar acentos
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')                       // solo alfanumérico
     .replace(/\s+/g, ' ')
@@ -47,11 +47,11 @@ export const MARCAS: Record<string, string> = {
   // Wilson
   'wilson': 'Wilson', 'wilson padel': 'Wilson',
   // Star Vie
-  'star vie': 'Star Vie', 'starvie': 'Star Vie',
+  'star vie': 'StarVie', 'starvie': 'StarVie',
   // Siux
   'siux': 'Siux',
-  // Vibora / Vibor-A
-  'vibora': 'Vibora', 'vibor-a': 'Vibora', 'vibor a': 'Vibora',
+  // Vibor-A
+  'vibor-a': 'Vibor-A', 'vibora': 'Vibor-A', 'vibor a': 'Vibor-A',
   // Drop Shot
   'drop shot': 'Drop Shot', 'dropshot': 'Drop Shot',
   // Black Crown
@@ -92,6 +92,24 @@ export const MARCAS: Record<string, string> = {
   'softee': 'Softee',
   // Xcalion
   'xcalion': 'Xcalion',
+  // Vairo
+  'vairo': 'Vairo',
+  // Legend
+  'legend': 'Legend',
+  // Prince
+  'prince': 'Prince',
+  // Harlem
+  'harlem': 'Harlem',
+  // J-Hayber
+  'j-hayber': 'J-Hayber', 'j.hayber': 'J-Hayber', 'j hayber': 'J-Hayber',
+  // K-Swiss
+  'k-swiss': 'K-Swiss', 'kswiss': 'K-Swiss', 'k swiss': 'K-Swiss',
+  // Mystica
+  'mystica': 'Mystica',
+  // Slazenger
+  'slazenger': 'Slazenger',
+  // Asics
+  'asics': 'Asics',
 }
 
 // ─── Líneas por marca ─────────────────────────────────────────────────────────
@@ -112,13 +130,13 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   'Adidas': [
     'metalbone', 'adipower multiweight', 'adipower carbon', 'adipower',
     'drive', 'match', 'rx series', 'rx',
-    'cross it', 'cross-it', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
+    'cross it', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
     'velara', 'kardex',
   ],
   'Head': [
     'delta', 'extreme', 'speed', 'radical', 'flash', 'spark', 'bolt',
     'gravity', 'alpha', 'zephyr', 'instinct', 'tour',
-    'edge', 'vibe', 'evo', 'one', 'concord',
+    'edge', 'vibe', 'evo', 'one', 'concord', 'coello',
   ],
   'Babolat': [
     'technical viper', 'counter viper', 'air viper', 'viper',
@@ -129,7 +147,7 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   'Wilson': [
     'bela', 'defy', 'optix', 'ultra', 'carbon force', 'endure', 'blade',
   ],
-  'Star Vie': [
+  'StarVie': [
     'black titan', 'black mamba',
     'triton', 'metheora', 'raptor', 'basalto', 'drax', 'kenta', 'aquila',
     'brava', 'gea', 'titania', 'astrum',
@@ -140,7 +158,7 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
     'trilogy', 'spyder', 'velox', 'beat', 'gea', 'astra', 'valkiria',
     'fusion', 'invicta',
   ],
-  'Vibora': [
+  'Vibor-A': [
     'black mamba', 'king cobra',
     'yarara', 'mamba', 'titan', 'bamboo', 'boa', 'naya', 'vipera', 'lethal',
   ],
@@ -153,7 +171,7 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
     'special', 'patron', 'snake', 'wolf', 'rebel', 'win', 'shark', 'coyote', 'viva',
   ],
   'Dunlop': [
-    'aero-star', 'tristorm',
+    'aero star', 'tristorm',
     'rocket', 'blast', 'fury', 'elite', 'strike', 'megamax',
     'galactica', 'titan', 'inferno', 'nemesis', 'fx', 'galaxy',
     'impact', 'infinity', 'samurai', 'fusion',
@@ -179,6 +197,33 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   'Oxdog': [
     'ultimate', 'hyper tour',
   ],
+  'Vairo': [
+    'black karbon', 'everlast', 'grapheno', 'genetic', 'columns', 'compact', 'across',
+  ],
+  'Legend': [
+    'invictus', 'odyssey', 'revenant', 'shadow', 'stealth',
+  ],
+  'Prince': [
+    'falcon', 'premier', 'quartz', 'rocket',
+  ],
+  'Harlem': [
+    'pro helix', 'bionic', 'euphoria',
+  ],
+  'J-Hayber': [
+    'warrior fit', 'warrior', 'attack',
+  ],
+  'K-Swiss': [
+    'supreme',
+  ],
+  'Mystica': [
+    'legacy',
+  ],
+  'Slazenger': [
+    'epic pro', 'epic',
+  ],
+  'Asics': [
+    'hybrid',
+  ],
 }
 
 // ─── Variantes conocidas ──────────────────────────────────────────────────────
@@ -198,9 +243,15 @@ export const VARIANTES: string[] = [
   '18k', '12k',
   // Materiales
   'carbon', 'alum', 'aluminium',
+<<<<<<< Updated upstream
   // Series especiales (solo nombres que SI aparecen como variante en el catalogo;
   // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
   // no atributos de producto, y nunca existiran como variante en `palas`)
+=======
+  // Series especiales (solo nombres que SÍ aparecen como variante en el catálogo;
+  // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
+  // no atributos de producto, y nunca existirán como variante en `palas`)
+>>>>>>> Stashed changes
   'master final', 'world padel tour',
   'gold edition', 'black edition', 'limited edition',
 ]
@@ -221,7 +272,7 @@ const JUGADORES = [
   'carolina navarro', 'lucia sainz', 'lucía sainz',
   'bea gonzalez', 'bea gonzález',
   'ari sanchez', 'ariana sanchez',
-  'lebron', 'galán', 'galan', 'tapia', 'coello',
+  'lebron', 'galán', 'galan', 'tapia',
   // Jugadores adicionales
   'tino libaak', 'libaak',
   'aranzazu osoro', 'osoro',
@@ -230,12 +281,18 @@ const JUGADORES = [
   'jon sanz',
   'franco dal bianco', 'dal bianco',
   'moyano', 'yanguas',
+  // Añadidos: nombres que aparecían sueltos (sin apellido o sin nombre) en
+  // algunos títulos y no se reconocían, generando palas duplicadas o con
+  // residuos en el modelo (caso real: "Agustín" suelto colaba en el modelo
+  // de varias Nox; "Di Nenno"/"Martin Di Nenno" generó dos filas para la
+  // misma Bullpadel Xplo porque ninguna de las dos formas estaba aquí).
+  'martin di nenno', 'martín di nenno', 'di nenno',
+  'agustin', 'agustín',
 ]
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 
 function quitarMarca(texto: string, marca: string): string {
-  // Quitar la marca del inicio (puede tener variantes de escritura)
   const alias = Object.entries(MARCAS)
     .filter(([, v]) => v === marca)
     .map(([k]) => k)
@@ -251,13 +308,13 @@ function quitarAño(texto: string): string {
 }
 
 function quitarJugadores(texto: string): string {
-  const norm = normalizar(texto)
+  // Strip accents first so patterns like 'agustin tapia' match 'AGUSTÍN TAPIA'
+  let result = texto.normalize('NFD').replace(/[̀-ͯ]/g, '')
   for (const j of JUGADORES.sort((a, b) => b.length - a.length)) {
-    if (norm.includes(j)) {
-      texto = texto.replace(new RegExp(j, 'gi'), '')
-    }
+    const jSinAcentos = j.normalize('NFD').replace(/[̀-ͯ]/g, '')
+    result = result.replace(new RegExp(jSinAcentos, 'gi'), '').replace(/\s+/g, ' ').trim()
   }
-  return texto.replace(/\s+/g, ' ').trim()
+  return result.replace(/\s+/g, ' ').trim()
 }
 
 // ─── Extractor principal ──────────────────────────────────────────────────────
@@ -271,12 +328,17 @@ export interface Atributos {
 }
 
 export function extraerAtributos(titulo: string): Atributos {
+  // Pre-procesar: "+" suelto (precedido de espacio o al final) → "PLUS"
+  // Ej: "STARVIE ASTRUM +" → "STARVIE ASTRUM PLUS"
+  // "HRD+" se deja intacto porque no tiene espacio antes del +.
+  titulo = titulo.replace(/(?<=\S) \+(?=\s|$)/g, ' PLUS').replace(/(?<=\s)\+(?=\s|$)/g, 'PLUS')
+
   const norm = normalizar(titulo)
 
   // 1. AÑO — primero 4 dígitos, luego 2 dígitos al final (ej: "25" → 2025)
   const añoMatch4 = titulo.match(/\b(20[2-9]\d)\b/)
   const añoMatch2 = !añoMatch4
-    ? titulo.match(/\b(2[0-9])\b(?=\s|$)/)  // "25", "26" al final o antes de espacio
+    ? titulo.match(/\b(2[0-9])\b(?=\s|$)/)
     : null
   const año = añoMatch4
     ? parseInt(añoMatch4[1])
@@ -294,22 +356,26 @@ export function extraerAtributos(titulo: string): Atributos {
 
   if (!marcaDetectada) return { marca: null, linea: null, modelo: null, variante: null, año }
 
-  // 3. Limpiar título: quitar marca, año y jugadores
+  // 3. Limpiar título: quitar marca, año, jugadores y "by" residual
   let resto = quitarMarca(titulo, marcaDetectada)
   resto = quitarAño(resto)
-  // También quitar año corto de 2 dígitos si no había año de 4 dígitos
   if (añoMatch2) {
     const añoCorto = añoMatch2[1]
     resto = resto.replace(new RegExp(`\\b${añoCorto}\\b`, 'g'), '').replace(/\s+/g, ' ').trim()
   }
   resto = quitarJugadores(resto)
+  // "BY" queda como residuo cuando se elimina "BY JUGADOR" — limpiarlo
+  resto = resto.replace(/\bby\b/gi, '').replace(/\s+/g, ' ').trim()
   const restoNorm = normalizar(resto)
 
   // 4. LÍNEA — buscar en el diccionario de esta marca (más específico primero)
   let lineaDetectada: string | null = null
+<<<<<<< Updated upstream
   // Respetar el orden curado del diccionario (mas especifico primero), NO reordenar por longitud:
   // reordenar por longitud rompe casos como Nox, donde codigos de jugador cortos (la10, at10...)
   // deben detectarse antes que nombres de tecnologia mas largos (quantum, ventus...)
+=======
+>>>>>>> Stashed changes
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
     if (restoNorm.includes(linea)) {
@@ -322,7 +388,6 @@ export function extraerAtributos(titulo: string): Atributos {
   }
 
   if (!lineaDetectada) {
-    // Si no hay línea conocida, usar la primera palabra significativa del resto
     const palabras = restoNorm.split(' ').filter(w => w.length > 1)
     lineaDetectada = palabras[0]
       ? palabras[0].charAt(0).toUpperCase() + palabras[0].slice(1)
@@ -332,7 +397,12 @@ export function extraerAtributos(titulo: string): Atributos {
   // 5. Quitar la línea del resto para extraer modelo y variante
   let sinLinea = resto
   if (lineaDetectada) {
-    const lineaRe = new RegExp(lineaDetectada.replace(/[-+]/g, '[-+]?'), 'gi')
+    // Permitir que separadores (espacio o guión) coincidan con el título original.
+    // Ej: "Aero Star" debe quitar tanto "AERO STAR" como "AERO-STAR".
+    const lineaPattern = lineaDetectada
+      .replace(/[-+]/g, '[-+]?')
+      .replace(/\s+/g, '[-\\s]+')
+    const lineaRe = new RegExp(lineaPattern, 'gi')
     sinLinea = sinLinea.replace(lineaRe, '').replace(/\s+/g, ' ').trim()
   }
 
@@ -350,29 +420,36 @@ export function extraerAtributos(titulo: string): Atributos {
   for (const v of VARIANTES.sort((a, b) => b.length - a.length)) {
     const vNorm = normalizar(v)
     if (sinLineaNorm.includes(vNorm)) {
+<<<<<<< Updated upstream
       // Usar alias canónico si existe. Probar primero con "v" tal cual (p.ej. "hrd+",
       // que normalizar() reduce a "hrd" y haría inalcanzable su alias "HRD+"),
       // y si no existe esa clave, probar con la forma normalizada.
+=======
+>>>>>>> Stashed changes
       varianteDetectada = VARIANTES_ALIAS[v] ?? VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
       sinLinea = sinLinea.replace(new RegExp(v, 'gi'), '').replace(/\s+/g, ' ').trim()
       break
     }
   }
 
-  // 7. MODELO — lo que queda: número de generación, versión X.Y, sufijo
-  // Ej: "04", "3.4", "Genius 18K", "Pro Cup"
+  // 7. MODELO — lo que queda
   let modeloDetectado: string | null = sinLinea.trim() || null
 
-  // Normalizar modelo: quitar "pala", "padel", artículos sueltos y caracteres sobrantes
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
       .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion)\b/gi, '')
+<<<<<<< Updated upstream
       // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
       // "3.4+" / "3.4-" → "3.4" (signo PEGADO al número, sin espacio antes, seguido de espacio o fin)
       .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
       // tokens "+"/"-" sueltos como palabra completa en cualquier posición → fuera
+=======
+      .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
+      .replace(/\s+[\+\-\/\|]\s+/g, ' ')
+      .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
+>>>>>>> Stashed changes
       .replace(/(^|\s)[+\-](?=\s|$)/g, '$1')
       .replace(/\s{2,}/g, ' ')
       .trim()
@@ -393,15 +470,4 @@ export function extraerAtributos(titulo: string): Atributos {
 export function nombreCanonico(a: Atributos): string {
   const partes = [a.marca, a.linea, a.modelo, a.variante, a.año?.toString()]
   return partes.filter(Boolean).join(' ')
-}
-
-// ─── Generador de slug ────────────────────────────────────────────────────────
-
-export function generarSlug(a: Atributos): string {
-  return nombreCanonico(a)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120)
 }

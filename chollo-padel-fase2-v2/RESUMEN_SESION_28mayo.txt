@@ -1,0 +1,92 @@
+HUNTPADEL — Sesión 28 mayo 2026
+================================================
+
+## OBJETIVO DE LA SESIÓN
+Arreglar errores de TypeScript que impedían el build en Vercel.
+Punto de partida: repo en GitHub (tinimoraza/chollo-padel, branch main).
+
+---
+
+## ERRORES CORREGIDOS (commits subidos)
+
+### Error 1 — audit-matches/route.ts (commit 75f35fb)
+Fichero: app/api/cron/audit-matches/route.ts
+Error:   Type error: Property 'id' does not exist on type 'ParserError<"Unexpected input: ño">'
+Causa:   TypeScript no infería bien los tipos de Supabase en columnas con ñ ("año")
+Fix:     Añadido cast `as unknown as { data: { id, marca, modelo, año }[] | null }`
+         en las dos queries a tabla `palas` (líneas ~169 y ~281)
+
+### Error 2 — match-wallapop/route.ts (commit 45b019e)
+Fichero: app/api/cron/match-wallapop/route.ts
+Error:   Property 'catch' does not exist on type 'PostgrestFilterBuilder...'
+Causa:   .catch() no funciona encadenado en queries de Supabase v2
+Fix:     Reemplazados los dos .catch(() => {}) por bloques try/catch con await
+
+### Error 3 — match-pala-id.ts (commit en curso)
+Fichero: scripts/match-pala-id.ts
+Error:   An object literal cannot have multiple properties with the same name ('vibora')
+Causa:   Clave 'vibora' duplicada en MARCA_MAP (línea 194), ya existía 'vibor-a'
+Fix:     Eliminada la línea duplicada 'vibora': 'Vibora'
+
+### Error 4 — match-pala-id.ts (mismo fichero, error anterior)
+Fix previo en este fichero: cambiada la firma de matchPalaIds para aceptar
+`ReturnType<typeof createClient> | any` en lugar de solo `ReturnType<typeof createClient>`
+Motivo: supabaseAdmin tiene tipo más específico que no era compatible
+
+---
+
+## ESTADO ACTUAL
+- Build en Vercel: pendiente de confirmar tras el último push (error 3)
+- Si hay más errores de TS, seguir el mismo patrón: pegar log aquí y corregir
+
+---
+
+## PENDIENTE DE SESIONES ANTERIORES (sin tocar hoy)
+
+### 1. top-oportunidades.ts — filtros italianos (NO aplicado aún)
+Fichero: scripts/top-oportunidades.ts
+Problema: el job del TOP no filtra vocabulario italiano ni precios inflados de Roma Sport
+Fix a aplicar — añadir en la query:
+  AND title NOT ILIKE '%racchetta%'
+  AND title NOT ILIKE '%borsa%'
+  AND title NOT ILIKE '%scarpe%'
+  AND title NOT ILIKE '%cappellino%'
+  AND title NOT ILIKE '%zaino%'
+Y excluir snapshots Roma Sport donde precio > precio_referencia * 2
+
+### 2. 6 scrapers nuevos sin validar (creados en sesión 5)
+  scripts/prices/scrapers/tennispoint.js
+  scripts/prices/scrapers/decathlon.js
+  scripts/prices/scrapers/padelproshop.js
+  scripts/prices/scrapers/miravia.js
+  scripts/prices/scrapers/amazon.js
+  scripts/prices/scrapers/padeliberico.js
+Para probar: node scripts/prices/pipeline.js tennispoint (uno a uno)
+
+### 3. Seguridad — URGENTE
+  - Rotar service_role key de Supabase
+    Dashboard → Settings → API → Regenerar service_role
+    Actualizar config.js de la extensión Chrome con la nueva key
+  - Activar RLS en 7 tablas (añadir políticas ANTES de activar):
+    ALTER TABLE public.searches ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.price_sources ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.price_snapshots ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.price_reference ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.price_match_cache ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.scraper_logs ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.palas_candidatas ENABLE ROW LEVEL SECURITY;
+
+### 4. Commit pendiente de sesión 26 mayo (ya puede estar aplicado — verificar)
+  git add scripts/prices/fuzzy-matcher.js scripts/prices/pipeline.js scripts/prices/test-fixes-v6.js
+  git commit -m "fix: pipeline v6 + fuzzy-matcher v5 — URL signals, HTTP check, cache invalidation"
+  Luego: DELETE FROM price_match_cache; (en Supabase)
+  Luego: node scripts/prices/pipeline.js padelnuestro
+
+---
+
+## REFERENCIAS DEL PROYECTO
+  Web:          https://www.huntpadel.com
+  Repo GitHub:  github.com/tinimoraza/chollo-padel (branch: main)
+  Vercel:       prj_wnfDiETPBP4VgmvG7uLQDaRSkeEa
+  Supabase:     vgbyhdnhsngaehruirwb
+  Repo local:   C:\chollo-padel\chollo-padel-fase2-v2\chollo-padel-v2

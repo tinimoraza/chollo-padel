@@ -53,11 +53,19 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
   return data?.pala_id ?? null
 }
 
+<<<<<<< Updated upstream
 // Traduce la variante a una forma comun para comparar candidata vs catalogo,
 // sin importar si esta escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
 // OJO: esta tabla es una lista cerrada y controlada -- solo se anaden pares aqui
 // cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
 // que demostro que no todas las abreviaturas son intercambiables).
+=======
+// Traduce la variante a una forma común para comparar candidata vs catálogo,
+// sin importar si está escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
+// OJO: esta tabla es una lista cerrada y controlada — solo se añaden pares aquí
+// cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
+// que demostró que no todas las abreviaturas son intercambiables).
+>>>>>>> Stashed changes
 const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
   'control': 'ctrl', 'ctrl': 'ctrl',
 }
@@ -68,6 +76,45 @@ function normalizarVariante(v: string | null): string | null {
   return VARIANTE_EQUIVALENCIAS[norm] ?? norm
 }
 
+<<<<<<< Updated upstream
+=======
+// Tokens que, si aparecen en el catálogo pero no en lo extraído, indican un producto
+// distinto (no solo "especificación adicional"). Impide que "3.4" matchee "CTRL 3.4"
+// o que "Cross It" matchee "Cross It Team" cuando la tienda no menciona Team.
+// Regla: "Genius 12K" ⊆ "Genius 12K Alum" → extra='alum' → no discriminante → OK.
+//        "3.4" ⊆ "CTRL 3.4"               → extra='ctrl' → discriminante → NO match.
+const MODELO_DISCRIMINANTES = new Set([
+  'ctrl', 'control', 'team', 'hybrid', 'air', 'carbon', 'light',
+  'plus', 'elite', 'power', 'soft', 'iron', 'speed', 'hard', 'free',
+])
+
+// Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
+// del catálogo, o viceversa. Permite matchear "GENIUS 12K" con "Genius 12K Alum":
+// la tienda omitió "Alum" pero no contradice el catálogo.
+// Si no hay modelo extraído → no filtramos por modelo (cualquier modelo vale).
+function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
+  // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
+  // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
+  if (!modeloExtraido) return !modeloCat
+  if (!modeloCat)      return false
+  const tokenizar = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+  const tCat = tokenizar(modeloCat)
+  const tExt = tokenizar(modeloExtraido)
+  // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" ⊆ "Genius 12K Alum")
+  // Solo permitido si las palabras extra del catálogo no son discriminantes
+  // (e.g., "CTRL" diferencia el producto; "Alum" es solo material adicional)
+  if (tExt.every(t => tCat.includes(t))) {
+    const extra = tCat.filter(t => !tExt.includes(t))
+    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
+  }
+  // Caso 2: tienda añade palabras (catálogo ⊆ tienda)
+  // e.g., catálogo tiene "Cup Hard" y tienda escribe "Cup Hard Pro Series"
+  if (tCat.every(t => tExt.includes(t))) return true
+  return false
+}
+
+>>>>>>> Stashed changes
 async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): Promise<{ id: string }[]> {
   if (!attrs.marca || !attrs.linea) return []
 
@@ -77,6 +124,7 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
     .eq('marca', attrs.marca)
     .eq('linea', attrs.linea)
 
+<<<<<<< Updated upstream
   // ilike: case-insensitive exact match (evita fallos por mayusculas padelnuestro vs padelzoom)
   if (attrs.modelo)  q = q.ilike('modelo', attrs.modelo)
   // Si modelo es null no filtramos -- si hay multiples -> ambiguo; si hay 1 -> match
@@ -88,6 +136,55 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
   // comparar el string literal -- evita falsos "sin match" por convenciones distintas
   // entre como lo escribe la tienda y como esta guardado en el catalogo.
   return (data ?? []).filter(p => normalizarVariante(p.variante) === normalizarVariante(attrs.variante))
+=======
+  // OJO: NO filtramos modelo en SQL — usamos match por subconjunto de tokens en
+  // memoria (ver modeloCompatible). Motivo: algunas tiendas escriben "GENIUS 12K"
+  // donde el catálogo tiene "Genius 12K Alum". Un ilike exacto los trataría como
+  // productos distintos y crearía una fila duplicada.
+
+  // OJO: NO filtramos por año en la consulta SQL. Si lo hiciéramos con
+  // `.eq('año', attrs.año)`, cualquier pala ya existente con año=null quedaría
+  // excluida aunque sea el mismo producto (caso real: "Siux Electra Lite ST3" -
+  // Padelful trae año=2023, Padelzoom no informa año → se creó una fila duplicada
+  // porque el filtro SQL descartó la fila sin año). Filtramos el año en memoria,
+  // tratando "sin año" como comodín compatible con cualquier año.
+
+  const { data } = await q
+  // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
+  // comparar el string literal — evita falsos "sin match" por convenciones distintas
+  // entre cómo lo escribe la tienda y cómo está guardado en el catálogo.
+  const filtrados = (data ?? []).filter(p => {
+    const variantesCoinciden = normalizarVariante(p.variante) === normalizarVariante(attrs.variante)
+    // Año compatible si coinciden, o si a alguno de los dos lados le falta el dato
+    const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
+    // Modelo compatible si los tokens del extraído son subconjunto del catálogo o viceversa.
+    // Permite que "GENIUS 12K" (tienda) matchee con "Genius 12K Alum" (catálogo).
+    const modeloOk = modeloCompatible(p.modelo, attrs.modelo)
+    return variantesCoinciden && añoCompatible && modeloOk
+  })
+
+  // "Sin año" auto-resolución:
+  // Si el título no lleva año y hay varios candidatos que solo difieren en año
+  // → elegir el más reciente. Razonamiento: cuando una tienda lista "WILSON BELA V3"
+  // sin año está vendiendo la versión actual, que es la más reciente del catálogo.
+  // Solo activamos la regla si todos los candidatos comparten marca+linea+modelo+variante
+  // (diferencia ÚNICAMENTE en año). Si difieren en otro campo, seguimos siendo
+  // ambiguos — no queremos falsos positivos.
+  if (!attrs.año && filtrados.length > 1) {
+    const claveSinAño = (p: any) =>
+      `${(p.marca ?? '').toLowerCase()}|${(p.linea ?? '').toLowerCase()}|${(p.modelo ?? '').toLowerCase()}|${normalizarVariante(p.variante) ?? ''}`
+    const claves = new Set(filtrados.map(claveSinAño))
+    if (claves.size === 1) {
+      // Todos iguales salvo año → quedarse con el de mayor año
+      const masReciente = filtrados.reduce((best: any, p: any) =>
+        (p.año ?? 0) > (best.año ?? 0) ? p : best
+      )
+      return [masReciente]
+    }
+  }
+
+  return filtrados
+>>>>>>> Stashed changes
 }
 async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   precio: number; precioOriginal?: number; url: string; titulo: string
@@ -138,6 +235,15 @@ async function insertarCandidata(producto: {
     candidatos_ids:  (candidatos ?? []).map(c => c.id),
     extraido_at:     new Date().toISOString(),
   }
+
+  // No pisar candidatas ya resueltas — si estado='matched', la pala ya existe.
+  // Si forzamos estado='pendiente' encima, el gestor la vuelve a mostrar como pendiente.
+  const { data: existente } = await supabase
+    .from('palas_candidatas')
+    .select('id, estado')
+    .eq('titulo_normalizado', normalizar(producto.titulo))
+    .maybeSingle()
+  if (existente?.estado === 'matched') return
 
   await supabase.from('palas_candidatas').upsert({
     titulo:             producto.titulo,
