@@ -1,11 +1,11 @@
 # HuntPadel — Arquitectura Técnica
-*Actualizado: 2026-06-05 — Reset y nueva estrategia de matching*
+*Actualizado: 2026-06-09*
 
 ---
 
 ## Visión general
 
-HuntPadel es un agregador de chollos de palas de pádel de segunda mano (Wallapop, Vinted) y tiendas online. Detecta anuncios con descuento real respecto al PVP de tienda, los matchea contra un catálogo canónico de palas, y presenta un ranking TOP + alertas a usuarios.
+HuntPadel es un agregador de chollos de palas de pádel. Detecta anuncios de segunda mano (Wallapop, Vinted) y precios de tiendas online, los matchea contra un catálogo canónico de palas, y presenta un ranking TOP + alertas a usuarios.
 
 ---
 
@@ -13,130 +13,51 @@ HuntPadel es un agregador de chollos de palas de pádel de segunda mano (Wallapo
 
 | Capa | Tecnología |
 |---|---|
-| Frontend/API | Next.js (Vercel Hobby) |
+| Frontend/API | Next.js (Vercel) |
 | Base de datos | Supabase (PostgreSQL) |
-| Scraper Wallapop | Chrome Extension (MV3, background service worker) |
-| Scraper Vinted | GitHub Actions + script Node/TSX |
-| Scraper tiendas | GitHub Actions + Playwright/Puppeteer/fetch |
-| Catálogo | GitHub Actions diario 07:00 UTC (padelzoom + padelful) |
-| CI/CD | GitHub Actions |
-| Cron externo | cron-job.org (llama endpoints Vercel directamente) |
+| Scraper tiendas precios | Scripts Node/TSX locales (3 tiendas activas) |
+| Scraper catálogo | padelzoom + padelful (enriquecimiento specs) |
+| Scraper segunda mano | Chrome Extension MV3 (Wallapop) |
+| Herramienta revisión | GestorCandidatas.exe (Python/CustomTkinter) |
 
 ---
 
-## Estado actual (2026-06-05)
-
-### ⚠️ Sistema en transición
-
-El sistema de matching anterior (fuzzy + embeddings) fue descartado por generar demasiados falsos positivos y contaminar el catálogo con duplicados y productos incorrectos. Se está construyendo un nuevo sistema basado en **Entity Resolution por atributos estructurados**.
-
-**Qué está activo:**
-- Scraper Chrome Extension (Wallapop) — recoge anuncios, sin asignación de pala
-- Scraper Vinted (GH Actions) — recoge anuncios, sin asignación de pala
-- Scrapers de tiendas (GH Actions) — pausa temporal hasta nuevo pipeline
-- Catálogo diario padelzoom + padelful — nuevo, activo desde 2026-06-05
-
-**Qué está pausado:**
-- Todos los schedules de GH Actions (comentados con `# [PAUSADO]`)
-- Endpoints Vercel de matching/auto-promote/audit (devuelven 503)
-- cron-job.org — pausar manualmente en consola
-
----
-
-## Tablas de Supabase
-
-### Tablas activas
+## Tablas principales
 
 | Tabla | Descripción |
 |---|---|
-| `productos` | **NUEVO** — Catálogo canónico. Una fila por pala real. Identidad: `marca + linea + modelo + variante + año` |
-| `producto_aliases` | **NUEVO** — Todos los nombres que usan las tiendas para el mismo producto. Cada match aprobado genera un alias |
-| `wallapop_cache` | Anuncios de segunda mano (Wallapop + Vinted). Sin `pala_id` asignado por ahora |
+| `palas` | Catálogo canónico. Una fila por pala real. Identidad: `marca + linea + modelo + variante + año` |
+| `producto_aliases` | Nombres que usan las tiendas para el mismo producto. Cada match confirmado genera un alias |
+| `palas_candidatas` | Productos scrapeados que no matchearon automáticamente — cola de revisión manual |
+| `price_snapshots` | Precios históricos por pala + tienda |
 | `price_sources` | Tiendas registradas como fuentes de precio |
-| `alertas` | Alertas de usuarios (query + precio máximo) |
-| `notificaciones` | Historial de notificaciones enviadas |
-
-### Tablas vacías / en desuso
-
-| Tabla | Estado |
-|---|---|
-| `palas` | Vaciada — sustituida por `productos` |
-| `palas_candidatas` | Vaciada — lógica de auto-promote eliminada |
-| `price_snapshots` | Vaciada — se rellenará con nuevo pipeline de tiendas |
-| `price_reference` | Vaciada — se recalculará con nuevo pipeline |
-| `price_match_cache` | Vaciada — matcher anterior descartado |
-| `top_oportunidades` | Vaciada — se regenerará cuando el matching esté listo |
-| `match_audit_log` | Vaciada |
-| `search_cache` | Vaciada |
+| `wallapop_cache` | Anuncios de segunda mano (Wallapop + Vinted) |
 
 ---
 
-## Catálogo canónico — Nueva arquitectura
-
-### Principio fundamental
-
-> La identidad de una pala NO es su nombre. Es la combinación de atributos estructurados: **marca + línea + modelo + variante + año**.
-
-### Schema `productos`
+## Schema `palas`
 
 ```sql
 marca       TEXT    -- 'Bullpadel', 'Nox', 'Adidas'...
 linea       TEXT    -- familia: 'Vertex', 'Metalbone', 'AT10'...
-modelo      TEXT    -- generación: '04', '3.4', 'HRD', 'Genius 18K'...
-variante    TEXT    -- diferenciador: 'Comfort', 'Woman', 'Light', 'CTRL'...
+modelo      TEXT    -- generación/versión: '04', '3.4', 'Cup Hard'...
+variante    TEXT    -- diferenciador: 'COMFORT', 'LIGHT', 'CTRL', 'CARBON'...
 año         INTEGER
+nombre      TEXT    -- nombre completo legible
+slug        TEXT    -- URL-friendly, único
+imagen_url  TEXT
+precio_pvp  NUMERIC -- media de price_snapshots disponibles
 
--- Técnicos (de Padelful)
-forma, balance, tacto, juego, genero
-peso_min, peso_max
-material_cara, material_nucleo, material_marco
-
--- Ratings (de Padelful)
-rating_global, rating_potencia, rating_control
-rating_rebote, rating_manejabilidad, rating_punto_dulce
-
-precio_pvp, imagen_url
 UNIQUE(marca, linea, modelo, variante, año)
 ```
 
-**Sobre `precio_pvp`:**
-- Valor inicial = precio mínimo de mercado que publica padelzoom (refleja el mercado actual, no el PVP de salida del fabricante que queda obsoleto)
-- Se recalcula con la **media de price_snapshots de tiendas** cuando hay ≥2 matches confirmados sobre esa pala
-- El PVP oficial del fabricante (de padelful) NO se usa como referencia — sería absurdo comparar contra el precio de lanzamiento de una pala de 2024
+**Sobre `precio_pvp`:** Se calcula como media de los `price_snapshots` con `disponible=true` de esa pala. Se recalcula tras cada merge de duplicados.
 
-### Schema `producto_aliases`
+---
 
-```sql
-producto_id UUID   -- FK → productos.id
-texto_original    TEXT  -- "Bullpadel Vertex 05 HYB 2026 Juan Tello"
-texto_normalizado TEXT  -- lowercase sin acentos
-tienda            TEXT  -- 'padelzoom', 'padelnuestro', 'padelproshop'...
-confianza         NUMERIC -- 1.0 = fuente oficial
-UNIQUE(tienda, texto_normalizado)
-```
+## Extractor de atributos (`scripts/extract-atributos.ts`)
 
-### Construcción del catálogo
-
-```
-Diario 07:00 UTC — scrape-catalogo.yml
-  ↓
-1. PADELZOOM (base)
-   FacetWP API → lista completa de palas (~800)
-   extract-atributos.ts → marca, linea, modelo, variante, año
-   precio_pvp = precio mínimo de mercado de padelzoom (referencia inicial)
-   → INSERT en productos + alias 'padelzoom'
-
-2. PADELFUL (enriquecimiento)
-   API padelful.com/api/v1/rackets (~1400)
-   extract-atributos.ts → atributos
-   → Buscar por (marca, linea, modelo, variante, año) en productos:
-     SI existe → UPDATE ratings + imagen_url + INSERT alias 'padelful'
-     SI no existe → INSERT nuevo producto con todos los campos
-```
-
-### Extractor de atributos (`scripts/extract-atributos.ts`)
-
-Módulo compartido usado tanto en la construcción del catálogo como en el matching de tiendas.
+Módulo compartido usado en pipeline de tiendas y deduplicación.
 
 ```
 Entrada: "Bullpadel Vertex 04 Comfort 2025"
@@ -149,167 +70,221 @@ Salida:
 ```
 
 **Jerarquía de extracción:**
-1. Marca → diccionario con aliases normalizados
-2. Año → regex `\b(20[2-9]\d)\b`
-3. Línea → diccionario por marca (orden especificidad descendente)
-4. Variante → diccionario global de variantes conocidas
-5. Modelo → lo que queda tras eliminar marca, línea, variante y año
+1. Pre-proceso: `"+" suelto → "PLUS"` (ej: "Astrum +" → "Astrum PLUS")
+2. Marca → diccionario con aliases normalizados
+3. Año → regex `\b(20[2-9]\d)\b`, también acepta año corto final (ej: "25" → 2025)
+4. Eliminar tokens de jugadores conocidos (Tapia, Lebrón, Coello, etc.)
+5. Línea → diccionario por marca (orden especificidad descendente)
+6. Variante → lista global: ctrl, control, light, team, carbon, hybrid, lite, air, pro, elite, tour, woman, junior, 18k, 12k, alum...
+7. Modelo → lo que queda tras eliminar todo lo anterior
+
+**Casos especiales documentados:**
+- `"+"` al final/suelto → `"PLUS"` (StarVie Astrum +, Kenta +, Raptor +)
+- `"CTRL"` y `"CONTROL"` son equivalentes (mismo variante normalizado)
+- Año corto `"25"` al final del título → `2025`
+- Head 2026: líneas renombradas a `"Coello"` (Motion/Pro/Team son variantes)
+- Adidas Cross It Team: `linea="Cross It"`, `modelo="Team"` (NO es una línea propia)
 
 ---
 
-## Matching de tiendas — Nueva estrategia (en desarrollo)
+## Pipeline de tiendas (`scripts/pipeline-tiendas.ts`)
 
-### Principio
-
-> No se comparan textos. Se comparan atributos estructurados.
-
-### Flujo
+### Flujo por producto
 
 ```
-Producto de tienda (ej: "Bullpadel Vertex04 25")
+Producto scrapeado (título + precio + URL)
   ↓
-extract-atributos.ts
+1. Buscar texto normalizado en producto_aliases
+   → MATCH → price_snapshot + fin
   ↓
-{ marca: Bullpadel, linea: Vertex, modelo: 04, variante: null, año: 2025 }
-  ↓
-Scoring contra productos del catálogo:
-  marca coincide:   +50
-  linea coincide:   +30
-  modelo coincide:  +10
-  variante coincide: +10
-  año coincide:     +10
-  ↓
-score ≥ umbral  → match automático → price_snapshot + alias
-score ambiguo   → cola revisión manual (Gestor)
-sin match       → cola revisión manual
-  ↓
-Cuando ≥2 tiendas tienen price_snapshot para una pala:
-  → recalcular precio_pvp = media de esos snapshots
-  → actualizar productos.precio_pvp
+2. extraerAtributos(título)
+   → buscarPorAtributos(marca, linea, variante, año, modelo)
+     → 1 resultado  → price_snapshot + alias nuevo
+     → >1 resultado → palas_candidatas (estado='ambiguo')
+     → 0 resultados → palas_candidatas (estado='pendiente')
 ```
 
-### Aprendizaje continuo
+### Función `modeloCompatible`
 
-Cada match manual en el Gestor genera:
-- Un nuevo alias en `producto_aliases`
-- O una nueva regla en el extractor
+Decide si el modelo del catálogo es compatible con el modelo extraído de la tienda.
 
-El sistema mejora con cada revisión.
+```typescript
+// Reglas:
+// 1. modelo extraído = null → solo matchea palas con modelo=null en catálogo
+//    ("CROSS IT CTRL" sin modelo NO va a "Cross It Team CTRL")
+// 2. modelo catálogo = null, extraído != null → no match
+// 3. Subset tienda⊆catálogo: "GENIUS 12K" matchea "Genius 12K Alum" (tienda omitió "Alum")
+//    EXCEPTO si el catálogo tiene tokens discriminantes extra (ctrl, team, hybrid, air,
+//    carbon, light...) → esos indican producto diferente, no mera especificación adicional
+//    Ej: "3.4" NO matchea "CTRL 3.4" porque "ctrl" es discriminante
+// 4. Subset catálogo⊆tienda: catálogo "Cup Hard" matchea tienda "Cup Hard Pro Series"
+```
 
----
+**MODELO_DISCRIMINANTES** (si aparecen en el catálogo pero no en lo extraído → NO match):
+`ctrl, control, team, hybrid, air, carbon, light, plus, elite, power, soft, iron, speed, hard, free`
 
-## Segunda mano — Estado y roadmap
+### Regla sin-año
 
-### Estado actual
-El matching de segunda mano (Wallapop/Vinted) está **pausado**. Los scrapers siguen recogiendo anuncios en `wallapop_cache` pero sin asignar `pala_id`.
+Si el título no trae año y hay varios candidatos que solo difieren en año → se elige el más reciente. Solo se activa si todos los candidatos comparten marca+linea+modelo+variante (diferencia ÚNICA en año).
 
-### Roadmap
-La estrategia de matching para segunda mano será **diferente** a la de tiendas porque los títulos de anuncios de segunda mano son mucho más variables (multilingual, abreviados, sin estructura). Se definirá una vez que el pipeline de tiendas esté funcionando.
+### Guardia anti-sobrescritura
 
----
+Si una candidata ya tiene `estado='matched'`, el pipeline NO la vuelve a escribir como pendiente/ambigua. Evita que re-runs deshagan resoluciones manuales.
 
-## GitHub Actions — Estado actual
+### Tiendas activas
 
-### Activos con schedule
-| Action | Schedule | Qué hace |
+| Tienda | Archivo | Uso |
 |---|---|---|
-| **Scrape Catálogo** | Diario 07:00 UTC | Padelzoom + Padelful → tabla `productos` |
+| padelzoom | padelzoom.js | Catálogo (fuente de specs) |
+| padelful | padelful.js | Catálogo (enriquecimiento specs) |
+| padelnuestro | padelnuestro.js | Precios reales de mercado |
 
-### Pausados (schedule comentado, workflow_dispatch disponible)
-| Action | Estado |
+---
+
+## Post-pipeline (`scripts/post-pipeline.ts`)
+
+Script a ejecutar **después de cada pipeline de tiendas**. Hace tres cosas:
+
+1. **Limpiar false negatives**: candidatas `pendiente` cuya marca+linea+modelo ya existe en catálogo pero el pipeline no matcheó (diferencia menor de escritura). Las marca como `matched`.
+
+2. **Auto-promover nuevas**: candidatas `pendiente` con marca+línea reconocida que genuinamente no existen en catálogo → las inserta como pala nueva en `palas`, crea alias, marca como `matched`.
+
+3. **Reportar pendientes**: lo que no se pudo resolver automáticamente (sin marca, sin línea, etc.) → lista para revisión manual.
+
+---
+
+## Proceso operativo completo
+
+**Ciclo estándar (ejecutar en este orden):**
+
+```bash
+# 1. Pipeline de cada tienda + post-proceso inmediato
+npx tsx --env-file=.env.local scripts/pipeline-tiendas.ts padelzoom
+npx tsx --env-file=.env.local scripts/post-pipeline.ts
+
+npx tsx --env-file=.env.local scripts/pipeline-tiendas.ts padelful
+npx tsx --env-file=.env.local scripts/post-pipeline.ts
+
+npx tsx --env-file=.env.local scripts/pipeline-tiendas.ts padelnuestro
+npx tsx --env-file=.env.local scripts/post-pipeline.ts
+
+# 2. Revisar ambiguos y sin_match en GestorCandidatas.exe
+#    - Ambiguos → "Asignar a pala existente"
+#    - Sin match reales → "Promover como nueva pala"
+#    - Listings viejos/rotos → "Posible nueva" o ignorar
+
+# 3. Deduplicación (cuando se han añadido palas nuevas)
+node scripts/fix-duplicados.js          # herramienta visual en http://localhost:4546
+# o CLI:
+npx tsx --env-file=.env.local scripts/detectar-duplicados.ts --sql
+```
+
+**Frecuencia recomendada:** Una vez a la semana o al añadir nuevas palas manualmente.
+
+---
+
+## GestorCandidatas (herramienta desktop)
+
+**Archivo fuente:** `C:\chollo-padel-extension\gestor_candidatas.py`
+**Ejecutable:** `C:\chollo-padel-extension\dist\GestorCandidatas.exe`
+**Recompilar:** `cd C:\chollo-padel-extension && python -m PyInstaller GestorCandidatas.spec`
+
+Herramienta de revisión manual de candidatas ambiguas o sin match.
+
+**Filtros disponibles:** Pendientes / Ambiguos / Todos / por Marca
+
+**Acciones por candidata:**
+- **Asignar a pala existente**: marca como matched y registra price_snapshot
+- **Promover como nueva pala**: inserta en `palas` + crea alias
+- **Posible nueva**: marca como `posible_nueva` (para revisión posterior)
+
+**Fixes aplicados (2026-06-09):**
+- El filtro "Pendientes" ya no oculta candidatas con `auto_promovida=true` + `estado='pendiente'` — el override fue eliminado, ahora `estado` manda siempre
+- `↻ Recargar` solo recarga candidatas (no las ~1800+ palas) → recarga rápida
+
+---
+
+## Deduplicación
+
+### Herramienta visual (`scripts/fix-duplicados.js`)
+
+```bash
+node scripts/fix-duplicados.js   # abre http://localhost:4546
+```
+
+Detecta grupos de palas duplicadas por tres fases:
+1. **Fase 1 — Identidad exacta**: misma `marca+linea+modelo+variante+año`
+2. **Fase 2 — Año null**: pala con `año=null` se fusiona con la de año conocido del mismo modelo
+3. **Fase 3 — Modelo subconjunto**: "GENIUS 12K" ⊆ "Genius 12K Alum" → mismo producto
+
+Al mergear: redirige price_snapshots y aliases al canonical, recalcula `precio_pvp` como media, borra el duplicado.
+
+### CLI (`scripts/detectar-duplicados.ts`)
+
+```bash
+npx tsx --env-file=.env.local scripts/detectar-duplicados.ts         # solo listar
+npx tsx --env-file=.env.local scripts/detectar-duplicados.ts --sql   # generar SQL de merge
+```
+
+---
+
+## `palas_candidatas` — estados
+
+| Estado | Significado |
 |---|---|
-| Scraper Vinted | ⏸ PAUSADO |
-| Match Segunda Mano | ⏸ PAUSADO |
-| Top Oportunidades | ⏸ PAUSADO |
-| Audit Matches | ⏸ PAUSADO |
-| Embedding Rematch | ⏸ PAUSADO |
-| Auto Promote Candidatas | ⏸ PAUSADO |
-| Review No-Match Diario | ⏸ PAUSADO |
-| Check Alerts | ⏸ PAUSADO |
-| Scrape Precios Tiendas | ⏸ PAUSADO (solo workflow_dispatch) |
+| `pendiente` | No matcheó con ninguna pala del catálogo |
+| `ambiguo` | Matcheó con más de una pala, requiere elección manual |
+| `matched` | Resuelta (manual o automáticamente) |
+| `posible_nueva` | No es una pala conocida, posible nuevo producto |
+
+**Nota:** El pipeline solo sobrescribe candidatas que NO están en `matched`. Las demás se actualizan normalmente.
 
 ---
 
-## Endpoints Vercel — Estado actual
+## Casos especiales y decisiones de diseño
 
-| Endpoint | Estado |
+### Año null como comodín
+Una pala con `año=null` en catálogo es compatible con cualquier año extraído de tienda. Evita duplicados cuando una tienda no informa el año.
+
+### Distintas ediciones ≠ duplicados
+`Nox AT10 Pro 2024` y `Nox AT10 Pro 2025` son productos distintos, NO duplicados. Solo son duplicados si tienen mismos atributos con residuos de nombre (ej: nombre de jugador que ya se eliminó del extractor).
+
+### Variantes CTRL/CONTROL
+Son equivalentes: `normalizarVariante` las mapea ambas a `'ctrl'`.
+
+### Head Coello 2026
+A partir de 2026, las líneas `Motion/Pro/Team` de Head pasaron a llamarse `Coello Motion/Pro/Team`. En la BD: `linea='Coello'`, `variante='MOTION'/'PRO'/'TEAM'`.
+
+### Dunlop Aero Star
+En la BD: `linea='Aero Star'`, `modelo=null`. Las entradas antiguas con `linea='Aero'` + `modelo='Star'` fueron migradas.
+
+### Adidas Cross It Team CTRL
+`linea='Cross It'`, `modelo='Team'`, `variante='CTRL'`. "Cross It Team" NO es una línea propia del extractor.
+
+---
+
+## Scripts disponibles
+
+| Script | Uso |
 |---|---|
-| `/api/cron/match-wallapop` | ⏸ Devuelve 503 |
-| `/api/cron/audit-matches` | ⏸ Devuelve 503 |
-| `/api/cron/scrape-wallapop` | ⏸ Devuelve 503 |
-| `/api/cron/check-alerts` | ✅ Activo (alertas usuarios) |
-| `/api/chollos` | ✅ Activo (sin datos por ahora) |
-| `/api/top` | ✅ Activo (sin datos por ahora) |
-
-> **Nota:** Los crons de Vercel se gestionan en cron-job.org además del `vercel.json`. Pausar los schedules de GH Actions no es suficiente — hay que desactivarlos también en cron-job.org.
-
----
-
-## Chrome Extension (Wallapop)
-
-**Estado:** Activa pero sin matching de pala. Recoge anuncios en `wallapop_cache`.
-
-**Alarms:**
-- `scrape`: cada 10 min — recoge anuncios nuevos
-- `verify`: cada hora — verifica vendidos
-- `category_swipe`: diario — barre categoría completa category_id=12579
-
-**Nota:** El matching de pala_id de la extensión también está desactivado.
+| `pipeline-tiendas.ts` | Scraping + matching de precios de tiendas |
+| `post-pipeline.ts` | Post-proceso: false negatives + auto-promote |
+| `detectar-duplicados.ts` | Detección CLI de duplicados en catálogo |
+| `fix-duplicados.js` | Herramienta visual de deduplicación (puerto 4546) |
+| `promover-candidatas.ts` | Promoción manual de candidatas a palas |
+| `refresh-sin-marca.ts` | Refrescar palas sin marca detectada |
+| `purge-sold-items.js` | Purgar price_snapshots de productos vendidos |
+| `extract-atributos.ts` | Módulo de extracción de atributos (importado por otros) |
 
 ---
 
-## Scrapers de tiendas disponibles
+## Estado actual (2026-06-09)
 
-| Tienda | Archivo | Método | Estado |
-|---|---|---|---|
-| Padel Nuestro | padelnuestro.js | Puppeteer | ✅ Funciona |
-| PadelZoom | padelzoom.js | FacetWP API | ✅ Funciona (ahora solo catálogo) |
-| Tienda PadelPoint | tiendapadelpoint.js | Playwright | ✅ Funciona |
-| Street Padel | streetpadel.js | fetch+cheerio | ✅ Funciona |
-| Zona de Padel | zonadepadel.js | fetch+cheerio | ✅ Funciona |
-| Padel Pro Shop | padelproshop.js | Section API | ✅ Funciona |
-| Padel Ibérico | padeliberico.js | fetch+cheerio | ✅ Funciona |
-| Tennis-Point | tennispoint.js | Shopify JSON | ✅ Funciona |
-| Padel Market | padelmarket.js | — | ✅ Funciona |
-| Padel Coronado | padelcoronado.js | Playwright | ✅ Funciona |
-| Mister Padel | misterpadel.js | Clerk.io API | ✅ Funciona |
-| Roma Sport | romasport.js | Playwright | ⚠️ Intermitente |
-| Decathlon | decathlon.js | — | ❌ Bloqueado |
-| Padel Vice | padelvice.js | — | ❌ Bloqueado |
-| SmashInn | smashinn.js | — | ❌ Bloqueado |
-| Time2Padel | time2padel.js | — | ❌ Bloqueado |
-| Bullpadel Oficial | bullpadel.js | — | Sin logs |
-| Nox Oficial | nox.js | — | Sin logs |
-| Siux Oficial | siux.js | — | Sin logs |
-| Vibora Oficial | vibora.js | — | Sin logs |
-| Ofertas de Padel | ofertasdepadel.js | — | Sin logs |
-
-> **Nota:** Los scrapers de tiendas generarán `price_snapshots` contra la tabla `productos` (no `palas`) en el nuevo pipeline.
-
----
-
-## Gestor de Palas Candidatas (extensión desktop)
-
-**Archivo:** `C:\chollo-padel-extension\gestor_candidatas.py`
-
-Herramienta de revisión manual para matches ambiguos. Muestra candidatas pendientes con recomendaciones fuzzy. Al aprobar un match:
-- Escribe en `price_match_cache` (manual, confidence=1.0)
-- Marca la candidata como `matched`
-
-**Bug corregido (2026-06-05):** El pool de búsqueda ya no cae a `self.palas` completo cuando `marca_detectada` es null — evitaba matches cross-brand como NOX → Bullpadel.
-
----
-
-## Roadmap
-
-1. ✅ Parar todos los procesos de matching antiguo
-2. ✅ Limpiar BD (palas, wallapop_cache.pala_id, candidatas, snapshots)
-3. ✅ Nuevo schema `productos` + `producto_aliases`
-4. ✅ Extractor de atributos (`extract-atributos.ts`)
-5. ✅ Script importación catálogo (`import-catalogo.ts`) — padelzoom base, padelful enriquece
-6. ✅ GH Action diario 07:00 UTC para catálogo
-7. 🔲 Ejecutar import y validar catálogo (~800-1400 productos)
-8. 🔲 Nuevo pipeline de tiendas con scoring por atributos
-9. 🔲 Activar scrapers de tiendas con nuevo pipeline
-10. 🔲 Definir estrategia matching segunda mano (diferente a tiendas)
-11. 🔲 Reactivar TOP + Chollos con nuevo sistema
+- ✅ Catálogo: ~1800 palas en `palas`
+- ✅ Pipeline de tiendas: funcional con matching por atributos
+- ✅ post-pipeline: auto-resolución de false negatives y nuevas palas
+- ✅ GestorCandidatas: funcional, filtros corregidos, recarga rápida
+- ✅ Deduplicación: herramienta visual + CLI operativos
+- ✅ `palas_candidatas`: 0 pendientes, 0 ambiguos (limpiado 2026-06-09)
+- ⏸ Segunda mano (Wallapop/Vinted): scraper activo pero matching pausado
+- ⏸ TOP Oportunidades / Chollos: pendiente de activar cuando el matching sea estable

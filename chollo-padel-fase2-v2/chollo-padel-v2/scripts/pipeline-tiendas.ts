@@ -53,19 +53,11 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
   return data?.pala_id ?? null
 }
 
-<<<<<<< Updated upstream
-// Traduce la variante a una forma comun para comparar candidata vs catalogo,
-// sin importar si esta escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
-// OJO: esta tabla es una lista cerrada y controlada -- solo se anaden pares aqui
-// cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
-// que demostro que no todas las abreviaturas son intercambiables).
-=======
 // Traduce la variante a una forma común para comparar candidata vs catálogo,
 // sin importar si está escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
 // OJO: esta tabla es una lista cerrada y controlada — solo se añaden pares aquí
 // cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
 // que demostró que no todas las abreviaturas son intercambiables).
->>>>>>> Stashed changes
 const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
   'control': 'ctrl', 'ctrl': 'ctrl',
 }
@@ -76,8 +68,6 @@ function normalizarVariante(v: string | null): string | null {
   return VARIANTE_EQUIVALENCIAS[norm] ?? norm
 }
 
-<<<<<<< Updated upstream
-=======
 // Tokens que, si aparecen en el catálogo pero no en lo extraído, indican un producto
 // distinto (no solo "especificación adicional"). Impide que "3.4" matchee "CTRL 3.4"
 // o que "Cross It" matchee "Cross It Team" cuando la tienda no menciona Team.
@@ -114,7 +104,6 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   return false
 }
 
->>>>>>> Stashed changes
 async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): Promise<{ id: string }[]> {
   if (!attrs.marca || !attrs.linea) return []
 
@@ -124,19 +113,6 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
     .eq('marca', attrs.marca)
     .eq('linea', attrs.linea)
 
-<<<<<<< Updated upstream
-  // ilike: case-insensitive exact match (evita fallos por mayusculas padelnuestro vs padelzoom)
-  if (attrs.modelo)  q = q.ilike('modelo', attrs.modelo)
-  // Si modelo es null no filtramos -- si hay multiples -> ambiguo; si hay 1 -> match
-
-  if (attrs.año) q = q.eq('año', attrs.año)
-
-  const { data } = await q
-  // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
-  // comparar el string literal -- evita falsos "sin match" por convenciones distintas
-  // entre como lo escribe la tienda y como esta guardado en el catalogo.
-  return (data ?? []).filter(p => normalizarVariante(p.variante) === normalizarVariante(attrs.variante))
-=======
   // OJO: NO filtramos modelo en SQL — usamos match por subconjunto de tokens en
   // memoria (ver modeloCompatible). Motivo: algunas tiendas escriben "GENIUS 12K"
   // donde el catálogo tiene "Genius 12K Alum". Un ilike exacto los trataría como
@@ -184,7 +160,6 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
   }
 
   return filtrados
->>>>>>> Stashed changes
 }
 async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   precio: number; precioOriginal?: number; url: string; titulo: string

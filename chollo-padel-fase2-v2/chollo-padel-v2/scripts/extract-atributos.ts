@@ -243,15 +243,9 @@ export const VARIANTES: string[] = [
   '18k', '12k',
   // Materiales
   'carbon', 'alum', 'aluminium',
-<<<<<<< Updated upstream
-  // Series especiales (solo nombres que SI aparecen como variante en el catalogo;
-  // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
-  // no atributos de producto, y nunca existiran como variante en `palas`)
-=======
   // Series especiales (solo nombres que SÍ aparecen como variante en el catálogo;
   // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
   // no atributos de producto, y nunca existirán como variante en `palas`)
->>>>>>> Stashed changes
   'master final', 'world padel tour',
   'gold edition', 'black edition', 'limited edition',
 ]
@@ -370,12 +364,6 @@ export function extraerAtributos(titulo: string): Atributos {
 
   // 4. LÍNEA — buscar en el diccionario de esta marca (más específico primero)
   let lineaDetectada: string | null = null
-<<<<<<< Updated upstream
-  // Respetar el orden curado del diccionario (mas especifico primero), NO reordenar por longitud:
-  // reordenar por longitud rompe casos como Nox, donde codigos de jugador cortos (la10, at10...)
-  // deben detectarse antes que nombres de tecnologia mas largos (quantum, ventus...)
-=======
->>>>>>> Stashed changes
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
     if (restoNorm.includes(linea)) {
@@ -420,12 +408,6 @@ export function extraerAtributos(titulo: string): Atributos {
   for (const v of VARIANTES.sort((a, b) => b.length - a.length)) {
     const vNorm = normalizar(v)
     if (sinLineaNorm.includes(vNorm)) {
-<<<<<<< Updated upstream
-      // Usar alias canónico si existe. Probar primero con "v" tal cual (p.ej. "hrd+",
-      // que normalizar() reduce a "hrd" y haría inalcanzable su alias "HRD+"),
-      // y si no existe esa clave, probar con la forma normalizada.
-=======
->>>>>>> Stashed changes
       varianteDetectada = VARIANTES_ALIAS[v] ?? VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
       sinLinea = sinLinea.replace(new RegExp(v, 'gi'), '').replace(/\s+/g, ' ').trim()
       break
@@ -438,18 +420,9 @@ export function extraerAtributos(titulo: string): Atributos {
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
       .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion)\b/gi, '')
-<<<<<<< Updated upstream
-      // Quitar signos +, -, / sueltos (artefactos de HRD+, Pro+, etc.)
-      .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
-      .replace(/\s+[\+\-\/\|]\s+/g, ' ')   // "3.4 + algo" → "3.4 algo"
-      // "3.4+" / "3.4-" → "3.4" (signo PEGADO al número, sin espacio antes, seguido de espacio o fin)
-      .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
-      // tokens "+"/"-" sueltos como palabra completa en cualquier posición → fuera
-=======
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')
       .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
->>>>>>> Stashed changes
       .replace(/(^|\s)[+\-](?=\s|$)/g, '$1')
       .replace(/\s{2,}/g, ' ')
       .trim()
