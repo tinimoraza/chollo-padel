@@ -188,7 +188,6 @@ async function insertarSnapshot(palaId: string, sourceId: string, producto: {
     precio_original:  producto.precioOriginal ?? null,
     url_producto:     producto.url,
     match_confidence: 1.0,
-    match_method:     'attribute_match',
     disponible:       true,
     scraped_at:       new Date().toISOString(),
   }, { onConflict: 'pala_id,source_id,url_producto' })
