@@ -220,7 +220,72 @@ async function autoPromover(): Promise<number> {
   return { insertadas, aliasResueltas }
 }
 
-// ─── PASO 3: Reporte de pendientes restantes ──────────────────────────────────
+// ─── PASO 3: Recalcular precios de referencia ────────────────────────────────
+
+// Fuentes excluidas del precio_referencia (precio medio):
+//   2 = PadelZoom (agregador, no tienda directa)
+//   9 = Roma Sport (publica PVP catálogo inflado)
+const FUENTES_EXCLUIR_REFERENCIA = new Set([2, 9])
+
+async function recalcularPrecios(): Promise<number> {
+  if (DRY_RUN) return 0
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: rows } = await supabase
+    .from('price_snapshots')
+    .select('pala_id')
+    .eq('disponible', true)
+    .gte('scraped_at', since)
+
+  const palaIds = [...new Set((rows ?? []).map((r: any) => r.pala_id))]
+  if (!palaIds.length) return 0
+
+  let actualizadas = 0
+
+  for (const palaId of palaIds) {
+    const { data: snaps } = await supabase
+      .from('price_snapshots')
+      .select('precio, source_id, url_producto')
+      .eq('pala_id', palaId)
+      .eq('disponible', true)
+      .gte('scraped_at', since)
+
+    if (!snaps?.length) continue
+
+    // Para precio_referencia: excluir fuentes que distorsionan; si quedan 0, usar todas
+    const snapsRef = snaps.filter((s: any) => !FUENTES_EXCLUIR_REFERENCIA.has(s.source_id))
+    const snapsFuente = snapsRef.length > 0 ? snapsRef : snaps
+
+    const preciosRef = snapsFuente.map((s: any) => Number(s.precio))
+    const precio_referencia = parseFloat(
+      (preciosRef.reduce((a: number, b: number) => a + b, 0) / preciosRef.length).toFixed(2)
+    )
+    const precio_minimo = Math.min(...snaps.map((s: any) => Number(s.precio)))
+    const fuentes_count = new Set(snaps.map((s: any) => s.source_id)).size
+
+    await supabase.from('price_reference').upsert({
+      pala_id:          palaId,
+      precio_referencia,
+      precio_minimo,
+      precio_maximo:    Math.max(...snaps.map((s: any) => Number(s.precio))),
+      fuentes_count,
+      updated_at:       new Date().toISOString(),
+    }, { onConflict: 'pala_id' })
+
+    await supabase.from('palas').update({
+      precio_referencia,
+      precio_minimo_tiendas: precio_minimo,
+      precios_updated_at:    new Date().toISOString(),
+    }).eq('id', palaId)
+
+    actualizadas++
+  }
+
+  return actualizadas
+}
+
+// ─── PASO 4: Reporte de pendientes restantes ──────────────────────────────────
 
 async function reportarPendientes() {
   const { data } = await supabase
@@ -272,6 +337,11 @@ async function main() {
   else console.log()
 
   // Paso 3
+  console.log('── Paso 3: Recalcular precios de referencia ─────────────')
+  const actualizadas = await recalcularPrecios()
+  console.log(`   → ${DRY_RUN ? '(dry-run)' : actualizadas + ' palas actualizadas'}\n`)
+
+  // Paso 4
   await reportarPendientes()
 
   // Resumen
@@ -279,6 +349,7 @@ async function main() {
   console.log(`✅ False negatives resueltos: ${marcadas}`)
   if (aliasResueltas > 0) console.log(`✅ Resueltas por alias:       ${aliasResueltas}`)
   console.log(`✅ Palas nuevas insertadas:   ${insertadas}`)
+  console.log(`✅ Precios recalculados:      ${actualizadas}`)
   const restantes = (totalPendientes ?? 0) - marcadas - insertadas - aliasResueltas
   if (restantes > 0) {
     console.log(`⚠️  Pendientes sin resolver:   ${restantes}  (revisar a mano)`)
