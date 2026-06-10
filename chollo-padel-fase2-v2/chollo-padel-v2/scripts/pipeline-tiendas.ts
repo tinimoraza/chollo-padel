@@ -284,10 +284,16 @@ async function main() {
 
   // Prefijos que indican que NO es una pala individual
   const EXCLUIR_PREFIJOS = ['pack ', 'pala test ', 'bolso ', 'accesorio ']
+  // Marcas que no queremos trackear (entrenamiento, marcas residuales, etc.)
+  const EXCLUIR_MARCAS = ['paddle coach', 'just ten']
 
   for (const p of productos) {
     const tituloLow = p.title.toLowerCase()
     if (EXCLUIR_PREFIJOS.some(pref => tituloLow.startsWith(pref))) {
+      if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
+      continue
+    }
+    if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m))) {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
@@ -337,6 +343,12 @@ async function main() {
         if (await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)) sinMatch++
       }
     }
+  }
+
+  // Auto-limpieza: marcar como 'matched' las candidatas que ya tienen alias en BD
+  if (!DRY_RUN) {
+    const { data: limpiadas } = await supabase.rpc('cleanup_candidatas_matched')
+    if (limpiadas) console.log(`  🧹 Limpiadas ${limpiadas} candidatas ya resueltas`)
   }
 
   console.log(`

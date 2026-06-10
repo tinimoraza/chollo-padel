@@ -521,7 +521,7 @@ export function extraerAtributos(titulo: string): Atributos {
 
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
-      .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion)\b/gi, '')
+      .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion|series|nfa)\b/gi, '')
       .replace(/\(\s*\)/g, '')
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')
