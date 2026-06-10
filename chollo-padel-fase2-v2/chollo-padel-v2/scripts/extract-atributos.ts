@@ -275,7 +275,7 @@ const JUGADORES = [
   'jeronimo gonzalez', 'jerónimo gonzalez', 'momo gonzalez', 'momo gonzález',
   'lucas bergamini', 'bergamini',
   'edu alonso', 'eduardo alonso',
-  'javier leal',
+  'javier leal', 'javi leal',
   'lucas campagnolo', 'campagnolo',
   'javier garrido',
   'juan tello', 'tello',
@@ -534,5 +534,4 @@ export function extraerAtributos(titulo: string): Atributos {
 
 export function nombreCanonico(a: Atributos): string {
   const partes = [a.marca, a.linea, a.modelo, a.variante, a.año?.toString()]
-  return partes.filter(Boolean).join(' ')
-}
+  return partes.filter(Boolean)
