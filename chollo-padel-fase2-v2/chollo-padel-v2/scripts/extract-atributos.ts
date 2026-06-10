@@ -224,6 +224,11 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   'Asics': [
     'hybrid',
   ],
+  'Kombat': [
+    'vesubio', 'etna', 'galeras', 'teide', 'arenal', 'osorno', 'krakatoa',
+    'fuji', 'black', 'delta', 'hunter', 'swat', 'sas', 'troya', 'obus',
+    'xifos', 'magnum', 'geo', 'apache', 'navy',
+  ],
 }
 
 // ─── Variantes conocidas ──────────────────────────────────────────────────────
@@ -234,7 +239,7 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
 export const VARIANTES: string[] = [
   // Técnicas
   'hrd+', 'hrd', 'ctrl', 'control', 'light', 'team', 'carbon',
-  'comfort', 'hybrid', 'hyb', 'attack', 'soft', 'air', 'pro',
+  'comfort', 'cmf', 'hybrid', 'hyb', 'attack', 'soft', 'air', 'pro',
   'elite', 'tour', 'ltd', 'limited', 'xtreme', 'xtrem', 'lite',
   'power', 'pwr', 'speed', 'motion',
   // Género
@@ -279,6 +284,7 @@ const JUGADORES = [
   'lucas campagnolo', 'campagnolo',
   'javier garrido',
   'juan tello', 'tello',
+  'federico chingotto', 'fede chingotto', 'chingotto',
   // #21-30
   'alex ruiz', 'alejandro ruiz',
   'javier garcia bernal',
@@ -370,6 +376,7 @@ const JUGADORES = [
   'miguel lamperti', 'lamperti',
   'moyano',
   'pablo lima', 'lima',
+  'manu martin', 'juan martin diaz', 'juan martin',
 ]
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
@@ -418,6 +425,8 @@ export function extraerAtributos(titulo: string): Atributos {
   // Normalizar versiones de año tipo "2.6" → "2026" (Babolat usa X.Y como código de año)
   // "2.4"→2024, "2.5"→2025, "2.6"→2026, etc.
   titulo = titulo.replace(/\b2\.([4-9])\b/g, (_m, d) => String(2020 + parseInt(d)))
+  // 'Special Edition' → 'SE' para mapear contra modelos tipo 'V1 SE' en catálogo
+  titulo = titulo.replace(/\bspecial\s+edition\b/gi, 'SE')
 
   const norm = normalizar(titulo)
 
@@ -492,6 +501,7 @@ export function extraerAtributos(titulo: string): Atributos {
     'junior': 'JUNIOR', 'jr': 'JUNIOR',
     'hrd+': 'HRD+', 'hrd': 'HRD',
     'ctrl': 'CTRL', 'control': 'CTRL',
+    'cmf': 'COMFORT', 'comfort': 'COMFORT',
   }
 
   // 6. VARIANTE — buscar en el texto restante (más específico primero)
@@ -512,6 +522,7 @@ export function extraerAtributos(titulo: string): Atributos {
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
       .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion)\b/gi, '')
+      .replace(/\(\s*\)/g, '')
       .replace(/^[\s+\-/|]+|[\s+\-/|]+$/g, '')
       .replace(/\s+[\+\-\/\|]\s+/g, ' ')
       .replace(/(\d(?:\.\d+)?)[+\-](?=\s|$)/g, '$1')
@@ -534,5 +545,5 @@ export function extraerAtributos(titulo: string): Atributos {
 
 export function nombreCanonico(a: Atributos): string {
   const partes = [a.marca, a.linea, a.modelo, a.variante, a.año?.toString()]
-  return partes.filter(Boolean).join(' ')
+  return partes.filter(Boolean).join(" ")
 }

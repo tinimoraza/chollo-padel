@@ -64,6 +64,10 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
 // que demostró que no todas las abreviaturas son intercambiables).
 const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
   'control': 'ctrl', 'ctrl': 'ctrl',
+  'hybrid': 'hybrid', 'hyb': 'hybrid',
+  'power': 'power', 'pwr': 'power',
+  'xtrem': 'xtrem', 'xtreme': 'xtrem',
+  'cmf': 'comfort',
 }
 
 function normalizarVariante(v: string | null): string | null {
@@ -80,6 +84,7 @@ function normalizarVariante(v: string | null): string | null {
 const MODELO_DISCRIMINANTES = new Set([
   'ctrl', 'control', 'team', 'hybrid', 'air', 'carbon', 'light',
   'plus', 'elite', 'power', 'soft', 'iron', 'speed', 'hard', 'free',
+  'betis', 'miami',
 ])
 
 // Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
