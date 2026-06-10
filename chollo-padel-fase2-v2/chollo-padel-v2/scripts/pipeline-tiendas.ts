@@ -208,8 +208,8 @@ async function insertarAlias(palaId: string, textoOriginal: string, tienda: stri
 
 async function insertarCandidata(producto: {
   titulo: string; precio: number; url: string; tienda: string; imagen?: string | null
-}, motivo: 'sin_match' | 'ambiguo', attrs: ReturnType<typeof extraerAtributos>, candidatos?: { id: string }[]) {
-  if (DRY_RUN) return
+}, motivo: 'sin_match' | 'ambiguo', attrs: ReturnType<typeof extraerAtributos>, candidatos?: { id: string }[]): Promise<boolean> {
+  if (DRY_RUN) return true
 
   // "Borrador de pala" con todo lo extraído en el momento del scrap, para que
   // al promocionar la candidata se pueda crear la pala sin volver a investigar.
@@ -234,7 +234,7 @@ async function insertarCandidata(producto: {
     .select('id, estado')
     .eq('titulo_normalizado', normalizar(producto.titulo))
     .maybeSingle()
-  if (existente?.estado === 'matched') return
+  if (existente?.estado === 'matched') return false
 
   await supabase.from('palas_candidatas').upsert({
     titulo:             producto.titulo,
@@ -248,6 +248,7 @@ async function insertarCandidata(producto: {
     datos_extraidos:    datosExtraidos,
     updated_at:         new Date().toISOString(),
   }, { onConflict: 'titulo_normalizado', ignoreDuplicates: false })
+  return true
 }
 
 // ─── Scraper ─────────────────────────────────────────────────────────────────
@@ -318,18 +319,18 @@ async function main() {
       // Ambiguo → Gestor
       if (DRY_RUN) {
         console.log(`  ⚠️  [ambiguo] ${p.title} (${candidatos.length} candidatos)`)
+        ambiguos++
       } else {
-        await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'ambiguo', attrs, candidatos)
+        if (await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'ambiguo', attrs, candidatos)) ambiguos++
       }
-      ambiguos++
     } else {
       // Sin match → Gestor
       if (DRY_RUN) {
         console.log(`  ❌ [sin match] ${p.title}`)
+        sinMatch++
       } else {
-        await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)
+        if (await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)) sinMatch++
       }
-      sinMatch++
     }
   }
 
