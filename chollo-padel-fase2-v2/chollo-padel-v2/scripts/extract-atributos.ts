@@ -536,4 +536,3 @@ export function nombreCanonico(a: Atributos): string {
   const partes = [a.marca, a.linea, a.modelo, a.variante, a.año?.toString()]
   return partes.filter(Boolean).join(' ')
 }
-}
