@@ -373,6 +373,8 @@ const JUGADORES = [
   // ── Otros / nicknames ────────────────────────────────────────────────────
   'alex galán',
   'carolina navarro',
+  'fernando belasteguin', 'belasteguín', 'belasteguin',  // Wilson Bela line player
+  'fede',  // Federico Chingotto standalone (belt+suspenders con 'fede chingotto')
   'miguel lamperti', 'lamperti',
   'moyano',
   'pablo lima', 'lima',

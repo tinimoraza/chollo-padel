@@ -85,6 +85,11 @@ const MODELO_DISCRIMINANTES = new Set([
   'ctrl', 'control', 'team', 'hybrid', 'air', 'carbon', 'light',
   'plus', 'elite', 'power', 'soft', 'iron', 'speed', 'hard', 'free',
   'betis', 'miami',
+  'se',      // Wilson Special Edition
+  'gen',     // LOK Gen 1/2/3
+  'cloud',   // Bullpadel Cloud variants
+  'geo',     // Bullpadel GEO series
+  'premier', // Bullpadel Premier Padel edition
 ])
 
 // Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
@@ -121,7 +126,11 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
     return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
   }
   // Caso 2: tienda añade palabras (catálogo subset tienda)
-  if (tCat.every(t => tokenIn(t, tExt))) return true
+  // Solo permitido si las palabras extra de la tienda no son discriminantes
+  if (tCat.every(t => tokenIn(t, tExt))) {
+    const extra = tExt.filter(t => !tokenIn(t, tCat))
+    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
+  }
   return false
 }
 

@@ -25,15 +25,25 @@ async function run() {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Obtener todos los pala_id distintos con snapshots recientes
-  const { data: rows, error } = await supabase
-    .from('price_snapshots')
-    .select('pala_id')
-    .eq('disponible', true)
-    .gte('scraped_at', since);
+  // Paginamos de 1000 en 1000 para esquivar el max-rows server-side de Supabase
+  const allPalaIds = new Set();
+  let offset = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data: rows, error } = await supabase
+      .from('price_snapshots')
+      .select('pala_id')
+      .eq('disponible', true)
+      .gte('scraped_at', since)
+      .range(offset, offset + PAGE - 1);
+    if (error) { console.error(error); process.exit(1); }
+    if (!rows || rows.length === 0) break;
+    rows.forEach(r => allPalaIds.add(r.pala_id));
+    if (rows.length < PAGE) break;
+    offset += PAGE;
+  }
 
-  if (error) { console.error(error); process.exit(1); }
-
-  const palaIds = [...new Set(rows.map(r => r.pala_id))];
+  const palaIds = [...allPalaIds];
   console.log(`Recalculando ${palaIds.length} palas con snapshots en los últimos 30 días...`);
 
   let actualizadas = 0;
@@ -90,23 +100,13 @@ async function run() {
       sin_cambio++;
     }
 
-    await supabase.from('price_reference').upsert({
-      pala_id: palaId,
+    const { data: existing } = await supabase
+      .from('price_reference')
+      .select('pala_id')
+      .eq('pala_id', palaId)
+      .maybeSingle();
+
+    const payload = {
       precio_referencia,
       precio_minimo,
-      precio_maximo,
-      fuentes_count,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'pala_id' });
-
-    await supabase.from('palas').update({
-      precio_referencia,
-      precio_minimo_tiendas: precio_minimo,
-      precios_updated_at: new Date().toISOString(),
-    }).eq('id', palaId);
-  }
-
-  console.log(`\nCompletado: ${actualizadas} actualizadas, ${sin_cambio} sin cambio.`);
-}
-
-run().catch(err => { console.error(err); process.exit(1); });
+      precio_maximo
