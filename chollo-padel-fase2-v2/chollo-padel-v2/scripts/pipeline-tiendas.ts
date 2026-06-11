@@ -93,6 +93,8 @@ const MODELO_DISCRIMINANTES = new Set([
   'cloud',   // Bullpadel Cloud variants
   'geo',     // Bullpadel GEO series
   'premier', // Bullpadel Premier Padel edition
+  'energy',  // StarVie Energy / Nox Energy variants
+  'luxury',  // Nox Luxury / StarVie Luxury variants
 ])
 
 // Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
