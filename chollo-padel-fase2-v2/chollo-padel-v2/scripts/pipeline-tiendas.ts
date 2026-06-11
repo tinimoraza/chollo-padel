@@ -19,6 +19,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, normalizar } from './extract-atributos'
 
+// Cargar .env.local si existe (entorno local). En CI las vars vienen del entorno del runner.
+try { require('dotenv').config({ path: '.env.local' }) } catch (_) {}
+
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 

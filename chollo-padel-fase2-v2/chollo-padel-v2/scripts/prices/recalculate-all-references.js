@@ -1,11 +1,13 @@
 // scripts/prices/recalculate-all-references.js
 // Uso: node scripts/prices/recalculate-all-references.js
 //
-// Recalcula precio_referencia con MEDIANA para TODAS las palas que tienen
-// snapshots en los últimos 30 días. Ejecutar una vez tras el fix de mediana
-// para corregir los valores inflados por Roma Sport (media → mediana).
+// Recalcula precio_referencia para TODAS las palas que tienen
+// snapshots en los ultimos 30 dias.
 //
-// Seguro de ejecutar varias veces (upsert idempotente).
+// Pagina la query de pala_ids de 1000 en 1000 para evitar el
+// max-rows server-side de Supabase (que cortaba a ~1000 filas).
+//
+// Seguro de ejecutar varias veces (insert/update idempotente).
 
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
@@ -15,7 +17,7 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
-function calcularMediana(precios) {
+function calcularMedia(precios) {
   if (precios.length === 0) return null;
   const suma = precios.reduce((a, b) => a + b, 0);
   return parseFloat((suma / precios.length).toFixed(2));
@@ -24,8 +26,7 @@ function calcularMediana(precios) {
 async function run() {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Obtener todos los pala_id distintos con snapshots recientes
-  // Paginamos de 1000 en 1000 para esquivar el max-rows server-side de Supabase
+  // Paginar de 1000 en 1000 para esquivar el max-rows server-side de Supabase
   const allPalaIds = new Set();
   let offset = 0;
   const PAGE = 1000;
@@ -44,7 +45,7 @@ async function run() {
   }
 
   const palaIds = [...allPalaIds];
-  console.log(`Recalculando ${palaIds.length} palas con snapshots en los últimos 30 días...`);
+  console.log(`Recalculando ${palaIds.length} palas con snapshots en los ultimos 30 dias...`);
 
   let actualizadas = 0;
   let sin_cambio = 0;
@@ -59,10 +60,9 @@ async function run() {
 
     if (!snaps || snaps.length === 0) continue;
 
-    // Excluir fuentes que distorsionan la referencia (igual que pipeline.js):
-    //   2 = PadelZoom: agregador que ya muestra precios bajados → infla bajada artificial
-    //   9 = Roma Sport: publica precios de catalogo inflados → distorsiona la mediana
-    // Si tras excluirlas no quedan fuentes, usar todas como fallback.
+    // Excluir fuentes que distorsionan la referencia:
+    //   2 = PadelZoom: agregador que ya muestra precios bajados
+    //   9 = Roma Sport: publica precios de catalogo inflados
     const FUENTES_EXCLUIR = new Set([2, 9]);
     const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR.has(s.source_id));
     const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps;
@@ -75,9 +75,9 @@ async function run() {
       }
     }
     const unique = [...byUrl.values()];
-    const precios = unique.map(s => s.precio);
+    const precios = unique.map(s => Number(s.precio));
 
-    const precio_referencia = calcularMediana(precios);
+    const precio_referencia = calcularMedia(precios);
     const precio_minimo = Math.min(...precios);
     const precio_maximo = Math.max(...precios);
     const fuentes_count = new Set(unique.map(s => s.source_id)).size;
@@ -94,19 +94,43 @@ async function run() {
       : 'N/A';
 
     if (anterior?.precio_referencia !== precio_referencia) {
-      console.log(`  ${anterior?.modelo || palaId}: ${anterior?.precio_referencia}€ → ${precio_referencia}€ (${diff > 0 ? '+' : ''}${diff}€)`);
+      console.log(`  ${anterior?.modelo || palaId}: ${anterior?.precio_referencia}EUR -> ${precio_referencia}EUR (${diff > 0 ? '+' : ''}${diff}EUR)`);
       actualizadas++;
     } else {
       sin_cambio++;
     }
 
+    const payload = {
+      precio_referencia,
+      precio_minimo,
+      precio_maximo,
+      fuentes_count,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Insert o update explícito (upsert del cliente JS falla silenciosamente en filas nuevas)
     const { data: existing } = await supabase
       .from('price_reference')
       .select('pala_id')
       .eq('pala_id', palaId)
       .maybeSingle();
 
-    const payload = {
+    if (existing) {
+      const { error } = await supabase.from('price_reference').update(payload).eq('pala_id', palaId);
+      if (error) console.error(`  ERROR update [${anterior?.modelo}]: ${error.message}`);
+    } else {
+      const { error } = await supabase.from('price_reference').insert({ pala_id: palaId, ...payload });
+      if (error) console.error(`  ERROR insert [${anterior?.modelo}]: ${error.message}`);
+    }
+
+    await supabase.from('palas').update({
       precio_referencia,
-      precio_minimo,
-      precio_maximo
+      precio_minimo_tiendas: precio_minimo,
+      precios_updated_at: new Date().toISOString(),
+    }).eq('id', palaId);
+  }
+
+  console.log(`\nCompletado: ${actualizadas} actualizadas, ${sin_cambio} sin cambio.`);
+}
+
+run().catch(err => { console.error(err); process.exit(1); });
