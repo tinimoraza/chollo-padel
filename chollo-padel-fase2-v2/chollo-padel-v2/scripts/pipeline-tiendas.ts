@@ -303,6 +303,7 @@ async function main() {
     'paddle coach', 'just ten',
     // Marcas muy nicho sin precio de referencia en otras tiendas → nunca serían chollos
     'hbl ', 'higer padel', 'hybrid padel', 'middle moon', 'nexus ', 'spin max', 'totalspin',
+    'rox ', 'rs by robin', 'robin soderling',
   ]
 
   for (const p of productos) {
