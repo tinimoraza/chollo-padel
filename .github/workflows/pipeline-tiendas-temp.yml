@@ -46,5 +46,8 @@ jobs:
       - name: Scrape padeliberico
         run: npx tsx scripts/pipeline-tiendas.ts padeliberico
 
+      - name: Scrape tennispoint
+        run: npx tsx scripts/pipeline-tiendas.ts tennispoint
+
       - name: Recalcular precio_reference
         run: node scripts/prices/recalculate-all-references.js
