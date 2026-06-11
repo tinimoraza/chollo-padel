@@ -47,7 +47,15 @@ async function scrape() {
       seen.add(url)
       // Shopify devuelve p.vendor con la marca (ej: "Wilson", "Bullpadel")
       // Los títulos de Tennis-Point no incluyen la marca, lo añadimos aquí
-      const title = p.vendor ? `${p.vendor} ${p.title}` : p.title
+      // Limpiar sufijos de pack: "Más raquetera", "Más tubo de pelotas", etc.
+      const cleanTitle = p.title
+        .replace(/\s*[+|]\s*Más\s+[^|+]+/gi, '')
+        .replace(/\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
+        .replace(/\s*,\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
+        .replace(/\s*Pala de pádel\s*$/i, '')
+        .replace(/\s*Pala de padel\s*$/i, '')
+        .trim()
+      const title = p.vendor ? `${p.vendor} ${cleanTitle}` : cleanTitle
       allProducts.push({
         title,
         price,
