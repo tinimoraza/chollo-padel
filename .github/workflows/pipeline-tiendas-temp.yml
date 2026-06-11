@@ -40,6 +40,9 @@ jobs:
       - name: Scrape padelzoom (catálogo)
         run: npx tsx scripts/pipeline-tiendas.ts padelzoom
 
+      - name: Instalar Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Scrape padeliberico
         run: npx tsx scripts/pipeline-tiendas.ts padeliberico
 
