@@ -12,6 +12,9 @@ const TIENDA_LABEL: Record<string, string> = {
   padelzoom:     'PadelZoom',
   romasport:     'Roma Sport',
   padelcoronado: 'Padel Coronado',
+  padelmarket:   'Padelmarket',
+  padeliberico:  'Padel Ibérico',
+  tennispoint:   'Tennis Point',
 }
 
 function timeAgo(iso: string) {
