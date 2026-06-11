@@ -295,6 +295,7 @@ async function main() {
 
   // 3. Matching
   let porAlias = 0, porAtributos = 0, ambiguos = 0, sinMatch = 0
+  const titulosProcessed = new Set<string>()
 
   // Prefijos que indican que NO es una pala individual
   const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ']
@@ -303,7 +304,7 @@ async function main() {
     'paddle coach', 'just ten',
     // Marcas muy nicho sin precio de referencia en otras tiendas → nunca serían chollos
     'hbl ', 'higer padel', 'hybrid padel', 'middle moon', 'nexus ', 'spin max', 'totalspin',
-    'rox ', 'rs by robin', 'robin soderling',
+    'rox ', 'rs by robin', 'rs prime', 'robin soderling',
   ]
 
   for (const p of productos) {
@@ -322,6 +323,7 @@ async function main() {
     }
 
     const textoNorm = normalizar(p.title)
+    titulosProcessed.add(textoNorm)
 
     // ── Vía 1: alias (cache) ─────────────────────────────────────────────────
     const palaIdAlias = await buscarPorAlias(textoNorm)
@@ -365,6 +367,33 @@ async function main() {
       } else {
         if (await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)) sinMatch++
       }
+    }
+  }
+
+  // Limpiar candidatas obsoletas de esta tienda: titulos que ya no saca el scraper
+  // (producto desaparecido o titulo cambiado por fix), o excluidos por EXCLUIR_MARCAS.
+  if (!DRY_RUN) {
+    const titulosEnScrape = new Set(productos.map(p => normalizar(p.title)))
+    let off2 = 0; const candidatasObsoletas: string[] = []
+    while (true) {
+      const { data: cands } = await supabase.from('palas_candidatas')
+        .select('id,titulo_normalizado,fuentes')
+        .in('estado', ['pendiente', 'ambiguo'])
+        .contains('fuentes', [TIENDA])
+        .range(off2, off2 + 999)
+      if (!cands || cands.length === 0) break
+      for (const c of cands) {
+        const soloEsta = (c.fuentes ?? []).length === 1
+        const fueraDeEscrape = !titulosEnScrape.has(c.titulo_normalizado)
+        const excluida = titulosEnScrape.has(c.titulo_normalizado) && !titulosProcessed.has(c.titulo_normalizado)
+        if (soloEsta && (fueraDeEscrape || excluida)) candidatasObsoletas.push(c.id)
+      }
+      if (cands.length < 1000) break
+      off2 += 1000
+    }
+    if (candidatasObsoletas.length > 0) {
+      await supabase.from('palas_candidatas').update({ estado: 'ignorada' }).in('id', candidatasObsoletas)
+      console.log('  🧹 ' + candidatasObsoletas.length + ' candidatas obsoletas/excluidas marcadas ignorada')
     }
   }
 

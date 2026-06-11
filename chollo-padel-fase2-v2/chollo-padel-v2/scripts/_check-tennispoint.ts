@@ -2,19 +2,30 @@ import { createClient } from '@supabase/supabase-js'
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!)
 
 async function main() {
-  // fuentes es array, usamos contains para filtrar por tennispoint
-  const { data, error } = await sb.from('palas_candidatas')
-    .select('titulo,precio_min,precio_max,datos_extraidos,estado')
+  // Estado actual de candidatas tennispoint
+  const { data: stats } = await sb.from('palas_candidatas')
+    .select('estado')
     .contains('fuentes', ['tennispoint'])
+
+  const byEstado: Record<string, number> = {}
+  for (const c of stats ?? []) byEstado[c.estado] = (byEstado[c.estado] ?? 0) + 1
+  console.log('=== Estados tennispoint ===')
+  for (const [e, n] of Object.entries(byEstado).sort()) console.log(`  ${e}: ${n}`)
+
+  // Pendientes restantes (sin_match reales)
+  const { data: pend } = await sb.from('palas_candidatas')
+    .select('titulo,precio_min,datos_extraidos')
+    .contains('fuentes', ['tennispoint'])
+    .eq('estado', 'pendiente')
     .order('titulo')
-    .limit(60)
 
-  if (error) { console.error(error); return }
-
-  for (const c of data ?? []) {
-    const d = c.datos_extraidos as any
-    console.log(`[${c.estado}] ${c.titulo} | €${c.precio_min} | marca=${d?.marca} linea=${d?.linea} modelo=${d?.modelo} año=${d?.año}`)
+  if (pend?.length) {
+    console.log('\n=== Pendientes sin resolver ===')
+    for (const c of pend) {
+      const d = c.datos_extraidos as any
+      console.log(`  ${c.titulo} | €${c.precio_min} | marca=${d?.marca} linea=${d?.linea} modelo=${d?.modelo} año=${d?.año}`)
+    }
   }
-  console.log(`\nTotal: ${data?.length}`)
+  console.log(`\nPendientes: ${pend?.length ?? 0}`)
 }
 main().catch(console.error)

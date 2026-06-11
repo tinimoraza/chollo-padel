@@ -410,6 +410,19 @@ function quitarJugadores(texto: string): string {
 
 // ─── Extractor principal ──────────────────────────────────────────────────────
 
+function detectarJugador(texto: string): string | null {
+  // Devuelve el nombre del jugador encontrado en el texto (en forma canónica Title Case)
+  // para usarlo como linea cuando no se detecta ninguna otra.
+  const sinAcentos = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  for (const j of JUGADORES.sort((a, b) => b.length - a.length)) {
+    const jNorm = j.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (new RegExp(jNorm, 'gi').test(sinAcentos)) {
+      return j.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    }
+  }
+  return null
+}
+
 export interface Atributos {
   marca:    string | null
   linea:    string | null
@@ -460,6 +473,7 @@ export function extraerAtributos(titulo: string): Atributos {
     const añoCorto = añoMatch2[1]
     resto = resto.replace(new RegExp(`\\b${añoCorto}\\b`, 'g'), '').replace(/\s+/g, ' ').trim()
   }
+  const restoAntesDeJugadores = resto  // guardamos para detectar jugador si linea=null
   resto = quitarJugadores(resto)
   // "BY" queda como residuo cuando se elimina "BY JUGADOR" — limpiarlo
   resto = resto.replace(/\bby\b/gi, '').replace(/\s+/g, ' ').trim()
@@ -483,6 +497,10 @@ export function extraerAtributos(titulo: string): Atributos {
     lineaDetectada = palabras[0]
       ? palabras[0].charAt(0).toUpperCase() + palabras[0].slice(1)
       : null
+  }
+  // Si aun sin linea, usar el jugador detectado (ej: "Babolat Juan Lebron 2025" → linea="Juan Lebron")
+  if (!lineaDetectada) {
+    lineaDetectada = detectarJugador(restoAntesDeJugadores)
   }
 
   // 5. Quitar la línea del resto para extraer modelo y variante

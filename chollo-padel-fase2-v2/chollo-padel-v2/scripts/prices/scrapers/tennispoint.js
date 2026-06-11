@@ -54,6 +54,7 @@ async function scrape() {
         .replace(/\s*,\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
         .replace(/\s*Pala de pádel\s*$/i, '')
         .replace(/\s*Pala de padel\s*$/i, '')
+        .replace(/[,;]\s*$/, '')  // quitar comas/puntos colgantes
         .trim()
       const title = p.vendor ? `${p.vendor} ${cleanTitle}` : cleanTitle
       allProducts.push({
