@@ -1,0 +1,44 @@
+name: Pipeline Tiendas + Chollos (temporal)
+
+# Corre a las 09:00 y 18:00 hora española (UTC+2 en verano)
+# UTC+2 → 07:00 UTC y 16:00 UTC
+on:
+  schedule:
+    - cron: '0 7 * * *'
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+jobs:
+  pipeline-tiendas:
+    name: "Scrape tiendas + recalcular precios"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Scrape padelmarket
+        run: npx tsx scripts/pipeline-tiendas.ts padelmarket
+
+      - name: Scrape padelnuestro
+        run: npx tsx scripts/pipeline-tiendas.ts padelnuestro
+
+      - name: Scrape padelzoom (catálogo)
+        run: npx tsx scripts/pipeline-tiendas.ts padelzoom
+
+      - name: Recalcular precio_reference
+        run: node scripts/prices/recalculate-all-references.js
