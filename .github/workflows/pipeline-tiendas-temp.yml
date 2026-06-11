@@ -40,5 +40,8 @@ jobs:
       - name: Scrape padelzoom (catálogo)
         run: npx tsx scripts/pipeline-tiendas.ts padelzoom
 
+      - name: Scrape padeliberico
+        run: npx tsx scripts/pipeline-tiendas.ts padeliberico
+
       - name: Recalcular precio_reference
         run: node scripts/prices/recalculate-all-references.js
