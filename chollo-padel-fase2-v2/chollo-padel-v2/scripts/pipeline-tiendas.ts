@@ -251,7 +251,7 @@ async function insertarCandidata(producto: {
     .select('id, estado')
     .eq('titulo_normalizado', normalizar(producto.titulo))
     .maybeSingle()
-  if (existente?.estado === 'matched') return false
+  if (existente?.estado === 'matched' || existente?.estado === 'ignorada') return false
 
   await supabase.from('palas_candidatas').upsert({
     titulo:             producto.titulo,
@@ -295,9 +295,13 @@ async function main() {
   let porAlias = 0, porAtributos = 0, ambiguos = 0, sinMatch = 0
 
   // Prefijos que indican que NO es una pala individual
-  const EXCLUIR_PREFIJOS = ['pack ', 'pala test ', 'bolso ', 'accesorio ']
+  const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ']
   // Marcas que no queremos trackear (entrenamiento, marcas residuales, etc.)
-  const EXCLUIR_MARCAS = ['paddle coach', 'just ten']
+  const EXCLUIR_MARCAS = [
+    'paddle coach', 'just ten',
+    // Marcas muy nicho sin precio de referencia en otras tiendas → nunca serían chollos
+    'hbl ', 'higer padel', 'hybrid padel', 'middle moon', 'nexus ', 'spin max', 'totalspin',
+  ]
 
   for (const p of productos) {
     const tituloLow = p.title.toLowerCase()
@@ -307,6 +311,10 @@ async function main() {
     }
     if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m))) {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
+      continue
+    }
+    if (tituloLow.includes('pickleball')) {
+      if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
       continue
     }
 
