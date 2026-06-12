@@ -310,9 +310,9 @@ async function main() {
   console.log(`📅 ${new Date().toISOString()}`)
   if (DRY_RUN) console.log('🔍 DRY-RUN — no se escribe en BD\n')
 
-  // 1. Obtener source_id de la tienda
-  const sourceId = await getSourceId(TIENDA)
-  console.log(`✅ Tienda encontrada: ${TIENDA} (id: ${sourceId})`)
+  // 1. Obtener source_id de la tienda (en dry-run no se necesita escribir en BD)
+  const sourceId = DRY_RUN ? 'dry-run' : await getSourceId(TIENDA)
+  if (!DRY_RUN) console.log(`✅ Tienda encontrada: ${TIENDA} (id: ${sourceId})`)
 
   // 2. Scrape
   console.log(`\n📥 Scrapeando ${TIENDA}...`)

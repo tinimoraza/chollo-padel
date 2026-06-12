@@ -153,6 +153,12 @@ async function autoPromover(): Promise<number> {
       continue
     }
 
+    // Guardia: linea='Pala' indica extracción fallida (prefijo genérico mal parseado).
+    // No auto-promover estas — irán al Gestor para revisión manual.
+    if (!d.linea || d.linea === 'Pala' || d.linea === 'pala') {
+      continue
+    }
+
     // Slug único
     let slug = slugify(nombre)
     if (usedSlugs.has(slug)) {
@@ -360,3 +366,4 @@ main().catch(err => {
   console.error('\n💥 Error fatal:', err)
   process.exit(1)
 })
+                    

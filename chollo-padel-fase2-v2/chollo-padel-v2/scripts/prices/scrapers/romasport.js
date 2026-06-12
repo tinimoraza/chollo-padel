@@ -18,11 +18,13 @@ async function extractProducts(page) {
       const priceEl = insEl ?? allAmounts[allAmounts.length - 1] ?? null
       const origEl  = el.querySelector('.price del .amount')
       const linkEl  = el.querySelector('a')
+      const imgEl   = el.querySelector('img.wp-post-image, img.attachment-woocommerce_thumbnail, img')
 
       const title     = titleEl?.textContent?.trim()
       const priceText = priceEl?.textContent?.replace(/[^\d,.]/g, '').replace(',', '.') ?? ''
       const origText  = origEl?.textContent?.replace(/[^\d,.]/g, '').replace(',', '.') ?? ''
       const url       = linkEl?.href ?? ''
+      const image     = imgEl?.getAttribute('data-src') || imgEl?.src || null
 
       const price    = parseFloat(priceText)
       const original = parseFloat(origText)
@@ -33,6 +35,7 @@ async function extractProducts(page) {
         price,
         precio_original: !isNaN(original) && original > price ? original : null,
         url,
+        image: image && image.startsWith('http') ? image : null,
       })
     })
     return items
@@ -128,6 +131,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

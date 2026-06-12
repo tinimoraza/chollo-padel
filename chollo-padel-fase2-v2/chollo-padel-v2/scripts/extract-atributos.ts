@@ -432,6 +432,22 @@ export interface Atributos {
 }
 
 export function extraerAtributos(titulo: string): Atributos {
+  // ── Strip ruido inglés (tiendas UK como pdhsports) ───────────────────────────
+  // Patrón: "Brand Model Padel Racket Black/Orange" → "Brand Model"
+  // "Padel Racket" es ruido equivalente a "Pala de Padel" en español.
+  // Los colores al final (solos o slash-separados: "Grey Black", "Black/Orange")
+  // no aportan identidad — se quitan para que el extractor vea solo marca+modelo.
+  // Quitar ruido de prefijo/sufijo genérico que confunde la extracción de línea:
+  // - "Pala de pádel / Pala de padel" (allforpadel, romasport, tiendapadel5…)
+  // - "Padel Racket" (pdhsports UK)
+  // NO quitamos colores: "Siux Fenix Pro Black", "Lava Orange" son identidad del producto.
+  titulo = titulo
+    .replace(/^pala\s+de\s+p[aá]del/gi, '')
+    .replace(/^pala\s+de\s+p[aá]del/gi, '')  // doble por si hay variante con tilde
+    .replace(/padel\s+racket/gi, '')
+    .replace(/^pala/gi, '')
+    .trim()
+
   // Pre-procesar: "+" suelto (precedido de espacio o al final) → "PLUS"
   // Ej: "STARVIE ASTRUM +" → "STARVIE ASTRUM PLUS"
   // "HRD+" se deja intacto porque no tiene espacio antes del +.
