@@ -1,21 +1,6 @@
 /**
  * app/api/chollos/route.ts
  * GET /api/chollos
- *
- * Devuelve palas con bajada de precio considerable en tiendas físicas.
- * Cruza price_snapshots (precio actual) con price_reference (media 30 días).
- *
- * Umbrales:
- *   CHOLLO     >= 30% descuento sobre precio_referencia
- *   OFERTA     >= 18% descuento sobre precio_referencia
- *
- * Solo snapshots de las últimas 24h (precios frescos del pipeline).
- * Deduplica por pala+tienda quedándose con el precio más bajo del día.
- *
- * Requisitos de calidad:
- *   - price_reference.fuentes_count >= MIN_FUENTES (>=2 tiendas) para que
- *     la referencia sea fiable. Una referencia de 1 sola tienda puede estar
- *     inflada o ser de una edición diferente del modelo -> false positives.
  */
 
 import { NextResponse } from 'next/server'
@@ -42,25 +27,23 @@ export interface CholloTienda {
   tag:               'CHOLLO' | 'OFERTA'
 }
 
-const UMBRAL_CHOLLO = 0.70  // precio_actual <= 70% de referencia = >=30% dto
-const UMBRAL_OFERTA = 0.82  // precio_actual <= 82% de referencia = >=18% dto
-const MIN_REFERENCIA = 50   // ignorar palas con precio_referencia < 50 (datos insuficientes)
-const MIN_FUENTES = 2       // referencia valida solo si viene de >=2 tiendas distintas
-const MAX_SPREAD  = 2.5     // si precio_maximo/precio_minimo > 2.5, datos contaminados por bad matches
-const MIN_ANO = 2024  // solo palas de 2024 en adelante
+const UMBRAL_CHOLLO = 0.70
+const UMBRAL_OFERTA = 0.82
+const MIN_REFERENCIA = 50
+const MIN_FUENTES = 2
+const MAX_SPREAD  = 2.5
+const MIN_ANO = 2024
 
-// Colisiones conocidas: [fragmento_en_url, fragmento_en_modelo_catalogo]
-// Si la URL contiene urlFrag Y el modelo contiene modelFrag → match incorrecto, descartar.
 const URL_MODEL_COLISIONES: [string, string][] = [
   ['counter-origin',    'counter veron'],
   ['counter-viper',     'counter veron'],
   ['extreme-motion',    'extreme tour'],
-  ['counter-viper-apt', 'counter viper'],  // APT es variante/modelo distinto al Counter Viper estandar
-  ['arrow-hit-hexagon', 'arrow hit'],      // Hexagon es variante distinta al Arrow Hit estandar
-  ['match-light-3-2',   'match light 2026'], // version 3.2 (modelo antiguo) != Match Light 2026
-  ['cross-it-light',    'cross it light 2026'], // Cross It Light generico (sin año/jugador) != Cross IT Light 2026 Martita Ortega
-  ['x-one-c6',          'x-one 2025'],          // Street Padel URL del C6 no es el X-One 2025
-  ['lapi-edition',      'tournament pro iconic'], // Lapi Edition es variante jugadora distinta al Tournament Pro Iconic estandar
+  ['counter-viper-apt', 'counter viper'],
+  ['arrow-hit-hexagon', 'arrow hit'],
+  ['match-light-3-2',   'match light 2026'],
+  ['cross-it-light',    'cross it light 2026'],
+  ['x-one-c6',          'x-one 2025'],
+  ['lapi-edition',      'tournament pro iconic'],
 ]
 
 function esDescartadoPorGuardias(
@@ -69,37 +52,26 @@ function esDescartadoPorGuardias(
   palaModelo: string,
   palaIdsConMismaUrl: Set<string>
 ): string | null {
-
   const url = urlProducto.toLowerCase()
 
-  // GUARDIA A: anyo de 4 digitos en URL
   const m4 = url.match(/20(\d{2})/)
   if (m4) {
     const urlYear = parseInt(m4[0], 10)
-    if (urlYear !== palaAno) {
-      return `A: anyo URL ${urlYear} != catalogo ${palaAno}`
-    }
+    if (urlYear !== palaAno) return `A: anyo URL ${urlYear} != catalogo ${palaAno}`
   }
 
-  // GUARDIA B: sufijo de 2 digitos tipo -NN- implica anyo
   if (!m4) {
     const slug = url.split('/').filter(Boolean).pop() ?? url
     const m2 = slug.match(/-(1[9]|2[0-9])-(?!\d{3,})/)
     if (m2) {
       const shortYear = parseInt(m2[1], 10)
       const fullYear = 2000 + shortYear
-      if (fullYear !== palaAno) {
-        return `B: sufijo -${m2[1]}- en URL implica ${fullYear} != catalogo ${palaAno}`
-      }
+      if (fullYear !== palaAno) return `B: sufijo -${m2[1]}- en URL implica ${fullYear} != catalogo ${palaAno}`
     }
   }
 
-  // GUARDIA C: URL compartida entre multiples pala_ids
-  if (palaIdsConMismaUrl.size > 1) {
-    return `C: URL compartida con ${palaIdsConMismaUrl.size - 1} pala(s) mas`
-  }
+  if (palaIdsConMismaUrl.size > 1) return `C: URL compartida con ${palaIdsConMismaUrl.size - 1} pala(s) mas`
 
-  // GUARDIA D: colision de nombre conocida
   const modeloLower = (palaModelo ?? '').toLowerCase()
   for (const [urlFrag, modelFrag] of URL_MODEL_COLISIONES) {
     if (url.includes(urlFrag) && modeloLower.includes(modelFrag)) {
@@ -107,16 +79,11 @@ function esDescartadoPorGuardias(
     }
   }
 
-  // GUARDIA E: codigo de anyo de Padel Pro Shop (-NNN al final de la URL)
-  // padelproshop.com usa sufijos como -224 (=2024), -225 (=2025), -226 (=2026).
-  // Si el anyo codificado no coincide con el anyo del catalogo, es un match incorrecto.
   if (url.includes('padelproshop.com')) {
     const mCode = url.match(/-(2\d{2})(?:[^\d]|$)/)
     if (mCode) {
       const codeYear = 2000 + parseInt(mCode[1].slice(1), 10)
-      if (codeYear < 2018 || codeYear > 2030) {
-        // año fuera de rango valido — ignorar la guardia para no descartar chollos por falso positivo
-      } else if (codeYear !== palaAno) {
+      if (codeYear >= 2018 && codeYear <= 2030 && codeYear !== palaAno) {
         return `E: codigo padelproshop -${mCode[1]} = ${codeYear} != catalogo ${palaAno}`
       }
     }
@@ -128,6 +95,8 @@ function esDescartadoPorGuardias(
 export async function GET() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
+  // price_reference se incluye inline en el join para evitar una segunda query
+  // con IN de 1000+ UUIDs que excede el limite de URL de PostgREST.
   const { data: snapshots, error } = await supabaseAdmin
     .from('price_snapshots')
     .select(`
@@ -138,7 +107,7 @@ export async function GET() {
       scraped_at,
       source_id,
       price_sources ( nombre, slug ),
-      palas (*)
+      palas ( *, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
     `)
     .eq('disponible', true)
     .gte('scraped_at', since)
@@ -147,77 +116,31 @@ export async function GET() {
     .order('scraped_at', { ascending: false })
 
   if (error) {
-    console.error('[api/chollos] Error:', error.message)
-    return NextResponse.json({ error: 'Error cargando chollos' }, { status: 500 })
+    return NextResponse.json({ error: 'Error cargando chollos', detail: error.message }, { status: 500 })
   }
 
   if (!snapshots || snapshots.length === 0) {
-    return NextResponse.json(
-      { chollos: [], updated_at: null },
-      { headers: { 'Cache-Control': 'no-store' } }
-    )
+    return NextResponse.json({ chollos: [], updated_at: null }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
-  // 2. Deduplicar en dos pasos:
-  //    Paso A: por pala_id+tienda → snapshot MÁS RECIENTE por tienda.
-  //            Evita que un precio antiguo/erróneo (ej: Bea González 173€ vs 209€ real) tape al actual.
-  //    Paso B: por pala_id → tienda con MENOR PRECIO.
-  //            Evita que la misma pala aparezca varias veces (una por cada tienda que la tenga de oferta).
   const byTienda = new Map<string, typeof snapshots[0]>()
   for (const snap of snapshots) {
     const key = `${snap.pala_id}__${snap.source_id}`
     const existing = byTienda.get(key)
-    if (!existing || snap.scraped_at > existing.scraped_at) {
-      byTienda.set(key, snap)
-    }
+    if (!existing || snap.scraped_at > existing.scraped_at) byTienda.set(key, snap)
   }
   const byKey = new Map<string, typeof snapshots[0]>()
   for (const snap of Array.from(byTienda.values())) {
     const existing = byKey.get(snap.pala_id)
-    if (!existing || snap.precio < existing.precio) {
-      byKey.set(snap.pala_id, snap)
-    }
+    if (!existing || snap.precio < existing.precio) byKey.set(snap.pala_id, snap)
   }
 
-  // 3a. Cargar price_reference para los pala_ids presentes.
-  //     Usamos price_reference (no palas.precio_referencia) para:
-  //       - tener el valor actualizado (sin desync entre tablas)
-  //       - filtrar referencias con fuentes_count < MIN_FUENTES
-  const palaIdsPresentes = Array.from(new Set(Array.from(byKey.values()).map(s => s.pala_id)))
-  const { data: priceRefs, error: priceRefError } = await supabaseAdmin
-    .from('price_reference')
-    .select('pala_id, precio_referencia, fuentes_count, precio_minimo, precio_maximo')
-    .in('pala_id', palaIdsPresentes)
-
-  const _dbgMeta = {
-    snapshots_raw: snapshots.length,
-    after_dedup: byKey.size,
-    pala_ids_queried: palaIdsPresentes.length,
-    price_refs_returned: priceRefs?.length ?? 0,
-    price_ref_error: priceRefError?.message ?? null,
-  }
-
-  const priceRefMap = new Map<string, { precio_referencia: number; fuentes_count: number; precio_minimo: number; precio_maximo: number }>(
-    (priceRefs ?? []).map(r => [
-      r.pala_id,
-      {
-        precio_referencia: Number(r.precio_referencia),
-        fuentes_count:     r.fuentes_count,
-        precio_minimo:     Number(r.precio_minimo),
-        precio_maximo:     Number(r.precio_maximo),
-      },
-    ])
-  )
-
-  // 3b. Indices para guardia C: URL -> pala_ids
   const urlToPalaIds = new Map<string, Set<string>>()
   for (const snap of Array.from(byKey.values())) {
-    const url = snap.url_producto
-    if (!urlToPalaIds.has(url)) urlToPalaIds.set(url, new Set())
-    urlToPalaIds.get(url)!.add(snap.pala_id)
+    if (!urlToPalaIds.has(snap.url_producto)) urlToPalaIds.set(snap.url_producto, new Set())
+    urlToPalaIds.get(snap.url_producto)!.add(snap.pala_id)
   }
 
-  // 4. Filtrar aplicando guardias + umbral de descuento
   const chollos: CholloTienda[] = []
   const _dbg: string[] = []
 
@@ -227,18 +150,21 @@ export async function GET() {
 
     if (!pala || !fuente) { _dbg.push(`no-pala/fuente|${snap.pala_id}`); continue }
 
-    // Filtro de antigüedad: solo palas de los ultimos 2 años
-    if (pala['año'] < MIN_ANO) { _dbg.push(`año=${pala['año']}|${pala.modelo}`); continue }
+    const palaAno = pala['año'] ?? pala['ano'] ?? null
+    if (palaAno === null || palaAno < MIN_ANO) { _dbg.push(`ano=${palaAno}|${pala.modelo}`); continue }
 
-    // Referencia desde price_reference (no palas.precio_referencia)
-    const priceRef = priceRefMap.get(snap.pala_id)
-    if (!priceRef) { _dbg.push(`no-priceRef|${pala.modelo}|año=${pala['año']}`); continue }
+    const priceRefArr = pala.price_reference
+    const priceRefRaw = Array.isArray(priceRefArr) ? priceRefArr[0] : priceRefArr
+    if (!priceRefRaw) { _dbg.push(`no-priceRef|${pala.modelo}|ano=${palaAno}`); continue }
 
-    // Minimo MIN_FUENTES tiendas — una sola fuente puede estar inflada
+    const priceRef = {
+      precio_referencia: Number(priceRefRaw.precio_referencia),
+      fuentes_count:     priceRefRaw.fuentes_count as number,
+      precio_minimo:     Number(priceRefRaw.precio_minimo),
+      precio_maximo:     Number(priceRefRaw.precio_maximo),
+    }
+
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
-
-    // Spread maximo: si max/min > MAX_SPREAD, la referencia esta contaminada por bad matches
-    // (p.ej. varias palas distintas matcheadas al mismo pala_id con precios muy dispares)
     if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) { _dbg.push(`spread|${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
@@ -251,18 +177,8 @@ export async function GET() {
     }
 
     const palaIdsEnEstaUrl = urlToPalaIds.get(snap.url_producto) ?? new Set([snap.pala_id])
-
-    const motivo = esDescartadoPorGuardias(
-      snap.url_producto,
-      pala['año'],
-      pala.modelo,
-      palaIdsEnEstaUrl
-    )
-
-    if (motivo) {
-      _dbg.push(`guardia:${motivo}|${pala.modelo}`)
-      continue
-    }
+    const motivo = esDescartadoPorGuardias(snap.url_producto, palaAno, pala.modelo, palaIdsEnEstaUrl)
+    if (motivo) { _dbg.push(`guardia:${motivo}|${pala.modelo}`); continue }
 
     const ratio = snap.precio / ref
     if (ratio > UMBRAL_OFERTA) { _dbg.push(`ratio=${ratio.toFixed(3)}>${UMBRAL_OFERTA}|${pala.modelo}`); continue }
@@ -274,7 +190,7 @@ export async function GET() {
       pala_id:           snap.pala_id,
       modelo:            pala.modelo,
       marca:             pala.marca,
-      ano:               pala['año'],
+      ano:               palaAno,
       slug:              pala.slug,
       imagen_url:        pala.imagen_url,
       precio_actual:     snap.precio,
@@ -289,13 +205,11 @@ export async function GET() {
     })
   }
 
-  // 5. Ordenar: CHOLLO primero, luego por descuento desc
   chollos.sort((a, b) => {
     if (a.tag !== b.tag) return a.tag === 'CHOLLO' ? -1 : 1
     return b.descuento_pct - a.descuento_pct
   })
 
-  // updated_at = scraped_at mas reciente (no el del mayor descuento)
   const updatedAt = chollos.length > 0
     ? chollos.reduce((max, c) => c.scraped_at > max ? c.scraped_at : max, chollos[0].scraped_at)
     : null
@@ -304,4 +218,12 @@ export async function GET() {
     {
       chollos,
       total: chollos.length,
-     
+      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
+      ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
+      updated_at: updatedAt,
+      _dbg,
+      _dbgMeta: { snapshots_raw: snapshots.length, after_dedup: byKey.size },
+    },
+    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+  )
+}
