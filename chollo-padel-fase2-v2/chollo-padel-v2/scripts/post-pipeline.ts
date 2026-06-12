@@ -223,9 +223,8 @@ async function autoPromover(): Promise<number> {
 // ─── PASO 3: Recalcular precios de referencia ────────────────────────────────
 
 // Fuentes excluidas del precio_referencia (precio medio):
-//   2 = PadelZoom (agregador, no tienda directa)
-//   9 = Roma Sport (publica PVP catálogo inflado)
-const FUENTES_EXCLUIR_REFERENCIA = new Set([2, 9])
+//   2 = PadelZoom (agregador, no tienda directa — no refleja precio real de venta)
+const FUENTES_EXCLUIR_REFERENCIA = new Set([2])
 
 async function recalcularPrecios(): Promise<number> {
   if (DRY_RUN) return 0
