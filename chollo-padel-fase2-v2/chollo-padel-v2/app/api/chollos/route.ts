@@ -184,10 +184,18 @@ export async function GET() {
   //       - tener el valor actualizado (sin desync entre tablas)
   //       - filtrar referencias con fuentes_count < MIN_FUENTES
   const palaIdsPresentes = Array.from(new Set(Array.from(byKey.values()).map(s => s.pala_id)))
-  const { data: priceRefs } = await supabaseAdmin
+  const { data: priceRefs, error: priceRefError } = await supabaseAdmin
     .from('price_reference')
     .select('pala_id, precio_referencia, fuentes_count, precio_minimo, precio_maximo')
     .in('pala_id', palaIdsPresentes)
+
+  const _dbgMeta = {
+    snapshots_raw: snapshots.length,
+    after_dedup: byKey.size,
+    pala_ids_queried: palaIdsPresentes.length,
+    price_refs_returned: priceRefs?.length ?? 0,
+    price_ref_error: priceRefError?.message ?? null,
+  }
 
   const priceRefMap = new Map<string, { precio_referencia: number; fuentes_count: number; precio_minimo: number; precio_maximo: number }>(
     (priceRefs ?? []).map(r => [
@@ -296,11 +304,4 @@ export async function GET() {
     {
       chollos,
       total: chollos.length,
-      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
-      ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
-      updated_at: updatedAt,
-      _dbg,
-    },
-    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
-  )
-}
+     
