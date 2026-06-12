@@ -114,6 +114,7 @@ export async function GET() {
     .gte('match_confidence', 0.95)
     .neq('source_id', 2)
     .order('scraped_at', { ascending: false })
+    .range(0, 5000)
 
   if (error) {
     return NextResponse.json({ error: 'Error cargando chollos', detail: error.message }, { status: 500 })
