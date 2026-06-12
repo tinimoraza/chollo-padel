@@ -465,10 +465,10 @@ export function extraerAtributos(titulo: string): Atributos {
   // - "Padel Racket" (pdhsports UK)
   // NO quitamos colores: "Siux Fenix Pro Black", "Lava Orange" son identidad del producto.
   titulo = titulo
-    .replace(/^pala\s+de\s+p[aá]del/gi, '')
-    .replace(/^pala\s+de\s+p[aá]del/gi, '')  // doble por si hay variante con tilde
-    .replace(/padel\s+racket/gi, '')
-    .replace(/^pala/gi, '')
+    .replace(/^pala\s+de\s+p[aá]del/gi, '')
+    .replace(/^pala\s+de\s+p[aá]del/gi, '')  // doble por si hay variante con tilde
+    .replace(/padel\s+racket/gi, '')
+    .replace(/^pala/gi, '')
     .trim()
 
   // Pre-procesar: "+" suelto (precedido de espacio o al final) → "PLUS"

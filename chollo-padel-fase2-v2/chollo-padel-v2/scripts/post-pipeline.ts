@@ -109,6 +109,18 @@ async function limpiarFalseNegatives(): Promise<number> {
 
 // ─── PASO 2: Auto-promover nuevas ────────────────────────────────────────────
 
+// Similaridad por tokens con prefijo parcial (sin dependencias externas)
+function tokenSim(a: string, b: string): number {
+  const ta = normalizar(a).split(/\s+/).filter(t => t.length > 1)
+  const tb = new Set(normalizar(b).split(/\s+/).filter(t => t.length > 1))
+  let hits = 0
+  for (const t of ta) {
+    if (tb.has(t) || [...tb].some(u => u.startsWith(t) || t.startsWith(u))) hits++
+  }
+  const total = Math.max(ta.length, tb.size)
+  return total === 0 ? 0 : (hits / total) * 100
+}
+
 async function autoPromover(): Promise<number> {
   const { data: candidatas } = await supabase
     .from('palas_candidatas')
@@ -120,9 +132,10 @@ async function autoPromover(): Promise<number> {
 
   if (!candidatas?.length) return 0
 
-  // Slugs existentes para unicidad
-  const { data: slugsData } = await supabase.from('palas').select('slug')
-  const usedSlugs = new Set(slugsData?.map(p => p.slug) ?? [])
+  // Palas existentes (para dedup fuzzy y unicidad de slug)
+  const { data: palasExistentes } = await supabase.from('palas').select('id, slug, nombre, marca')
+  const usedSlugs = new Set(palasExistentes?.map(p => p.slug) ?? [])
+  const palasPool = palasExistentes ?? []
 
   let insertadas = 0
   let aliasResueltas = 0
@@ -130,7 +143,7 @@ async function autoPromover(): Promise<number> {
   for (const c of candidatas) {
     const d = c.datos_extraidos as Record<string, any>
     const titulo = c.titulo as string
-    const nombre = titulo.trim().toUpperCase()
+    const nombre = titulo.replace(/^pala\s+/i, '').trim().toUpperCase()
 
     // Guardia: comprobar si ya existe alias para esta candidata
     const { data: aliasExistente } = await supabase
@@ -156,6 +169,32 @@ async function autoPromover(): Promise<number> {
     // Guardia: linea='Pala' indica extracción fallida (prefijo genérico mal parseado).
     // No auto-promover estas — irán al Gestor para revisión manual.
     if (!d.linea || d.linea === 'Pala' || d.linea === 'pala') {
+      continue
+    }
+
+    // Guardia fuzzy: si ya existe una pala similar de la misma marca, no insertar
+    const sameMarca = palasPool.filter(p => (p.marca ?? '').toLowerCase() === (d.marca ?? '').toLowerCase())
+    const dupFuzzy = sameMarca.find(p => tokenSim(nombre, p.nombre) >= 78)
+    if (dupFuzzy) {
+      const fuente = d.fuente ?? 'tienda'
+      const textoNorm = normalizar(titulo)
+      if (!DRY_RUN) {
+        const { data: aliasYa } = await supabase.from('producto_aliases')
+          .select('id').eq('pala_id', dupFuzzy.id).eq('texto_normalizado', textoNorm).maybeSingle()
+        if (!aliasYa) {
+          await supabase.from('producto_aliases').insert({
+            pala_id: dupFuzzy.id, texto_original: titulo,
+            texto_normalizado: textoNorm, tienda: fuente,
+            fuente_url: d.url_origen ?? null, confianza: 0.85,
+          })
+        }
+        await supabase.from('palas_candidatas').update({
+          estado: 'matched', revisada_at: new Date().toISOString(),
+          datos_extraidos: { ...d, pala_id_promovida: dupFuzzy.id },
+        }).eq('id', c.id)
+      }
+      console.log(`  🔗 [dup\u2192match] ${nombre} \u2192 ${dupFuzzy.nombre}`)
+      aliasResueltas++
       continue
     }
 
@@ -334,12 +373,9 @@ async function main() {
   const marcadas = await limpiarFalseNegatives()
   console.log(`   → ${marcadas} marcadas como matched\n`)
 
-  // Paso 2
-  console.log('── Paso 2: Auto-promover nuevas ─────────────────────────')
-  const { insertadas, aliasResueltas } = await autoPromover()
-  console.log(`   → ${insertadas} palas nuevas insertadas`)
-  if (aliasResueltas > 0) console.log(`   → ${aliasResueltas} resueltas por alias existente\n`)
-  else console.log()
+  // Paso 2 — AUTO-PROMOVER DESACTIVADO
+  // Las candidatas sin match van al Gestor para revisión manual.
+  console.log('── Paso 2: Auto-promover nuevas ── DESACTIVADO (usar Gestor)')
 
   // Paso 3
   console.log('── Paso 3: Recalcular precios de referencia ─────────────')
@@ -366,4 +402,3 @@ main().catch(err => {
   console.error('\n💥 Error fatal:', err)
   process.exit(1)
 })
-                    

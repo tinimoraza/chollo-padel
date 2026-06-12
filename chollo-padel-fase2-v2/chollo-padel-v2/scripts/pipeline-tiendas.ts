@@ -334,6 +334,8 @@ async function main() {
     // Marcas muy nicho sin precio de referencia en otras tiendas → nunca serían chollos
     'hbl ', 'higer padel', 'hybrid padel', 'middle moon', 'nexus ', 'spin max', 'totalspin',
     'rox ', 'rs ', 'rs by robin', 'rs prime', 'robin soderling',
+    'erreesse', 'pala erreesse', 'lx ', 'pala lx ',
+    'sane ', 'pala sane ', 'pala rs ',
   ]
 
   for (const p of productos) {
