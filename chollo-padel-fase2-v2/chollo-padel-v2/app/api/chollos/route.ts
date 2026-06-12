@@ -100,7 +100,7 @@ function esDescartadoPorGuardias(
   }
 
   // GUARDIA D: colision de nombre conocida
-  const modeloLower = palaModelo.toLowerCase()
+  const modeloLower = (palaModelo ?? '').toLowerCase()
   for (const [urlFrag, modelFrag] of URL_MODEL_COLISIONES) {
     if (url.includes(urlFrag) && modeloLower.includes(modelFrag)) {
       return `D: URL contiene "${urlFrag}" pero modelo es "${modelFrag}"`
@@ -216,21 +216,21 @@ export async function GET() {
     const pala = snap.palas as any
     const fuente = snap.price_sources as any
 
-    if (!pala || !fuente) continue
+    if (!pala || !fuente) { console.log(`[chollos:dbg] SKIP no-pala/fuente | pala_id=${snap.pala_id}`); continue }
 
     // Filtro de antigüedad: solo palas de los ultimos 2 años
-    if (pala['año'] < MIN_ANO) continue
+    if (pala['año'] < MIN_ANO) { console.log(`[chollos:dbg] SKIP año=${pala['año']} | ${pala.modelo}`); continue }
 
     // Referencia desde price_reference (no palas.precio_referencia)
     const priceRef = priceRefMap.get(snap.pala_id)
-    if (!priceRef) continue
+    if (!priceRef) { console.log(`[chollos:dbg] SKIP no-priceRef | ${pala.modelo}`); continue }
 
     // Minimo MIN_FUENTES tiendas — una sola fuente puede estar inflada
-    if (priceRef.fuentes_count < MIN_FUENTES) continue
+    if (priceRef.fuentes_count < MIN_FUENTES) { console.log(`[chollos:dbg] SKIP fuentes=${priceRef.fuentes_count} | ${pala.modelo}`); continue }
 
     // Spread maximo: si max/min > MAX_SPREAD, la referencia esta contaminada por bad matches
     // (p.ej. varias palas distintas matcheadas al mismo pala_id con precios muy dispares)
-    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) continue
+    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) { console.log(`[chollos:dbg] SKIP spread | ${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
     if (!ref || ref < MIN_REFERENCIA) continue
@@ -265,7 +265,7 @@ export async function GET() {
     }
 
     const ratio = snap.precio / ref
-    if (ratio > UMBRAL_OFERTA) continue
+    if (ratio > UMBRAL_OFERTA) { console.log(`[chollos:dbg] SKIP ratio=${ratio.toFixed(3)} | ${pala.modelo}`); continue }
 
     const descuento_pct = Math.round((1 - ratio) * 100)
     const tag: 'CHOLLO' | 'OFERTA' = ratio <= UMBRAL_CHOLLO ? 'CHOLLO' : 'OFERTA'
