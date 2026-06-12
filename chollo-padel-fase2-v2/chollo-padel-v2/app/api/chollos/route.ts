@@ -211,42 +211,34 @@ export async function GET() {
 
   // 4. Filtrar aplicando guardias + umbral de descuento
   const chollos: CholloTienda[] = []
+  const _dbg: string[] = []
 
   for (const snap of Array.from(byKey.values())) {
     const pala = snap.palas as any
     const fuente = snap.price_sources as any
 
-    if (!pala || !fuente) { console.log(`[chollos:dbg] SKIP no-pala/fuente | pala_id=${snap.pala_id}`); continue }
+    if (!pala || !fuente) { _dbg.push(`no-pala/fuente|${snap.pala_id}`); continue }
 
     // Filtro de antigüedad: solo palas de los ultimos 2 años
-    if (pala['año'] < MIN_ANO) { console.log(`[chollos:dbg] SKIP año=${pala['año']} | ${pala.modelo}`); continue }
+    if (pala['año'] < MIN_ANO) { _dbg.push(`año=${pala['año']}|${pala.modelo}`); continue }
 
     // Referencia desde price_reference (no palas.precio_referencia)
     const priceRef = priceRefMap.get(snap.pala_id)
-    if (!priceRef) { console.log(`[chollos:dbg] SKIP no-priceRef | ${pala.modelo}`); continue }
+    if (!priceRef) { _dbg.push(`no-priceRef|${pala.modelo}|año=${pala['año']}`); continue }
 
     // Minimo MIN_FUENTES tiendas — una sola fuente puede estar inflada
-    if (priceRef.fuentes_count < MIN_FUENTES) { console.log(`[chollos:dbg] SKIP fuentes=${priceRef.fuentes_count} | ${pala.modelo}`); continue }
+    if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
 
     // Spread maximo: si max/min > MAX_SPREAD, la referencia esta contaminada por bad matches
     // (p.ej. varias palas distintas matcheadas al mismo pala_id con precios muy dispares)
-    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) { console.log(`[chollos:dbg] SKIP spread | ${pala.modelo}`); continue }
+    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) { _dbg.push(`spread|${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
-    if (!ref || ref < MIN_REFERENCIA) continue
+    if (!ref || ref < MIN_REFERENCIA) { _dbg.push(`ref<MIN|ref=${ref}|${pala.modelo}`); continue }
 
-    // GUARDIA PRECIO MINIMO: si el precio actual esta muy por debajo del precio minimo
-    // historico, casi seguro es un producto distinto mal matcheado.
-    // Ej: Cross It Light 2026 (min 248€) matcheada a una URL que vende la version 2024 a 170€.
-    //
-    // Umbral adaptativo segun fuentes_count:
-    //   - fuentes_count >= 3: historial fiable → umbral estricto 0.75
-    //   - fuentes_count == 2: historial limitado → umbral relajado 0.65
-    //     (evita falsos negativos en palas nuevas cuyo unico minimo historico ES el PVP,
-    //      como Joma Blast/Hyper Pro 2026 que debutan en oferta a -33%)
     const umbralMinimo = priceRef.fuentes_count >= 3 ? 0.75 : 0.65
     if (priceRef.precio_minimo > 0 && snap.precio / priceRef.precio_minimo < umbralMinimo) {
-      console.log(`[chollos:skip] precio ${snap.precio}€ < ${umbralMinimo*100}% de minimo ${priceRef.precio_minimo}€ (fuentes:${priceRef.fuentes_count}) → probable bad match | ${pala.modelo}`)
+      _dbg.push(`minimo|${snap.precio}/${priceRef.precio_minimo}<${umbralMinimo}|${pala.modelo}`)
       continue
     }
 
@@ -260,12 +252,12 @@ export async function GET() {
     )
 
     if (motivo) {
-      console.log(`[chollos:skip] ${motivo} | ${pala.modelo} | ${snap.url_producto.slice(-50)}`)
+      _dbg.push(`guardia:${motivo}|${pala.modelo}`)
       continue
     }
 
     const ratio = snap.precio / ref
-    if (ratio > UMBRAL_OFERTA) { console.log(`[chollos:dbg] SKIP ratio=${ratio.toFixed(3)} | ${pala.modelo}`); continue }
+    if (ratio > UMBRAL_OFERTA) { _dbg.push(`ratio=${ratio.toFixed(3)}>${UMBRAL_OFERTA}|${pala.modelo}`); continue }
 
     const descuento_pct = Math.round((1 - ratio) * 100)
     const tag: 'CHOLLO' | 'OFERTA' = ratio <= UMBRAL_CHOLLO ? 'CHOLLO' : 'OFERTA'
@@ -307,7 +299,9 @@ export async function GET() {
       chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
       ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
       updated_at: updatedAt,
+      _dbg,
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
   )
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
