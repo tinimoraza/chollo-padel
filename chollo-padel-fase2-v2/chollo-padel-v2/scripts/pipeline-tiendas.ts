@@ -19,6 +19,16 @@
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, normalizar } from './extract-atributos'
 
+// Interfaz explícita para evitar que ts-node falle con ReturnType<> sobre props con ñ
+interface AtributosExtraidos {
+  marca:    string | null
+  linea:    string | null
+  modelo:   string | null
+  variante: string | null
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  año:      number | null
+}
+
 // Cargar .env.local si existe (entorno local). En CI las vars vienen del entorno del runner.
 try { require('dotenv').config({ path: '.env.local' }) } catch (_) {}
 
@@ -139,7 +149,7 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   return false
 }
 
-async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): Promise<{ id: string }[]> {
+async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: string }[]> {
   if (!attrs.marca || !attrs.linea) return []
 
   let q = supabase
@@ -160,7 +170,14 @@ async function buscarPorAtributos(attrs: ReturnType<typeof extraerAtributos>): P
   // porque el filtro SQL descartó la fila sin año). Filtramos el año en memoria,
   // tratando "sin año" como comodín compatible con cualquier año.
 
-  const { data } = await q
+  const { data: _rawData } = await q
+  // Supabase type inference falla con 'ñ' en el nombre de columna ('año').
+  // Cast explícito para evitar ParserError<"Unexpected input: ño">.
+  const data = (_rawData ?? []) as unknown as {
+    id: string; nombre: string; marca: string | null
+    linea: string | null; modelo: string | null
+    variante: string | null; año: number | null
+  }[]
   // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
   // comparar el string literal — evita falsos "sin match" por convenciones distintas
   // entre cómo lo escribe la tienda y cómo está guardado en el catálogo.
@@ -213,6 +230,15 @@ async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   if (error) console.error(`  ❌ [snapshot] ${producto.titulo}: ${error.message}`)
 }
 
+async function actualizarImagenSiNull(palaId: string, imageUrl: string | null | undefined) {
+  if (DRY_RUN || !imageUrl) return
+  // Solo actualiza si imagen_url es NULL — no pisa imágenes ya existentes
+  await supabase.from('palas')
+    .update({ imagen_url: imageUrl })
+    .eq('id', palaId)
+    .is('imagen_url', null)
+}
+
 async function insertarAlias(palaId: string, textoOriginal: string, tienda: string, url?: string) {
   if (DRY_RUN) return
   await supabase.from('producto_aliases').upsert({
@@ -227,7 +253,7 @@ async function insertarAlias(palaId: string, textoOriginal: string, tienda: stri
 
 async function insertarCandidata(producto: {
   titulo: string; precio: number; url: string; tienda: string; imagen?: string | null
-}, motivo: 'sin_match' | 'ambiguo', attrs: ReturnType<typeof extraerAtributos>, candidatos?: { id: string }[]): Promise<boolean> {
+}, motivo: 'sin_match' | 'ambiguo', attrs: AtributosExtraidos, candidatos?: { id: string }[]): Promise<boolean> {
   if (DRY_RUN) return true
 
   // "Borrador de pala" con todo lo extraído en el momento del scrap, para que
@@ -304,7 +330,7 @@ async function main() {
     'paddle coach', 'just ten',
     // Marcas muy nicho sin precio de referencia en otras tiendas → nunca serían chollos
     'hbl ', 'higer padel', 'hybrid padel', 'middle moon', 'nexus ', 'spin max', 'totalspin',
-    'rox ', 'rs by robin', 'rs prime', 'robin soderling',
+    'rox ', 'rs ', 'rs by robin', 'rs prime', 'robin soderling',
   ]
 
   for (const p of productos) {
@@ -321,6 +347,12 @@ async function main() {
       if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
       continue
     }
+    if (tituloLow.includes('segunda mano') || tituloLow.includes('second hand') ||
+        tituloLow.includes('2ª mano') || tituloLow.includes('2a mano') ||
+        tituloLow.includes('reacondicionad') || tituloLow.includes('refurbished')) {
+      if (DRY_RUN) console.log(`  🚫 [segunda mano] ${p.title}`)
+      continue
+    }
 
     const textoNorm = normalizar(p.title)
     titulosProcessed.add(textoNorm)
@@ -332,6 +364,7 @@ async function main() {
         console.log(`  ✅ [alias] ${p.title}`)
       } else {
         await insertarSnapshot(palaIdAlias, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
+        await actualizarImagenSiNull(palaIdAlias, p.image)
       }
       porAlias++
       continue
@@ -349,6 +382,7 @@ async function main() {
       } else {
         await insertarSnapshot(palaId, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
         await insertarAlias(palaId, p.title, TIENDA, p.url)
+        await actualizarImagenSiNull(palaId, p.image)
       }
       porAtributos++
     } else if (candidatos.length > 1) {
@@ -393,7 +427,7 @@ async function main() {
     }
     if (candidatasObsoletas.length > 0) {
       await supabase.from('palas_candidatas').update({ estado: 'ignorada' }).in('id', candidatasObsoletas)
-      console.log('  🧹 ' + candidatasObsoletas.length + ' candidatas obsoletas/excluidas marcadas ignorada')
+      console.log('  🧹 ' + candidatasObsoletas.length + ' candidatas obsoletas/excluidas marcadas ignada')
     }
   }
 
