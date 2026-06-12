@@ -116,7 +116,7 @@ export const MARCAS: Record<string, string> = {
 // Orden: de más específico a menos específico dentro de cada marca.
 // El extractor prueba en orden y se queda con el primer match.
 
-export const LINEAS_POR_MARCA: Record<string, string[]> = {
+export let LINEAS_POR_MARCA: Record<string, string[]> = {
   'Bullpadel': [
     'vertex', 'hack', 'spike', 'flow', 'neuron', 'indiga', 'ionic', 'wonder',
     'pearl', 'elite', 'legend', 'ava', 'bp10',
@@ -178,11 +178,13 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
   ],
   'Joma': [
     'valkiria', 'master', 'open', 'slam', 'hyper', 'blast', 'recon',
+    'gold', 'tournament', 'pro', 'rookie',
   ],
   'Enebe': [
     'suburban', 'spitfire', 'combat',
     'response', 'mustang', 'supra', 'rsx', 'space', 'genius', 'massive',
     'aerox', 'point', 'cross', 'astra', 'break',
+    'arrow', 'full', 'matrix', 'nitro', 'rs', 'venom',
   ],
   'Varlion': [
     'lethal', 'summum', 'carbon', 'baseline',
@@ -233,6 +235,27 @@ export const LINEAS_POR_MARCA: Record<string, string[]> = {
 
 // ─── Variantes conocidas ──────────────────────────────────────────────────────
 // Palabras que identifican una VARIANTE (diferenciador secundario),
+// ─── Sincronización automática desde BD ──────────────────────────────────────
+// Enriquece LINEAS_POR_MARCA con todas las lineas que existan en palas.
+// Llamar al inicio del pipeline para que los matches sean siempre actuales.
+export async function cargarLineasDesdeBD(supabase: any): Promise<void> {
+  const { data } = await supabase
+    .from('palas')
+    .select('marca, linea')
+    .not('linea', 'is', null)
+  if (!data) return
+  for (const row of data as { marca: string; linea: string }[]) {
+    const { marca, linea } = row
+    if (!marca || !linea) continue
+    const lineaNorm = linea.toLowerCase().trim()
+    if (!LINEAS_POR_MARCA[marca]) {
+      LINEAS_POR_MARCA[marca] = [lineaNorm]
+    } else if (!LINEAS_POR_MARCA[marca].includes(lineaNorm)) {
+      LINEAS_POR_MARCA[marca].push(lineaNorm)
+    }
+  }
+}
+
 // no la línea ni el modelo principal.
 // Orden: de más específico a menos específico.
 

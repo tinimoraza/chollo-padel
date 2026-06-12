@@ -17,7 +17,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { extraerAtributos, normalizar } from './extract-atributos'
+import { extraerAtributos, normalizar, cargarLineasDesdeBD } from './extract-atributos'
 
 // Interfaz explícita para evitar que ts-node falle con ReturnType<> sobre props con ñ
 interface AtributosExtraidos {
@@ -313,6 +313,9 @@ async function main() {
   // 1. Obtener source_id de la tienda (en dry-run no se necesita escribir en BD)
   const sourceId = DRY_RUN ? 'dry-run' : await getSourceId(TIENDA)
   if (!DRY_RUN) console.log(`✅ Tienda encontrada: ${TIENDA} (id: ${sourceId})`)
+
+  // 1b. Cargar lineas desde BD (sincroniza LINEAS_POR_MARCA automaticamente)
+  await cargarLineasDesdeBD(supabase)
 
   // 2. Scrape
   console.log(`\n📥 Scrapeando ${TIENDA}...`)
