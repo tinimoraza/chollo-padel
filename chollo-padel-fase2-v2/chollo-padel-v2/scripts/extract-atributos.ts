@@ -39,7 +39,7 @@ export const MARCAS: Record<string, string> = {
   // Nox
   'nox': 'Nox', 'nox padel': 'Nox',
   // Adidas
-  'adidas': 'Adidas', 'adidas padel': 'Adidas',
+  'adidas': 'Adidas', 'adidas padel': 'Adidas', 'adipower': 'Adidas',
   // Head
   'head': 'Head', 'head padel': 'Head',
   // Babolat
