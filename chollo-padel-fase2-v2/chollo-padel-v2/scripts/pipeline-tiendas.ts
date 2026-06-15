@@ -329,7 +329,7 @@ async function main() {
   const titulosProcessed = new Set<string>()
 
   // Prefijos que indican que NO es una pala individual
-  const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ']
+  const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ', 'pala de padel open']
   // Marcas que no queremos trackear (entrenamiento, marcas residuales, etc.)
   const EXCLUIR_MARCAS = [
     'paddle coach', 'just ten',
@@ -359,7 +359,8 @@ async function main() {
     }
     if (tituloLow.includes('segunda mano') || tituloLow.includes('second hand') ||
         tituloLow.includes('2ª mano') || tituloLow.includes('2a mano') ||
-        tituloLow.includes('reacondicionad') || tituloLow.includes('refurbished')) {
+        tituloLow.includes('reacondicionad') || tituloLow.includes('refurbished') ||
+        tituloLow.includes('defectos esteticos') || tituloLow.includes('defectos estéticos')) {
       if (DRY_RUN) console.log(`  🚫 [segunda mano] ${p.title}`)
       continue
     }
