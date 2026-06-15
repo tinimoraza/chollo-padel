@@ -339,6 +339,7 @@ async function main() {
     'erreesse', 'pala erreesse', 'lx ', 'pala lx ',
     'sane ', 'pala sane ', 'pala rs ',
     'aca padel', 'aca atrium', 'aca magic', 'aca roqueta', 'aca wave', 'aca palladium',
+    'pala aca ', 'set platinum',
     'kelme ', 'belén berbel', 'belen berbel', 'wild bull',
   ]
 
