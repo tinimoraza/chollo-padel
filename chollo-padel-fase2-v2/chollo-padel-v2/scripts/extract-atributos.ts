@@ -522,7 +522,7 @@ export function extraerAtributos(titulo: string): Atributos {
   let lineaDetectada: string | null = null
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
-    if (restoNorm.includes(linea)) {
+    if (restoNorm.includes(linea) || norm.includes(linea)) {
       lineaDetectada = linea
         .split(' ')
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))

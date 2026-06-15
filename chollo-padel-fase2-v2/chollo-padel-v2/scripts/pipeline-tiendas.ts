@@ -77,8 +77,18 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
 // OJO: esta tabla es una lista cerrada y controlada — solo se añaden pares aquí
 // cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
 // que demostró que no todas las abreviaturas son intercambiables).
+const LINEA_EQUIVALENCIAS: Record<string, string> = {
+  'jr': 'Junior',
+}
+
+function normalizarLinea(l: string | null): string | null {
+  if (!l) return null
+  const norm = l.toLowerCase().trim()
+  return LINEA_EQUIVALENCIAS[norm] ?? l
+}
+
 const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
-  'control': 'ctrl', 'ctrl': 'ctrl',
+  'control': 'ctrl', 'ctrl': 'ctrl', 'ctr': 'ctrl',
   'hybrid': 'hybrid', 'hyb': 'hybrid',
   'power': 'power', 'pwr': 'power',
   'xtrem': 'xtrem', 'xtreme': 'xtrem',
@@ -133,7 +143,7 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   if (!modeloExtraido) return !modeloCat
   if (!modeloCat)      return false
   const tokenizar = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
   // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
@@ -158,7 +168,7 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
     .from('palas')
     .select('id, nombre, marca, linea, modelo, variante, año')
     .eq('marca', attrs.marca)
-    .eq('linea', attrs.linea)
+    .eq('linea', normalizarLinea(attrs.linea))
 
   // OJO: NO filtramos modelo en SQL — usamos match por subconjunto de tokens en
   // memoria (ver modeloCompatible). Motivo: algunas tiendas escriben "GENIUS 12K"
