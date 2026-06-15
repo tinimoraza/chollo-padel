@@ -146,6 +146,14 @@ function tokenIn(t: string, arr: string[]): boolean {
 // Permite que "MTW" (abreviatura de Adidas) matchee con "Multiweight".
 const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'mtw': 'multiweight',
+  // Traducciones de color español→inglés (tiendas ES usan español, BD usa inglés)
+  'negra': 'black', 'negro': 'black',
+  'blanca': 'white', 'blanco': 'white',
+  'roja': 'red', 'rojo': 'red',
+  'verde': 'green',
+  'amarilla': 'yellow', 'amarillo': 'yellow',
+  'azul': 'blue',
+  'gris': 'grey',
 }
 
 function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
