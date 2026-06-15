@@ -337,6 +337,8 @@ async function main() {
     'rox ', 'rs ', 'rs by robin', 'rs prime', 'robin soderling',
     'erreesse', 'pala erreesse', 'lx ', 'pala lx ',
     'sane ', 'pala sane ', 'pala rs ',
+    'aca padel', 'aca atrium', 'aca magic', 'aca roqueta', 'aca wave', 'aca palladium',
+    'kelme ', 'belén berbel', 'belen berbel', 'wild bull',
   ]
 
   for (const p of productos) {
