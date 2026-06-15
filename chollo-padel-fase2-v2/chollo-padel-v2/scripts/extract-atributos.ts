@@ -132,6 +132,7 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
     'drive', 'match', 'rx series', 'rx',
     'cross it', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
     'velara', 'kardex',
+    'copa del mundo', 'world cup',
   ],
   'Head': [
     'delta', 'extreme', 'speed', 'radical', 'flash', 'spark', 'bolt',
@@ -267,6 +268,9 @@ export const VARIANTES: string[] = [
   'power', 'pwr', 'speed', 'motion',
   // Género
   'woman', 'women', 'mujer', 'junior', 'jr',
+  // Países (Copa del Mundo Adidas)
+  'espana', 'alemania', 'argentina', 'belgica', 'colombia', 'francia',
+  'inglaterra', 'italia', 'mexico', 'paises bajos', 'estados unidos', 'multination',
   // Numeradas (generaciones Bullpadel)
   '18k', '12k',
   // Materiales
@@ -567,6 +571,11 @@ export function extraerAtributos(titulo: string): Atributos {
     'hrd+': 'HRD+', 'hrd': 'HRD',
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
+    // Países Copa del Mundo
+    'espana': 'España', 'alemania': 'Alemania', 'argentina': 'Argentina',
+    'belgica': 'Bélgica', 'colombia': 'Colombia', 'francia': 'Francia',
+    'inglaterra': 'Inglaterra', 'italia': 'Italia', 'mexico': 'Mexico',
+    'paises bajos': 'Netherlands', 'estados unidos': 'USA', 'multination': 'Multination',
   }
 
   // 6. VARIANTE — buscar en el texto restante (más específico primero)

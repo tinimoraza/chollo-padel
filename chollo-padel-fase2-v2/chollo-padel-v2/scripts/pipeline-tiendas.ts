@@ -79,6 +79,8 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
 // que demostró que no todas las abreviaturas son intercambiables).
 const LINEA_EQUIVALENCIAS: Record<string, string> = {
   'jr': 'Junior',
+  'copa del mundo': 'World Cup',
+  'world cup': 'World Cup',
 }
 
 function normalizarLinea(l: string | null): string | null {
@@ -88,6 +90,8 @@ function normalizarLinea(l: string | null): string | null {
 }
 
 const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
+  'paises bajos': 'netherlands',
+  'estados unidos': 'usa',
   'control': 'ctrl', 'ctrl': 'ctrl', 'ctr': 'ctrl',
   'hybrid': 'hybrid', 'hyb': 'hybrid',
   'power': 'power', 'pwr': 'power',
@@ -97,7 +101,7 @@ const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
 
 function normalizarVariante(v: string | null): string | null {
   if (!v) return null
-  const norm = v.toLowerCase().trim()
+  const norm = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
   return VARIANTE_EQUIVALENCIAS[norm] ?? norm
 }
 
