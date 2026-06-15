@@ -409,6 +409,10 @@ async function main() {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
+    if (/ kit(\b|$)/.test(tituloLow) || / pack(\b|$)/.test(tituloLow) || /\btest\b/.test(tituloLow)) {
+      if (DRY_RUN) console.log(`  🚫 [excluido kit/pack/test] ${p.title}`)
+      continue
+    }
     if (tituloLow.includes('pickleball')) {
       if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
       continue
