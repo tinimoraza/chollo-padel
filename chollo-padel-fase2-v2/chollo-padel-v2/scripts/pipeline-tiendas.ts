@@ -142,6 +142,12 @@ function tokenIn(t: string, arr: string[]): boolean {
   return arr.some(x => tokensCompatibles(t, x))
 }
 
+// Aliases de tokens de modelo: normaliza abreviaturas a su forma canónica.
+// Permite que "MTW" (abreviatura de Adidas) matchee con "Multiweight".
+const MODELO_TOKEN_ALIAS: Record<string, string> = {
+  'mtw': 'multiweight',
+}
+
 function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
   // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
   // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
@@ -149,6 +155,7 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   if (!modeloCat)      return false
   const tokenizar = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+      .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
   // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
@@ -205,7 +212,11 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
     // Modelo compatible si los tokens del extraído son subconjunto del catálogo o viceversa.
     // Permite que "GENIUS 12K" (tienda) matchee con "Genius 12K Alum" (catálogo).
     const modeloOk = modeloCompatible(p.modelo, attrs.modelo)
-    return variantesCoinciden && añoCompatible && modeloOk
+    // Caso cruzado: extractor clasifica algo como variante pero el catálogo lo tiene como modelo
+    // (ej: Bullpadel Indiga CTRL 2026 → attrs.variante="CTRL" pero DB tiene modelo="CTR", variante=null)
+    const cruzado = !attrs.modelo && !!attrs.variante && !p.variante
+      && normalizarVariante(p.modelo) === normalizarVariante(attrs.variante)
+    return (variantesCoinciden && modeloOk || cruzado) && añoCompatible
   })
 
   // "Sin año" auto-resolución:

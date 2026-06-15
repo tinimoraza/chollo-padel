@@ -552,6 +552,12 @@ export function extraerAtributos(titulo: string): Atributos {
       .replace(/\s+/g, '[-\\s]+')
     const lineaRe = new RegExp(lineaPattern, 'gi')
     sinLinea = sinLinea.replace(lineaRe, '').replace(/\s+/g, ' ').trim()
+    // Si parte de la línea ya fue quitada por quitarMarca (ej: "adipower" en "Adipower Multiweight"),
+    // la regex anterior no matchea el resto. Eliminamos token a token los que queden en sinLinea.
+    const lineaTokens = normalizar(lineaDetectada).split(/\s+/).filter(t => t.length >= 3)
+    for (const tok of lineaTokens) {
+      sinLinea = sinLinea.replace(new RegExp('\\b' + tok + '\\b', 'gi'), '').replace(/\s+/g, ' ').trim()
+    }
   }
 
   // Mapeo de alias de variante → nombre canónico
