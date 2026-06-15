@@ -164,7 +164,17 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
   // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
   if (!modeloExtraido) return !modeloCat
-  if (!modeloCat)      return false
+  if (!modeloCat) {
+    // Si el modelo extraído contiene solo tokens numéricos (número de generación tipo "3.3"),
+    // se considera sin modelo real → compatible con entradas que tampoco tienen modelo.
+    // Ej: "Cross It 3.3" → modelo="3.3" → tokens todos dígitos → compatible con Cross It 2024 (modelo=null).
+    const tokens = modeloExtraido
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]/g, ' ').trim()
+      .split(/\s+/).filter(Boolean)
+    if (tokens.length > 0 && tokens.every(t => /^\d+$/.test(t))) return true
+    return false
+  }
   const tokenizar = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
