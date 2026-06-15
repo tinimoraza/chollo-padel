@@ -163,34 +163,30 @@ const MODELO_TOKEN_ALIAS: Record<string, string> = {
 function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
   // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
   // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
-  if (!modeloExtraido) return !modeloCat
-  if (!modeloCat) {
-    // Si el modelo extraído contiene solo tokens numéricos (número de generación tipo "3.3"),
-    // se considera sin modelo real → compatible con entradas que tampoco tienen modelo.
-    // Ej: "Cross It 3.3" → modelo="3.3" → tokens todos dígitos → compatible con Cross It 2024 (modelo=null).
-    const tokens = modeloExtraido
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase().replace(/[^a-z0-9]/g, ' ').trim()
-      .split(/\s+/).filter(Boolean)
-    if (tokens.length > 0 && tokens.every(t => /^\d+$/.test(t))) return true
-    return false
+  if (!modeloExtraido) {
+    if (!modeloCat) return true
+    // Si el catálogo tiene solo un número de versión ("3.3", "3.4") y el extractor
+    // no tiene modelo (porque el 3.x fue convertido a año) → compatible; el año discrimina.
+    return /^[\d.]+$/.test(modeloCat.trim())
   }
+  if (!modeloCat) return false
   const tokenizar = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
   // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
-  // Solo permitido si las palabras extra del catalogo no son discriminantes
+  // Solo permitido si las palabras extra del catálogo no son discriminantes.
+  // No contamos tokens numéricos puros como discriminantes: son números de generación
+  // (ej "3"/"4" de "3.4") que el extractor convierte a año — el año ya discrimina.
   if (tExt.every(t => tokenIn(t, tCat))) {
     const extra = tCat.filter(t => !tokenIn(t, tExt))
-    return !extra.some(t => MODELO_DISCRIMINANTES.has(t) || /^\d+$/.test(t))
+    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
   }
   // Caso 2: tienda añade palabras (catálogo subset tienda)
-  // Solo permitido si las palabras extra de la tienda no son discriminantes
   if (tCat.every(t => tokenIn(t, tExt))) {
     const extra = tExt.filter(t => !tokenIn(t, tCat))
-    return !extra.some(t => MODELO_DISCRIMINANTES.has(t) || /^\d+$/.test(t))
+    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
   }
   return false
 }

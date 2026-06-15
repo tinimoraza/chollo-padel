@@ -268,6 +268,7 @@ export const VARIANTES: string[] = [
   'power', 'pwr', 'speed', 'motion',
   // Género
   'woman', 'women', 'mujer', 'junior', 'jr',
+  'hrd plus',  // Hrd + con espacio → alias de HRD+
   // Países (Copa del Mundo Adidas)
   'espana', 'alemania', 'argentina', 'belgica', 'colombia', 'francia',
   'inglaterra', 'italia', 'mexico', 'paises bajos', 'estados unidos', 'multination',
@@ -397,6 +398,7 @@ const JUGADORES = [
   'noemi aguilar',
   'melania merino',
   'ana catarina nogueira',
+  'mafalda fernandes',
   // ── Otros / nicknames ────────────────────────────────────────────────────
   'alex galán',
   'carolina navarro',
@@ -478,6 +480,8 @@ export function extraerAtributos(titulo: string): Atributos {
   // Pre-procesar: "+" suelto (precedido de espacio o al final) → "PLUS"
   // Ej: "STARVIE ASTRUM +" → "STARVIE ASTRUM PLUS"
   // "HRD+" se deja intacto porque no tiene espacio antes del +.
+  // Normalizar guiones especiales (em dash –, en dash –) a espacio
+  titulo = titulo.replace(/[\u2013\u2014]/g, ' ')
   titulo = titulo.replace(/(?<=\S) \+(?=\s|$)/g, ' PLUS').replace(/(?<=\s)\+(?=\s|$)/g, 'PLUS')
 
   // Normalizar versiones de año tipo "2.6" → "2026" (Babolat usa X.Y como código de año)
@@ -485,6 +489,13 @@ export function extraerAtributos(titulo: string): Atributos {
   titulo = titulo.replace(/\b2\.([4-9])\b/g, (_m, d) => String(2020 + parseInt(d)))
   // 'Special Edition' → 'SE' para mapear contra modelos tipo 'V1 SE' en catálogo
   titulo = titulo.replace(/\bspecial\s+edition\b/gi, 'SE')
+
+  // Generaciones Adidas (y otras marcas): 3.1→2022, 3.2→2023, 3.3→2024, 3.4→2025
+  // Se convierte a año para que el filtro de año resuelva la ambigüedad en el matching.
+  // Solo se aplica si no hay ya un año de 4 dígitos en el título.
+  if (!/\b20[2-9]\d\b/.test(titulo)) {
+    titulo = titulo.replace(/\b3\.([1-4])\b/g, (_m: string, d: string) => String(2021 + parseInt(d)))
+  }
 
   const norm = normalizar(titulo)
 
@@ -568,7 +579,7 @@ export function extraerAtributos(titulo: string): Atributos {
   const VARIANTES_ALIAS: Record<string, string> = {
     'mujer': 'WOMAN', 'mujeres': 'WOMAN', 'women': 'WOMAN',
     'junior': 'JUNIOR', 'jr': 'JUNIOR',
-    'hrd+': 'HRD+', 'hrd': 'HRD',
+    'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD',
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
     // Países Copa del Mundo
