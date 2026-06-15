@@ -37,7 +37,8 @@ const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 const TIENDA  = process.argv[2]
-const DRY_RUN = process.argv.includes('--dry-run')
+const DRY_RUN  = process.argv.includes('--dry-run')
+const NO_POST   = process.argv.includes('--no-post')
 
 if (!TIENDA) {
   console.error('❌ Uso: npx tsx pipeline-tiendas.ts <tienda> [--dry-run]')
@@ -446,7 +447,7 @@ async function main() {
   }
 
   // Post-pipeline automatico
-  if (!DRY_RUN) {
+  if (!DRY_RUN && !NO_POST) {
     console.log('\n── Post-pipeline ──────────────────────────────────────')
     await postPipeline()
   }

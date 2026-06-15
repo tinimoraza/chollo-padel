@@ -16,7 +16,7 @@ jobs:
   pipeline-tiendas:
     name: "Scrape tiendas + recalcular precios"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
@@ -32,25 +32,25 @@ jobs:
         run: npm install
 
       - name: Scrape padelmarket
-        run: npx tsx scripts/pipeline-tiendas.ts padelmarket
+        run: npx tsx scripts/pipeline-tiendas.ts padelmarket --no-post
 
       - name: Scrape padelnuestro
-        run: npx tsx scripts/pipeline-tiendas.ts padelnuestro
+        run: npx tsx scripts/pipeline-tiendas.ts padelnuestro --no-post
 
       - name: Scrape padelzoom (catálogo)
-        run: npx tsx scripts/pipeline-tiendas.ts padelzoom
+        run: npx tsx scripts/pipeline-tiendas.ts padelzoom --no-post
 
       - name: Instalar Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: Scrape padeliberico
-        run: npx tsx scripts/pipeline-tiendas.ts padeliberico
+        run: npx tsx scripts/pipeline-tiendas.ts padeliberico --no-post
 
       - name: Scrape tennispoint
-        run: npx tsx scripts/pipeline-tiendas.ts tennispoint
+        run: npx tsx scripts/pipeline-tiendas.ts tennispoint --no-post
 
       - name: Scrape romasport
-        run: npx tsx scripts/pipeline-tiendas.ts romasport
+        run: npx tsx scripts/pipeline-tiendas.ts romasport --no-post
 
-      - name: Recalcular precio_reference
-        run: node scripts/prices/recalculate-all-references.js
+      - name: Post-pipeline (match + recalcular precios)
+        run: npx tsx scripts/post-pipeline.ts
