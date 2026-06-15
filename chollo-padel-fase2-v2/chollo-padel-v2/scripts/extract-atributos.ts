@@ -289,7 +289,7 @@ export const VARIANTES: string[] = [
 const JUGADORES = [
   // ── FIP Top 50 Men (ranking junio 2026) ──────────────────────────────────
   // #1-2
-  'arturo coello',          // ⚠️  NO 'coello' solo — es nombre del modelo Head Coello Pro
+  'arturo coello', 'ale coello', 'alejandro coello', 'coello',  // Head Coello Pro/Motion/Junior (DB no usa 'coello' como atributo)
   'agustin tapia', 'agustín tapia', 'agustin', 'agustín', 'tapia',
   // #3-4
   'ale galan', 'ale galán', 'alejandro galan', 'alejandro galán', 'galan', 'galán',
@@ -302,7 +302,7 @@ const JUGADORES = [
   'coki nieto', 'jorge nieto',
   'paquito navarro', 'francisco navarro',
   // #11-20
-  'jon sanz',
+  'jon sanz', 'j sanz',
   'martin di nenno', 'martín di nenno', 'di nenno',
   'francisco guerrero', 'guerrero',
   'jeronimo gonzalez', 'jerónimo gonzalez', 'momo gonzalez', 'momo gonzález',
@@ -477,6 +477,8 @@ export function extraerAtributos(titulo: string): Atributos {
     .replace(/^pala/gi, '')
     .trim()
 
+  // Normalizar 'Carb-on' (Lok) → 'carbon' antes de separar por guión
+  titulo = titulo.replace(/carb-on/gi, 'carbon')
   // Normalizar guiones especiales (em dash –, en dash –) a espacio
   titulo = titulo.replace(/[\u2013\u2014]/g, ' ')
   // Pre-procesar "+": "Raptor+" → "Raptor PLUS", "Astrum +" → "Astrum PLUS"
@@ -578,7 +580,7 @@ export function extraerAtributos(titulo: string): Atributos {
   const VARIANTES_ALIAS: Record<string, string> = {
     'mujer': 'WOMAN', 'mujeres': 'WOMAN', 'women': 'WOMAN',
     'junior': 'JUNIOR', 'jr': 'JUNIOR',
-    'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD',
+    'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD+',
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
     // Países Copa del Mundo
