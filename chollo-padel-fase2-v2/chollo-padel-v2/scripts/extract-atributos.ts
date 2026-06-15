@@ -141,8 +141,8 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
   ],
   'Babolat': [
     'technical viper', 'counter viper', 'air viper', 'viper',
-    'technical veron', 'counter veron', 'air veron', 'veron',
-    'technical vertuo', 'counter vertuo', 'air vertuo', 'vertuo',
+    'technical veron', 'air veron', 'veron',
+    'vertuo',
     'xplo', 'dyna energy', 'stima vita', 'air origin', 'alioth', 'lamborghini',
   ],
   'Wilson': [
@@ -271,7 +271,7 @@ export const VARIANTES: string[] = [
   'hrd plus',  // Hrd + con espacio → alias de HRD+
   // Países (Copa del Mundo Adidas)
   'espana', 'alemania', 'argentina', 'belgica', 'colombia', 'francia',
-  'inglaterra', 'italia', 'mexico', 'paises bajos', 'estados unidos', 'multination',
+  'inglaterra', 'italia', 'mexico', 'paises bajos', 'estados unidos', 'holanda', 'eeuu', 'multination',
   // Numeradas (generaciones Bullpadel)
   '18k', '12k',
   // Materiales
@@ -295,7 +295,7 @@ const JUGADORES = [
   'ale galan', 'ale galán', 'alejandro galan', 'alejandro galán', 'galan', 'galán',
   'federico chingotto', 'chingotto',
   // #5-10
-  'juan lebron', 'juan lebrón', 'lebron',
+  'juan lebron', 'juan lebrón', 'j lebron', 'j lebrón', 'lebron',
   'leo augsburger', 'leandro augsburger', 'augsburger',
   'franco stupaczuk', 'stupaczuk', 'stupa',
   'miguel yanguas', 'mike yanguas', 'yanguas',
@@ -477,11 +477,10 @@ export function extraerAtributos(titulo: string): Atributos {
     .replace(/^pala/gi, '')
     .trim()
 
-  // Pre-procesar: "+" suelto (precedido de espacio o al final) → "PLUS"
-  // Ej: "STARVIE ASTRUM +" → "STARVIE ASTRUM PLUS"
-  // "HRD+" se deja intacto porque no tiene espacio antes del +.
   // Normalizar guiones especiales (em dash –, en dash –) a espacio
   titulo = titulo.replace(/[\u2013\u2014]/g, ' ')
+  // Pre-procesar "+": "Raptor+" → "Raptor PLUS", "Astrum +" → "Astrum PLUS"
+  titulo = titulo.replace(/(\w)\+/g, '$1 PLUS')  // + pegado a letra (sin espacio)
   titulo = titulo.replace(/(?<=\S) \+(?=\s|$)/g, ' PLUS').replace(/(?<=\s)\+(?=\s|$)/g, 'PLUS')
 
   // Normalizar versiones de año tipo "2.6" → "2026" (Babolat usa X.Y como código de año)
@@ -586,7 +585,7 @@ export function extraerAtributos(titulo: string): Atributos {
     'espana': 'España', 'alemania': 'Alemania', 'argentina': 'Argentina',
     'belgica': 'Bélgica', 'colombia': 'Colombia', 'francia': 'Francia',
     'inglaterra': 'Inglaterra', 'italia': 'Italia', 'mexico': 'Mexico',
-    'paises bajos': 'Netherlands', 'estados unidos': 'USA', 'multination': 'Multination',
+    'paises bajos': 'Netherlands', 'estados unidos': 'USA', 'holanda': 'Netherlands', 'eeuu': 'USA', 'multination': 'Multination',
   }
 
   // 6. VARIANTE — buscar en el texto restante (más específico primero)

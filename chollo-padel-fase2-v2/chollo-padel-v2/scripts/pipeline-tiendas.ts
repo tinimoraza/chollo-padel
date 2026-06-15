@@ -158,6 +158,12 @@ const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'amarilla': 'yellow', 'amarillo': 'yellow',
   'azul': 'blue',
   'gris': 'grey',
+  // Abreviaturas de color en inglés (tiendas usan Bk/Bl/Rd/Wh/Yl)
+  'bk': 'black',
+  'bl': 'blue',
+  'rd': 'red',
+  'wh': 'white',
+  'yl': 'yellow',
 }
 
 function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
@@ -169,7 +175,9 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
     // no tiene modelo (porque el 3.x fue convertido a año) → compatible; el año discrimina.
     return /^[\d.]+$/.test(modeloCat.trim())
   }
-  if (!modeloCat) return false
+  // Si el catálogo no tiene modelo pero el extractor solo extrajo un número de versión
+  // (ej "3.5" de "Metalbone 3.5 2026") → compatible; el año discrimina.
+  if (!modeloCat) return /^[\d.]+$/.test(modeloExtraido.trim())
   const tokenizar = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
@@ -394,6 +402,10 @@ async function main() {
       continue
     }
     if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m))) {
+      if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
+      continue
+    }
+    if (tituloLow.includes('exclusiva padelproshop') || tituloLow.includes('(exclusiva padelproshop)')) {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
