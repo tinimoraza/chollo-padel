@@ -350,7 +350,7 @@ async function reportarPendientes() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-async function main() {
+export async function main() {
   console.log(`\n${'─'.repeat(60)}`)
   console.log(`  post-pipeline.ts${DRY_RUN ? '  [DRY RUN]' : ''}`)
   console.log(`${'─'.repeat(60)}\n`)
@@ -398,7 +398,11 @@ async function main() {
   console.log(`${'─'.repeat(60)}\n`)
 }
 
-main().catch(err => {
-  console.error('\n💥 Error fatal:', err)
-  process.exit(1)
-})
+// Solo ejecutar si se llama directamente (no cuando se importa)
+if (process.argv[1]?.endsWith('post-pipeline.ts')) {
+  main().catch(err => {
+    console.error('
+💥 Error fatal:', err)
+    process.exit(1)
+  })
+}

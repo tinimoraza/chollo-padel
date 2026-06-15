@@ -18,6 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, normalizar, cargarLineasDesdeBD } from './extract-atributos'
+import { main as postPipeline } from './post-pipeline.ts'
 
 // Interfaz explícita para evitar que ts-node falle con ReturnType<> sobre props con ñ
 interface AtributosExtraidos {
@@ -440,6 +441,12 @@ async function main() {
   if (!DRY_RUN) {
     const { data: limpiadas } = await supabase.rpc('cleanup_candidatas_matched')
     if (limpiadas) console.log(`  🧹 Limpiadas ${limpiadas} candidatas ya resueltas`)
+  }
+
+  // Post-pipeline automatico
+  if (!DRY_RUN) {
+    console.log('\n── Post-pipeline ──────────────────────────────────────')
+    await postPipeline()
   }
 
   console.log(`

@@ -101,7 +101,7 @@ export const MARCAS: Record<string, string> = {
   // Harlem
   'harlem': 'Harlem',
   // J-Hayber
-  'j-hayber': 'J-Hayber', 'j.hayber': 'J-Hayber', 'j hayber': 'J-Hayber',
+  'j-hayber': 'J-Hayber', 'j.hayber': 'J-Hayber', 'j hayber': 'J-Hayber', 'jhayber': 'J-Hayber',
   // K-Swiss
   'k-swiss': 'K-Swiss', 'kswiss': 'K-Swiss', 'k swiss': 'K-Swiss',
   // Mystica
