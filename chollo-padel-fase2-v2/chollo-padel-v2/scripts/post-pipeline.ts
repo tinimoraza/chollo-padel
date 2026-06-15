@@ -388,21 +388,14 @@ export async function main() {
   // Resumen
   console.log(`\n${'─'.repeat(60)}`)
   console.log(`✅ False negatives resueltos: ${marcadas}`)
-  if (aliasResueltas > 0) console.log(`✅ Resueltas por alias:       ${aliasResueltas}`)
-  console.log(`✅ Palas nuevas insertadas:   ${insertadas}`)
   console.log(`✅ Precios recalculados:      ${actualizadas}`)
-  const restantes = (totalPendientes ?? 0) - marcadas - insertadas - aliasResueltas
-  if (restantes > 0) {
-    console.log(`⚠️  Pendientes sin resolver:   ${restantes}  (revisar a mano)`)
-  }
   console.log(`${'─'.repeat(60)}\n`)
 }
 
 // Solo ejecutar si se llama directamente (no cuando se importa)
 if (process.argv[1]?.endsWith('post-pipeline.ts')) {
   main().catch(err => {
-    console.error('
-💥 Error fatal:', err)
+    console.error('\n💥 Error fatal:', err)
     process.exit(1)
   })
 }

@@ -49,5 +49,8 @@ jobs:
       - name: Scrape tennispoint
         run: npx tsx scripts/pipeline-tiendas.ts tennispoint
 
+      - name: Scrape romasport
+        run: npx tsx scripts/pipeline-tiendas.ts romasport
+
       - name: Recalcular precio_reference
         run: node scripts/prices/recalculate-all-references.js
