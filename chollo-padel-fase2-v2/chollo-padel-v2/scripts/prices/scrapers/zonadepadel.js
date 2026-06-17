@@ -50,6 +50,51 @@ async function fetchPage(url) {
   return res.text()
 }
 
+const TIENE_AÑO_RE = /\b(19|20)\d{2}\b/
+
+// Algunos listados de zonadepadel mantienen el título "histórico" de un producto
+// sin año (ej. "Head Speed Pro") aunque la ficha tenga varias ediciones por año
+// en el catálogo (2023, 2025...). Sin año, pipeline-tiendas.ts no puede desambiguar
+// y termina emparejando con la edición más reciente (falso positivo, ver caso real:
+// "Head Speed Pro" → matcheó con la edición 2025 cuando la tienda vendía la 2023).
+// Para evitarlo, si el título no trae año, vamos a la ficha de producto y lo extraemos
+// de ahí (sale en el <title>, en la tabla de características "Año" y en el cuerpo).
+async function extraerAñoDeFicha($) {
+  const titleText = $('title').text()
+  const mTitle = titleText.match(/\b(20\d{2})\b/)
+  if (mTitle) return mTitle[1]
+
+  let año = null
+  $('dt').each((_, dt) => {
+    if (año) return
+    const label = $(dt).text().trim().toLowerCase()
+    if (label === 'año' || label === 'ano') {
+      const val = $(dt).next('dd').text().trim()
+      const m = val.match(/(20\d{2})/)
+      if (m) año = m[1]
+    }
+  })
+  if (año) return año
+
+  const bodyText = $('body').text()
+  const mBody = bodyText.match(/a[nñ]o:?\s*(20\d{2})/i)
+  return mBody ? mBody[1] : null
+}
+
+async function completarAñoSiFalta(load, products) {
+  for (const p of products) {
+    if (TIENE_AÑO_RE.test(p.title)) continue
+    try {
+      const html = await fetchPage(p.url)
+      const año = await extraerAñoDeFicha(load(html))
+      if (año) p.title = `${p.title} ${año}`
+    } catch (e) {
+      console.error(`[zonadepadel] No se pudo obtener año de ${p.url}:`, e.message)
+    }
+    await sleep(DELAY_MS)
+  }
+}
+
 async function scrapeBrandCat(load, catPath) {
   const products = []
   let page = 1
@@ -131,6 +176,13 @@ async function scrape() {
   }
 
   console.log(`[zonadepadel] Total palas únicas: ${allProducts.length}`)
+
+  const sinAño = allProducts.filter(p => !TIENE_AÑO_RE.test(p.title))
+  if (sinAño.length > 0) {
+    console.log(`[zonadepadel] Completando año en ficha para ${sinAño.length} productos sin año en el título…`)
+    await completarAñoSiFalta(load, sinAño)
+  }
+
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,
