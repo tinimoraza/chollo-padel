@@ -90,8 +90,15 @@ function añoMencionado(s: string): number | null {
   return m ? parseInt(m[1]) : null
 }
 
+function normalizar(s: string): string {
+  // Sin esto, "ÉLITE" rompía la detección de límite de palabra de \b: la "É" no
+  // cuenta como carácter de palabra para el regex, así que "\blite\b" matcheaba
+  // la "LITE" suelta dentro de "É-LITE" como si fuera una palabra aparte.
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
 function tieneLite(s: string): boolean {
-  return /\blite\b/i.test(s)
+  return /\blite\b/i.test(normalizar(s))
 }
 
 async function main() {
@@ -132,15 +139,26 @@ async function main() {
     }
 
     // 4. Marca mencionada distinta a la de la pala
-    const marcaDistinta = MARCAS.find(m => m !== p.marca && marcaRegex(m).test(texto))
+    // Si el texto también menciona la marca CORRECTA de la pala, no es una
+    // contaminación cruzada de marca: es una palabra de marca (ej. "Legend")
+    // usada como nombre de línea/modelo dentro de otra marca ya correcta
+    // (ej. "Bullpadel Flow Legend", "Adidas Adipower Legend"). Sin este check,
+    // "Legend" como marca de catálogo generaba decenas de falsos positivos.
+    const marcaCorrectaPresente = marcaRegex(p.marca).test(texto)
+    const marcaDistinta = !marcaCorrectaPresente
+      ? MARCAS.find(m => m !== p.marca && marcaRegex(m).test(texto))
+      : undefined
     if (marcaDistinta) {
       hallazgos.push({ tipo: `marca mencionada=${marcaDistinta} pala.marca=${p.marca}`, alias: a })
       continue
     }
 
     // 5. Año mencionado distinto al de la pala
+    // Off-by-one (2025 vs 2026) es ruido habitual: tiendas/blogs etiquetan el
+    // "año de temporada" de forma distinta al año de catálogo. Solo flagueamos
+    // diferencias de 2+ años, que son mucho más probables de ser un bug real.
     const añoAlias = añoMencionado(texto)
-    if (añoAlias && p.año && añoAlias !== p.año) {
+    if (añoAlias && p.año && Math.abs(añoAlias - p.año) >= 2) {
       hallazgos.push({ tipo: `año: alias=${añoAlias} pala.año=${p.año}`, alias: a })
       continue
     }

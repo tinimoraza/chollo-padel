@@ -170,7 +170,10 @@ const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'yl': 'yellow',
 }
 
-function modeloCompatible(modeloCat: string | null, modeloExtraido: string | null): boolean {
+function modeloCompatible(
+  modeloCat: string | null, modeloExtraido: string | null,
+  añoCat: number | null = null, añoExtraido: number | null = null,
+): boolean {
   // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
   // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
   if (!modeloExtraido) {
@@ -194,18 +197,24 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
+  // Un token extra puramente numérico (ej. "32" fusionado de "3.2") solo es seguro
+  // de ignorar si el año discrimina realmente en alguno de los dos lados. Si NO hay
+  // año conocido en ninguno de los dos, ese número es la ÚNICA pista de versión que
+  // tenemos y SÍ debe discriminar — caso real: tienda "Pala adidas Metalbone Youth 3.4"
+  // (sin año) matcheó contra catálogo "Youth 3.2" porque el "2" sobrante no contaba
+  // como discriminante y no había año de ningún lado para frenarlo.
+  const esExtraInseguro = (t: string) =>
+    MODELO_DISCRIMINANTES.has(t) || (/^[0-9]+$/.test(t) && añoCat == null && añoExtraido == null)
   // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
   // Solo permitido si las palabras extra del catálogo no son discriminantes.
-  // No contamos tokens numéricos puros como discriminantes: son números de generación
-  // (ej "3"/"4" de "3.4") que el extractor convierte a año — el año ya discrimina.
   if (tExt.every(t => tokenIn(t, tCat))) {
     const extra = tCat.filter(t => !tokenIn(t, tExt))
-    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
+    return !extra.some(esExtraInseguro)
   }
   // Caso 2: tienda añade palabras (catálogo subset tienda)
   if (tCat.every(t => tokenIn(t, tExt))) {
     const extra = tExt.filter(t => !tokenIn(t, tCat))
-    return !extra.some(t => MODELO_DISCRIMINANTES.has(t))
+    return !extra.some(esExtraInseguro)
   }
   return false
 }
@@ -248,7 +257,7 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
     const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
     // Modelo compatible si los tokens del extraído son subconjunto del catálogo o viceversa.
     // Permite que "GENIUS 12K" (tienda) matchee con "Genius 12K Alum" (catálogo).
-    const modeloOk = modeloCompatible(p.modelo, attrs.modelo)
+    const modeloOk = modeloCompatible(p.modelo, attrs.modelo, p.año, attrs.año)
     // Caso cruzado: extractor clasifica algo como variante pero el catálogo lo tiene como modelo
     // (ej: Bullpadel Indiga CTRL 2026 → attrs.variante="CTRL" pero DB tiene modelo="CTR", variante=null)
     const cruzado = !attrs.modelo && !!attrs.variante && !p.variante
