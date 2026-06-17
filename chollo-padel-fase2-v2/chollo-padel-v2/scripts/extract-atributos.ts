@@ -491,6 +491,12 @@ export function extraerAtributos(titulo: string): Atributos {
   // 'Special Edition' → 'SE' para mapear contra modelos tipo 'V1 SE' en catálogo
   titulo = titulo.replace(/\bspecial\s+edition\b/gi, 'SE')
 
+  // Quitar sufijos numéricos tipo SKU (≥5 dígitos, ej: "13894", "228272") que algunas
+  // tiendas (Softee, Head…) añaden al final del título y que contaminan la extracción
+  // del modelo. Los años (4 dígitos, 2020-2030) y los tokens de peso ("12K", "18K") no
+  // se ven afectados porque tienen como máximo 4 ó 2 dígitos respectivamente.
+  titulo = titulo.replace(/\b\d{5,}\b/g, '').replace(/\s+/g, ' ').trim()
+
   // Generaciones Adidas (y otras marcas): 3.1→2022, 3.2→2023, 3.3→2024, 3.4→2025
   // Se convierte a año para que el filtro de año resuelva la ambigüedad en el matching.
   // Solo se aplica si no hay ya un año de 4 dígitos en el título.

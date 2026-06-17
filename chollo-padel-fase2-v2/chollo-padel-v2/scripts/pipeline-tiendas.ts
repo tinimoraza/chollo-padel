@@ -97,6 +97,7 @@ const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
   'power': 'power', 'pwr': 'power',
   'xtrem': 'xtrem', 'xtreme': 'xtrem',
   'cmf': 'comfort',
+  'wpt': 'world padel tour', 'world padel tour': 'world padel tour',
 }
 
 function normalizarVariante(v: string | null): string | null {
@@ -131,6 +132,20 @@ const MODELO_DISCRIMINANTES = new Set([
              // contaminó aliases/price_snapshots de dos pala_id distintos (detectado
              // en BD, no reproducido aún en pipeline real, pero el hueco existía).
 ])
+
+// Marcas que no están (ni se van a dar de alta) en el catálogo `palas` y que generan
+// ruido constante en "Pendientes que requieren revisión manual" (estado sin_match,
+// marca_detectada=null). En vez de crear una candidata para que el Gestor las descarte
+// a mano cada vez, se descartan aquí directamente antes de insertarCandidata().
+// Revisar y quitar de esta lista si en el futuro se decide dar soporte a alguna.
+const MARCAS_EXCLUIDAS = [
+  'ares', 'eclypse', 'leyenda', 'orygen', 'wingpadel', 'pala set',
+]
+
+function tituloTieneMarcaExcluida(titulo: string): boolean {
+  const norm = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return MARCAS_EXCLUIDAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(norm))
+}
 
 // Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
 // del catálogo, o viceversa. Permite matchear "GENIUS 12K" con "Genius 12K Alum":
@@ -329,6 +344,7 @@ async function insertarCandidata(producto: {
   titulo: string; precio: number; url: string; tienda: string; imagen?: string | null
 }, motivo: 'sin_match' | 'ambiguo', attrs: AtributosExtraidos, candidatos?: { id: string }[]): Promise<boolean> {
   if (DRY_RUN) return true
+  if (tituloTieneMarcaExcluida(producto.titulo)) return false
 
   // "Borrador de pala" con todo lo extraído en el momento del scrap, para que
   // al promocionar la candidata se pueda crear la pala sin volver a investigar.
@@ -548,3 +564,4 @@ main().catch(err => {
   console.error('💥 Error fatal:', err)
   process.exit(1)
 })
+ 
