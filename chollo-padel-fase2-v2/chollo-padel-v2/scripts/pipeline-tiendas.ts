@@ -126,6 +126,10 @@ const MODELO_DISCRIMINANTES = new Set([
   'prisma',  // Varlion LW Prisma vs LW
   'pansy',   // Varlion Prisma Pansy vs Prisma
   'world',   // Lok Hype World vs Hype
+  'lite',    // Nox AT10 Genius 12K Alum Xtrem vs ...Xtrem LITE (variante más ligera,
+             // NO la misma pala) — sin esto, "lite" como extra no discriminaba y
+             // contaminó aliases/price_snapshots de dos pala_id distintos (detectado
+             // en BD, no reproducido aún en pipeline real, pero el hueco existía).
 ])
 
 // Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo

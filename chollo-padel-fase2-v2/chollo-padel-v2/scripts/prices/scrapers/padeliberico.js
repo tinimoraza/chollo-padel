@@ -38,11 +38,18 @@ async function extractProducts(page) {
         ? parseFloat(originalText.replace(/[^0-9,]/g, '').replace(',', '.'))
         : NaN
 
+      // Imagen — PrestaShop suele hacer lazy-load (data-src con la url real,
+      // "src" empieza siendo un placeholder base64/1x1). Descartamos "data:".
+      const imgEl  = article.querySelector('img')
+      const rawImg = imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
       return {
         title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url,
+        image,
       }
     }).filter(Boolean)
   })
@@ -132,6 +139,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

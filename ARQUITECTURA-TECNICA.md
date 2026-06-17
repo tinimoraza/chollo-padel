@@ -1,5 +1,5 @@
 # HuntPadel — Arquitectura Técnica
-*Actualizado: 2026-06-09*
+*Actualizado: 2026-06-16*
 
 ---
 
@@ -84,6 +84,11 @@ Salida:
 - Año corto `"25"` al final del título → `2025`
 - Head 2026: líneas renombradas a `"Coello"` (Motion/Pro/Team son variantes)
 - Adidas Cross It Team: `linea="Cross It"`, `modelo="Team"` (NO es una línea propia)
+- `"Carb-on"` (marca Lok) → preprocesado a `"carbon"` antes de separar por guión
+- JOMA `"HRD"` → alias de `"HRD+"` (verificado: la BD solo almacena `HRD+`)
+- JUGADORES incluye `'coello', 'ale coello', 'alejandro coello'` (Head Coello Pro/Motion/Junior
+  no almacena "coello" como atributo, es puramente nombre de jugador en el título de tienda)
+  y `'j sanz'` además de `'jon sanz'`
 
 ---
 
@@ -123,6 +128,22 @@ Decide si el modelo del catálogo es compatible con el modelo extraído de la ti
 **MODELO_DISCRIMINANTES** (si aparecen en el catálogo pero no en lo extraído → NO match):
 `ctrl, control, team, hybrid, air, carbon, light, plus, elite, power, soft, iron, speed, hard, free`
 
+**MODELO_TOKEN_ALIAS** — normaliza variantes de escritura de un mismo token antes de comparar
+(colores en español/inglés y abreviaturas de 2 letras que usan algunas tiendas en el título):
+`mtw→multiweight, negra/negro→black, blanca/blanco→white, roja/rojo→red, verde→green,
+amarilla/amarillo→yellow, azul→blue, gris→grey, bk→black, bl→blue, rd→red, wh→white, yl→yellow`
+
+### Filtros de exclusión
+
+Antes de intentar matchear, el pipeline descarta productos que no son palas reales independientes:
+
+- **Kits**: título contiene ` kit` (ej. "Pala Wilson Optix Padel Kit")
+- **Packs**: título contiene ` pack` (ej. "pack con mochila Pala Siux Electra Pro SE Black 2026")
+- **Productos de test**: título contiene `test` como palabra (ej. "Pala de TEST Oxdog Hyper Pro 2.0 2025")
+- **Exclusiva padelproshop**: título contiene "exclusiva padelproshop" / "(exclusiva padelproshop)"
+
+En modo `DRY_RUN` cada exclusión se loguea como `🚫 [excluido]` / `🚫 [excluido kit/pack/test]`.
+
 ### Regla sin-año
 
 Si el título no trae año y hay varios candidatos que solo difieren en año → se elige el más reciente. Solo se activa si todos los candidatos comparten marca+linea+modelo+variante (diferencia ÚNICA en año).
@@ -133,11 +154,32 @@ Si una candidata ya tiene `estado='matched'`, el pipeline NO la vuelve a escribi
 
 ### Tiendas activas
 
-| Tienda | Archivo | Uso |
+Cualquier archivo `.js` en `scripts/prices/scrapers/` es una "tienda" lanzable: `pipeline-tiendas.ts`
+hace `require(`./prices/scrapers/${tienda}.js`)` dinámicamente, sin lista hardcodeada. Esto significa
+que **todas** las tiendas (en producción o no) pasan por el mismo pipeline de matching — no existe
+un camino alternativo de fuzzy-matching para las tiendas nuevas. El antiguo `scripts/prices/pipeline.js`
++ `fuzzy-matcher.js` (matching difuso con umbral de similitud) es código legacy que ya no se ejecuta
+desde el flujo actual (ni desde el GitHub Action ni desde PipelineLauncher); algunos scrapers conservan
+comentarios de cabecera obsoletos que referencian ese pipeline antiguo, pero no afecta al runtime.
+
+**En producción (GitHub Action, `pipeline-tiendas-temp.yml`, 2x/día):**
+
+| Tienda | Archivo | Notas |
 |---|---|---|
-| padelzoom | padelzoom.js | Catálogo (fuente de specs) |
-| padelful | padelful.js | Catálogo (enriquecimiento specs) |
+| padelmarket | padelmarket.js | |
 | padelnuestro | padelnuestro.js | Precios reales de mercado |
+| padelzoom | padelzoom.js | Catálogo (fuente de specs) |
+| allforpadel | allforpadel.js | Requiere Playwright |
+| padeliberico | padeliberico.js | Requiere Playwright |
+| tennispoint | tennispoint.js | fetch a Shopify JSON API |
+| romasport | romasport.js | Requiere Playwright |
+| tiendapadel5 | tiendapadel5.js | |
+| padelproshop | padelproshop.js | fetch a Shopify Section API |
+
+**Disponibles pero no en producción** (lanzables manualmente vía PipelineLauncher o CLI):
+amazon, bullpadel, decathlon, miravia, misterpadel, nox, ofertasdepadel, padelcoronado, padelkiwi,
+padelshop, padelspain, padelvice, pdhsports, siux, smashinn, starvie, streetpadel, tiendapadelpoint,
+time2padel, vibora, zonadepadel. (decathlon está bloqueada por Cloudflare, ver histórico de sesiones.)
 
 ---
 
@@ -201,6 +243,29 @@ Herramienta de revisión manual de candidatas ambiguas o sin match.
 **Fixes aplicados (2026-06-09):**
 - El filtro "Pendientes" ya no oculta candidatas con `auto_promovida=true` + `estado='pendiente'` — el override fue eliminado, ahora `estado` manda siempre
 - `↻ Recargar` solo recarga candidatas (no las ~1800+ palas) → recarga rápida
+
+---
+
+## PipelineLauncher (herramienta desktop)
+
+**Archivo fuente:** `C:\chollo-padel-extension\pipeline_launcher.py`
+**Ejecutable:** `C:\chollo-padel-extension\dist\PipelineLauncher.exe`
+**Recompilar:** `cd C:\chollo-padel-extension && python -m PyInstaller --onefile --windowed --name PipelineLauncher pipeline_launcher.py`
+
+GUI (Python/CustomTkinter, mismo estilo que GestorCandidatas) para lanzar `pipeline-tiendas.ts`
+sin usar la terminal.
+
+**Selección de tiendas:** descubre dinámicamente todas las `.js` en `scripts/prices/scrapers/`
+(no solo las 9 en producción) y marca con 🟢 las que ya están en el GitHub Action y con ⚪ las que
+no. Botón "Solo nuevas" selecciona de golpe solo las que no están en producción. Permite añadir a
+mano cualquier nombre de tienda que no aparezca en el listado.
+
+**Modos:** dry-run (no escribe en BD) o real; con/sin post-pipeline al final. Ejecución en serie,
+una tienda detrás de otra (con botón para detener tras la tienda en curso).
+
+**Salida:** progreso en vivo + resumen por tienda (alias/atributos/ambiguos/sin_match/total) y un
+log JSON en `C:\chollo-padel-extension\logs\pipeline_run_<timestamp>.json` con el detalle completo
+de cada ejecución (útil para pasárselo a Claude y verificar resultados).
 
 ---
 
@@ -278,13 +343,18 @@ En la BD: `linea='Aero Star'`, `modelo=null`. Las entradas antiguas con `linea='
 
 ---
 
-## Estado actual (2026-06-09)
+## Estado actual (2026-06-16)
 
 - ✅ Catálogo: ~1800 palas en `palas`
-- ✅ Pipeline de tiendas: funcional con matching por atributos
+- ✅ Pipeline de tiendas: funcional con matching por atributos (mismo motor para TODAS las tiendas,
+  en producción o no — ya no hay fuzzy-matching al 100% en el flujo activo)
+- ✅ 9 tiendas en producción vía GitHub Action (`pipeline-tiendas-temp.yml`, 2x/día); ~21 tiendas
+  más con scraper listo pero sin enchufar al Action, lanzables manualmente
 - ✅ post-pipeline: auto-resolución de false negatives y nuevas palas
 - ✅ GestorCandidatas: funcional, filtros corregidos, recarga rápida
+- ✅ PipelineLauncher: GUI para lanzar cualquier tienda (producción o no), serie, con log JSON
+- ✅ Filtros de exclusión: kit/pack/test/exclusiva padelproshop
 - ✅ Deduplicación: herramienta visual + CLI operativos
-- ✅ `palas_candidatas`: 0 pendientes, 0 ambiguos (limpiado 2026-06-09)
 - ⏸ Segunda mano (Wallapop/Vinted): scraper activo pero matching pausado
 - ⏸ TOP Oportunidades / Chollos: pendiente de activar cuando el matching sea estable
+- ⏳ Plan: seguir añadiendo tiendas nuevas a producción de forma agresiva + seguir afinando el matching

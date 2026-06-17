@@ -57,11 +57,14 @@ async function scrape() {
         .replace(/[,;]\s*$/, '')  // quitar comas/puntos colgantes
         .trim()
       const title = p.vendor ? `${p.vendor} ${cleanTitle}` : cleanTitle
+      // Shopify devuelve la imagen en p.image.src (o p.images[0].src como fallback)
+      const image = p.image?.src ?? p.images?.[0]?.src ?? null
       allProducts.push({
         title,
         price,
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url,
+        image,
       })
     }
 
@@ -78,6 +81,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

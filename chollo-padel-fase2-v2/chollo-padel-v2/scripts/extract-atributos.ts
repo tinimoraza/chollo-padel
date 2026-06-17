@@ -37,7 +37,7 @@ export const MARCAS: Record<string, string> = {
   // Bullpadel
   'bullpadel': 'Bullpadel', 'bull padel': 'Bullpadel', 'bull-padel': 'Bullpadel',
   // Nox
-  'nox': 'Nox', 'nox padel': 'Nox',
+  'nox': 'Nox', 'nox padel': 'Nox', 'ea10': 'Nox',
   // Adidas
   'adidas': 'Adidas', 'adidas padel': 'Adidas', 'adipower': 'Adidas',
   // Head
