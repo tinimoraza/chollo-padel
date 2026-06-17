@@ -17,6 +17,13 @@ const TIENDA_LABEL: Record<string, string> = {
   tennispoint:   'Tennis Point',
 }
 
+function formatModelo(nombre: string, marca: string): string {
+  if (!nombre) return nombre
+  const marcaNorm = marca.trim().toLowerCase()
+  const sinMarca = nombre.replace(new RegExp(`^${marcaNorm}\\s+`, 'i'), '')
+  return sinMarca || nombre
+}
+
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (diff < 60)  return `hace ${diff} min`
@@ -143,7 +150,7 @@ export default function ChollosPage() {
                 {/* Imagen */}
                 <div style={s.imgWrap}>
                   {c.imagen_url
-                    ? <img src={c.imagen_url} alt={c.modelo} style={s.img} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    ? <img src={c.imagen_url} alt={c.nombre} style={s.img} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     : <div style={s.imgPlaceholder}>🏓</div>
                   }
                 </div>
@@ -151,7 +158,7 @@ export default function ChollosPage() {
                 {/* Info pala */}
                 <div style={s.info}>
                   <p style={s.marca}>{c.marca}</p>
-                  <p style={s.modelo}>{c.modelo}</p>
+                  <p style={s.modelo}>{formatModelo(c.nombre, c.marca)}</p>
 
                   {/* Precios */}
                   <div style={s.precios}>

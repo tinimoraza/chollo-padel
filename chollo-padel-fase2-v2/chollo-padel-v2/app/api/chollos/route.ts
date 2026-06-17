@@ -12,6 +12,7 @@ export const fetchCache = 'force-no-store'
 export interface CholloTienda {
   pala_id:           string
   modelo:            string
+  nombre:            string
   marca:             string
   ano:               number
   slug:              string
@@ -190,6 +191,7 @@ export async function GET() {
     chollos.push({
       pala_id:           snap.pala_id,
       modelo:            pala.modelo,
+      nombre:            pala.nombre ?? pala.modelo,
       marca:             pala.marca,
       ano:               palaAno,
       slug:              pala.slug,
