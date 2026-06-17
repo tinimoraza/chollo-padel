@@ -141,7 +141,7 @@ const MODELO_DISCRIMINANTES = new Set([
 // Nota: "wing[ -]?padel" porque las tiendas escriben tanto "WINGPADEL" (una palabra)
 // como "WING PADEL" / "WING-PADEL" (separado) seg\u00fan el producto.
 const MARCAS_EXCLUIDAS = [
-  'ares', 'eclypse', 'leyenda', 'orygen', 'wing[ -]?padel', 'pala set', 'kugan',
+  'ares', 'eclypse', 'leyenda', 'orygen', 'wing[ -]?padel', 'pala set', 'kugan', 'dreampadel',
 ]
 
 function tituloTieneMarcaExcluida(titulo: string): boolean {

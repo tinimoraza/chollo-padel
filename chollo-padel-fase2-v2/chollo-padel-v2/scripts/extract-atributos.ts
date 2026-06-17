@@ -269,9 +269,12 @@ export const VARIANTES: string[] = [
   // Género
   'woman', 'women', 'mujer', 'junior', 'jr',
   'hrd plus',  // Hrd + con espacio → alias de HRD+
-  // Países (Copa del Mundo Adidas)
+  // Países (Copa del Mundo Adidas) — formas en español
   'espana', 'alemania', 'argentina', 'belgica', 'colombia', 'francia',
   'inglaterra', 'italia', 'mexico', 'paises bajos', 'estados unidos', 'holanda', 'eeuu', 'multination',
+  // Países — formas en inglés (algunas tiendas, ej. zonadepadel, listan el título
+  // original en inglés: "World Cup Spain 2026", "World Cup England 2026"...)
+  'spain', 'germany', 'belgium', 'france', 'england', 'italy', 'netherlands', 'usa',
   // Numeradas (generaciones Bullpadel)
   '18k', '12k',
   // Materiales
@@ -593,11 +596,15 @@ export function extraerAtributos(titulo: string): Atributos {
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
     'wpt': 'WORLD PADEL TOUR', 'world padel tour': 'WORLD PADEL TOUR',
-    // Países Copa del Mundo
+    // Países Copa del Mundo — formas en español
     'espana': 'España', 'alemania': 'Alemania', 'argentina': 'Argentina',
     'belgica': 'Bélgica', 'colombia': 'Colombia', 'francia': 'Francia',
     'inglaterra': 'Inglaterra', 'italia': 'Italia', 'mexico': 'Mexico',
     'paises bajos': 'Netherlands', 'estados unidos': 'USA', 'holanda': 'Netherlands', 'eeuu': 'USA', 'multination': 'Multination',
+    // Países Copa del Mundo — formas en inglés → mismo canónico que el catálogo
+    'spain': 'España', 'germany': 'Alemania', 'belgium': 'Bélgica',
+    'france': 'Francia', 'england': 'Inglaterra', 'italy': 'Italia',
+    'netherlands': 'Netherlands', 'usa': 'USA',
   }
 
   // 6. VARIANTE — buscar en el texto restante (más específico primero)
