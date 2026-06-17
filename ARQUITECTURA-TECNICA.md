@@ -221,7 +221,9 @@ node scripts/fix-duplicados.js          # herramienta visual en http://localhost
 npx tsx --env-file=.env.local scripts/detectar-duplicados.ts --sql
 
 # 4. Falsos positivos (matching tienda↔catálogo cruzado: versión, peso, lite, marca, año)
-node scripts/fix-falsos-positivos.js    # herramienta visual en http://localhost:4547
+#    Pestaña "⚠️ Falsos Positivos" en GestorCandidatas.exe — detecta y permite
+#    Borrar alias / Repuntar a la pala correcta / Ignorar (se persiste en BD,
+#    tabla aliases_fp_ignorados, para no volver a aparecer)
 # o solo lectura, sin actuar (corre también semanalmente vía GitHub Action "Falsos Positivos"):
 npx tsx --env-file=.env.local scripts/detectar-falsos-positivos.ts
 ```
