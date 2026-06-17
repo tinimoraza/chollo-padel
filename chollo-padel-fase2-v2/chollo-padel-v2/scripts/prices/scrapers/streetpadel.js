@@ -25,7 +25,11 @@ async function fetchPage(pageNum) {
     },
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
+  // La web no manda charset en las cabeceras pero el HTML va en Latin-1 (ISO-8859-1),
+  // no UTF-8. res.text() asume UTF-8 y destroza Ñ/Á/Í/Ó/É → "�" (rompe el matching
+  // de nombres de jugador y modelos con tildes). Decodificamos explícitamente como Latin-1.
+  const buf = Buffer.from(await res.arrayBuffer())
+  return new TextDecoder('iso-8859-1').decode(buf)
 }
 
 async function scrape() {
