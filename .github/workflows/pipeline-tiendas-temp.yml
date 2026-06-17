@@ -70,5 +70,8 @@ jobs:
       - name: Scrape padelvice
         run: npx tsx scripts/pipeline-tiendas.ts padelvice --no-post
 
+      - name: Scrape padelcoronado
+        run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
+
       - name: Post-pipeline (match + recalcular precios)
         run: npx tsx scripts/post-pipeline.ts

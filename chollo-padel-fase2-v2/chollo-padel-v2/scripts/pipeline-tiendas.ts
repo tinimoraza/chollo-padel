@@ -179,7 +179,14 @@ function modeloCompatible(modeloCat: string | null, modeloExtraido: string | nul
   // (ej "3.5" de "Metalbone 3.5 2026") → compatible; el año discrimina.
   if (!modeloCat) return /^[\d.]+$/.test(modeloExtraido.trim())
   const tokenizar = (s: string) =>
-    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      // Fusionar versiones "X.Y" en un solo token ANTES de partir por puntuaci\u00f3n.
+      // Sin esto, "3.3" \u2192 tokens ['3','3'] y "3.0" \u2192 ['3','0']: el '0'/'3' suelto
+      // no est\u00e1 en MODELO_DISCRIMINANTES (solo tiene palabras) y el algoritmo los
+      // trataba como compatibles por compartir el '3' \u2014 falso positivo real:
+      // "Adidas Adipower CTRL 3.0" (streetpadel) matche\u00f3 con "Adidas Adipower 3.3 CTRL".
+      .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
+      .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
   const tCat = tokenizar(modeloCat)
   const tExt = tokenizar(modeloExtraido)
