@@ -277,9 +277,12 @@ export const VARIANTES: string[] = [
   // Materiales
   'carbon', 'alum', 'aluminium',
   // Series especiales (solo nombres que SÍ aparecen como variante en el catálogo;
-  // "premier padel" y "wpt" se quitaron porque son nombres de circuitos/torneos,
-  // no atributos de producto, y nunca existirán como variante en `palas`)
-  'master final', 'world padel tour',
+  // "premier padel" se quitó porque es nombre de circuito/torneo, no atributo de
+  // producto, y nunca existirá como variante en `palas`.
+  // "wpt" SÍ se reincorpora: es la abreviatura que usan las tiendas (ej. "NOX EQUATION
+  // WPT ADVANCED SERIES 2022") para lo que en el catálogo está guardado como variante
+  // "WORLD PADEL TOUR" — sin esto, "wpt" queda suelto en el modelo y nunca matchea.
+  'master final', 'world padel tour', 'wpt',
   'gold edition', 'black edition', 'limited edition',
 ]
 
@@ -589,6 +592,7 @@ export function extraerAtributos(titulo: string): Atributos {
     'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD+',
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
+    'wpt': 'WORLD PADEL TOUR', 'world padel tour': 'WORLD PADEL TOUR',
     // Países Copa del Mundo
     'espana': 'España', 'alemania': 'Alemania', 'argentina': 'Argentina',
     'belgica': 'Bélgica', 'colombia': 'Colombia', 'francia': 'Francia',
