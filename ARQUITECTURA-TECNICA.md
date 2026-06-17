@@ -219,6 +219,11 @@ npx tsx --env-file=.env.local scripts/post-pipeline.ts
 node scripts/fix-duplicados.js          # herramienta visual en http://localhost:4546
 # o CLI:
 npx tsx --env-file=.env.local scripts/detectar-duplicados.ts --sql
+
+# 4. Falsos positivos (matching tienda↔catálogo cruzado: versión, peso, lite, marca, año)
+node scripts/fix-falsos-positivos.js    # herramienta visual en http://localhost:4547
+# o solo lectura, sin actuar (corre también semanalmente vía GitHub Action "Falsos Positivos"):
+npx tsx --env-file=.env.local scripts/detectar-falsos-positivos.ts
 ```
 
 **Frecuencia recomendada:** Una vez a la semana o al añadir nuevas palas manualmente.
