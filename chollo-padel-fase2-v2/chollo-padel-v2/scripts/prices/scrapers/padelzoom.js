@@ -70,6 +70,23 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
+// Reintenta una petición FacetWP ante timeouts/errores transitorios de red.
+// Sin esto, un solo timeout en la página 1 tiraba todo el script (exit 1)
+// aunque las páginas 2+ ya tenían su propio try/catch individual.
+async function fwpRequestRetry(page, attempts = 3) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await fwpRequest(page);
+    } catch (err) {
+      lastErr = err;
+      console.error(`[padelzoom] Intento ${i}/${attempts} falló en página ${page}: ${err.message}`);
+      if (i < attempts) await sleep(3000 * i);
+    }
+  }
+  throw lastErr;
+}
+
 // ── Petición FacetWP para una página ────────────────────────────────────────
 function fwpRequest(page) {
   return postJson(FACETWP_URL, {
@@ -129,8 +146,8 @@ function parseTemplate(html) {
 async function scrape() {
   console.log('[padelzoom] Iniciando scrape via FacetWP API…');
 
-  // Página 1: obtener total_pages
-  const first = await fwpRequest(1);
+  // Página 1: obtener total_pages (con reintentos — si esta falla, todo el job muere)
+  const first = await fwpRequestRetry(1);
   const totalPages = first?.settings?.pager?.total_pages ?? 1;
   const totalRows  = first?.settings?.pager?.total_rows  ?? '?';
   console.log(`[padelzoom] Total palas: ${totalRows} — Páginas: ${totalPages}`);
@@ -149,7 +166,7 @@ async function scrape() {
   for (let page = 2; page <= totalPages; page++) {
     await sleep(DELAY_MS);
     try {
-      const res      = await fwpRequest(page);
+      const res      = await fwpRequestRetry(page);
       const products = parseTemplate(res.template || '');
       console.log(`[padelzoom] Página ${page}/${totalPages}: ${products.length} palas`);
       for (const p of products) {
