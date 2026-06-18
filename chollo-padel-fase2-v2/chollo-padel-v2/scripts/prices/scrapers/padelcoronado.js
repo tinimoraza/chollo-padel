@@ -5,6 +5,23 @@ const SCROLL_PAUSE_MS = 4000
 const MAX_SCROLLS     = 100
 const STABLE_NEEDED   = 4
 
+// Reintenta un page.evaluate si la navegación (p.ej. reload tras aceptar cookies)
+// destruye el execution context a mitad de la llamada.
+async function safeEvaluate(page, fn, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await page.evaluate(fn)
+    } catch (err) {
+      const msg = err?.message || ''
+      if (!msg.includes('Execution context was destroyed') && !msg.includes('Target closed')) throw err
+      console.log(`[padelcoronado]   ⚠️  Contexto destruido por navegación, reintentando (${i + 1}/${attempts})…`)
+      await page.waitForLoadState('domcontentloaded').catch(() => {})
+      await page.waitForTimeout(1500)
+    }
+  }
+  return null
+}
+
 async function scrapeBrandPage(page, url) {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 40000 }).catch(() => {})
   await page.waitForTimeout(2500)
@@ -19,14 +36,14 @@ async function scrapeBrandPage(page, url) {
   // Scroll hasta estabilizar
   let prevCount = 0, stableCount = 0, scrolls = 0
   while (scrolls < MAX_SCROLLS) {
-    const count = await page.evaluate(() => {
+    const count = (await safeEvaluate(page, () => {
       const selectors = ['.e-loop-item.product', 'li.product', '.type-product']
       for (const sel of selectors) {
         const els = document.querySelectorAll(sel)
         if (els.length > 0) return els.length
       }
       return 0
-    })
+    })) ?? 0
     if (count === prevCount) {
       stableCount++
       if (stableCount >= STABLE_NEEDED) break
@@ -39,7 +56,7 @@ async function scrapeBrandPage(page, url) {
     scrolls++
   }
 
-  return page.evaluate(() => {
+  return (await safeEvaluate(page, () => {
     function parsePrice(text) {
       if (!text) return NaN
       const m = text.match(/([\d.]+,\d{2})/)
@@ -99,7 +116,7 @@ async function scrapeBrandPage(page, url) {
         image,
       }
     }).filter(Boolean)
-  })
+  })) ?? []
 }
 
 async function scrape() {
@@ -140,11 +157,11 @@ async function scrape() {
   await page.waitForTimeout(1000)
 
   // Descubrir URLs de marca desde el sidebar de filtros
-  const brandUrls = await page.evaluate(() => {
+  const brandUrls = (await safeEvaluate(page, () => {
     const links = Array.from(document.querySelectorAll('a[href*="/marca-palas-"]'))
     const urls  = links.map(a => a.href).filter(h => h.includes('/categoria-producto/palas-padel/'))
     return [...new Set(urls)]
-  })
+  })) ?? []
 
   if (brandUrls.length === 0) {
     console.log('[padelcoronado] ⚠️  No se encontraron URLs de marca — scrapeando categoría global')
