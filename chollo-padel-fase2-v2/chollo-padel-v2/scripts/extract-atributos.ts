@@ -245,14 +245,32 @@ export async function cargarLineasDesdeBD(supabase: any): Promise<void> {
     .select('marca, linea')
     .not('linea', 'is', null)
   if (!data) return
+  // Agrupamos las líneas nuevas (no presentes ya en el array hardcoded) por marca,
+  // SIN tocar el orden de las líneas hardcoded — ese orden está curado a mano
+  // ("más específico primero" por diseño, no necesariamente por longitud) y
+  // reordenarlo globalmente por longitud rompió matches de otras marcas
+  // (ej. Bullpadel, Joma...) que no tienen nada que ver con el bug que motivó esto.
+  // Las líneas que vienen de BD sí pueden tener problemas de substring entre ellas
+  // (caso real: Lok tiene 'carb' y 'carbon' — si 'carb' queda antes en el array,
+  // "Lok Carbon Hype Gen 2" matchea 'carb' por substring antes de llegar a 'carbon').
+  // Por eso, solo el bloque de líneas NUEVAS (cargadas dinámicamente) se ordena por
+  // longitud descendente entre sí, y se añade al final, detrás de las hardcoded.
+  const nuevasPorMarca: Record<string, string[]> = {}
   for (const row of data as { marca: string; linea: string }[]) {
     const { marca, linea } = row
     if (!marca || !linea) continue
     const lineaNorm = linea.toLowerCase().trim()
+    const yaExiste = LINEAS_POR_MARCA[marca]?.includes(lineaNorm)
+    if (yaExiste) continue
+    if (!nuevasPorMarca[marca]) nuevasPorMarca[marca] = []
+    if (!nuevasPorMarca[marca].includes(lineaNorm)) nuevasPorMarca[marca].push(lineaNorm)
+  }
+  for (const [marca, nuevas] of Object.entries(nuevasPorMarca)) {
+    nuevas.sort((a, b) => b.length - a.length)
     if (!LINEAS_POR_MARCA[marca]) {
-      LINEAS_POR_MARCA[marca] = [lineaNorm]
-    } else if (!LINEAS_POR_MARCA[marca].includes(lineaNorm)) {
-      LINEAS_POR_MARCA[marca].push(lineaNorm)
+      LINEAS_POR_MARCA[marca] = nuevas
+    } else {
+      LINEAS_POR_MARCA[marca].push(...nuevas)
     }
   }
 }
@@ -546,7 +564,13 @@ export function extraerAtributos(titulo: string): Atributos {
   resto = resto.replace(/\bby\b/gi, '').replace(/\s+/g, ' ').trim()
   const restoNorm = normalizar(resto)
 
-  // 4. LÍNEA — buscar en el diccionario de esta marca (más específico primero)
+  // 4. LÍNEA — buscar en el diccionario de esta marca (más específico primero).
+  // Primera que matchee, en el orden del array — ese orden está curado a mano
+  // por marca (no por longitud). El problema de substrings entre líneas
+  // cargadas dinámicamente desde BD (ej. Lok 'carb'/'carbon') se resuelve
+  // ordenando ESE bloque por longitud al cargarlo (ver cargarLineasDesdeBD),
+  // no aquí — hacerlo aquí (más larga de TODAS las que matcheen) rompía el
+  // orden curado de otras marcas y empeoró el matching global.
   let lineaDetectada: string | null = null
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {

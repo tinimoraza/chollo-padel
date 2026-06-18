@@ -179,6 +179,12 @@ const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'amarilla': 'yellow', 'amarillo': 'yellow',
   'azul': 'blue',
   'gris': 'grey',
+  'naranja': 'orange',
+  'rosa': 'pink',
+  'plata': 'silver', 'plateado': 'silver', 'plateada': 'silver',
+  'oro': 'gold', 'dorado': 'gold', 'dorada': 'gold',
+  'morado': 'purple', 'morada': 'purple', 'lila': 'purple', 'violeta': 'purple',
+  'marron': 'brown', 'marrón': 'brown',
   // Abreviaturas de color en inglés (tiendas usan Bk/Bl/Rd/Wh/Yl)
   'bk': 'black',
   'bl': 'blue',
@@ -304,11 +310,20 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
 
   return filtrados
 }
+// Devuelve true si el snapshot quedó guardado (o estamos en DRY_RUN), false si falló
+// de verdad. OJO: antes esta función no devolvía nada — solo hacía console.error y
+// seguía. Eso provocaba un bug real: si el insert fallaba (transitorio o no), el
+// llamador igualmente ejecutaba insertarAlias() justo después, creando un alias
+// "confirmado" para una pala que en realidad NUNCA quedó con precio guardado
+// (caso real: "BULLPADEL VERTEX 04 25 WOMEN" en latiendadelpadel — alias creado,
+// snapshot inexistente). Ahora se reintenta una vez (por si es un fallo de red
+// puntual) y el resultado se propaga para que el llamador NO cree el alias si el
+// snapshot de verdad falló.
 async function insertarSnapshot(palaId: string, sourceId: string, producto: {
   precio: number; precioOriginal?: number; url: string; titulo: string
-}) {
-  if (DRY_RUN) return
-  const { error } = await supabase.from('price_snapshots').upsert({
+}): Promise<boolean> {
+  if (DRY_RUN) return true
+  const payload = {
     pala_id:          palaId,
     source_id:        sourceId,
     precio:           producto.precio,
@@ -317,8 +332,19 @@ async function insertarSnapshot(palaId: string, sourceId: string, producto: {
     match_confidence: 1.0,
     disponible:       true,
     scraped_at:       new Date().toISOString(),
-  }, { onConflict: 'pala_id,source_id' })
-  if (error) console.error(`  ❌ [snapshot] ${producto.titulo}: ${error.message}`)
+  }
+  for (let intento = 1; intento <= 2; intento++) {
+    const { error } = await supabase.from('price_snapshots')
+      .upsert(payload, { onConflict: 'pala_id,source_id' })
+    if (!error) return true
+    if (intento === 1) {
+      console.error(`  ⚠️  [snapshot] ${producto.titulo}: ${error.message} — reintentando…`)
+      await new Promise(r => setTimeout(r, 1000))
+    } else {
+      console.error(`  ❌ [snapshot] ${producto.titulo}: ${error.message} (tras reintento, NO se crea alias)`)
+    }
+  }
+  return false
 }
 
 async function actualizarImagenSiNull(palaId: string, imageUrl: string | null | undefined) {
@@ -415,7 +441,7 @@ async function main() {
   console.log(`  → ${productos.length} productos`)
 
   // 3. Matching
-  let porAlias = 0, porAtributos = 0, ambiguos = 0, sinMatch = 0
+  let porAlias = 0, porAtributos = 0, ambiguos = 0, sinMatch = 0, snapshotsFallidos = 0
   const titulosProcessed = new Set<string>()
 
   // Prefijos que indican que NO es una pala individual
@@ -472,8 +498,12 @@ async function main() {
       if (DRY_RUN) {
         console.log(`  ✅ [alias] ${p.title}`)
       } else {
-        await insertarSnapshot(palaIdAlias, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
-        await actualizarImagenSiNull(palaIdAlias, p.image)
+        const ok = await insertarSnapshot(palaIdAlias, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
+        if (ok) {
+          await actualizarImagenSiNull(palaIdAlias, p.image)
+        } else {
+          snapshotsFallidos++
+        }
       }
       porAlias++
       continue
@@ -489,9 +519,13 @@ async function main() {
       if (DRY_RUN) {
         console.log(`  ✅ [atribs] ${p.title}`)
       } else {
-        await insertarSnapshot(palaId, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
-        await insertarAlias(palaId, p.title, TIENDA, p.url)
-        await actualizarImagenSiNull(palaId, p.image)
+        const ok = await insertarSnapshot(palaId, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
+        if (ok) {
+          await insertarAlias(palaId, p.title, TIENDA, p.url)
+          await actualizarImagenSiNull(palaId, p.image)
+        } else {
+          snapshotsFallidos++
+        }
       }
       porAtributos++
     } else if (candidatos.length > 1) {
@@ -558,7 +592,7 @@ async function main() {
   ✅ Por atributos: ${porAtributos}
   ⚠️  Ambiguos:     ${ambiguos}  → Gestor
   ❌ Sin match:     ${sinMatch}  → Gestor
-  📦 Total:        ${productos.length}
+  ${snapshotsFallidos > 0 ? `🔥 Snapshots fallidos: ${snapshotsFallidos}  (sin alias, revisar logs)\n  ` : ''}📦 Total:        ${productos.length}
   `)
 }
 
