@@ -3,18 +3,29 @@
 // Clerk key: oViLXCkVp3oqPERmIdkGDadmGGSm9FA8
 // API: https://api.clerk.io/v2/search/search?key=KEY&query=pala+padel&limit=100&offset=0
 //      &attributes[]=name&attributes[]=price&attributes[]=list_price&attributes[]=url
+//
+// NOTA (fix 2026-06-18): la query "pala padel" en Clerk.io es búsqueda libre
+// (fuzzy/recomendador), no un filtro de categoría — devolvía ropa y calzado
+// (Asics/Nike faldas, mallas, zapatillas...) que disparó el sin-match al 93.9%.
+// El campo "product_type" viene vacío en la mayoría de palas reales, así que no
+// sirve como filtro. En cambio el campo "categories" (array de IDs numéricos)
+// SÍ es fiable: el ID 1 = "Palas de padel" exclusivamente — verificado contra
+// ~800 productos, 175 con categories.includes(1) y ninguno de ropa/calzado/
+// accesorios lo tenía. Filtramos por esa categoría en vez de por palabras clave.
 
-const SOURCE_KEY = 'misterpadel'
-const CLERK_KEY  = 'oViLXCkVp3oqPERmIdkGDadmGGSm9FA8'
-const LIMIT      = 100
-const MAX_ITEMS  = 2000
+const SOURCE_KEY  = 'misterpadel'
+const CLERK_KEY   = 'oViLXCkVp3oqPERmIdkGDadmGGSm9FA8'
+const CAT_PALAS   = 1
+const LIMIT       = 100
+const MAX_ITEMS   = 2000
 
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'shoe',
   'shirt', 'bag', 'string', 'net', 'ball', 'balls', 'accessory', 'calzado']
 
-function esPala(name) {
-  const nl = name.toLowerCase()
+function esPala(p) {
+  if (!Array.isArray(p.categories) || !p.categories.includes(CAT_PALAS)) return false
+  const nl = (p.name || '').toLowerCase()
   return !EXCLUIR.some(w => nl.includes(w))
 }
 
@@ -25,7 +36,7 @@ async function scrape() {
   let offset = 0
 
   while (offset < MAX_ITEMS) {
-    const url = `https://api.clerk.io/v2/search/search?key=${CLERK_KEY}&query=pala+padel&limit=${LIMIT}&offset=${offset}&attributes[]=name&attributes[]=price&attributes[]=list_price&attributes[]=url`
+    const url = `https://api.clerk.io/v2/search/search?key=${CLERK_KEY}&query=pala+padel&limit=${LIMIT}&offset=${offset}&attributes[]=name&attributes[]=price&attributes[]=list_price&attributes[]=url&attributes[]=categories`
 
     let data
     try {
@@ -40,7 +51,7 @@ async function scrape() {
 
     for (const p of data.product_data) {
       if (!p.name || !p.url || !p.price) continue
-      if (!esPala(p.name)) continue
+      if (!esPala(p)) continue
       const price    = parseFloat(p.price)
       const original = parseFloat(p.list_price)
       if (isNaN(price) || price < 30) continue
