@@ -2,6 +2,10 @@
 // Sportlet Store (Italia) — PrestaShop HTML scraping (fetch + cheerio)
 // URL catálogo: https://sportlet.store/it/racchette-da-padel
 // Paginación: ?page=N
+// NOTA (fix 2026-06-18): el tema actual NO usa <article class="product-miniature">
+// ni ".product-title" — las tarjetas son <div class="js-product-miniature"> y el
+// título/link están en <div class="product_name"><a>. El precio sí usa ".price"
+// / ".regular-price" como ya se esperaba, eso funcionaba bien.
 
 const SOURCE_KEY    = 'sportlet'
 const BASE_URL      = 'https://sportlet.store'
@@ -62,7 +66,7 @@ async function scrape() {
     catch (e) { console.error(`[sportlet] Error ${url}:`, e.message); break }
 
     const $ = cheerio.load(html)
-    const cards = $('article.product-miniature, .js-product-miniature')
+    const cards = $('.js-product-miniature')
     if (cards.length === 0) break
 
     $('.pagination a').each((_, a) => {
@@ -77,7 +81,7 @@ async function scrape() {
     cards.each((_, el) => {
       const $card = $(el)
 
-      const linkEl = $card.find('h3.product-title a, h2.product-title a, .product-title a').first()
+      const linkEl = $card.find('.product_name a, h3.product-title a, h2.product-title a, .product-title a').first()
       const title  = linkEl.text().trim()
       const href   = linkEl.attr('href')
       if (!title || !href || !isPala(title) || seen.has(href)) return

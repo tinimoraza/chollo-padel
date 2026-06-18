@@ -1,7 +1,13 @@
 // scripts/prices/scrapers/virtualpadel.js
-// Virtual Padel — WooCommerce (fetch + cheerio)
+// Virtual Padel — WooCommerce + Elementor Loop Grid (fetch + cheerio)
 // URL catálogo: https://virtualpadel.es/palas-de-padel/
 // Paginación: /page/N/
+// NOTA (fix 2026-06-18): el tema usa Elementor "Loop Grid" para listar productos.
+// Las tarjetas NO son <li class="product"> (markup clásico WooCommerce) sino
+// <div class="... product type-product ...">. WooCommerce sigue añadiendo las
+// clases "product" y "type-product" vía post_class(), así que ese selector es
+// estable. El título+link está en h2.elementor-heading-title > a (no en
+// a.woocommerce-loop-product__link, que este tema no usa).
 
 const SOURCE_KEY = 'virtualpadel'
 const BASE_URL   = 'https://virtualpadel.es'
@@ -60,7 +66,7 @@ async function scrape() {
     catch (e) { console.error(`[virtualpadel] Error ${url}:`, e.message); break }
 
     const $ = cheerio.load(html)
-    const cards = $('li.product, .product-item')
+    const cards = $('.product.type-product')
     if (cards.length === 0) break
 
     // Detectar última página desde paginación WooCommerce
@@ -76,9 +82,9 @@ async function scrape() {
     cards.each((_, el) => {
       const $c = $(el)
 
-      const linkEl = $c.find('a.woocommerce-loop-product__link, .woocommerce-LoopProduct-link').first()
+      const linkEl = $c.find('h2.elementor-heading-title a, a.woocommerce-loop-product__link').first()
       const href   = linkEl.attr('href')
-      const title  = $c.find('.woocommerce-loop-product__title, h2.product-title, h2').first().text().trim()
+      const title  = linkEl.text().trim()
       if (!title || !href || !isPala(title) || seen.has(href)) return
       seen.add(href)
 
@@ -91,7 +97,7 @@ async function scrape() {
 
       if (isNaN(price) || price < 30) return
 
-      const imgEl  = $c.find('img').first()
+      const imgEl  = $c.find('img.vp-main-image, img').first()
       const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
       const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
 

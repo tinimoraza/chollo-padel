@@ -1,15 +1,19 @@
 // scripts/prices/scrapers/time2padel.js
 // Time2Padel — PrestaShop HTML scraping
-// URL: https://www.time2padel.com/es/palas-de-padel
+// URL: https://www.time2padel.com/es/5-palas-de-padel
 // Plataforma: PrestaShop (patrón similar a ofertasdepadel.com)
 // Paginación: ?page=2
+//
+// NOTA (fix 2026-06-18): la URL "/es/palas-de-padel" (sin ID) da 404 — PrestaShop
+// regeneró el slug con el ID delante: "/es/5-palas-de-padel". Los selectores
+// (article.product-miniature, .product-title, etc.) seguían siendo correctos.
 //
 // Ejecutar:
 //   node scripts/prices/pipeline.js time2padel
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
-const CATEGORY_URL = `${BASE_URL}/es/palas-de-padel`
+const CATEGORY_URL = `${BASE_URL}/es/5-palas-de-padel`
 const DELAY_MS     = 1200
 const MAX_PAGES    = 60
 

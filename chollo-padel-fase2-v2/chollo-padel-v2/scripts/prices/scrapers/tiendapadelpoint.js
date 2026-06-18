@@ -1,6 +1,10 @@
 // scripts/prices/scrapers/tiendapadelpoint.js
 // OpenCart — Playwright (necesita cookies de sesión para paginación)
 // ~850 productos totales, filtramos por título "Pala ..."
+// NOTA (fix 2026-06-18): el tema ya no usa ".product-details" para la tarjeta —
+// ahora es ".product-thumb", con título/link en ".name a" dentro de ".caption"
+// (el primer <a> de la tarjeta es el botón "Vista Rápida" sin href, por eso
+// hay que apuntar directamente a ".name a").
 
 const SOURCE_KEY  = 'tiendapadelpoint'
 const BASE_URL    = 'https://www.tiendapadelpoint.com/palas-de-padel'
@@ -44,9 +48,9 @@ function extractProductsFromPage(page) {
     }
 
     const items = []
-    const blocks = document.querySelectorAll('.product-details')
+    const blocks = document.querySelectorAll('.product-thumb')
     for (const pd of blocks) {
-      const a = pd.querySelector('a')
+      const a = pd.querySelector('.name a')
       const title = a?.textContent?.trim()
       const url   = a?.href
       if (!title || !url) continue

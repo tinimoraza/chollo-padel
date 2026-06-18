@@ -1,20 +1,24 @@
 // scripts/prices/scrapers/justpadel.js
 // Just Padel — Shopify JSON API
-// URL colección: https://justpadel.com/es-es/collections/palas-de-padel
-// Nota: tienda con prefijo locale /es-es/ — products.json está en la raíz igual.
+// NOTA (fix 2026-06-18): la tienda se ha re-orientado a mercado NL (Marketmix B.V.),
+// la colección "palas-de-padel" ya no existe/está vacía. Usamos /products.json en
+// la raíz (sin colección) y filtramos por product_type === "Rackets", que es el
+// campo que Shopify devuelve para las palas/raquetas en este catálogo.
 // Paginación: ?limit=250&page=N
 
 const SOURCE_KEY = 'justpadel'
 const BASE_URL   = 'https://justpadel.com'
-const COLLECTION = 'palas-de-padel'
 const LIMIT      = 250
 const DELAY_MS   = 600
 
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
-  'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'pack ']
+  'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'pack ',
+  'bal', 'tas', 'schoen', 'cap', 'kleding']
 
-function isPala(title) {
-  return !EXCLUIR.some(w => title.toLowerCase().includes(w))
+function isPala(p) {
+  if (p.product_type && p.product_type.toLowerCase() !== 'rackets') return false
+  const t = p.title.toLowerCase()
+  return !EXCLUIR.some(w => t.includes(w))
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
@@ -27,7 +31,7 @@ async function scrape() {
   let page = 1
 
   while (true) {
-    const url = `${BASE_URL}/collections/${COLLECTION}/products.json?limit=${LIMIT}&page=${page}`
+    const url = `${BASE_URL}/products.json?limit=${LIMIT}&page=${page}`
     console.log(`[justpadel] Página ${page}: ${url}`)
 
     const res = await fetch(url, {
@@ -42,17 +46,16 @@ async function scrape() {
     const data = await res.json()
     const products = data.products ?? []
 
-    console.log(`[justpadel]  → ${products.length} productos`)
+    console.log(`[justpadel]  → ${products.length} productos (todas categorías)`)
     if (products.length === 0) break
 
     for (const p of products) {
-      if (!isPala(p.title)) continue
+      if (!isPala(p)) continue
       const variant  = p.variants?.[0]
       if (!variant) continue
       const price    = parseFloat(variant.price)
       const compare  = parseFloat(variant.compare_at_price)
-      // Usar URL con locale para que los links lleguen a la página correcta
-      const pUrl     = `${BASE_URL}/es-es/products/${p.handle}`
+      const pUrl     = `${BASE_URL}/products/${p.handle}`
       if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
       seen.add(pUrl)
 
