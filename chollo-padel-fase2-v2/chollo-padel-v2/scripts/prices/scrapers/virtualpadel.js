@@ -8,6 +8,17 @@
 // clases "product" y "type-product" vía post_class(), así que ese selector es
 // estable. El título+link está en h2.elementor-heading-title > a (no en
 // a.woocommerce-loop-product__link, que este tema no usa).
+//
+// NOTA (fix 2026-06-18 #2): BUG de paginación — la detección de lastPage buscaba
+// `.woocommerce-pagination a, .page-numbers a` (un <a> DENTRO de un contenedor con
+// esa clase). Pero el tema Elementor pinta el paginador como
+// `<nav class="elementor-pagination"><a class="page-numbers next" href=".../page/2/">`
+// — el <a> ES el elemento con clase "page-numbers", no un descendiente. El selector
+// CSS ".page-numbers a" nunca matcheaba nada → lastPage quedaba fijo en 1 y el
+// scraper paraba tras la página 1, aunque la tienda tenía más páginas (detectado
+// porque el catálogo solo devolvía 19 palas, sospechosamente pocas para una tienda
+// activa — verificado en vivo: existe /palas-de-padel/page/2/). Fix: seleccionar
+// también los propios `a.page-numbers` y `a` dentro de `.elementor-pagination`.
 
 const SOURCE_KEY = 'virtualpadel'
 const BASE_URL   = 'https://virtualpadel.es'
@@ -70,7 +81,7 @@ async function scrape() {
     if (cards.length === 0) break
 
     // Detectar última página desde paginación WooCommerce
-    $('.woocommerce-pagination a, .page-numbers a').each((_, a) => {
+    $('.woocommerce-pagination a, .page-numbers a, a.page-numbers, .elementor-pagination a').each((_, a) => {
       const href = $(a).attr('href') || ''
       const m = href.match(/\/page\/(\d+)/)
       if (m) {
