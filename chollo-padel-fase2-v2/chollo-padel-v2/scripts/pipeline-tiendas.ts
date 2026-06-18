@@ -226,8 +226,14 @@ function modeloCompatible(
   // tenemos y SÍ debe discriminar — caso real: tienda "Pala adidas Metalbone Youth 3.4"
   // (sin año) matcheó contra catálogo "Youth 3.2" porque el "2" sobrante no contaba
   // como discriminante y no había año de ningún lado para frenarlo.
+  // Un token "vXpY" (fusión de versión "X.Y", ej. "1.0"→"v1p0") es SIEMPRE
+  // discriminante — nunca ruido ignorable. Bug real: "Drop Shot Canyon Pro
+  // Control 1.0" matcheaba contra catálogo "Pro" (sin número, variante Control,
+  // 2024 Y 2025) porque "v1p0" no pasaba ni MODELO_DISCRIMINANTES ni el test
+  // de numérico puro (tiene letras v/p) → no se consideraba inseguro → 3 candidatos
+  // ambiguos en vez de 1 (solo "Pro 1.0" CTRL 2025).
   const esExtraInseguro = (t: string) =>
-    MODELO_DISCRIMINANTES.has(t) || (/^[0-9]+$/.test(t) && añoCat == null && añoExtraido == null)
+    MODELO_DISCRIMINANTES.has(t) || /^v\d+p\d+$/.test(t) || (/^[0-9]+$/.test(t) && añoCat == null && añoExtraido == null)
   // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
   // Solo permitido si las palabras extra del catálogo no son discriminantes.
   if (tExt.every(t => tokenIn(t, tCat))) {
