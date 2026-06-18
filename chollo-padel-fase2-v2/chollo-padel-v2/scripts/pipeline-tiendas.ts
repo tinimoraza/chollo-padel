@@ -503,7 +503,7 @@ async function main() {
       if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
       continue
     }
-    if (tituloLow.includes('beach tennis')) {
+    if (tituloLow.includes('beach tennis') || /\bbt\b/i.test(p.title)) {
       if (DRY_RUN) console.log(`  🚫 [excluido beach tennis] ${p.title}`)
       continue
     }
