@@ -1,0 +1,11 @@
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY)
+const t0 = Date.now()
+const { data, error } = await supabase.from('palas').select('id').limit(1)
+console.log('query1', Date.now()-t0, 'ms', error)
+const t1 = Date.now()
+const { data: d2 } = await supabase.from('palas').select('id').limit(1)
+console.log('query2', Date.now()-t1, 'ms')
+const t2 = Date.now()
+const { data: d3 } = await supabase.from('palas').select('id').limit(1)
+console.log('query3', Date.now()-t2, 'ms')

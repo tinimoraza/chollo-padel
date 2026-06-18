@@ -90,10 +90,16 @@ async function scrape() {
       const original = parsePrice($card.find('.regular-price, .old-price').first().text())
       if (isNaN(price) || price < 30) return
 
+      // Imagen — PrestaShop, posible lazy-load (data-src con la url real).
+      const imgEl  = $card.find('a.tm_gallery_item_box img, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
       allProducts.push({
         title, price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url: link,
+        image,
       })
     })
 
@@ -112,6 +118,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

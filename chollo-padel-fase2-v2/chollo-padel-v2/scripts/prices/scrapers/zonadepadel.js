@@ -137,11 +137,17 @@ async function scrapeBrandCat(load, catPath) {
       const finalPrice = isNaN(price) ? fallbackPrice : price
       if (isNaN(finalPrice) || finalPrice < 30) return
 
+      // Imagen — PrestaShop, posible lazy-load (data-src con la url real).
+      const imgEl  = $a.find('a.product-thumbnail img, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
       products.push({
         title,
         price: finalPrice,
         precio_original: (!isNaN(original) && original > finalPrice) ? original : null,
         url,
+        image,
       })
     })
 
@@ -190,6 +196,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

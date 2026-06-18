@@ -117,11 +117,18 @@ async function scrape() {
 
       if (isNaN(price) || price < 30) return  // precio mínimo razonable para una pala
 
+      // Imagen — PrestaShop suele hacer lazy-load (data-src con la url real,
+      // "src" empieza siendo un placeholder base64/1x1). Descartamos "data:".
+      const imgEl  = $el.find('a.product-thumbnail img, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
       pageProducts.push({
         title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url: link,
+        image,
       })
     })
 
@@ -144,6 +151,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

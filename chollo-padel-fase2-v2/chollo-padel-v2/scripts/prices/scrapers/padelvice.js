@@ -104,6 +104,11 @@ async function scrape() {
       const original = parsePrice(priceDel)
       if (isNaN(price) || price < 30) return
 
+      // Imagen — WordPress/WooCommerce hace lazy-load (data-src con la url real).
+      const imgEl  = $container.find('img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
       seen2.add(link)
       seen.add(link)
       pageProducts.push({
@@ -111,6 +116,7 @@ async function scrape() {
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url: link,
+        image,
       })
     })
 
@@ -134,6 +140,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

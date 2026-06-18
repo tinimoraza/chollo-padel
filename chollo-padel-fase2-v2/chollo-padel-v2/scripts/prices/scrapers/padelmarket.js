@@ -43,11 +43,16 @@ async function scrape() {
       const url     = `https://padelmarket.com/products/${p.handle}`
       if (isNaN(price) || price < 30 || seen.has(url)) continue
       seen.add(url)
+      // Shopify devuelve la imagen en p.image.src (o p.images[0].src como fallback).
+      // Preferimos el dominio https:// (a veces viene //cdn... sin protocolo).
+      let image = p.image?.src ?? p.images?.[0]?.src ?? null
+      if (image && image.startsWith('//')) image = `https:${image}`
       allProducts.push({
         title:           p.title,
         price,
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url,
+        image,
       })
     }
 
@@ -64,6 +69,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

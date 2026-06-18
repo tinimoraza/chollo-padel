@@ -41,7 +41,12 @@ function extractFromHtml(html) {
     const maxPrice = Math.max(...prices)
     const original = maxPrice > price ? maxPrice : null
 
-    items.push({ title, price, precio_original: original, url })
+    // Imagen — Shopify CDN, buscamos la primera url de imagen del chunk (src o srcset)
+    const imgMatch = chunk.match(/(?:\/\/|https:\/\/)cdn\.shopify\.com\/[^"'\s]+\.(?:jpg|jpeg|png|webp)[^"'\s]*/i)
+    let image = imgMatch ? imgMatch[0] : null
+    if (image && image.startsWith('//')) image = `https:${image}`
+
+    items.push({ title, price, precio_original: original, url, image })
   }
 
   return items
@@ -104,6 +109,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }
