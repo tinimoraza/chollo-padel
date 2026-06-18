@@ -12,84 +12,114 @@ env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
 
+# NOTA (fix 2026-06-18): este job era uno solo, secuencial, con las 19+ tiendas
+# scrapeadas una detrás de otra → superaba el timeout-minutes: 60 ("the job has
+# exceeded the maximum execution time of 1h0m0s"). Se divide en 3 jobs paralelos
+# por tipo de scraper (igual que ya hace scrape-precios.yml): 2 grupos fetch/cheerio
+# (sin Playwright, rápidos) + 1 grupo Playwright (más lento, solo las que lo
+# necesitan). Un job final "post-pipeline" espera a los 3 con needs+if:always().
+
 jobs:
-  pipeline-tiendas:
-    name: "Scrape tiendas + recalcular precios"
+  scrape-grupo-a:
+    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel"
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Instalar dependencias
         run: npm install
-
       - name: Scrape padelmarket
         run: npx tsx scripts/pipeline-tiendas.ts padelmarket --no-post
-
       - name: Scrape padelnuestro
         run: npx tsx scripts/pipeline-tiendas.ts padelnuestro --no-post
-
-      - name: Instalar Playwright browsers
-        run: npx playwright install --with-deps chromium
-
       - name: Scrape padelzoom (catálogo)
         run: npx tsx scripts/pipeline-tiendas.ts padelzoom --no-post
-
-      - name: Scrape allforpadel
-        run: npx tsx scripts/pipeline-tiendas.ts allforpadel --no-post
-
-      - name: Scrape padeliberico
-        run: npx tsx scripts/pipeline-tiendas.ts padeliberico --no-post
-
       - name: Scrape tennispoint
         run: npx tsx scripts/pipeline-tiendas.ts tennispoint --no-post
-
-      - name: Scrape romasport
-        run: npx tsx scripts/pipeline-tiendas.ts romasport --no-post
-
-      - name: Scrape tiendapadel5
-        run: npx tsx scripts/pipeline-tiendas.ts tiendapadel5 --no-post
-
       - name: Scrape padelproshop
         run: npx tsx scripts/pipeline-tiendas.ts padelproshop --no-post
-
       - name: Scrape starvie
         run: npx tsx scripts/pipeline-tiendas.ts starvie --no-post
-
       - name: Scrape ofertasdepadel
         run: npx tsx scripts/pipeline-tiendas.ts ofertasdepadel --no-post
 
+  scrape-grupo-b:
+    name: "Scrape B: padelvice, streetpadel, zonadepadel, latiendadelpadel, padelspain, padelstyle, time2padel"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
       - name: Scrape padelvice
         run: npx tsx scripts/pipeline-tiendas.ts padelvice --no-post
-
-      - name: Scrape padelcoronado
-        run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
-
       - name: Scrape streetpadel
         run: npx tsx scripts/pipeline-tiendas.ts streetpadel --no-post
-
       - name: Scrape zonadepadel
         run: npx tsx scripts/pipeline-tiendas.ts zonadepadel --no-post
-
       - name: Scrape latiendadelpadel
         run: npx tsx scripts/pipeline-tiendas.ts latiendadelpadel --no-post
-
       - name: Scrape padelspain
         run: npx tsx scripts/pipeline-tiendas.ts padelspain --no-post
-
       - name: Scrape padelstyle
         run: npx tsx scripts/pipeline-tiendas.ts padelstyle --no-post
-
       - name: Scrape time2padel
         run: npx tsx scripts/pipeline-tiendas.ts time2padel --no-post
 
+  scrape-grupo-playwright:
+    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Instalar Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Scrape allforpadel
+        run: npx tsx scripts/pipeline-tiendas.ts allforpadel --no-post
+      - name: Scrape padeliberico
+        run: npx tsx scripts/pipeline-tiendas.ts padeliberico --no-post
+      - name: Scrape romasport
+        run: npx tsx scripts/pipeline-tiendas.ts romasport --no-post
+      - name: Scrape tiendapadel5
+        run: npx tsx scripts/pipeline-tiendas.ts tiendapadel5 --no-post
+      - name: Scrape padelcoronado
+        run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
+
+  post-pipeline:
+    name: "Post-pipeline (match + recalcular precios)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scrape-grupo-a, scrape-grupo-b, scrape-grupo-playwright]
+    if: always()
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
       - name: Post-pipeline (match + recalcular precios)
         run: npx tsx scripts/post-pipeline.ts
