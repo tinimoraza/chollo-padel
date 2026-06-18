@@ -416,9 +416,31 @@ async function insertarCandidata(producto: {
 
 // ─── Scraper ─────────────────────────────────────────────────────────────────
 
+// Algunas tiendas WooCommerce (Store API: latiendadelpadel, padelstyle, misterpadel,
+// smashinn...) devuelven el campo "name" SIN decodificar entidades HTML — ej. el
+// guion "–" de "Bullpadel XPLO 2026 – Di Nenno" llega literalmente como "&#8211;".
+// Esa cadena nunca matchea el regex de guiones especiales de extraerAtributos(),
+// asi que el residuo "8211" contamina el modelo y el producto cae en sin_match
+// aunque la pala SI exista en catalogo. Se decodifica de forma centralizada aqui
+// para que cualquier scraper -actual o futuro- quede protegido sin tener que
+// arreglarlo tienda por tienda.
+const ENTIDADES_HTML: Record<string, string> = {
+  'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'",
+  'nbsp': ' ', 'hellip': '…', 'rsquo': '’', 'lsquo': '‘',
+  'rdquo': '”', 'ldquo': '“', 'mdash': '—', 'ndash': '–',
+}
+function decodeHtmlEntities(texto: string): string {
+  if (!texto) return texto
+  return texto
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_m, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-zA-Z]+);/g, (m, nombre) => ENTIDADES_HTML[nombre] ?? m)
+}
+
 async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null }[]> {
   const scraper = require(`./prices/scrapers/${tienda}.js`)
-  return scraper.scrape ? await scraper.scrape() : await scraper()
+  const productos = scraper.scrape ? await scraper.scrape() : await scraper()
+  return productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -479,6 +501,10 @@ async function main() {
     }
     if (tituloLow.includes('pickleball')) {
       if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
+      continue
+    }
+    if (tituloLow.includes('beach tennis')) {
+      if (DRY_RUN) console.log(`  🚫 [excluido beach tennis] ${p.title}`)
       continue
     }
     if (tituloLow.includes('segunda mano') || tituloLow.includes('second hand') ||

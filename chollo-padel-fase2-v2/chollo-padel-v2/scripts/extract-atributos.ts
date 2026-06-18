@@ -130,14 +130,14 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
   'Adidas': [
     'metalbone', 'adipower multiweight', 'adipower carbon', 'adipower',
     'drive', 'match', 'rx series', 'rx',
-    'cross it', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
+    'cross it', 'crossit', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
     'velara', 'kardex',
     'copa del mundo', 'world cup',
   ],
   'Head': [
     'delta', 'extreme', 'speed', 'radical', 'flash', 'spark', 'bolt',
     'gravity', 'alpha', 'zephyr', 'instinct', 'tour',
-    'edge', 'vibe', 'evo', 'one', 'concord', 'coello',
+    'edge', 'vibe', 'vive', 'evo', 'one', 'concord', 'coello',
   ],
   'Babolat': [
     'technical viper', 'counter viper', 'air viper', 'viper',
@@ -160,7 +160,7 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
     'fusion', 'invicta',
   ],
   'Vibor-A': [
-    'black mamba', 'king cobra',
+    'black mamba', 'king cobra', 'king kobra',
     'yarara', 'mamba', 'titan', 'bamboo', 'boa', 'naya', 'vipera', 'lethal',
   ],
   'Drop Shot': [
@@ -571,11 +571,21 @@ export function extraerAtributos(titulo: string): Atributos {
   // ordenando ESE bloque por longitud al cargarlo (ver cargarLineasDesdeBD),
   // no aquí — hacerlo aquí (más larga de TODAS las que matcheen) rompía el
   // orden curado de otras marcas y empeoró el matching global.
+  // LINEAS_ALIAS: variantes ortograficas que usan algunas tiendas para una linea
+  // que en el catalogo (y en LINEAS_POR_MARCA) tiene otro nombre canonico.
+  // Ej: m1padel escribe "Crossit" (sin espacio) y "Vive" (typo de "Vibe").
+  const LINEAS_ALIAS: Record<string, string> = {
+    'crossit': 'Cross It',
+    'vive': 'Vibe',
+    'king kobra': 'King Cobra',
+  }
   let lineaDetectada: string | null = null
+  let lineaAliasMatched: string | null = null  // texto realmente matcheado en el título (puede diferir del canónico, ej. "vive" → "Vibe")
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
     if (restoNorm.includes(linea) || norm.includes(linea)) {
-      lineaDetectada = linea
+      lineaAliasMatched = linea
+      lineaDetectada = LINEAS_ALIAS[linea] ?? linea
         .split(' ')
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ')
@@ -597,16 +607,25 @@ export function extraerAtributos(titulo: string): Atributos {
   // 5. Quitar la línea del resto para extraer modelo y variante
   let sinLinea = resto
   if (lineaDetectada) {
+    // Importante: para quitar la línea del texto hay que usar el ALIAS realmente
+    // matcheado (lineaAliasMatched, ej. "vive"), no el nombre canónico de salida
+    // (lineaDetectada, ej. "Vibe") — si la tienda escribe una variante ortográfica
+    // distinta del canónico, una regex basada en el canónico no matchea nada y la
+    // palabra original queda contaminando el modelo (ej. modelo="Vive ..." en vez
+    // de limpio).
+    const textoAQuitar = lineaAliasMatched
+      ? lineaAliasMatched.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      : lineaDetectada
     // Permitir que separadores (espacio o guión) coincidan con el título original.
     // Ej: "Aero Star" debe quitar tanto "AERO STAR" como "AERO-STAR".
-    const lineaPattern = lineaDetectada
+    const lineaPattern = textoAQuitar
       .replace(/[-+]/g, '[-+]?')
       .replace(/\s+/g, '[-\\s]+')
     const lineaRe = new RegExp(lineaPattern, 'gi')
     sinLinea = sinLinea.replace(lineaRe, '').replace(/\s+/g, ' ').trim()
     // Si parte de la línea ya fue quitada por quitarMarca (ej: "adipower" en "Adipower Multiweight"),
     // la regex anterior no matchea el resto. Eliminamos token a token los que queden en sinLinea.
-    const lineaTokens = normalizar(lineaDetectada).split(/\s+/).filter(t => t.length >= 3)
+    const lineaTokens = normalizar(textoAQuitar).split(/\s+/).filter(t => t.length >= 3)
     for (const tok of lineaTokens) {
       sinLinea = sinLinea.replace(new RegExp('\\b' + tok + '\\b', 'gi'), '').replace(/\s+/g, ' ').trim()
     }
