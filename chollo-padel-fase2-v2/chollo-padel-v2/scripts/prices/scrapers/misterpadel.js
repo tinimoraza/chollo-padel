@@ -12,6 +12,16 @@
 // SÍ es fiable: el ID 1 = "Palas de padel" exclusivamente — verificado contra
 // ~800 productos, 175 con categories.includes(1) y ninguno de ropa/calzado/
 // accesorios lo tenía. Filtramos por esa categoría en vez de por palabras clave.
+//
+// NOTA (fix 2026-06-18 #3): tras el fix anterior (955→174 productos), seguía
+// habiendo 71.8% de sin-match (125/174). Causa: el nombre Clerk.io lleva un
+// sufijo " Padel - <Color>" (ej. "Bullpadel Vertex 05 Padel - White/black",
+// "adidas Metalbone 2026 Padel - Black/red"). Ese color se filtraba dentro del
+// campo "modelo" al extraer atributos (extraerAtributos), y como el catálogo
+// no guarda el color ahí, nunca casaba. Confirmado en pruebas locales contra
+// extraerAtributos(). Se limpia aquí el sufijo " Padel - ..." antes de usar el
+// título, ya que es ruido específico del feed de esta tienda (no del extractor
+// genérico, que no debe tocarse para no afectar a otras tiendas).
 
 const SOURCE_KEY  = 'misterpadel'
 const CLERK_KEY   = 'oViLXCkVp3oqPERmIdkGDadmGGSm9FA8'
@@ -55,8 +65,9 @@ async function scrape() {
       const price    = parseFloat(p.price)
       const original = parseFloat(p.list_price)
       if (isNaN(price) || price < 30) continue
+      const title = p.name.replace(/\s+Padel\s*-\s*.+$/i, '').trim()
       allProducts.push({
-        title:           p.name,
+        title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url:             p.url,
