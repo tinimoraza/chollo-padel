@@ -1,6 +1,9 @@
 // scripts/prices/scrapers/padelkiwi.js
-// PadelKiwi — Shopify JSON API (probable, 2K reseñas)
+// PadelKiwi — Shopify JSON API
 // URL: https://www.padelkiwi.com
+// NOTA (fix 2026-06-18): SÍ es Shopify, pero el slug de colección real es
+// "palas-de-padel-ver-todas-las-palas" (no "palas"/"palas-de-padel"/"padel-rackets",
+// que dan 404). Verificado vía /collections/palas-de-padel-ver-todas-las-palas/products.json.
 //
 // Ejecutar:
 //   node scripts/prices/pipeline.js padelkiwi
@@ -19,10 +22,11 @@ function isPala(title) {
 }
 
 const CANDIDATES = [
+  { base: 'https://www.padelkiwi.com', col: 'palas-de-padel-ver-todas-las-palas' },
+  { base: 'https://padelkiwi.com',     col: 'palas-de-padel-ver-todas-las-palas' },
   { base: 'https://www.padelkiwi.com', col: 'palas' },
   { base: 'https://www.padelkiwi.com', col: 'palas-de-padel' },
   { base: 'https://www.padelkiwi.com', col: 'padel-rackets' },
-  { base: 'https://padelkiwi.com',     col: 'palas' },
 ]
 
 async function tryShopify() {
@@ -70,7 +74,8 @@ async function scrape() {
       const pUrl = `${base}/products/${p.handle}`
       if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
       seen.add(pUrl)
-      allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl })
+      const image = p.images?.[0]?.src ?? null
+      allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl, image })
     }
   } else {
     console.log('[padelkiwi] ⚠️  No se pudo detectar plataforma — revisar manualmente padelkiwi.com')
@@ -78,7 +83,7 @@ async function scrape() {
 
   console.log(`[padelkiwi] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, scraped_at }))
+  return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, scraped_at }))
 }
 
 module.exports = { scrape, SOURCE_KEY }
