@@ -498,9 +498,15 @@ async function main() {
   // usa \b en cualquier posición del título porque estas marcas aparecen tanto al
   // principio ("Cartri Shooter 512º") como detrás de "Pala " ("Pala HBL Strike").
   // Revisar y quitar de aquí si en el futuro se decide dar soporte a alguna.
+  // Ampliado 20260619 (2ª pasada, análisis "sin marca detectada" del dry-run):
+  // Armani EA7, Fila, Rox, Salming, Prokennex, Hybrid, BB Zeus, EQSI, Futura, Set
+  // → confirmado por SQL que ninguna tiene filas en `palas`.
   const MARCAS_NO_CATALOGADAS = [
     'hbl', 'goliat', 'cartri', 'alacran', 'kelme', 'endless', 'stiga', 'osaka',
     'indian maharadja', 'maharadja', 'by vp', 'tactical', 'hirostar', 'xcalion',
+    'armani ea7', 'ea7', 'fila', 'salming', 'prokennex', 'bb zeus', 'eqsi', 'futura',
+    // 'rox' y 'hybrid' ya cubiertas como prefijo en EXCLUIR_MARCAS ('rox ', 'hybrid padel');
+    // 'set' se deja fuera de aquí por ser demasiado genérica (falsos positivos con "set platinum").
   ]
   function tituloTieneMarcaNoCatalogada(tituloLow: string): boolean {
     return MARCAS_NO_CATALOGADAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(tituloLow))
