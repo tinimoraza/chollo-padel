@@ -110,6 +110,21 @@ export const MARCAS: Record<string, string> = {
   'slazenger': 'Slazenger',
   // Asics
   'asics': 'Asics',
+  // NOTA (fix 2026-06-19): marcas confirmadas como "sin match" en
+  // pipeline_run_20260618_230627.json (originalpadel, tiendapadelpoint,
+  // justpadel) — no estaban en este listado, así que el extractor nunca
+  // detectaba marca y caían directo a sin_match en vez de pasar a ambiguos
+  // (donde el Gestor puede decidir si se añaden al catálogo o no).
+  'alacran': 'Alacran',
+  'kelme': 'Kelme',
+  'hbl': 'HBL',
+  'goliat': 'Goliat',
+  'endless': 'Endless',
+  'stiga': 'Stiga',
+  'osaka': 'Osaka',
+  'indian maharadja': 'Indian Maharadja', 'maharadja': 'Indian Maharadja',
+  'by vp': 'By VP',
+  'tactical': 'Tactical',
 }
 
 // ─── Líneas por marca ─────────────────────────────────────────────────────────

@@ -17,9 +17,18 @@ const HEADERS = {
   'Accept-Language': 'es-ES,es;q=0.9',
 }
 
+// NOTA (fix 2026-06-19): el catálogo de originalpadel mezcla ropa con palas
+// (sudaderas, pantalones, mallas, boxers, polos…) que no estaban en EXCLUIR y
+// caían como "sin match" al pasar por el extractor de atributos de palas.
+// Confirmado en pipeline_run_20260618_230627.json (ej. "Sudadera Bullpadel
+// Baiona Carbon", "Pantalon Bullpadel Beariz Negro", "Mallas Bullpadel Betan
+// Negro", "Boxers Lacoste…"). Se amplía la lista de exclusión.
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla',
-  'gafas', 'libro', 'kit ', ' kit']
+  'gafas', 'libro', 'kit ', ' kit', 'sudadera', 'pantalon', 'pantalón',
+  'malla', 'mallas', 'boxer', 'boxers', 'polo ', 'chaqueta', 'gorra',
+  'sombrero', 'calcetin', 'calcetín', 'calcetines', 'leggin', 'sujetador',
+  'top deportivo', 'chandal', 'chándal']
 
 function isPala(title) {
   const t = title.toLowerCase()
