@@ -90,9 +90,15 @@ const KEEP_WORDS = new Set([
 
 const TOKENS_DIFERENCIADORES = new Set([
   // Técnicos
+  // v9 (2026-06-19): "cross" eliminado de diferenciadores. Bug: el catálogo
+  // guarda los modelos Adidas sin el prefijo de familia ("Ctrl", "Team",
+  // "Light"), nunca "Cross It Ctrl". Como "cross" SÍ aparece en los títulos
+  // de Wallapop/Vinted pero NUNCA en pala.tokens del catálogo, difExtra
+  // siempre fallaba ("cross" sobra) y ningún anuncio "Adidas Cross It X"
+  // podía matchear aunque el modelo (Ctrl/Team/Light) coincidiera exacto.
   'ctrl', 'carbon', 'team', 'hrd', 'light', 'soft', 'air',
   'pro', 'elite', 'attack', 'motion', 'drive', 'match',
-  'arrow', 'cross', 'hit', 'rx', 'power', 'speed',
+  'arrow', 'hit', 'rx', 'power', 'speed',
   '12k', 'alum', 'luxury', 'ltd', 'xtrem', 'arena', 'sft',
   'hybrid', 'lite', 'x', 'proplus', 'woman',
   'extreme', 'vertex', 'hack', 'genius', 'viper',
@@ -212,7 +218,20 @@ function tokenizar(texto) {
     .filter(t => t.length >= 2 || t === 'x' || /^\d$/.test(t) || /^\d{3,4}$/.test(t))
     .filter(t =>
       KEEP_WORDS.has(t) ||
-      (!STOP_WORDS.has(t) && (!/^\d+$/.test(t) || /^0[1-9]$/.test(t) || /^\d$/.test(t) || /^v\d+p\d+$/.test(t) || (/^\d{3,4}$/.test(t) && !/^20(1[89]|2[0-9])$/.test(t))))
+      (!STOP_WORDS.has(t) && (
+        !/^\d+$/.test(t) ||
+        /^0[1-9]$/.test(t) ||
+        /^\d$/.test(t) ||
+        /^v\d+p\d+$/.test(t) ||
+        // v9 (2026-06-19): números de 2 cifras (10-99) ahora se conservan como
+        // token. Bug: Black Crown vende su línea principal como modelo="10",
+        // "11"..."14" (sin sufijo, sin decimales). El filtro original solo
+        // guardaba 1, 3 o 4 cifras → estos modelos quedaban con tokens:[] y
+        // quedaban excluidos de candidatos sin importar el título (línea
+        // "if (pala.tokens.length === 0) return null" en fuzzyMatch).
+        /^\d{2}$/.test(t) ||
+        (/^\d{3,4}$/.test(t) && !/^20(1[89]|2[0-9])$/.test(t))
+      ))
     );
 }
 
@@ -360,7 +379,7 @@ async function getCatalog() {
   while (true) {
     const { data, error } = await supabase
       .from('palas')
-      .select('id, modelo, marca, año')
+      .select('id, modelo, marca, año, linea')
       .range(from, from + PAGE - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -369,9 +388,20 @@ async function getCatalog() {
     from += PAGE;
   }
 
+  // v9 (2026-06-19): se añade "linea" al texto tokenizado. Bug: el catálogo
+  // separa estructuralmente el nombre de línea (Radical, Extreme, Trilogy...)
+  // del campo "modelo" (que para muchas marcas — Head, Siux — solo guarda un
+  // sufijo como "Pro"/"LTD"/"X"/"Team" o queda directamente null). El matcher
+  // solo tokenizaba "modelo", así que para Head/Siux el catálogo no contenía
+  // NUNCA el nombre real de la línea que aparece en los títulos de venta
+  // ("Head Radical Pro 2025"), causando que esos modelos quedaran con
+  // tokens:[] (excluidos) o con tokens incompletos que no representaban
+  // el producto real. Esto NO era un hueco de catálogo (las palas SÍ existen,
+  // con año y demás datos correctos) — era el matcher leyendo solo media ficha.
   _catalogCache = palas.map(p => ({
     ...p,
-    tokens: extraerTokensModelo(p.modelo || '', p.marca || ''),
+    nombre: `${p.linea || ''} ${p.modelo || ''}`.trim() || p.modelo,
+    tokens: extraerTokensModelo(`${p.linea || ''} ${p.modelo || ''}`.trim(), p.marca || ''),
   }));
 
   _palasPorMarca = new Map();
@@ -487,7 +517,7 @@ async function fuzzyMatch(productTitle, productUrl) {
         const matched = pala.tokens.filter(t => tokensTitle.includes(t));
         const ratio = matched.length / pala.tokens.length;
         if (ratio < 0.5) return null;
-        return { id: pala.id, nombre: pala.modelo, score: ratio };
+        return { id: pala.id, nombre: pala.nombre, score: ratio };
       })
       .filter(Boolean)
       .sort((a, b) => b.score - a.score)
@@ -563,18 +593,18 @@ async function fuzzyMatch(productTitle, productUrl) {
       //        Se guarda en wallapop_cache y aparece en buscador, pero NO en top/chollos (umbral 0.95).
       confidence = modelosAmbiguos.length > 0 ? 0.92 : 0.95;
       if (modelosAmbiguos.length > 0) {
-        console.log(`[fuzzy] ⚠️  Match ambiguo sin año: "${winner.modelo}" vs ${modelosAmbiguos.map(m => `"${m.modelo}"`).join(', ')} → conf=0.92`);
+        console.log(`[fuzzy] ⚠️  Match ambiguo sin año: "${winner.nombre}" vs ${modelosAmbiguos.map(m => `"${m.nombre}"`).join(', ')} → conf=0.92`);
       }
     }
 
-    return { pala_id: winner.id, pala_nombre: winner.modelo, confidence, method: 'fuzzy' };
+    return { pala_id: winner.id, pala_nombre: winner.nombre, confidence, method: 'fuzzy' };
   }
 
   return {
     pala_id: null,
     confidence: 0.8,
     method: 'needs_claude',
-    candidates: scored.map(s => ({ id: s.pala.id, nombre: s.pala.modelo, score: s.score / (scored[0]?.score || 1) })),
+    candidates: scored.map(s => ({ id: s.pala.id, nombre: s.pala.nombre, score: s.score / (scored[0]?.score || 1) })),
   };
 }
 
