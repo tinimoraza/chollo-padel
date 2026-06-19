@@ -12,7 +12,10 @@
 import { chromium } from 'playwright'
 import { detectarMarca } from './detect-marca'
 import { createClient } from '@supabase/supabase-js'
-import { matchPalaIds } from './match-pala-id'
+// NOTA (2026-06-19): matcher unificado — sustituye a match-pala-id.ts (eliminado).
+// CommonJS, se importa con require porque comparte motor con el pipeline de tiendas.
+const { matchSecondhandCache } = require('./prices/secondhand-matcher')
+const { recalculatePriceReference } = require('./prices/pipeline')
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
@@ -399,7 +402,7 @@ async function main() {
   }
 
   // ── Match pala_id automático ─────────────────────────────────────────────
-  await matchPalaIds(supabase)
+  await matchSecondhandCache(supabase, { recalculatePriceReference })
 
   // ── Invalidar search_cache ────────────────────────────────────────────────
   // Los anuncios borrados (vendidos) quedan en caché hasta TTL si no se invalida.
