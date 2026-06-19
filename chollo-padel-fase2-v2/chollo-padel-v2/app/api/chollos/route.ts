@@ -98,27 +98,51 @@ export async function GET() {
 
   // price_reference se incluye inline en el join para evitar una segunda query
   // con IN de 1000+ UUIDs que excede el limite de URL de PostgREST.
-  const { data: snapshots, error } = await supabaseAdmin
-    .from('price_snapshots')
-    .select(`
-      pala_id,
-      precio,
-      precio_original,
-      url_producto,
-      scraped_at,
-      source_id,
-      price_sources ( nombre, slug ),
-      palas ( *, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
-    `)
-    .eq('disponible', true)
-    .gte('scraped_at', since)
-    .gte('match_confidence', 0.95)
-    .neq('source_id', 2)
-    .order('scraped_at', { ascending: false })
-    .range(0, 5000)
+  //
+  // NOTA (fix 2026-06-19): Supabase (PostgREST) tiene un tope "Max Rows" por
+  // request (por defecto 1000) que IGNORA el .range(0, 5000) que pedíamos —
+  // cualquier .range() que pida más de ese tope se trunca silenciosamente a
+  // 1000 filas, SIN error. Con 19+ tiendas activas ya hay >5000 snapshots en
+  // 24h (confirmado: 5053), así que una sola query SIEMPRE se quedaba corta.
+  // Al venir ordenado por scraped_at DESC, se truncaban las filas más
+  // ANTIGUAS dentro de la ventana de 24h — es decir, justo las tiendas cuyo
+  // job de GitHub Actions termina antes en el batch (caso real: latiendadelpadel,
+  // que escanea en el job "scrape-grupo-b" y termina ~10-15 min antes que
+  // padelcoronado/ofertasdepadel en grupo-a). Sus snapshots quedaban fuera de
+  // la query y nunca llegaban a evaluarse en los guards/ratio → ningún chollo
+  // de esas tiendas podía aparecer aunque el precio fuera el más barato.
+  // Fix: paginar en bloques de 1000 hasta agotar los resultados.
+  const PAGE_SIZE = 1000
+  function fetchPage(from: number, to: number) {
+    return supabaseAdmin
+      .from('price_snapshots')
+      .select(`
+        pala_id,
+        precio,
+        precio_original,
+        url_producto,
+        scraped_at,
+        source_id,
+        price_sources ( nombre, slug ),
+        palas ( *, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
+      `)
+      .eq('disponible', true)
+      .gte('scraped_at', since)
+      .gte('match_confidence', 0.95)
+      .neq('source_id', 2)
+      .order('scraped_at', { ascending: false })
+      .range(from, to)
+  }
 
-  if (error) {
-    return NextResponse.json({ error: 'Error cargando chollos', detail: error.message }, { status: 500 })
+  const snapshots: any[] = []
+  for (let from = 0; from <= 5000; from += PAGE_SIZE) {
+    const { data: page, error } = await fetchPage(from, from + PAGE_SIZE - 1)
+    if (error) {
+      return NextResponse.json({ error: 'Error cargando chollos', detail: error.message }, { status: 500 })
+    }
+    if (!page || page.length === 0) break
+    snapshots.push(...page)
+    if (page.length < PAGE_SIZE) break
   }
 
   if (!snapshots || snapshots.length === 0) {
