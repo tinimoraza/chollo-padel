@@ -21,7 +21,7 @@ env:
 
 jobs:
   scrape-grupo-a:
-    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda"
+    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda, padelkiwi"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -50,6 +50,8 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts ofertasdepadel --no-post
       - name: Scrape padeltienda
         run: npx tsx scripts/pipeline-tiendas.ts padeltienda --no-post
+      - name: Scrape padelkiwi
+        run: npx tsx scripts/pipeline-tiendas.ts padelkiwi --no-post
 
   scrape-grupo-b:
     name: "Scrape B: padelvice, streetpadel, zonadepadel, latiendadelpadel, padelspain, padelstyle, time2padel, padelmania"
