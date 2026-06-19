@@ -487,6 +487,25 @@ async function main() {
     'kelme ', 'belén berbel', 'belen berbel', 'wild bull',
   ]
 
+  // Marcas que el extractor SÍ reconoce (están en MARCAS de extract-atributos.ts)
+  // pero que no tienen ninguna pala en el catálogo `palas` ni se van a dar de alta
+  // (gama baja / nicho sin presencia real en el mercado de referencia). Sin esto,
+  // cada producto de estas marcas cae siempre en "sin_match" o "ambiguo" y genera
+  // candidatas en el Gestor que se descartan a mano una y otra vez (confirmado en
+  // dry-run 20260619: HBL, Goliat, Cartri, Alacran, Kelme, Endless, Stiga, Osaka,
+  // Indian Maharadja, By VP, Tactical, Hirostar, Xcalion).
+  // A diferencia de EXCLUIR_MARCAS (startsWith, para casos muy concretos), esta
+  // usa \b en cualquier posición del título porque estas marcas aparecen tanto al
+  // principio ("Cartri Shooter 512º") como detrás de "Pala " ("Pala HBL Strike").
+  // Revisar y quitar de aquí si en el futuro se decide dar soporte a alguna.
+  const MARCAS_NO_CATALOGADAS = [
+    'hbl', 'goliat', 'cartri', 'alacran', 'kelme', 'endless', 'stiga', 'osaka',
+    'indian maharadja', 'maharadja', 'by vp', 'tactical', 'hirostar', 'xcalion',
+  ]
+  function tituloTieneMarcaNoCatalogada(tituloLow: string): boolean {
+    return MARCAS_NO_CATALOGADAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(tituloLow))
+  }
+
   for (const p of productos) {
     const tituloLow = p.title.toLowerCase()
     if (EXCLUIR_PREFIJOS.some(pref => tituloLow.startsWith(pref))) {
@@ -495,6 +514,10 @@ async function main() {
     }
     if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m))) {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
+      continue
+    }
+    if (tituloTieneMarcaNoCatalogada(tituloLow)) {
+      if (DRY_RUN) console.log(`  🚫 [marca no catalogada] ${p.title}`)
       continue
     }
     if (tituloLow.includes('exclusiva padelproshop') || tituloLow.includes('(exclusiva padelproshop)')) {
