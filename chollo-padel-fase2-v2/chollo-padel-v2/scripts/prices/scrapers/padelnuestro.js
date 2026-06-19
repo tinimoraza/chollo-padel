@@ -76,7 +76,15 @@ async function scrape() {
       }
 
       await page.goto(nextUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
-      await page.waitForSelector("div.product-item-info", { timeout: 30_000 });
+      try {
+        await page.waitForSelector("div.product-item-info", { timeout: 30_000 });
+      } catch (err) {
+        // La página devolvió 200 pero sin tarjetas de producto (fin real del
+        // catálogo, bloqueo puntual o página vacía). No tiramos todo el scrape
+        // por una sola página fallida: cerramos la paginación con lo acumulado.
+        console.log(`[padelnuestro] Página ${pageNum + 1} sin productos (timeout esperando selector). Detengo paginación. Total: ${allProducts.length} productos.`);
+        break;
+      }
       pageNum++;
     }
   } finally {
