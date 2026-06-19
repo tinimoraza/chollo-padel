@@ -61,11 +61,13 @@ async function scrape() {
 
       // La tienda oficial omite el nombre de marca — lo añadimos para que el matcher lo detecte
       const title = p.title.toLowerCase().startsWith('starvie') ? p.title : `StarVie ${p.title}`
+      const image = p.images?.[0]?.src ?? null
       allProducts.push({
         title,
         price,
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url,
+        image,
       })
     }
 
@@ -82,6 +84,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

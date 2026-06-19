@@ -67,11 +67,19 @@ async function scrapeAll(load) {
       const original = parsePrice($a.find('.regular-price, .old-price').first().text())
       if (isNaN(price) || price < 30) return
 
+      // Imagen — PrestaShop suele usar lazy-load (data-src) sobre img.product-thumbnail-first
+      const imgEl  = $a.find('img.product-thumbnail-first, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
+        ? null
+        : (rawImg.split('?')[0] || null)
+
       products.push({
         title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url,
+        image,
       })
     })
 
@@ -102,6 +110,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

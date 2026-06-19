@@ -93,11 +93,18 @@ async function scrape() {
 
       if (isNaN(price) || price < 30) return
 
+      const imgEl  = $el.find('img.product-thumbnail-first, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
+        ? null
+        : (rawImg.split('?')[0] || null)
+
       pageProducts.push({
         title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url: link,
+        image,
       })
     })
 
@@ -113,7 +120,12 @@ async function scrape() {
         const priceText = $el.find('.price, .product-price').first().text()
         const price = parsePrice(priceText)
         if (isNaN(price) || price < 30) return
-        pageProducts.push({ title, price, precio_original: null, url: link })
+        const imgEl  = $el.find('img').first()
+        const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+        const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
+          ? null
+          : (rawImg.split('?')[0] || null)
+        pageProducts.push({ title, price, precio_original: null, url: link, image })
       })
     }
 
@@ -133,6 +145,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

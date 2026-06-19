@@ -83,11 +83,16 @@ function extractProductsFromPage(page) {
         ? aplicarIVA(original)
         : NaN
 
+      const imgEl  = pd.querySelector('.image img, img')
+      const rawImg = imgEl?.getAttribute('data-src') || imgEl?.getAttribute('src') || ''
+      const image  = (!rawImg || rawImg.startsWith('data:')) ? null : rawImg.split('?')[0]
+
       items.push({
         title,
         price:           finalPrice,
         precio_original: !isNaN(finalOriginal) ? finalOriginal : null,
         url,
+        image,
       })
     }
     return items
@@ -164,6 +169,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

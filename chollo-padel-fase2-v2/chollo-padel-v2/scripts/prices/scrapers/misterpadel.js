@@ -46,7 +46,7 @@ async function scrape() {
   let offset = 0
 
   while (offset < MAX_ITEMS) {
-    const url = `https://api.clerk.io/v2/search/search?key=${CLERK_KEY}&query=pala+padel&limit=${LIMIT}&offset=${offset}&attributes[]=name&attributes[]=price&attributes[]=list_price&attributes[]=url&attributes[]=categories`
+    const url = `https://api.clerk.io/v2/search/search?key=${CLERK_KEY}&query=pala+padel&limit=${LIMIT}&offset=${offset}&attributes[]=name&attributes[]=price&attributes[]=list_price&attributes[]=url&attributes[]=categories&attributes[]=image`
 
     let data
     try {
@@ -71,6 +71,7 @@ async function scrape() {
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url:             p.url,
+        image:           p.image || null,
       })
     }
 
@@ -96,6 +97,7 @@ async function scrape() {
     price:           p.price,
     precio_original: p.precio_original ?? null,
     url:             p.url,
+    image:           p.image ?? null,
     scraped_at,
   }))
 }

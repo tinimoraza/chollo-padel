@@ -136,7 +136,11 @@ function parseTemplate(html) {
     const price    = parseFloat(priceRaw.replace(',', '.'));
     if (!price || isNaN(price) || price < 20 || price > 2000) return;
 
-    products.push({ title, price, url });
+    const $img   = $link.find('img').first();
+    const rawImg = $img.attr('data-src') || $img.attr('src') || '';
+    const image  = (!rawImg || rawImg.startsWith('data:')) ? null : rawImg.split('?')[0];
+
+    products.push({ title, price, url, image });
   });
 
   return products;
@@ -190,6 +194,7 @@ async function scrape() {
     title:      p.title,
     price:      p.price,
     url:        p.url,
+    image:      p.image ?? null,
     scraped_at,
   }));
 }
