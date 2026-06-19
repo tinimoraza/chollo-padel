@@ -57,6 +57,13 @@ const EXCLUIR_SCRAPER = [
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
   'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
+  // v2 (2026-06-19): términos técnicos exclusivos de raquetas de TENIS, verificados
+  // contra el catálogo de palas antes de añadirlos (ej. "graphene" se excluyó a
+  // propósito de esta lista porque SÍ existe en palas reales como "Head Alpha
+  // Graphene 360"). Detectado: "Raqueta Head Radical/Liquidmetal/..." (tenis Head)
+  // se colaba porque solo bloqueábamos "tenis head" literal.
+  'liquidmetal', 'flexpoint', 'midplus', 'oversize', 'speedport', 'microgel',
+  'youtek', 'aeroskin', 'inteligence', 'intelligence', 'agassi',
   // Golf
   'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
   'bolas de golf', 'bolas golf', ' golf ',  // Wilson golf

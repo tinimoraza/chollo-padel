@@ -17,6 +17,10 @@ const EXCLUIR_SCRAPER = [
   'raqueta tenis', 'raquetas tenis', 'tenis head', 'tenis wilson',
   'pro staff', 'blade v8', 'blade v9', 'blade v10', 'blade 98', 'blade 100',
   'pure drive', 'pure aero', 'pure strike', 'radical mp', 'ultra 98',
+  // v2 (2026-06-19): términos exclusivos de tenis verificados contra catálogo
+  // ("graphene" excluido a propósito, existe en palas reales).
+  'liquidmetal', 'flexpoint', 'midplus', 'oversize', 'speedport', 'microgel',
+  'youtek', 'aeroskin', 'inteligence', 'intelligence', 'agassi',
   'hierros', 'driver golf', 'speedback', 'putter', 'madera golf',
   'bolas de golf', 'bolas golf', ' golf ', 'pickleball', 'blade pro v',
   'esquís', 'esqui ', 'snowboard', 'ski ',
