@@ -1,0 +1,955 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+[auto-promote] Buscando candidatas para promover...
+[auto-promote] ✅ Promovida: "SUPER PACK ENEBE SPITFIRE BLACK 12K 2025" (1 fuentes, id: b4ccedbe-200d-4b4e-8c19-4d9ad2576d90)
+[auto-promote] ✅ Promovida: "BULLPADEL XPLO 25" (1 fuentes, id: 852b03ab-7a0c-425d-b848-1e0d204b572c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO COMPACT SIGNATURE"
+[auto-promote] ✅ Promovida: "NOX FUTURE Attack 12K NFA Series 2025 (Pala)" (1 fuentes, id: 02a8e0ab-af3d-45f1-9ff9-293f9d1b7cf4)
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT AXION ATTACK 2024 JON SANZ" (1 fuentes, id: 61733db0-66ae-44f9-9cf3-058d7a44ea41)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX PACK AT GENIUS LIMITED EDITION 2024"
+[auto-promote] ✅ Promovida: "SIUX ELECTRA ST3 STUPA PRO" (1 fuentes, id: ff7b32d1-a945-4a61-ad9b-e28cfec52d3e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EDGE II WHITE"
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT X-BASS 2026" (1 fuentes, id: 5252ca75-d60f-4f8b-bcbc-169285deb649)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME EDGE BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP INFERNO ELITE LT G1 HL NARANJA AZUL"
+[auto-promote] ✅ Promovida: "BABOLAT AIR VIPER 2.6" (1 fuentes, id: 3af17d1b-7ac9-4c78-a7d5-8a4c7afc09f2)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2026" (1 fuentes, id: 9f6adcfe-7536-4fd5-9d58-c42738c6e120)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO BLACK KARBON CONFORT"
+[auto-promote] ✅ Promovida: "NOX EA10 VENTUS HYBRID 12K XTREM BY EDU ALONSO 2026" (1 fuentes, id: c10a1e45-280e-4ef1-a6a1-db36f469ba15)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN PITON WHITE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EDGE II BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME MOTION 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO EVERLAST CROSS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO COLUMNS ULTRA"
+[auto-promote] ✅ Promovida: "BABOLAT AIR VERTUO 2.6" (1 fuentes, id: 2e44a4c9-4eb2-4e1e-a554-32ac0ff8fb38)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME EDGE WHITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE TRITON BALANCE +"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN HURRICANE PRO 3.0 MUJER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX TRILOGY PRO 5 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LOK MAXX HYPE YANGUAS WORLD"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP NEMESIS CARBON"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME PRO 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX SPYDER LITE 3 HARD"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD COELLO JUNIOR 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP INFINITY PRO G1 HL METAL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX ELECTRA 4 FLOW"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A BLACK MAMBA ÉLITE 3K 2.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP GALAXY"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT LAMBORGHINI BL.002 2026"
+[auto-promote] ✅ Promovida: "BABOLAT COUNTER VIPER 2.6" (1 fuentes, id: ae729adc-2fca-4e06-b4b1-df8972767b5b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL WHIP EXTREME 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE WHITE/BLUE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA YARARA CARBON PLUS 1K RED 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON DEFY PRO V1 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN PRO WHITE 2024"
+[auto-promote] ✅ Promovida: "WILSON BLADE PRO V3 PADEL" (1 fuentes, id: 44dad96d-135e-4449-a960-a3f6728e4279)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX VK10 PAR ARANZAZU OSORO 2024"
+[auto-promote] ✅ Promovida: "BABOLAT COUNTER VERON 2.6" (1 fuentes, id: e4b4b329-9149-444b-9b89-cfaf245dd01f)
+[auto-promote] ✅ Promovida: "NOX EA10 VENTUS ATTACK 12K XTREME BY EDU ALONSO 2026" (1 fuentes, id: 4ce2adfa-acf4-4e42-b734-44dfd8ca6a93)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO BLACK KARBON SPEED"
+[auto-promote] ✅ Promovida: "Wilson Blade V3 Padel 2024" (1 fuentes, id: a6403c20-61cd-49c8-8fe8-9a6bbd281fe0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO GRAPHENO SPEED"
+[auto-promote] ✅ Promovida: "HEAD EXTREME MOTION 2023" (1 fuentes, id: dccd5bdd-2dcc-4173-b771-3ec6ca63d9e4)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND REVENANT EVO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP INFINITY PRO G1 HL BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP NEMESIS CARBON CONTROL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO GRAPHENO CONFORT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD COELLO JUNIOR 2026"
+[auto-promote] ✅ Promovida: "BLACK CROWN GLADIUS" (1 fuentes, id: 46295a0c-5b7e-4c79-87ec-86f501e86a00)
+[auto-promote] ✅ Promovida: "Wilson Defy V1 Padel 2025" (1 fuentes, id: 0894f01a-40ab-4b3d-9fec-ee7f2c7bb67e)
+[auto-promote] ✅ Promovida: "ENEBE MUSTANG 12K BLUE 2025" (1 fuentes, id: 4ac1caa5-7d7e-4e47-a7dc-0e64ab3c0498)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX TRILOGY GO 5"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME ONE 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE PINK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT 2026 ROJO/NEGRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP GRAVITY"
+[auto-promote] ✅ Promovida: "Siux Fenix Pro 2026 Black" (1 fuentes, id: ca98bf76-be89-46f0-894d-14c3e9ff83ce)
+[auto-promote] ✅ Promovida: "BABOLAT AIR VERON 2.6" (1 fuentes, id: 1a99131e-6638-4403-a7f2-cbeb658cf6ac)
+[auto-promote] ✅ Promovida: "NOX VK10 VENTUS CONTROL 12K BY ARANZAZU OSORO 2026" (1 fuentes, id: fe880cfc-069d-44c7-ad04-1552f20919b6)
+[auto-promote] ✅ Promovida: "DUNLOP INFERNO ELITE LT G1 HL AZUL NARANJA" (1 fuentes, id: 080ad701-5ab0-4f40-b30c-23bef9ed31c0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK 02 BETIS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS CROSS IT CTRL 2026"
+[auto-promote] ✅ Promovida: "NOX VENTUS HYBRID 12K LITE PVENTUS12HL" (1 fuentes, id: b1f45e64-705a-4e32-b95f-e65758621800)
+[auto-promote] ✅ Promovida: "DROP SHOT AXION ATTACK 2.0 JON SANZ" (1 fuentes, id: 65cbb14d-2081-40b0-883d-cb4c10758b1d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT 2026 BLANCO/GRIS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE AEROX 7.1- V.2 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN PITON JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ML10 PRO CUP LUXURY SERIES 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME ONE X 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT LAMBORGHINI BL.002 BRONCE 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE BLACK TITAN"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SUMMIT PERLA"
+[auto-promote] ✅ Promovida: "SIUX ELECTRA ST3 LITE" (1 fuentes, id: a35104d8-b6e4-44b0-b18f-3fae7872a59e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN KILLER 2.0 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD COELLO PRO SPECIAL PACKAGING 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL PEARL CLOUD 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD GRAPHENE 360+ ALPHA POWER"
+[auto-promote] ✅ Promovida: "SIUX SPYDER 4 CONTROL 2025" (1 fuentes, id: 577d1cd6-0727-44e9-910d-2f8f22a90b5e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 02 ATLETICO DE MADRID"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN REBEL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD VIBE AZUL 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE BLUE/PINK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK 04 PREMIER PADEL 26"
+[auto-promote] ✅ Promovida: "BABOLAT COUNTER VERTUO 2.6" (1 fuentes, id: 892b9959-239c-47cb-9f55-044f238fae75)
+[auto-promote] ✅ Promovida: "WILSON BLADE V3 PADEL" (1 fuentes, id: fa49a832-1807-4477-afc6-250e04835a8b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK ORO EDITION A25"
+[auto-promote] ✅ Promovida: "BABOLAT VIPER SOFT JUAN LEBRÓN 3.0" (1 fuentes, id: ba7f5561-0422-43fb-98c8-32ead1ee1585)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK 04 TOUR FINAL 25"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO EVERLAST CONFORT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE BLACK/GOLDEN"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA SOFT 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK POSEIDON"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK DIABLO PRO"
+[auto-promote] ✅ Promovida: "STARVIE KENTA +" (1 fuentes, id: be186857-878c-44f1-9a04-ee982c05712a)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN PRO GOLD 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT AXION ATTTACK SOFT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE 3K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE TRIONIC FIBER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK ARMAGEDDON"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK 03 CMF X-SERIES"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP JPN PRO RED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND INVICTUS X"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX JUNIOR GUN METAL/CYAN/METALLIC SILVER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL NEURON 02 EDGE TOUR FINAL 25"
+[auto-promote] ✅ Promovida: "MIDDLE MOON ECLIPSE 9 GOLD ATTACK 12K 2026" (1 fuentes, id: d2fc7fb4-0740-4ef7-ba04-42e5cf1f759d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT LAMBORGHINI BL.003.25 AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA POWER 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE FREEZER CARBON 3K VERDE SFT"
+[auto-promote] ✅ Promovida: "SIUX ASTRA CONTROL" (1 fuentes, id: 60c76d97-d91d-45e9-9365-156cc4919924)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK JUNIOR 26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN PITON BLUE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX JR GIRL 26"
+[auto-promote] ✅ Promovida: "BABOLAT VIPER JUAN LEBRÓN 3.0 NARANJA" (1 fuentes, id: fd681b98-3b5a-47a7-9da9-2217adbb3b42)
+[auto-promote] ✅ Promovida: "WILSON CARBON FORCE LT 2023" (1 fuentes, id: fd795116-81e7-48ff-95ff-83556f718e0c)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 12K Xtreme Lite 2026 by AGUSTIN TAPIA (Pala)" (1 fuentes, id: c0edc85f-ab06-46a7-bcf0-ae130696b1c8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LOK BE FLOW PINK GEN 2"
+[auto-promote] 🚫 No es pala, descartando: "AKKERON PROTECTOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD CONCORD"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT AXION ATTACK 1.0 2025"
+[auto-promote] ✅ Promovida: "DROP SHOT AXION CONTROL 1.0 2025" (1 fuentes, id: 02f14ba5-f0c6-41d1-adb4-142a7afceab3)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK ROSE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK STORMBREAKER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN 2.0 VERDE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT LAMBORGHINI BL.003 WHITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP FURY 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP JPN PRO BLUE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE REBOUNCE ORANGE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 05 GEO PREMIER PÁDEL 26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE TRIONIC NANO MESH"
+[auto-promote] ✅ Promovida: "ADIDAS CROSS IT CTRL 2026 (Pala)" (1 fuentes, id: 472adba2-cc3f-45e7-8aa3-b2a87ffe225c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL XPLO PREMIER PÁDEL 26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE FREEZER CARBON 3K PETROL"
+[auto-promote] ✅ Promovida: "MIDDLE MOON ECLIPSE 5 CARBON GOLD REEDITION 2025" (1 fuentes, id: e8b4234a-b8b5-4aa9-b5e9-0115b789e1bc)
+[auto-promote] ✅ Promovida: "HEAD EXTREME TEAM 2025" (1 fuentes, id: c73d3c66-799c-47fa-a570-4659b7fc305e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A KING COBRA TECHNIC"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM PRO HELIX HP-224"
+[auto-promote] ✅ Promovida: "HARLEM EUPHORIA PRO" (1 fuentes, id: 499addbe-6e95-4f50-8187-2fa378c53b06)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "KSWISS SUPREME 12K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL JAPAN PRO AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK PEGASUS PRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE EXODUS BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE ALU 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RSX 7.1 CARBON- V.2 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SLAZENGER EPIC 3K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL ICON 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN 2.0 AMARILLA AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE GRIS/AZUL"
+[auto-promote] ✅ Promovida: "DROP SHOT CANYON PRO ATTACK 1.5" (1 fuentes, id: d0fc6e31-f8bb-4d81-84e0-351e3075a64e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA TEAM"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND ODYSSEY 2.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SPEED GOLD POWER 4.0 NANO MESH A005844"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP 25 GALACTICA TEAM"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND INVICTUS CLASSIC"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK PREDATOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL XPLO ATLÉTICO DE MADRID"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE PRO MASTER EVOLUTION NARANJA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA SPEED 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX SPYDER LITE CTRL 3 HARD"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE COMBAT 7.1-V.2 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK ATLAS EDITION"
+[auto-promote] ✅ Promovida: "BLACK CROWN ICONIC CROWN" (1 fuentes, id: 24071d7f-6325-49bc-b0dd-bef585271e3e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN PRO ORANGE 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "PRINCE ROCKET"
+[auto-promote] ✅ Promovida: "VIBOR-A TITAN 3K BLACK" (1 fuentes, id: aa7313f2-2db0-4804-979d-5bad28e3990c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MASSIVE YELLOW"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE ASTRA JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RSX AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SPEED 3.0 ROYAL POWER 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CANYON PRO CONFORT 2.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE GRIS/DORADO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE BOMBA LITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN ICONIC"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK DIAVOLO 25"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A TITAN CLASSIC BLUE JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A YARARA PRO SILVER"
+[auto-promote] ✅ Promovida: "HARLEM EUPHORIA SOFT" (1 fuentes, id: 74b16dfe-0725-42d5-992e-ee0873eac43b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM BIONIC HP-221"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "J.HAYBER WARRIOR FIT AZUL/PISTACHO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LOK CARB-ON HYPE BY FRANCO DAL BIANCO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN VIVA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON DIAVOLO ESPAÑA 23"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN 2.0 NARANJA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE 24K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN 2.0 AMARILLA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE BRAVA 2025"
+[auto-promote] ✅ Promovida: "SOFTEE REBOUNCE ROJO 3K" (1 fuentes, id: 81601f23-e68d-4f60-8c25-23012c4f6ddb)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO GENETIC POWER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP R30 GOLDEN WHITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TRISTORM PRO 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX ELECTRA GO 4"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EVO EXTREME 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK JR 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT AXION ATTACK 1.5"
+[auto-promote] ✅ Promovida: "NOX AT10 PRO CUP HARD BY AGUSTIN TAPIA" (1 fuentes, id: 7732a892-93ea-4413-ad78-490313320702)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG ESMERALD 15K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON ARMAGEDDON 23"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO EVERLAST SPEED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT SPORTAGE PRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STAR VIE S2 FLUOR CARBON EFFECT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL ELITE LIGHT W MUJER 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS CROSS IT LIGHT 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE PRO MASTER EVOLUTION ROJO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX DIABLO REVOLUTION PRO 3"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT AIR ORIGIN"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL DISCOVER PWR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT COUNTER ORIGIN 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LOK MAXX HYPE GEN 2"
+[auto-promote] ✅ Promovida: "NOX AT GENIUS ATTACK 18K AGUSTÍN TAPIA 2024" (1 fuentes, id: 715cfd8e-2f32-478a-affc-5462693dca2e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX FENIX PRO BLACK 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE BOMBA MAX"
+[auto-promote] ✅ Promovida: "WILSON BLADE LS V3 PADEL 2" (1 fuentes, id: 06f97e1f-fc99-4348-a2ca-850e05dca4d2)
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE TEAM 2026 (Pala)" (1 fuentes, id: 5826a9b8-6fe8-43b0-87e0-f7fe05442ed8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STAR VIE RAPTOR MASTER FINAL"
+[auto-promote] ✅ Promovida: "HEAD SPEED PRO X SPECIAL PACKAGING 2023" (1 fuentes, id: 9f9a216c-d6ea-4c20-a8f8-02e7772898cd)
+[auto-promote] ✅ Promovida: "VIBORA KING COBRA XTREME 3K 2024" (1 fuentes, id: acd589e5-9636-4934-80d7-22785cbc6f25)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP PADEL JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A KING COBRA ANIVERSARIO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE KENTA ETERNAL PRO 2024"
+[auto-promote] ✅ Promovida: "WILSON CARBON FORCE PADEL 2 2024" (1 fuentes, id: 19ee327c-0b80-49aa-bd62-cd4586ecd82e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD ONE ULTRALIGHT BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK JUNIOR 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CONQUEROR CONTROL 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT AXION ATTACK JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE TRIONIC LIGHT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE POWER LTD CARBON"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ML10 SHOTGUN LUXURY SERIES 2022"
+[auto-promote] ✅ Promovida: "SIUX BLACK CARBON REVOLUTION 2 ROJO" (1 fuentes, id: cfd550bd-8176-4285-a28d-9603497e36da)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE TRITÓN 2025"
+[auto-promote] ✅ Promovida: "NOX AT PRO CUP COORP 2024" (1 fuentes, id: ecadd88b-159e-46e0-9177-4541a36cd507)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A BOA ADVANCE 22"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SLAZENGER EPIC PRO 12K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX AT10 GENIUS ULTRALIGHT 23"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA POWER BETIS"
+[auto-promote] ✅ Promovida: "BULLPADEL HACK 02 ADVANCE" (1 fuentes, id: 4e57fbdf-4e0e-44b2-bb3e-6ae56e537877)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP WHIP POLY 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 04 LTD ED. JUAN TELLO ARGENTINA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA PWR 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON OPTIX V2 LITE LILAC"
+[auto-promote] ✅ Promovida: "VIBOR-A LIQUID YARARA" (1 fuentes, id: 2f46a17b-5e35-46e8-8709-c2f2f649bd40)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "JOMA ROOKIE AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON OPTIX V1 WHITE PADEL 2"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL BREAKER 370"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A LETHAL ADVANCE"
+[auto-promote] ✅ Promovida: "VIBOR-A TITAN 15K BLACK TWILL" (1 fuentes, id: 0bf76646-400f-4317-b32f-97ed278d530b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A MAMBA LIQUID"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN WOLF"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LOK CARBON FDB GEN 2"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE RUNA RED HYBRID DEFECTO ESTÉTICO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD VIBE GREY/BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT TALL/BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD GRAPHENE 360 ALPHA TOUR AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN PITON 12 SILVER 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT 2025 AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT ALIOTH MINI JÚNIOR AZUL/AMARILLO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL 35 ANIVERSARIO POLY 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE VESTA 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE SUPRA 3K BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA POWER GREY"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE ROYAL 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A TITAN JUNIOR CLASSIC WHITE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SUMMIT 3.0 YELLOW POWER"
+[auto-promote] ✅ Promovida: "NOX LA10 QUANTUM 12K BY LEO AUGSBURGER 2025" (1 fuentes, id: 16f5ce0e-dfe3-4262-8d1c-8b1ef81e442d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CONQUEROR CONFORT 1.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE BOMBA SOFT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE DRAX 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP IMPACT HL RED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP IMPACT HL YELLOW"
+[auto-promote] ✅ Promovida: "NOX AT GENIUS LIMITED EDITION 2023" (1 fuentes, id: fdec6a69-c996-471a-a4c2-12195ed98b9f)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON DEFY V1 SE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE BOMBA SPEED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP GALACTICA OS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ASICS HYBRID SOFT"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP GALACTICA OS LITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP RACE 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND INVICTUS 4.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP TORINO OCRE GOLDEN 25"
+[auto-promote] ✅ Promovida: "DROP SHOT EXPLORER PRO ATTACK 1.5" (1 fuentes, id: 75ef743b-55da-475a-8d98-730366d6d72a)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ML10 PRO CUP COORP 23"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "PRINCE QUARTZ V2"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VARLION MAXIMA WPT MALMO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL FLOW W 24"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND SHADOW GOLD"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL BREAKER 360"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL BREAKER 355"
+[auto-promote] ✅ Promovida: "LOK BE FLOW YELLOW GEN 2" (1 fuentes, id: 46ee86cb-8413-4368-b59c-6645436f5f2d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RS 9.1 AMARILLO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FUSION ELITE PRO PLATA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA CLUB 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK EXCELSIOR PRO 25"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT X LAMBORGHINI BL002 BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX QUANTUM 12K COBALT 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE GREEN 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL BLACK DRAGON 4.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A LIQUID KING COBRA"
+[auto-promote] ✅ Promovida: "HIGER PADEL RED CENTINEL CARBON 3K 2025" (1 fuentes, id: 8cac4421-2312-4eb9-a4aa-c0cdc0e5029c)
+[auto-promote] ✅ Promovida: "NOX  FUTURE CONTROL 12K ALUM" (1 fuentes, id: 11d4df6b-f29a-4140-9534-119db19f1c89)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A BLACK MAMBA XTREME 3K 2.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON OPTIX V1 BLACK PADEL 2"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE SPACE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS ADIPOWER CARBON CTRL 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS ADIPOWER CARBON LIGHT 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA GIRL 2025"
+[auto-promote] ✅ Promovida: "HBL STRIKE EVO PRO 1.0" (1 fuentes, id: ad12df32-e1a9-4007-9f12-970a4e33f13d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD ONE ULTRALIGHT WHITE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS METALBONE YOUTH 3.3 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK JUNIOR 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT TECHNICAL VERTUO JUAN LEBRÓN 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "MYSTICA LEGACY CARBON ATTACK RED 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT 2025 NEGRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL WHIP LIGHT MUJER 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL R CONTROL 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX TL10 BY TINO LIBAAK 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL R FURY 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SPEED GOLD POWER 3.0 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "J-HAYBER ATTACK R NEGRO/NARANJA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON DEFY PRO V1 SE"
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Light 2025 (Pala)" (1 fuentes, id: 632139df-4914-43dd-989a-97f1a1666538)
+[auto-promote] ✅ Promovida: "DROP SHOT EXPLORER SOFT WOMAN" (1 fuentes, id: d86e5bf2-3597-4ee7-9217-34027680ff81)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS NETHERLAND WC 2026"
+[auto-promote] ✅ Promovida: "ADIDAS INGLATERRA WORLD CUP 2026" (1 fuentes, id: f3331970-3e17-4301-9a0c-40b47362b65e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA SPEED 2026 16CURSPE26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA SOFT 2026 16CURSOF26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA POWER BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "PRINCE PREMIER AHS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK 04 BETIS"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 18K BY AGUSTÍN TAPIA 23" (1 fuentes, id: 8475d887-bb3f-46eb-924a-134a23c30e45)
+[auto-promote] ✅ Promovida: "BULLPADEL VERTEX 03 W MUJER 2023" (1 fuentes, id: 8116773f-dfb4-434d-b822-fcba43df91d5)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A VIPERA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL HACK HYBRID 04 25 MIAMI"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 12K BY AGUSTIN TAPIA 23" (1 fuentes, id: c6a6b1ac-0571-45f8-abc0-4c7ba67fdaa6)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD SPEED JUNIOR 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP IMPACT CARBON PRO LTD AMARILLA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP IMPACT PRO HL PINK"
+[auto-promote] ✅ Promovida: "DROP SHOT QUANTUM" (1 fuentes, id: 4a32d910-125a-4d52-a836-61757f5218f0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ML10 SHOTGUN 12K LUXURY SERIES EX"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN COYOTE CARBON 3K"
+[auto-promote] ✅ Promovida: "SIUX BEAT CONTROL 3" (1 fuentes, id: 43a4bc43-3fdd-49a4-9b78-197470149fe1)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL JAPAN PRO 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A TITAN 12K RED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND INVICTUS 3.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP STRIKE VERDE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA DIO TITAN 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX BEAT CONTROL 2 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FUSION ELITE PRO ORO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RESPONSE ORANGE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "JOMA OPEN BLANCO TURQUESA FLUOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT ALIOTH JUNIOR"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE SPITFIRE BLACK 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX TRILOGY ELITE 5"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN HURRICANE 3.0 MUJER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG BLUE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT STIMA VITA 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "PRINCE PREMIER V2"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN SHARK"
+[auto-promote] ✅ Promovida: "KOMBAT ETNA 2025 by MANU MARTIN (Pala)" (1 fuentes, id: 5bcc6dda-30ed-4434-b79c-0109725c3736)
+[auto-promote] ✅ Promovida: "KOMBAT GALERAS 2025 by MANU MARTIN (Pala)" (1 fuentes, id: 7d3f1dc8-c8d6-4e34-ac2f-f6a191a89490)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP IMPACT PRO HL ORANGE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP SAMURAI SOFT"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS ATTACK 12K BY AGUSTIN TAPIA 2025" (1 fuentes, id: fdbf521f-c584-4b02-adde-c9fa45e73e99)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "PRINCE FALCON"
+[auto-promote] ✅ Promovida: "KOMBAT TEIDE 2025 by MANU MARTIN (Pala)" (1 fuentes, id: 11f8d0bc-5517-4f38-889a-70633736cca9)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VAIRO ACROSS BLUE SAND FINISH"
+[auto-promote] ✅ Promovida: "HEAD EXTREME ELITE 2023" (1 fuentes, id: caaa0f2e-0b58-4845-9832-c3b4e6ad1d62)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD EXTREME JUNIOR 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON OPTIX V2 LITE WHITE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A NAYA JUNIOR PURPLE 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE CHACAL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE PHANTOM"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RS 9.1 ORANGE 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL GAME CTR NEGRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "WILSON DEFY LS V1 SE"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 18K ALUM BY AGUSTIN TAPIA 2025" (1 fuentes, id: db77a5ca-d391-496d-bb25-bbef5a7dcb41)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT EXPLORER PRO ATTACK 1.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP MEGAMAX SILVER"
+[auto-promote] ✅ Promovida: "ADIDAS COLOMBIA WORLD CUP 2026" (1 fuentes, id: 703323ab-9cb6-43d6-bcb3-fd121c3585b9)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA GIRL 26"
+[auto-promote] ✅ Promovida: "WILSON OPTIX V2 POWER ROJO" (1 fuentes, id: 01a156d9-7225-46f0-9889-e386c8841ed4)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL DISCOVER CTR 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD SPEED PRO X 2023 221043"
+[auto-promote] ✅ Promovida: "STARVIE RAPTOR +" (1 fuentes, id: 5a6ee78f-a8b4-404d-aaa9-a96276232b82)
+[auto-promote] ✅ Promovida: "NOX ML10 VENTUS CONTROL 3K BY MIGUEL LAMPERTI 2026" (1 fuentes, id: c017af30-6d44-4fb9-9940-db2f0f82f6f0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA BOY 26"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS ATTACK 18K ALUM BY AGUSTIN TAPIA 2025" (1 fuentes, id: 75511944-a401-4e7d-9d48-d1da9e3ecc02)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX GIRL JUNIOR 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD VIBE VERDE 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX PRO GUN METAL/CYAN/METALLIC SILVER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD SPEED JUNIOR 2025"
+[auto-promote] ✅ Promovida: "HEAD EXTREME ONE 2025" (1 fuentes, id: 1580cadf-2f04-4360-acd3-ff5e551039d8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS CROSS IT CARBON 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP INFERNO ELITE LTD AMARILLO AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA BLACK MAMBA ANIVERSARIO"
+[auto-promote] ✅ Promovida: "SIUX ELECTRA ST3 GO" (1 fuentes, id: 5120cfb4-b618-4169-bc6f-dfd2bbf0c5a1)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL FLOW LEGEND MUJER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CONQUEROR CONTROL 1.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL NEURON 02 PREMIER PADEL 26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 05 LIGHT PREMIER PADEL 26 MUJER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP EFE EXTREME 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP RACE LIGHT 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CANYON PRO CONTROL 1.0 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND INVICTUS LW"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE TRIONIC"
+[auto-promote] ✅ Promovida: "HYBRID PADEL CALA CARBON" (1 fuentes, id: b07a33d1-ddce-4099-9777-4f2eb995399b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT EXPLORER PRO ATTACK 2.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX TEAM GUN METAL/CYAN/METALLIC SILVER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE OXEL"
+[auto-promote] ✅ Promovida: "WILSON ENDURE PRO V1 AZUL" (1 fuentes, id: e0ccd0eb-0cd9-483d-b031-cd1d46df59df)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP COORP BY MIGUEL LAMPERTI" (1 fuentes, id: 5f35befe-18e8-465d-a7ca-6d302e549bb7)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL MASTER 370"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL MASTER ONE"
+[auto-promote] ✅ Promovida: "HYBRID PADEL MAZO CARBON" (1 fuentes, id: a3b161c1-75a2-49e5-9107-5b4ad47bd3c7)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TITAN LT HL ORANGE"
+[auto-promote] ✅ Promovida: "BLACK CROWN PITON WHITE SOFT 2025" (1 fuentes, id: 34d826d8-b827-4dad-b6a0-f70fb7fe803f)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE WALL MASTER 360"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND STEALTH-X"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS DRIVE 3.3 VINTAGE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP 779 WHIP LIGHT 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX LA10 BY LEO AUGSBURGER 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX TRILOGY CONTROL PRO 4"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX AT10 GENIUS HARD AGUSTÍN TAPIA 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL GOLDEN WHITE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT ALIOTH PRO JUNIOR ROJO"
+[auto-promote] ✅ Promovida: "SIUX VALKIRIA ELITE 2025 MUJER" (1 fuentes, id: d7b44da8-c53d-4c3e-8d77-9fcec3a315c6)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP SILVER BY MIGUEL LAMPERTI 2025" (1 fuentes, id: 75a73fee-f8ff-46bc-a810-e4c22527f6ea)
+[auto-promote] ✅ Promovida: "HEAD SPEED MOTION 2025 ARI SÁNCHEZ" (1 fuentes, id: d2aa765d-2002-485f-b097-d30e6ba66625)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX VK10 QUANTUM 3K ARANZAZU OSORO 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS ADIPOWER 10 ANIVERSARIO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 04 W TF 2024 MUJER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL 35 ANIVERSARIO LIGHT 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP WHIP POLIETILENO 2025"
+[auto-promote] ✅ Promovida: "Starvie JR 2025" (1 fuentes, id: 85d0f729-dada-4cea-b003-a785cd5da5eb)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TRISTORM LITE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RS 9.1 BLUE 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL WHIP EXTREME 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL K2 POWER 2025"
+[auto-promote] ✅ Promovida: "SIUX DIABLO ELITE 2026" (1 fuentes, id: 3a33c6cb-0ab6-4fe1-a726-c65b4a35de67)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX GEA 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BLACK CROWN PITON EPIC ENERGY 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL 35 ANIVERSARIO HYBRID 2025"
+[auto-promote] ✅ Promovida: "BULLPADEL VERTEX 04" (1 fuentes, id: 106b1807-a801-4d08-8a4d-ff5f3abc9595)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL WHIP HYBRID 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL VERTEX 04 TF 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL NEURON CLOUD 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SIUX VELOX FLEX AZUL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL R ACE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "LEGEND STEALTH-EVO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS ARROW HIT WHITE/BLUE JUNIOR"
+[auto-promote] ✅ Promovida: "SIUX ELECTRA ELITE 2026" (1 fuentes, id: c9d9e296-1467-426f-98db-d321ff5acb1a)
+[auto-promote] ✅ Promovida: "SIUX TRILOGY ELITE 2026" (1 fuentes, id: ff071d09-1fb2-44bd-a25e-acfa7254e27d)
+[auto-promote] ✅ Promovida: "SIUX BEAT CONTROL 2026" (1 fuentes, id: c31c00f5-08a8-4aab-b95c-aa4cdc47b9a3)
+[auto-promote] ✅ Promovida: "HEAD VIBE GR OR 2026" (1 fuentes, id: 0d5d9a52-1960-4e0b-a264-2c0bc81a70e9)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX LITE 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX PRO 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX TEAM 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP STRIKE BLUE NH 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT RD BK 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD BOLT WH GR 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ULTIMATE SILVER/BLUE"
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS ATTACK 12K ALUM XTREM BY AGUSTÍN TAPIA" (1 fuentes, id: 1ef62bf7-bcde-4c36-8ed9-0edcf116bfcc)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL RAIDER CONTROL"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ATTRACTION WPT ADVANCED SERIES 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX ML10 PRO CUP LUXURY SERIES 23"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT EXPLORER PRO COMFORT 2.0"
+[auto-promote] ✅ Promovida: "WILSON BELA V3" (1 fuentes, id: df05b4b4-e6a5-4bf9-a904-93da3e306936)
+[auto-promote] ✅ Promovida: "Oxdog Ultimate Pro Smash 2026" (1 fuentes, id: 9b621f8a-76b3-4369-9d10-f66f29654054)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP GALACTICA JUNIOR 2025"
+[auto-promote] ✅ Promovida: "HBL GET" (1 fuentes, id: f74c88b5-68eb-4ee1-b28a-08c758a06876)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS METALBONE RESERVE ALE GALÁN 2026"
+[auto-promote] ✅ Promovida: "DUNLOP AERO-STAR PRO MOYANO" (1 fuentes, id: 0b964d6f-ef64-4f62-a6f9-96f0cbe71df3)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP LUXURY SERIES EX" (1 fuentes, id: e24a7531-610c-4539-909e-f7b69948e37d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BABOLAT X LAMBORGHINI BL002 SCANDAL GREEN"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "TECNIFIBRE CURVA POWER 2026 16CURPOW26"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE BASALTO OSIRIS 2.0 2023"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL INDIGA W MUJER 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS CROSSIT TEAM LIGHT 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "AKKERON BLACK FENIX A25"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL ICON CLOUD 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX LITE GUN METAL/CYAN/METALLIC SILVER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP FX START GUN METAL/CYAN/METALLIC SILVER"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG PRO 15K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD MONSTER KIDS"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX  AT10 GENIUS ULTRALIGHT BY AGUSTIN TAPIA"
+[auto-promote] ✅ Promovida: "Bullpadel Indiga CTRL 2026" (1 fuentes, id: fa82d4b3-5483-4b8f-bd08-2693c3e40644)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL RP 36 ANIVERSARIO POLY 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE EXODUS GOLD 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBOR-A KING COBRA ÉLITE 24K 2.0 2025"
+[auto-promote] ✅ Promovida: "NOX AT10 PRO CUP SOFT BY AGUSTIN TAPIA" (1 fuentes, id: b8dc1790-7181-42b7-80b8-7162aa86abdb)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "MYSTICA LEGACY CARBON HYBRID BLUE 2024"
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE CARBON 3.4 2025" (1 fuentes, id: 7ff78ce2-9a13-49ca-a38d-82798c57d8f8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Titan Black 3K 2026"
+[auto-promote] ✅ Promovida: "STARVIE ASTRUM +" (1 fuentes, id: 8fe33864-5d16-4248-9263-676623d78625)
+[auto-promote] ✅ Promovida: "SIUX ASTRA HYBRID" (1 fuentes, id: 5076f438-3e39-4809-a04c-941c338c7f8e)
+[auto-promote] ✅ Promovida: "WILSON BELA LS V3" (1 fuentes, id: 25676f7d-3c01-4372-804b-22a72bb863f0)
+[auto-promote] ✅ Promovida: "Pala Adidas RX Series Red 3.4 2025" (1 fuentes, id: e2c3a263-6aab-44e1-b2e6-e347bf2163a2)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS ATTACK 18K ALUM BY AGUSTÍN TAPIA 2026" (1 fuentes, id: af4b8289-f345-434f-93db-1e76cf5a66fb)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 12K ALUM XTREM LITE BY AGUSTÍN TAPIA 2026" (1 fuentes, id: 49d07631-e50c-4c2b-b160-18182316207e)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP ROUGH SURFACE EDITION BY MIGUEL LAMPERTI" (1 fuentes, id: 8077e552-1560-40ec-8407-a5d134a2d749)
+[auto-promote] ✅ Promovida: "BULLPADEL NEURON" (1 fuentes, id: 863f441a-37c3-4963-a3b9-5704c724bcc5)
+[auto-promote] ✅ Promovida: "BLACK CROWN PITON" (1 fuentes, id: a17443d6-fa50-4b50-84a4-b5270d747973)
+[auto-promote] ✅ Promovida: "Bullpadel Xplo 2026 Martin Di Nenno" (1 fuentes, id: e80fdad8-05ec-4946-8f9a-c820f0642667)
+[auto-promote] ✅ Promovida: "Babolat Counter Veron 2026" (1 fuentes, id: c9233c8b-e0de-4cbc-a48a-6d45b381a71e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Wilson Bela V3 2025"
+[auto-promote] ✅ Promovida: "Babolat Viper 3.0 2026 Juan Lebron" (1 fuentes, id: dfd48af4-d3e1-4bc1-a5f6-d0cd1e4a86e5)
+[auto-promote] ✅ Promovida: "Bullpadel Hack 04 2026 Paquito Navarro" (1 fuentes, id: 53ccad90-e7ba-467c-96e2-849aa8edb528)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Hack 04 Hybrid 2026"
+[auto-promote] ✅ Promovida: "Drop Shot Axion Attack 2.0 2026 Jon Sanz" (1 fuentes, id: 93c391be-fe25-44ec-a7cf-a8c7f88581c2)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Head Extreme One 2026"
+[auto-promote] ✅ Promovida: "Adidas Arrow Hit Carbon CTRL 2026" (1 fuentes, id: 8a9059d8-a59b-4a8d-81a8-c1f84ea315af)
+[auto-promote] ✅ Promovida: "Drop Shot Axion Attack 1.5 Jon Sanz 2025" (1 fuentes, id: 871b1b01-e1ab-492b-8ad2-a466d236f3b8)
+[auto-promote] ✅ Promovida: "Babolat Viper Soft 3.0 2026 Juan Lebron" (1 fuentes, id: b259c96a-62f0-4525-919e-98be66e24402)
+[auto-promote] ✅ Promovida: "Star Vie Triton Balance 2026 Plus" (1 fuentes, id: ba7079e5-6de5-412b-97c8-df3d3642f007)
+[auto-promote] ✅ Promovida: "Head Extreme One X 2026" (1 fuentes, id: c13035c7-1849-4979-9760-a08aa92e71f8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Lok Carbon Hype Gen 2 2026"
+[auto-promote] ✅ Promovida: "Siux Fenix Pro Black 2026 Leo Ausburger" (1 fuentes, id: 9ce9dbf8-9adb-437c-af14-fac9f714180e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM BIONIC 12K HP-221"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM EUPHORIA GREEN"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM EUPHORIA PRO 3K HP-222"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM EUPHORIA SOFT 3K HP-223"
+[auto-promote] ✅ Promovida: "Adidas Adipower Carbon CTRL 3.4 2025" (1 fuentes, id: 2cacc169-2bad-42c3-a49f-212fb397c830)
+[auto-promote] ✅ Promovida: "Adidas Adipower Carbon Light 3.4 2025" (1 fuentes, id: 692573f1-cd6f-4482-bdf1-8e6f50595d6a)
+[auto-promote] ✅ Promovida: "Lok Carbon Hype Fdb Gen 2 2026" (1 fuentes, id: bd524c31-0bf4-4c9a-9422-93a9368bd8ef)
+[auto-promote] ✅ Promovida: "Bullpadel Hack 04 Hybrid Cloud 2026" (1 fuentes, id: ba8e24f3-8fe5-470a-b4ee-9d2a658c2261)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Drop Shot Canyon Pro Control 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Enebe Response 3K EVO 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Enebe Response 24K Violet 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Enebe Response 24K Silver 2026"
+[auto-promote] ✅ Promovida: "HARLEM COREX 18K" (1 fuentes, id: 50ea3500-b3e2-4538-842d-5a48e4574b4a)
+[auto-promote] ✅ Promovida: "Lok Maxx Hype Gen 2 2026 Mike Yanguas" (1 fuentes, id: c9a885ba-1dfb-4de8-9903-14e363b277a7)
+[auto-promote] ✅ Promovida: "Lok Maxx Hype Gen 2 2026 Yanguas World" (1 fuentes, id: 9017de2d-ac18-4a41-8a7d-da065f505c47)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM CYCLONE 12K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Oxdog Ultimate Pro 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Oxdog Pure Pro+ 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Drop Shot Quantum Soft Women 2026"
+[auto-promote] ✅ Promovida: "Vibora King Cobra Xtreme 3K 2025" (1 fuentes, id: 4d411ec7-fe27-4201-b28d-219b927b8920)
+[auto-promote] ✅ Promovida: "Vibora Black Mamba Xtreme 3K 2025" (1 fuentes, id: 88cddc70-ea97-46ef-a4df-ce075559a121)
+[auto-promote] ✅ Promovida: "Nox Ventus Hybrid 12K Lite 2026" (1 fuentes, id: 1b5a3535-608c-4e74-817a-daebe803b907)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Adidas Arrow Hit Carbon 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Hack Advance 2026"
+[auto-promote] ✅ Promovida: "Lok Be Flow Gen 2 Pink-Green 2026" (1 fuentes, id: 8e71da9d-72bf-4d15-a367-ec4473ec4262)
+[auto-promote] ✅ Promovida: "Bullpadel Vertex 05 2026 Juan Tello" (1 fuentes, id: 508405b0-f4c1-404d-8c6d-e9997500baec)
+[auto-promote] ✅ Promovida: "HARLEM NIRVANA 12K" (1 fuentes, id: 2bd5654f-93a4-4900-a83d-529d01bcbd62)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM NIRVANA 12K HP-219"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "MYSTICA QUICKSTART HYBRID RED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Titan Black 15K Twill 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Wilson Endure LS V1 2026"
+[auto-promote] ✅ Promovida: "Vibora Black Mamba Elite 3K 2.0 2025" (1 fuentes, id: 06f88bc8-3029-43d4-bd6f-8d2df92f1f52)
+[auto-promote] ✅ Promovida: "Bullpadel Flow Woman 2025 Ale Salazar" (1 fuentes, id: 7bf443dc-3542-46cd-aaba-1662dae954fa)
+[auto-promote] ✅ Promovida: "SIUX GEA" (1 fuentes, id: 33e8ec4c-9b3e-4614-b17a-05f566c55ce4)
+[auto-promote] ✅ Promovida: "NOX FUTURE Hybrid 12K NFA Series 2025 (Pala)" (1 fuentes, id: 3c2f4886-3aeb-4448-ab00-26c3fbb501c6)
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE RESERVE EDT 2026 ALE GALAN (Pala)" (1 fuentes, id: 0c609052-cfbb-43f4-bb55-2bf6357ad977)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "MUNICH ATMOSPHERE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG PRO CARBON ESMERALD 15K 2026"
+[auto-promote] ✅ Promovida: "NOX FUTURE Control 12K NFA Series 2025 (Pala)" (1 fuentes, id: e5be7f7b-8744-4878-b830-e291b670f67c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE MUSTANG PRO CARBON GOLD 15K 2026"
+[auto-promote] ✅ Promovida: "BULLPADEL ICON 2025 JUAN MARTÍN DÍAZ (Pala)" (1 fuentes, id: cc4ef099-b1d5-42b4-bffa-b226ac90e2ec)
+[auto-promote] ✅ Promovida: "SIUX FENIX ELITE 2026" (1 fuentes, id: 7c75da96-6032-40a7-b318-63b2d0b39e1b)
+[auto-promote] ✅ Promovida: "SIUX BEAT HYBRID 2026" (1 fuentes, id: d1ad81dd-259f-476f-9633-7818ed027ec5)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX FENIX PRO BLACK 2025" (1 fuentes, id: 5a56d7b8-9049-4d66-b22c-bbced5ce5c7f)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX INVICTA" (1 fuentes, id: 3f879464-5a88-42e5-988c-6401bb5343ab)
+[auto-promote] ✅ Promovida: "SUPER PACK HIGER PADEL RED CENTINEL CARBON 3K 2025" (1 fuentes, id: 86c73f57-f3ec-4683-a1e6-0db6f00aa4f3)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL X-COMPACT 2 ORANGE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "BULLPADEL X-COMPACT 2 YELLOW"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT BORA 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT CARAT PRO"
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Control 2025 (Pala)" (1 fuentes, id: ee4b5289-cabb-4705-b9bd-9e49b5c03f58)
+[auto-promote] ✅ Promovida: "STARVIE BLACK TITAN 2026 (Pala)" (1 fuentes, id: dc8b0ef0-eb12-4138-a618-d16e78e2d9e8)
+[auto-promote] ✅ Promovida: "SUPER PACK HEAD GRAPHENE 360 VECTOR 2025" (1 fuentes, id: 3cd34f20-5ec0-491c-83fe-df869e4a89de)
+[auto-promote] ✅ Promovida: "BLACK CROWN SPECIAL MASTER" (1 fuentes, id: d9f2722f-bd6e-4149-a853-e8de9294065b)
+[auto-promote] ✅ Promovida: "HEAD VIBE BL YL 2026" (1 fuentes, id: 50d22a23-db2a-4f11-b438-a67227dd4085)
+[auto-promote] ✅ Promovida: "BULLPADEL ELITE W Tour Final 2025 GEMMA TRIAY (Pala)" (1 fuentes, id: e117d587-5312-4fba-a1d4-6e977a3e2a14)
+[auto-promote] ✅ Promovida: "ADIDAS CROSS IT CARBON 2026 (Pala)" (1 fuentes, id: 9f11b8f0-7be7-4391-81e6-079d08da86ae)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE RAZE 4.0"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE REBOUNCE RED 3K"
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT CARAT PRO" (1 fuentes, id: 7127fffc-93b5-4f5f-91df-9ed85960d68e)
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT IONIQ 12K" (1 fuentes, id: 32ea0b9a-cdf7-4af2-ac96-df2e0fbaec91)
+[auto-promote] ✅ Promovida: "BULLPADEL FLOW LEGEND 2026 ALEJANDRA SALAZAR (Pala)" (1 fuentes, id: 5fa76d2c-383b-4514-bb9d-e81edbcb06f8)
+[auto-promote] ✅ Promovida: "SIUX VALKIRIA ELITE 2026" (1 fuentes, id: 006d0549-3549-4725-8780-ccb4db946f2d)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS HMX PRO BLACK GREEN 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ADIDAS ZENTIX BLACK ORANGE 2026"
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE CARBON 2026 (Pala)" (1 fuentes, id: cec06df6-59ce-45c7-a4d5-0a8209afe6e9)
+[auto-promote] ✅ Promovida: "SUPER PACK MIDDLE MOON ATILA 3.0 12K 2026" (1 fuentes, id: d6704e7b-dec9-4042-ab5c-837af15ab8ae)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX ELECTRA PRO SHADOW RED 2026" (1 fuentes, id: d368b0e6-ef48-406d-8499-15230fc45d4b)
+[auto-promote] ✅ Promovida: "MIDDLE MOON ATILA 3.0 12K 2026" (1 fuentes, id: c3c68618-fe9e-4e4b-b231-58c24608730b)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Belgium 2026 (Pala)" (1 fuentes, id: 6f0c71df-9d76-48bf-96cf-dc2cfc7061bd)
+[auto-promote] ✅ Promovida: "NEXUS XYLON CARBON" (1 fuentes, id: 78379092-2cb3-4835-8b5d-0b7ccfc764b7)
+[auto-promote] ✅ Promovida: "HIGER PADEL BLUE CENTINEL CARBON 3K 2025" (1 fuentes, id: 7abc64b4-7c30-4fa1-a29a-d79777212c3f)
+[auto-promote] ✅ Promovida: "NEXUS WONDER CARBON" (1 fuentes, id: 6d0f6509-bbe4-4c6b-9345-0cbe2592bff1)
+[auto-promote] ✅ Promovida: "Pala Joma Open Turquesa Flúor" (1 fuentes, id: cdad8d7b-ecaa-45c0-b95c-d5b8f9b3d830)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX ELECTRA PRO FIRE RED 2026" (1 fuentes, id: f8038bfa-7628-4e9a-a192-815925e3d909)
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT X-DRIVE" (1 fuentes, id: 2d327b94-b491-48dc-abe0-607d85e7a2c0)
+[auto-promote] ✅ Promovida: "SIUX PEGASUS ELITE 2026" (1 fuentes, id: 0156c595-eedf-4cc8-b36c-d3d1c4389e26)
+[auto-promote] ✅ Promovida: "PADDLE COACH AIRBOX Attack 2025 (Pala)" (1 fuentes, id: a995b37f-9aec-411b-b97e-ea3905e00238)
+[auto-promote] ✅ Promovida: "PADDLE COACH AIRBOX Control 2025 (Pala)" (1 fuentes, id: f174427e-1503-4685-89b6-cc26efb15ea5)
+[auto-promote] ✅ Promovida: "PADDLE COACH TRITUBOX 12K 2025 (Pala)" (1 fuentes, id: 66d90f4e-0225-46af-994f-8c5a254344b5)
+[auto-promote] ✅ Promovida: "Pala Joma Gold Pro II" (1 fuentes, id: 62ff81d6-d602-455e-a856-8bd36d65ae78)
+[auto-promote] ✅ Promovida: "DROP SHOT AXION Comfort 2025 JON SANZ (Pala)" (1 fuentes, id: c407b6a6-f56e-4d24-99e2-39a86d874ad1)
+[auto-promote] ✅ Promovida: "Pala Enebe Arrow" (1 fuentes, id: 00452fe9-549f-488b-b732-ffc8ac5e8df5)
+[auto-promote] ✅ Promovida: "BULLPADEL DISCOVER Control 2025 (Pala)" (1 fuentes, id: 47c14091-7a04-4b35-8b96-c3687fba65c3)
+[auto-promote] ✅ Promovida: "JUST TEN REBORN Killer 2022 (Pala)" (1 fuentes, id: 17937f49-31c6-4bfe-9d38-4340b7e2d5b7)
+[auto-promote] ✅ Promovida: "PADDLE COACH AIRBOX Control 2024 (Pala)" (1 fuentes, id: 86c98634-dc60-4a15-8faa-96b1f02b1f2a)
+[auto-promote] ✅ Promovida: "PALA PICKLEBALL HEAD EXTREME TOUR LITE" (1 fuentes, id: 197d3d63-9829-48ed-9364-ca9dbcce031f)
+[auto-promote] ✅ Promovida: "STARVIE ARKOS 2026 (Pala)" (1 fuentes, id: 8c190417-6113-4f63-94f6-1594bddbc07f)
+[auto-promote] ✅ Promovida: "Pala Adidas Cross It Carbon Ctrl 2025" (1 fuentes, id: a73b65a9-ca7f-4e82-bce5-bc19323ec55f)
+[auto-promote] ✅ Promovida: "ADIDAS RX SERIES 2026 (Pala)" (1 fuentes, id: bc61b025-291b-44b0-aef1-4f5a6523e35d)
+[auto-promote] ✅ Promovida: "LOK JUNGLE Lite 2026 (Pala)" (1 fuentes, id: f7dcc25a-2bbe-49b1-a31a-57d0691b9c6d)
+[auto-promote] ✅ Promovida: "BULLPADEL HACK Junior 2026 PAQUITO NAVARRO (Pala)" (1 fuentes, id: 152f62f5-aece-4710-91f1-9da1947c1825)
+[auto-promote] ✅ Promovida: "BULLPADEL DISCOVER Power 2025 (Pala)" (1 fuentes, id: dc053363-9296-485b-9e85-0b6ddec16103)
+[auto-promote] ✅ Promovida: "PALA PICKLEBALL HEAD EXTREME TOUR" (1 fuentes, id: b73f4665-ba9b-472f-a70e-f2840bd55f0d)
+[auto-promote] ✅ Promovida: "PALA PICKLEBALL HEAD EXTREME PRO" (1 fuentes, id: f053897a-dff2-4e72-b4de-da9d34aa64b8)
+[auto-promote] ✅ Promovida: "SUPER PACK DUNLOP TSUNAMI RED" (1 fuentes, id: ef276c9d-ef44-458f-8915-f7484481ad57)
+[auto-promote] ✅ Promovida: "SUPER PACK ADIDAS ZENTIX BLACK ORANGE 2026" (1 fuentes, id: e2034104-a4bd-44cb-aca1-452f82307b22)
+[auto-promote] ✅ Promovida: "SUPER PACK ADIDAS HMX PRO BLACK GREEN 2026" (1 fuentes, id: ea639c31-f3b1-4c0e-8b17-be4c4da82468)
+[auto-promote] ✅ Promovida: "SUPER PACK JOMA ROOKIE NEGRO NARANJA" (1 fuentes, id: 81abf940-3c8b-40a8-ad91-85f8217b07de)
+[auto-promote] ✅ Promovida: "SUPER PACK ENEBE MUSTANG 12K BLUE 2025" (1 fuentes, id: ea77a8e2-6af5-475f-968f-6d76f971a5ed)
+[auto-promote] ✅ Promovida: "KOMBAT ARENAL 2025 by MANU MARTIN (Pala)" (1 fuentes, id: 3b314d42-e6ca-425a-81d4-6914eb11c78b)
+[auto-promote] ✅ Promovida: "BULLPADEL K2 POWER 2025 (Pala)" (1 fuentes, id: e23d818f-59d8-4040-a351-10f66e7b1159)
+[auto-promote] ✅ Promovida: "PADDLE COACH AIRBOX Attack 2024 (Pala)" (1 fuentes, id: 021ff815-f333-4f03-bc53-776b9c12d844)
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE Ctrl 2026 (Pala)" (1 fuentes, id: eb04a3f5-5164-4b24-bd51-856eded59bfd)
+[auto-promote] ✅ Promovida: "SUPER PACK HEAD GRAPHENE 360 ATTITUDE 2025" (1 fuentes, id: 18ffa1ee-0ab5-4af2-a54a-bd4d4fc3638a)
+[auto-promote] ✅ Promovida: "SUPER PACK DROP SHOT QUANTUM" (1 fuentes, id: e00cf70f-8f5d-43c2-9496-8708850155ca)
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Power 2026 (Pala)" (1 fuentes, id: bd96d283-f2a9-4f0c-8caa-ac3e3ad90be9)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Italy 2026 (Pala)" (1 fuentes, id: d08e5e69-1c5c-436e-9cb4-4bd8361d76dd)
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Power 2025 JAVI LEAL (Pala)" (1 fuentes, id: 28b052b4-401f-4458-b5dc-a5e438136231)
+[auto-promote] ✅ Promovida: "KOMBAT VESUBIO 2025 by MANU MARTIN (Pala)" (1 fuentes, id: c09889c1-b42c-47c6-8670-c2ac791d684a)
+[auto-promote] ✅ Promovida: "ADIDAS METALBONE HRD+ 2026 ALE GALAN (Pala)" (1 fuentes, id: 4b22be0a-3ff1-46df-8378-3a52b9752dc8)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 18K 2025 by AGUSTIN TAPIA (Pala)" (1 fuentes, id: 0715336a-ac5d-477c-81ab-6a2b7bcbb1ce)
+[auto-promote] ✅ Promovida: "BULLPADEL NEURON 2024 CHINGOTTO (Pala)" (1 fuentes, id: 7bea9916-ff1c-482b-a9d3-2407b36d1f6d)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX SPYDER 4 ATTACK 2025" (1 fuentes, id: 1602254b-fe86-451a-b739-72b9cf4aea93)
+[auto-promote] ✅ Promovida: "PADDLE COACH BITUBOX 12K 2025 (Pala)" (1 fuentes, id: bbad406e-19b5-486f-b75b-bb3b64a9a2e2)
+[auto-promote] ✅ Promovida: "BULLPADEL INDIGA PWR 2025 (Pala)" (1 fuentes, id: d021e47e-86c7-45e4-8a9d-c373b69d9aaf)
+[auto-promote] ✅ Promovida: "BULLPADEL INDIGA W 2025 (Pala)" (1 fuentes, id: 49fb60b1-6550-4948-91f3-fe2e6d436965)
+[auto-promote] ✅ Promovida: "BULLPADEL VERTEX 05 HYB 2026 (Pala)" (1 fuentes, id: 27a19cf8-a3e9-4160-a020-202522791c1c)
+[auto-promote] ✅ Promovida: "BULLPADEL PEARL BEA GONZALEZ 2026 (Pala)" (1 fuentes, id: 164381a9-bac7-48e9-a03b-c375d3ffbfa7)
+[auto-promote] ✅ Promovida: "BULLPADEL ELITE W 2026 GEMMA TRIAY (Pala)" (1 fuentes, id: 82683627-966c-4399-b8a9-862435cfc365)
+[auto-promote] ✅ Promovida: "BLACK CROWN PATRON Xtrem 2025 (Pala)" (1 fuentes, id: 22614468-e1ca-49d0-9b16-d13b817b2a93)
+[auto-promote] ✅ Promovida: "LOK JUNGLE 2026 (Pala)" (1 fuentes, id: db7751d4-0e7f-4bef-9c7d-7cd66baa7507)
+[auto-promote] ✅ Promovida: "BULLPADEL XPLO CMF 2026 MARTIN DI NENNO (Pala)" (1 fuentes, id: 013e01b9-224b-4fd5-acd3-def179020d30)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Colombia 2026 (Pala)" (1 fuentes, id: 1f7fe677-fca5-46cd-8f40-416b63a7cd30)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP USA 2026 (Pala)" (1 fuentes, id: 0c08ecc7-cb1a-431b-a539-5b6d720b215b)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Germany 2026 (Pala)" (1 fuentes, id: e0f40d0c-292f-431a-b7d0-e1676400e23e)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Argentina 2026 (Pala)" (1 fuentes, id: 97655550-bd67-475e-82e1-f1caa80e73f9)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP Spain 2026 (Pala)" (1 fuentes, id: 2c3da23a-fa40-4bee-9388-8339a5d3ca1f)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP England 2026 (Pala)" (1 fuentes, id: 1971a42e-10c5-4114-b2bb-022ead33b02e)
+[auto-promote] ✅ Promovida: "ADIDAS WORLD CUP France 2026 (Pala)" (1 fuentes, id: 47a436e8-4a8c-432e-a070-97f988358c37)
+[auto-promote] ✅ Promovida: "STARVIE POLARIS 2026 (Pala)" (1 fuentes, id: 5440fef7-37cc-4c2e-aa34-9c8a8a0ef997)
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Light 2026 (Pala)" (1 fuentes, id: aff9771b-5e58-4ddc-b85f-f5ee8287e0a9)
+[auto-promote] ✅ Promovida: "KOMBAT KRAKATOA 2025 by MANU MARTIN (Pala)" (1 fuentes, id: fdaf99dd-8edf-41fa-9d73-8c84dcd3565e)
+[auto-promote] ✅ Promovida: "KOMBAT OSORNO 2025 by MANU MARTIN (Pala)" (1 fuentes, id: 728e848f-e021-4c9e-9b59-fc72d72de31f)
+[auto-promote] ✅ Promovida: "STARVIE NYRA 2026 (Pala)" (1 fuentes, id: e9fe616f-3b66-429a-a019-3268107c452c)
+[auto-promote] ✅ Promovida: "STARVIE TITANIA PRO 2025 (Pala)" (1 fuentes, id: 689ea543-5a00-4c10-a40f-d6aa34b37025)
+[auto-promote] ✅ Promovida: "BULLPADEL ELITE W 25 GEMMA TRIAY 2025 (Pala)" (1 fuentes, id: 201f0012-f880-46c9-bd7a-4ed68514e1e5)
+[auto-promote] ✅ Promovida: "NOX AT10 GENIUS 18K 2026 by AGUSTIN TAPIA (Pala)" (1 fuentes, id: 1d623b20-1569-4758-a47c-095ed6013507)
+[auto-promote] ✅ Promovida: "ADIDAS RX SERIES Light 2026 (Pala)" (1 fuentes, id: 31c62fe6-971c-4e27-b81d-d82849a917a1)
+[auto-promote] ✅ Promovida: "BULLPADEL INDIGA PWR 2026 (Pala)" (1 fuentes, id: 37675f9f-aa30-4830-99be-c7cd85eecabf)
+[auto-promote] ✅ Promovida: "BULLPADEL INDIGA W 2026 (Pala)" (1 fuentes, id: 9a0917b0-ffd2-4d60-ba2c-ecb06c101538)
+[auto-promote] ✅ Promovida: "ADIDAS DRIVE Light 2026 (Pala)" (1 fuentes, id: 2c446e2a-74b3-4c5e-af72-7189557ba6b1)
+[auto-promote] ✅ Promovida: "ADIDAS RX SERIES Light 2024 (Pala)" (1 fuentes, id: bfbda645-345a-4e26-a456-2c56e4f4ee18)
+[auto-promote] ✅ Promovida: "ADIDAS MATCH Light 2026 (Pala)" (1 fuentes, id: f88e7e67-1605-4efe-89d8-9f635919bec3)
+[auto-promote] ✅ Promovida: "ROYAL PADEL M27 Light 2026 (Pala)" (1 fuentes, id: f7a6151b-7c3c-46bb-adac-f15e36477098)
+[auto-promote] ✅ Promovida: "WILSON DEFY PRO V1  Special Edition 2026 (Pala)" (1 fuentes, id: 7a474ac8-ce1c-47f6-b0b3-f505c9c45a49)
+[auto-promote] ✅ Promovida: "BULLPADEL IONIC Control 2026 (Pala)" (1 fuentes, id: 7ff5ee38-eadc-46db-b191-4faad39c1304)
+[auto-promote] ✅ Promovida: "BLACK CROWN WIN Carbon 2025 (Pala)" (1 fuentes, id: 528c9808-fd36-4bc2-890a-421a7f241643)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX SPYDER 4 CONTROL 2025" (1 fuentes, id: 13223800-6d1c-4f4a-bf2c-4cdd3f77b523)
+[auto-promote] ✅ Promovida: "PALA PICKLEBALL ADIDAS ADIPOWER ATTACK 3" (1 fuentes, id: 396cca02-00b3-464a-9418-56320c93a823)
+[auto-promote] ✅ Promovida: "SUPER PACK SIUX OPTIMUS 5" (1 fuentes, id: 2a784a46-1b56-4424-8a85-4cf78b2ca527)
+[auto-promote] ✅ Promovida: "DROP SHOT EXPLORER PRO ATTACK - Lucas Campagnolo Premier Padel" (1 fuentes, id: 6ac3e983-ac80-48a5-8e9b-a78a5d9cec5b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT EXPLORER PRO SOFT 1.0 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT IONIQ 12K"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT PACIFIC BLACK"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT REVENGE PRO"
+[auto-promote] ✅ Promovida: "DUNLOP AERO STAR PRO 2024" (1 fuentes, id: a998fed2-d88a-45c4-b374-c201cc3e5f71)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP AERO STAR TEAM 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DUNLOP TSUNAMI RED"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM HELIX PRO HP-224"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL WHIP EVA 2024"
+[auto-promote] ✅ Promovida: "SIUX SPYDER 4 ATTACK 2025" (1 fuentes, id: d6b850a3-4e84-4791-84ac-6d364b6762a9)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE PRO MASTER EVOLUTION AMARILLA"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "DROP SHOT SAKURA 3.0 2021"
+[auto-promote] ✅ Promovida: "DROP SHOT X-BASS 2026" (1 fuentes, id: 1bd29435-c8ce-455f-a8cb-ec27349e8f0e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE NITRO RED JUNIOR 2024"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ENEBE RSX 7.1 CARBON RELOADED 2024"
+[auto-promote] ✅ Promovida: "ENEBE SPITFIRE BLACK 12K 2025" (1 fuentes, id: 9bb22277-9bdf-48f3-877b-e73dc3caf0d0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HARLEM COREX 18K HP-218"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD GRAPHENE 360 ATTITUDE 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "HEAD GRAPHENE 360 VECTOR 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "KELME PUMA 2022"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL ANIVERSARIO 36 PINK 2026"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "ROYAL PADEL M27 LIGHT 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE EGON"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE RUNA BLUE HYBRID"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE JUNIOR 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA RUSSELL ADVANCE"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA TITAN 2025"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "VIBORA YARARA CARBON PLUS 1K BLUE 2025"
+[auto-promote] ✅ Promovida: "Pala Wilson Optix Padel Kit" (1 fuentes, id: 10d3ec12-5f27-4b70-9751-93bfe69bac55)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SPEED ORANGE POWER REEDITION"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE SWAT YELLOW"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE WINNER PRO MAROON DEFECTO ESTÉTICO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "SOFTEE WINNER STAR PRO"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "STARVIE BRAVA SOFT 15K 2025"
+[auto-promote] ✅ Promovida: "VIBORA BLACK MAMBA PRO 2026" (1 fuentes, id: 25c5884f-4305-45aa-b5df-318de6b139f1)
+[auto-promote] ✅ Promovida: "NEXUS MAXIMUS SANDED 3.0 PRO CARBON 18K" (1 fuentes, id: 523440f7-bb75-4030-82cc-985015c48bb1)
+[auto-promote] ✅ Promovida: "NEXUS FIREFIGHT" (1 fuentes, id: 0f2e3104-d3d0-44ea-8aaf-e903e57a95b2)
+[auto-promote] ✅ Promovida: "TOTALSPIN EFECTO RUGOSO 4ON" (1 fuentes, id: c4c7e25a-867b-40f4-86b8-78bd51902aec)
+[auto-promote] ✅ Promovida: "HBL BUD" (1 fuentes, id: 807d7e70-ce4c-4fa9-8b0f-95c73925f3ae)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat Viper JL FW 2026 Pala de pádel"
+[auto-promote] ✅ Promovida: "Bullpadel Wonder Pala de pádel" (1 fuentes, id: 66ad03e4-e045-47e7-83ce-87aaf9b308a6)
+[auto-promote] ✅ Promovida: "Siux Fenix Pro Pala de pádel" (1 fuentes, id: e788cb00-7aaf-4ea6-a03a-e104bd4bcb51)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat Viper Soft Juan Lebron  Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Dunlop Rocket Green Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX Ventus Control 3K Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Wilson Wilson Cupra LT V2 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Vertex 26 Junior Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Starvie Arkos Pala de pádel Superficie completa"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Legend 2025 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat Alioth Pro Jr Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Indiga 26 Junior Pala de pádel"
+[auto-promote] ✅ Promovida: "adidas Drive 2026 Pala de pádel" (1 fuentes, id: 264c8d5a-bbc7-49b7-9184-80d1383f622a)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat ACRAB Pala de pádel"
+[auto-promote] ✅ Promovida: "Babolat Counter Vertuo 2026 Pala de pádel" (1 fuentes, id: cc46f590-1318-4956-9086-ee2be7f2cb57)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Vertex 2 CTR Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Black Mamba Verde Junior Pala de pádel"
+[auto-promote] ✅ Promovida: "Siux Fenix Pro 5 2025 By Alex Chozas" (1 fuentes, id: 8f827598-9297-4f2d-81af-0802cc7df5b3)
+[auto-promote] ✅ Promovida: "Rox R-Sparky Amarillo Pala de pádel" (1 fuentes, id: 3334323c-9723-418b-be65-4e3064d2a606)
+[auto-promote] ✅ Promovida: "Bullpadel Neuron 02 Geo Pala de pádel Superficie completa" (1 fuentes, id: 8a14bf5d-7053-4903-a20e-70d4e7fb3faf)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Bisoke Carbon Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas FRA WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Vertex 05 W Cloud Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Wilson Match Point Padel Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas ARG WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Crossit Carbon Ctrl 2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Crossit Ctrl 2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas ITA WC2026 Pala de pádel"
+[auto-promote] ✅ Promovida: "Babolat Juan Lebron 2025 Más raquetera" (1 fuentes, id: 895eea88-809a-453f-b0c6-1fc36adfdb3b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Indiga W 26 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Dunlop Lite Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Enebe Full Tubular Carbon Pala de pádel"
+[auto-promote] ✅ Promovida: "Siux PEGASUS PRO Pala de pádel" (1 fuentes, id: c4cc6916-24f3-47db-a706-61db347799a8)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas ENG WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Multination WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas NTH WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat Dyna Energy"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Xplo Tour Final 24 Premier Padel Collection"
+[auto-promote] ✅ Promovida: "Dunlop FX Lite Más raquetera" (1 fuentes, id: e641e93d-df4a-4352-81bd-7d4726ee8d0a)
+[auto-promote] ✅ Promovida: "Rox R-Sparky Sky Pala de pádel" (1 fuentes, id: 92fe205b-6055-47f0-b821-40ae775a0b46)
+[auto-promote] ✅ Promovida: "HEAD Coello Vibe 2026 Pala de pádel" (1 fuentes, id: d71589e1-6c6a-426e-8e2a-bb2172607b40)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Real Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Bisoke Attk Carbon Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Icon 26 Pala de pádel Superficie completa"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Softee Potenza Rainbow   Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Black Mamba Edition Pala de pádel"
+[auto-promote] ✅ Promovida: "Vibora Yarara Edition Pala de pádel" (1 fuentes, id: 095b82c9-d370-43f6-8ef9-c3cd37b1b5d4)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Vertex 02 X Hybrid Carbon Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Yarara Pala de pádel"
+[auto-promote] 🚫 No es pala, descartando: "Wilson Pack de 3 Optix V2 Lite  Más tubo de pelotas, Más raquetera"
+[auto-promote] ✅ Promovida: "Pala Bullpadel Icon 2025" (1 fuentes, id: b4ea4425-7a81-4858-b71e-8f2cc24bfbe0)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Woman  Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Piton Carbon LTD Pala de pádel"
+[auto-promote] 🚫 No es pala, descartando: "Pala Oxdog Ultimate Court + Paletero Oxdog FEP ultra tour padel bag + Bote de pelotas Oxdog BOOST+"
+[auto-promote] ✅ Promovida: "Pala Adidas World Cup Multinacional CAN/MEX/EEUU 2026" (1 fuentes, id: 1133b037-82f4-4252-bfdb-001c1618e737)
+[auto-promote] ✅ Promovida: "Pala de TEST Oxdog Hyper Pro 2.0 2025" (1 fuentes, id: b4e25d2c-9e12-45ee-82f2-cf6460576d6c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas GER WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Vibora Naya Purpura Junior Pala de pádel"
+[auto-promote] ✅ Promovida: "Wilson Defy V1 Special Edition 2026" (1 fuentes, id: c75f1b1c-2f92-43f8-aba1-65901a8d1b1d)
+[auto-promote] ✅ Promovida: "Pala Head Coello Vibe 2025" (1 fuentes, id: acf53f9d-03fd-4b50-8135-8f127f308d14)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas BEL WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas MEX WC2026 Pala de pádel"
+[auto-promote] 🚫 No es pala, descartando: "Bullpadel Iconic Light 26 Más raquetera, Más tubo de pelotas"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX Ventus Attack 12K Xtreme Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Wilson Carbon Force C Pala de pádel"
+[auto-promote] ✅ Promovida: "Pala Adidas Adipower Multiweight CTRL Pro EDT Álex Ruiz" (1 fuentes, id: 4b6da850-ac7d-46cc-a4b2-4bc573d4f09a)
+[auto-promote] ✅ Promovida: "Pala Babolat Viper Soft 3.0 2026 J. Lebrón" (1 fuentes, id: 67bdafcf-2a06-473c-b007-dd8ffa1ac9be)
+[auto-promote] ✅ Promovida: "Pala Adidas Multiweight Ctrl 3.3 2024" (1 fuentes, id: 3c1f7b1e-7e02-4209-a83e-01aa36fc977a)
+[auto-promote] ✅ Promovida: "Pala Adidas RX Series Lime 3.4 2025" (1 fuentes, id: f0da092a-cb20-4d16-a777-9e23a9dd43fc)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas ESP WC2026 Pala de pádel"
+[auto-promote] ✅ Promovida: "adidas Match 2026 Pala de pádel" (1 fuentes, id: 4d7f5a40-662c-4f41-b536-069e2f08e7d2)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Babolat BL.003  Pala de pádel"
+[auto-promote] ✅ Promovida: "Babolat Juan Lebron 2025 Pala de pádel" (1 fuentes, id: 6fc9837b-10fe-432f-8467-17c439263d1c)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Dunlop Galactica Limited By Nisse Pala de pádel"
+[auto-promote] ✅ Promovida: "Wilson Bela LS V3 Más raquetera" (1 fuentes, id: 34c3ffbd-8586-4c1a-8210-aaf530bd10b5)
+[auto-promote] ✅ Promovida: "Pala Adidas Cross IT Carbon 2025 Maxi Arce" (1 fuentes, id: 1fafba94-58b9-4796-9b0f-d42af4bf710f)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Vertex 04 Woman 2025" (1 fuentes, id: eca7b339-a729-48d3-8bde-b43f4df0c99c)
+[auto-promote] ✅ Promovida: "Siux Electra Pro Pala de pádel" (1 fuentes, id: 3d7e578d-8b24-4326-ae6e-f42fd43a3b82)
+[auto-promote] ✅ Promovida: "Babolat Technical Viper 2026 Pala de pádel" (1 fuentes, id: e96cb570-a5a5-486c-83c4-caa8c0fbab8e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas COL WC2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas Crossit Carbon 2026 Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Dunlop Galactica OS Limited By Nisse Pala de pádel"
+[auto-promote] ✅ Promovida: "HEAD Coello Pro Más raquetera" (1 fuentes, id: 4cbe7c98-516f-4814-b12e-1ace69493ad7)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Icon 2026" (1 fuentes, id: d7fdb42f-da13-4abc-aaee-9e66c1f5d2dd)
+[auto-promote] ✅ Promovida: "Pala Head Coello Vibe 2026" (1 fuentes, id: 027bd542-73f1-4873-83d7-daad3544b00b)
+[auto-promote] ✅ Promovida: "Pala Drop Shot Explorer Soft Women 2026" (1 fuentes, id: 49f1463e-afc3-4645-b1d2-1f068eb8bb19)
+[auto-promote] ✅ Promovida: "Bullpadel Vertex 05 Light Pala de pádel" (1 fuentes, id: 4fe390da-9018-465d-b4f2-489fecd0406b)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "NOX VK10 by Aranzou Osoro Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Tecnifibre Wall Breaker 365 (2024)"
+[auto-promote] ✅ Promovida: "Pala Bullpadel XPLO 26" (1 fuentes, id: 9f601b05-1b3c-410b-8e35-08f713c470ee)
+[auto-promote] ✅ Promovida: "HEAD Speed 2025 Pala de pádel" (1 fuentes, id: 3e975a01-45e8-4147-9a08-c8bca9a1ad5e)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "adidas 10th Anniversary Pala de pádel"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Elite W 26 Pala de pádel Superficie completa"
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Tecnifibre Wall Breaker 360W (2024)"
+[auto-promote] ✅ Promovida: "Pala Nox AT10 Genius Attack 12K by Agustín Tapia 2025" (1 fuentes, id: 7723ce36-b15c-4ead-b372-9f5bc25a0374)
+[auto-promote] ✅ Promovida: "Rox R-Sparky Sky" (1 fuentes, id: 5b84eff3-4186-4ed0-8bfa-7b97fc547495)
+[auto-promote] ✅ Promovida: "Bullpadel Iconic Light 26," (1 fuentes, id: e84ea029-00e4-4bc5-8c5d-821f34c8a946)
+[auto-promote] ✅ Promovida: "Rox R-Sparky Amarillo" (1 fuentes, id: d78fea60-f1ce-4761-8576-a041b27468dd)
+[auto-promote] ✅ Promovida: "Pala Bullpadel K2 Power 25" (1 fuentes, id: 745b6aa0-dd9c-479d-8e17-6636536b6d0b)
+[auto-promote] ✅ Promovida: "Pala Adidas Metalbone HRD+ 2026 Ale Galán" (1 fuentes, id: 22f4e0a2-e0ab-4e79-b83e-8f66080dd4f2)
+[auto-promote] ✅ Promovida: "Pala Adidas Metalbone 2026 Ale Galán" (1 fuentes, id: 87cd8567-5589-46ef-a213-f0dd03008bf8)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Icon 25" (1 fuentes, id: fd4919ce-f77a-4096-b516-2e50da6b51f2)
+[auto-promote] ✅ Promovida: "Pala Adipower Multiweight 2023" (1 fuentes, id: f901e6c5-46cf-46cc-83d7-be8386efa160)
+[auto-promote] ✅ Promovida: "Essnova LTD edición limitada" (1 fuentes, id: bc16c388-16ca-4a87-a965-ce4676394222)
+[auto-promote] ✅ Promovida: "Pala Adidas Metalbone Carbon 2026" (1 fuentes, id: 308554a7-363a-493e-94e8-131a0f785863)
+[auto-promote] ✅ Promovida: "Varlion Cañon Difusor Carbon Black  2022" (1 fuentes, id: a5f09534-e9a0-4a3e-92e0-6d6e84aab428)
+[auto-promote] ✅ Promovida: "HEAD VIBE GR BK 2025" (1 fuentes, id: 36d0e3c9-da99-4b3c-adaa-fe93e46a8a6c)
+[auto-promote] ✅ Promovida: "Pala de pádel EA10 Ventus Attack 12K XTREM by Edu Alonso" (1 fuentes, id: 717eba7a-8c74-4173-88cd-d379c757f59d)
+[auto-promote] ✅ Promovida: "Head Vibe Gris/Negro 2025" (1 fuentes, id: a15ea171-4e47-4ed7-9983-78181f946d90)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Hack JR 25" (1 fuentes, id: 8854dbd6-c7b7-473f-a378-32966d649caa)
+[auto-promote] ✅ Promovida: "Bullpadel Icon 2026" (1 fuentes, id: d6336b8c-d516-4120-929f-dffe4ff1b319)
+[auto-promote] ✅ Promovida: "Pala Adidas Metalbone Team 2026" (1 fuentes, id: 846b76cf-2b74-443a-be5b-6e43f3ae7d4e)
+[auto-promote] ✅ Promovida: "Head Vibe 2026 Blue/Yellow" (1 fuentes, id: 52dfee3a-9b99-4a6a-ad31-2ccdfb5ca72f)
+[auto-promote] ✅ Promovida: "Varlion Bourne Summum Prisma Radio W" (1 fuentes, id: ecf6b302-ccce-4fde-9033-e40f024f4437)
+[auto-promote] ✅ Promovida: "Pala Adidas Rx Series Light 2024" (1 fuentes, id: 80506c0f-54f7-43f2-9aeb-14213db6cf21)
+[auto-promote] ✅ Promovida: "Head Vibe 2026 Green/Orange" (1 fuentes, id: 36ede1a5-102d-4eeb-9333-af4a4c9cf14f)
+[auto-promote] ✅ Promovida: "Wilson Defy V1 LS Special Edition 2026" (1 fuentes, id: 51ae7d6f-960c-466a-8a23-7111dcfa3015)
+[auto-promote] ✅ Promovida: "Pala Adidas Cross It Carbon 2026" (1 fuentes, id: 48c5b838-bc67-4810-afec-19e4aa713afc)
+[auto-promote] ✅ Promovida: "Pala Adidas Metalbone Green padel" (1 fuentes, id: 1c587e4b-31ef-4f04-995b-032bb13cd3fa)
+[auto-promote] ✅ Promovida: "Pala Joma Slam Pro Iconic Blanco Oro" (1 fuentes, id: bd3cee5e-1524-48b4-8f90-e3925db73e67)
+[auto-promote] ✅ Promovida: "Pala Adidas Cross It Ctrl 2026" (1 fuentes, id: 6c7073a5-c834-4932-9921-e16f6ea62f24)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Bullpadel Flow Woman 2025"
+[auto-promote] ✅ Promovida: "Starvie Triton Soft Exclusiva" (1 fuentes, id: 9c96e336-a383-4027-86fa-ca7fc66db500)
+[auto-promote] ✅ Promovida: "Lok Maxx Hype" (1 fuentes, id: 8ee405ce-7e91-4847-9b2f-4fda50d34cbb)
+[auto-promote] ✅ Promovida: "Nox AT10 Luxury Genius Attack 18K Alum 2026 By Agustín Tapia" (1 fuentes, id: f7a747fe-d16a-4905-82b0-74d12fc8716f)
+[auto-promote] ✅ Promovida: "Adidas Adipower CTRL Multiweight Pro EDT 2025" (1 fuentes, id: 95eae563-9ac6-464a-a6d6-e2700a3ab06d)
+[auto-promote] ✅ Promovida: "Wilson Blade LS V3 Padel 2024" (1 fuentes, id: 3395050b-0170-4e1d-ba77-5e9aa67ed369)
+[auto-promote] ✅ Promovida: "Head One Ultralight Negra 2025" (1 fuentes, id: 3a668519-a345-4e4a-afac-2fe26ef7ac63)
+[auto-promote] ✅ Promovida: "Head Speed Motion – Ari Sánchez Reedición 2025" (1 fuentes, id: 35c59dc2-caf9-498f-ac8c-b654b6c3d038)
+[auto-promote] ✅ Promovida: "Adidas Cross It Carbon 2025" (1 fuentes, id: 925cf808-396c-417c-8f65-1373bb505ce4)
+[auto-promote] ✅ Promovida: "Adidas Metalbone Lite 3.1 2022" (1 fuentes, id: 4ae7080e-ff0e-41d5-8bca-e9c70e24c259)
+[auto-promote] ✅ Promovida: "Black Crown Patron" (1 fuentes, id: a71e2989-eb35-49bb-9d60-e4a944f68911)
+[auto-promote] ✅ Promovida: "Varlion Maxima Summun Junior Pansy 2022" (1 fuentes, id: 474825c1-d6e8-4c47-add6-4d79b348e672)
+[auto-promote] ✅ Promovida: "Wilson Defy LS V1 Padel 2025" (1 fuentes, id: d174dd03-78fa-4c03-b73c-4dc0d6386a29)
+[auto-promote] ✅ Promovida: "Varlion LW Carbon 8 Prisma" (1 fuentes, id: 6909125a-3961-4e5a-b541-d46e003314e4)
+[auto-promote] ✅ Promovida: "Wilson Bela Elite V3" (1 fuentes, id: 10fbf51a-3791-4427-ac8b-b02b43a20d96)
+[auto-promote] ✅ Promovida: "PALA BULLPADEL ELITE 2026" (1 fuentes, id: 3f40b7c2-f437-47e5-8e07-c73fd5580806)
+[auto-promote] ✅ Promovida: "PALA JOMA TOURNAMENT PRO ICONIC LAPI EDITION" (1 fuentes, id: 54c8c289-9af2-43bf-ab4b-5edd998e73e6)
+[auto-promote] ✅ Promovida: "TRIPACK BULLPADEL GAME WOMAN" (1 fuentes, id: 0d4a842a-cb4b-4549-8cf5-fef8dfcf90d4)
+[auto-promote] ✅ Promovida: "BULLPADEL GOLD XSERIES 3.0" (1 fuentes, id: 8fb3aeec-c73f-44d8-8ff2-b5ed94cef4ca)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP ULTRA LIGHT SILVER JUNIOR" (1 fuentes, id: 24afb76f-bce3-43dd-b81b-c55ffc10911a)
+[auto-promote] ✅ Promovida: "NOX ML10 PRO CUP" (1 fuentes, id: 03fabad9-f3bf-4269-91b6-1ae3f3f5f9b2)
+[auto-promote] ✅ Promovida: "SIUX FENIX II" (1 fuentes, id: d2c1cee7-d256-4dcc-b7dd-ba89debeac78)
+[auto-promote] ✅ Promovida: "NOX MJ10 GEMELAS ATOMIKAS BY MAJO SÁNCHEZ ALAYETO 2022" (1 fuentes, id: 8694cb80-296c-4e82-88c3-84143de9b0b4)
+[auto-promote] ✅ Promovida: "HEAD DELTA PRO 2022" (1 fuentes, id: 6a8eafa2-06d9-4a7a-9847-d3c5d21431b0)
+[auto-promote] ✅ Promovida: "STAR VIE RAPTOR 2022" (1 fuentes, id: a7658e50-5731-45ff-9a7b-be0184711f15)
+[auto-promote] ✅ Promovida: "STAR VIE ARCADIA" (1 fuentes, id: ad6bb491-5396-4284-997d-58037ef19936)
+[auto-promote] ✅ Promovida: "DUNLOP RENEGADE" (1 fuentes, id: a74614d6-668f-464a-9c1a-3e6d19fc894c)
+[auto-promote] ✅ Promovida: "BULLPADEL FLOW WOMAN 2022" (1 fuentes, id: 60a29134-3ce8-4f63-8946-ae4e5bfe3530)
+[auto-promote] ✅ Promovida: "SIUX SPYDER 4 ATTACK FLEX" (1 fuentes, id: 8ad1f7a6-9c55-4f5f-bb41-2982819d4ba3)
+[auto-promote] ✅ Promovida: "SOFTEE POTENZA RAINBOW AQUA NEGRO AZUL" (1 fuentes, id: 6e9ca31f-0860-4bd3-8f1f-75e15287fe69)
+[auto-promote] ✅ Promovida: "SOFTEE PRO MASTER ROJA 13893" (1 fuentes, id: d85ee10f-71a2-41ad-9c76-fe7ee55e324e)
+[auto-promote] ✅ Promovida: "HEAD ALPHA JUNIOR SANYO" (1 fuentes, id: c7d6d19e-af91-4585-83ce-45c40f170927)
+[auto-promote] ✅ Promovida: "BLACK CROWN PITON AIR" (1 fuentes, id: b40dc1b0-1c7a-4eb8-a3eb-2943b96ab58d)
+[auto-promote] ✅ Promovida: "SOFTEE PRO MASTER" (1 fuentes, id: 43997cbf-7baa-4415-a6de-56dc556d26a9)
+[auto-promote] ✅ Promovida: "STAR VIE AQUILA SPACE" (1 fuentes, id: d44e23b7-af06-491d-b86e-c73daad018b4)
+[auto-promote] ✅ Promovida: "SOFTEE POTENZA BLACK EDITION" (1 fuentes, id: 7c97ce12-6aa8-407e-9714-716687179474)
+[auto-promote] ✅ Promovida: "ENEBE COMBAT ULTRASOFT CELESTE" (1 fuentes, id: 194c6d5a-0cb5-4a9c-ac1f-5d51d140d038)
+[auto-promote] ✅ Promovida: "HEAD EVO SANYO" (1 fuentes, id: b2707fba-95c2-4aef-825d-5c4dade53fc6)
+[auto-promote] ✅ Promovida: "SIUX ELECTRA ST3 SPECIAL EDITION" (1 fuentes, id: d63fbcf3-60d5-40ca-bb0b-6b4c111a0b9c)
+[auto-promote] ✅ Promovida: "HEAD DELTA ELITE 2022" (1 fuentes, id: 2fb3e24e-e809-413e-8070-ecc8dc89606b)
+[auto-promote] ✅ Promovida: "SIUX FENIX 3K" (1 fuentes, id: 0cb56239-b578-42fc-911c-ac495dca7a7b)
+[auto-promote] ✅ Promovida: "SOFTEE RANGER CORAL NEGRO NARANJA" (1 fuentes, id: 9e07d3cd-7278-479f-a925-da91c6acacd7)
+[auto-promote] ✅ Promovida: "NOX X-ONE C.6" (1 fuentes, id: 911b0617-2cb2-450d-8f98-0daa483d30ef)
+[auto-promote] ✅ Promovida: "HEAD DELTA MOTION 2022" (1 fuentes, id: 8cf80c49-4cb8-49b3-822e-c913164edc67)
+[auto-promote] ✅ Promovida: "SOFTEE FREEZER NEGRO DORADO" (1 fuentes, id: 9a203987-6a6f-4dbc-862f-0ff9f0a1b14b)
+[auto-promote] ✅ Promovida: "BABOLAT COUNTER VIPER APT" (1 fuentes, id: 5cec0755-074f-4c91-9493-7bc76545a8a9)
+[auto-promote] ✅ Promovida: "BLACK CROWN PITON LIMITED" (1 fuentes, id: 3d7526fb-603b-46fe-9d84-0351fb9d8433)
+[auto-promote] ✅ Promovida: "SOFTEE BEACH TENNIS FISTERRA" (1 fuentes, id: f62c30d0-581c-424e-84df-de7d48ac1d45)
+[auto-promote] ✅ Promovida: "NOX ML10 BAHIA LUXURY SERIES 2022" (1 fuentes, id: 74b1de43-2412-44b5-b0c0-5c456e4baecc)
+[auto-promote] ✅ Promovida: "STAR VIE PRODIGY 24K" (1 fuentes, id: a2a2c2bf-03ca-4cab-91aa-a617e0ac15d9)
+[auto-promote] ✅ Promovida: "NOX NERBO WPT LUXURY SERIES 2022" (1 fuentes, id: e81d3ec5-0971-4a3b-b208-07dd653f2016)
+[auto-promote] ✅ Promovida: "SOFTEE POTENZA FIBER" (1 fuentes, id: 596ad8a9-50c1-4cd8-a529-46debf93e91a)
+[auto-promote] ✅ Promovida: "ENEBE COMBAT ULTRASOFT 2021" (1 fuentes, id: 89e5eb06-5ef7-4027-915c-5da9ae38d7e5)
+[auto-promote] ✅ Promovida: "DUNLOP AERO STAR JUNIOR" (1 fuentes, id: ad6d49d9-7caa-4d72-9722-8f2b4c88a308)
+[auto-promote] ✅ Promovida: "SOFTEE WINNER PRO BLACK 13874" (1 fuentes, id: 522c1f8b-f3bc-4311-900e-8e7122fb915d)
+[auto-promote] ✅ Promovida: "HEAD FLASH W 2022 228272" (1 fuentes, id: 48749859-6471-48da-a84d-d2d332c9da62)
+[auto-promote] ✅ Promovida: "SOFTEE PRO MASTER AMARILLO FLUOR 13894" (1 fuentes, id: 234e9d35-9640-46db-a3da-a22f755dc2b8)
+[auto-promote] ✅ Promovida: "SOFTEE SWAT ORANGE" (1 fuentes, id: d481b316-5592-40a3-a7c7-bb8270c7849a)
+[auto-promote] ✅ Promovida: "STAR VIE METHEORA JUNIOR" (1 fuentes, id: 74563c65-8f99-490a-bc67-f44df4db2877)
+[auto-promote] ✅ Promovida: "BULLPADEL WING BALANCE" (1 fuentes, id: 26e88af1-07c9-4368-9b8b-b7be13f1826e)
+[auto-promote] ✅ Promovida: "STAR VIE S2 RED CARBON EFFECT" (1 fuentes, id: b0157ee0-258b-4dc6-a7fe-97c576cc6245)
+[auto-promote] ✅ Promovida: "SIUX TSUNAMI 4.0 LUXURY" (1 fuentes, id: 0fe105cb-fc4f-44d4-80a9-a704e8763b04)
+[auto-promote] ✅ Promovida: "NOX AT GENIUS ATTACK 18K 2022" (1 fuentes, id: 6a8c524e-4967-47aa-a9e8-43bbd663f7d4)
+[auto-promote] ✅ Promovida: "NOX TEMPO WPT LUXURY SERIES 2022" (1 fuentes, id: b031d9dd-1524-4148-8c10-06a590c25846)
+[auto-promote] ✅ Promovida: "Adidas Metalbone Carbon Control 2026" (1 fuentes, id: acbddabc-67ce-4211-9bb8-44ea5ba5102f)
+[auto-promote] ✅ Promovida: "Adidas World Cup Spain 2026" (1 fuentes, id: 2b1cfba2-ae5d-428c-8d6a-d141dbd429eb)
+[auto-promote] ⚠️  Slug duplicado, ignorando: "Adidas World Cup Netherlands 2026"
+[auto-promote] ✅ Promovida: "Lok Carbon Hype FDB 2026" (1 fuentes, id: 768e91c4-caae-42d5-a03a-3acf262b5239)
+[auto-promote] ✅ Promovida: "Drop Shot Explorer Soft Woman 2026" (1 fuentes, id: 4f3b10a8-2671-4e44-bf99-16d23a875877)
+[auto-promote] ✅ Promovida: "Lok Carbon Flow 2024" (1 fuentes, id: cfafc720-9edb-473c-8535-50dce4cb2ba8)
+[auto-promote] ✅ Promovida: "Enebe Massive 2024" (1 fuentes, id: 6c86f476-5e1e-4b66-94fe-5566d8037bb3)
+[auto-promote] ✅ Promovida: "Star Vie Brava Pro 15k 2025" (1 fuentes, id: 9badb1e4-55f6-4fb9-9996-8216803f75a8)
+[auto-promote] ✅ Promovida: "Head Vibe negra morada 2025" (1 fuentes, id: fcff6b8f-eb11-489a-ac60-7b2bb4930fa3)
+[auto-promote] ✅ Promovida: "Joma Slam Pro A1 blanco oro 2024" (1 fuentes, id: 51e157ab-1c01-483c-a8f1-ed015e930480)
+[auto-promote] ✅ Promovida: "Dunlop FX Pro Lite Metal 2026" (1 fuentes, id: debf83ae-43fc-48fc-aa37-98944bffb39f)
+[auto-promote] ✅ Promovida: "Dunlop Nanomax Lite 2025" (1 fuentes, id: 599dfbee-6c8f-4d8e-b47a-793f2487af3d)
+[auto-promote] ✅ Promovida: "Dunlop Nanomax Lite white 2026" (1 fuentes, id: 2063ceb1-e4a3-4ee6-8f65-52c370ec9967)
+[auto-promote] ✅ Promovida: "Star Vie Raydium Columns" (1 fuentes, id: 4f04c5e8-582e-4728-963d-d43f90db7f60)
+[auto-promote] ✅ Promovida: "Head Vibe azul roja 2025" (1 fuentes, id: 0cc87469-4d9e-4657-8277-8f6592c77b5d)
+[auto-promote] ✅ Promovida: "Tecnifibre Wall Master 365" (1 fuentes, id: ec25c71b-b06d-455d-8e21-3e6011df4bbb)
+[auto-promote] ✅ Promovida: "Adidas World Cup FIFA Multination 2026" (1 fuentes, id: babb1a79-5f7b-43c5-9e11-90e9693025a3)
+[auto-promote] ✅ Promovida: "Bullpadel Vertex Woman Junior 2026" (1 fuentes, id: feca9e01-74dc-4f63-a8b1-85d2c81b8861)
+[auto-promote] ✅ Promovida: "Head Speed Pro X" (1 fuentes, id: 23492bbe-0c53-49be-924d-4778bb208cef)
+[auto-promote] ✅ Promovida: "Tecnifibre Wall Master 355" (1 fuentes, id: d2dc9fa9-f4e2-44e4-b0c5-d651f51b5d3c)
+[auto-promote] ✅ Promovida: "Dunlop Inferno Elite Silver" (1 fuentes, id: 5ed30a03-08ab-44d4-bfe9-81075d1c37dc)
+[auto-promote] ✅ Promovida: "Adidas World Cup France 2026" (1 fuentes, id: f6217a01-9197-4e21-9bd9-0c96f79baa6a)
+[auto-promote] ✅ Promovida: "Adidas World Cup USA 2026" (1 fuentes, id: 37880151-d0be-4f87-b455-1ba31ae89c10)
+[auto-promote] ✅ Promovida: "Adidas World Cup England 2026" (1 fuentes, id: e3fc0f16-3c88-4fea-8a6a-ea56a79e8936)
+[auto-promote] ✅ Promovida: "Adidas World Cup Italy 2026" (1 fuentes, id: 863c29c7-5592-452d-b46c-0d4c2aa010f0)
+[auto-promote] ✅ Promovida: "Adidas World Cup Belgium 2026" (1 fuentes, id: 694a9d64-9a07-497f-8616-f9effabe155e)
+[auto-promote] ✅ Promovida: "Adidas World Cup Germany 2026" (1 fuentes, id: b0d6ebb7-2ef8-4c03-99aa-aa0f5589a0ce)
+[auto-promote] ✅ Promovida: "BULLPADEL FLOW WOMAN 25" (1 fuentes, id: d33c16ee-52a9-4fc2-81f8-0ae2e3b68e13)
+[auto-promote] ✅ Promovida: "BULLPADEL XPLO PREMIER 2025" (1 fuentes, id: 786cf1d0-7a5a-45a2-bb14-b1d33b6fab9c)
+[auto-promote] ✅ Promovida: "HEAD SPEED ELITE LTD" (1 fuentes, id: 62a6bee5-6a52-459d-81cb-223b07ca23f3)
+[auto-promote] ✅ Promovida: "Pala de Padel Siux Astral Control 2026" (1 fuentes, id: 67b60400-a11d-411a-9576-4e7bc78d9e4c)
+[auto-promote] ✅ Promovida: "Pala de Padel Bullpadel Vertex 04 Woman 25" (1 fuentes, id: fc4ceb8c-9df6-42ec-8352-a0d59bb3b159)
+[auto-promote] ✅ Promovida: "Pala de Padel Dunlop Galactica Lite 2025" (1 fuentes, id: fe75af55-0c59-40ba-b54f-049694d42a72)
+[auto-promote] ✅ Promovida: "Pala de Padel Joma Slam Pro Negro Plata" (1 fuentes, id: 3db322f6-f469-43c8-b3ce-1a409f359b66)
+[auto-promote] ✅ Promovida: "Pala de Padel Joma Slam Pro Premier Padel New Giza P2" (1 fuentes, id: 46cafa48-976b-45d4-930a-6a9ebe1dfd16)
+[auto-promote] ✅ Promovida: "Pala de Padel Joma Slam Pro Iconic Blanco Oro" (1 fuentes, id: 3cd58b03-b528-4e88-9c45-52db8d6581af)
+[auto-promote] ✅ Promovida: "Pala de Padel Bullpadel Icon 26 Juan Martin Diaz" (1 fuentes, id: 60f39a57-5235-42e0-9395-eb1c0e5c5a1b)
+[auto-promote] ✅ Promovida: "Pala de Padel Joma Slam Pro Blanco Negro 2.0" (1 fuentes, id: 68a8dba4-3605-42d3-aa32-f3240e0aed07)
+[auto-promote] ✅ Promovida: "Pala de Padel Wilson Bela Junior V2" (1 fuentes, id: dc2d943f-8cab-409c-aa8a-55f5d17c6ddd)
+[auto-promote] ✅ Promovida: "Babolat Tech Viper Soft 2026" (1 fuentes, id: 1b8ba5c9-21f1-4a98-8808-8143470555bf)
+[auto-promote] ✅ Promovida: "Head Vibe 2025 Purple" (1 fuentes, id: 49a8a39f-a082-498c-b8c1-b8afec825927)
+[auto-promote] ✅ Promovida: "Starvie Titania Soft 2024" (1 fuentes, id: 53eea64d-23cb-473c-858c-06e22a11c49a)
+[auto-promote] ✅ Promovida: "Pala StarVie Titania Ultra Speed Soft 2024" (1 fuentes, id: 3d81e556-b127-42fd-9a3f-b7b1ab423cb4)
+[auto-promote] ✅ Promovida: "Pala Kelme Falcon" (1 fuentes, id: f3cafd61-4041-43ab-9b1d-dbf52b31f4b0)
+[auto-promote] ✅ Promovida: "Pala StarVie Kenta Ultra Speed Soft" (1 fuentes, id: 3ee11d17-0fb0-4ece-a07c-a7df8b97f3ba)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Icon 2026 – Juan Martin Diaz" (1 fuentes, id: d9f56d17-64f3-4484-8e18-117d7fcff5ef)
+[auto-promote] ✅ Promovida: "Pala StarVie Titania Soft 2024" (1 fuentes, id: 8c42aecd-4e2b-44bf-8d83-9cc484e33aa6)
+[auto-promote] ✅ Promovida: "Pala Kelme Shark" (1 fuentes, id: d67334f3-7ea2-4eef-8194-60be8166e6cb)
+[auto-promote] ✅ Promovida: "Pala Yarara Xtreme Fiber Black 2025" (1 fuentes, id: ca1a87f9-6b36-40d2-a906-37c244d1989d)
+[auto-promote] ✅ Promovida: "Pala StarVie Titania Soft" (1 fuentes, id: 1fb00de1-c8da-4571-976b-34c8191acf98)
+[auto-promote] ✅ Promovida: "Pala StarVie Titania Ultra Speed Soft" (1 fuentes, id: 634ff47d-739c-4aaf-858d-dfa748007553)
+[auto-promote] ✅ Promovida: "Pala Black Crown Piton Negra" (1 fuentes, id: 7497879c-45df-4f1d-b7a6-8d9639cdec24)
+[auto-promote] ✅ Promovida: "Head Vibe 2025 Green Orange" (1 fuentes, id: b7069a79-d09e-4318-b387-1a3efb024b54)
+[auto-promote] ✅ Promovida: "Pala Kelme Grey Wolf" (1 fuentes, id: 2a9fcca7-647b-424c-b5d9-8c1e221c96dd)
+[auto-promote] ✅ Promovida: "Nox Ml10 Bahía Luxury Series" (1 fuentes, id: 150239e1-3c9a-4032-98f0-2b30a190f302)
+
+[auto-promote] Completado: 443 promovidas, 4 esperando más fuentes.
