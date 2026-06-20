@@ -264,9 +264,6 @@ function modeloCompatible(
     // no tiene modelo (porque el 3.x fue convertido a año) → compatible; el año discrimina.
     return /^[\d.]+$/.test(modeloCat.trim())
   }
-  // Si el catálogo no tiene modelo pero el extractor solo extrajo un número de versión
-  // (ej "3.5" de "Metalbone 3.5 2026") → compatible; el año discrimina.
-  if (!modeloCat) return /^[\d.]+$/.test(modeloExtraido.trim())
   const tokenizar = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
       // Fusionar versiones "X.Y" en un solo token ANTES de partir por puntuaci\u00f3n.
@@ -277,7 +274,16 @@ function modeloCompatible(
       .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
       .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
       .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
-  const tCat = tokenizar(modeloCat)
+  // Catalogo sin modelo (modeloCat=null, ej. "SOFTEE TRIONIC" sin sufijo) se trata
+  // como tokens=[] en vez de cortar aqui con un caso especial: asi el extra de la
+  // tienda (modeloExtraido) pasa por el mismo filtro esExtraInseguro() de abajo -
+  // ruido real (colores, "Yellow", "Wmn"...) no discrimina, pero un numero de
+  // version SIN ano en ningun lado sigue discriminando igual que en el resto de
+  // casos. Bug real 2026-06-20: "Pala Softee Trionic Yellow 2025" caia en
+  // sin_match contra la fila plana "SOFTEE TRIONIC" porque el caso especial
+  // anterior solo aceptaba modelo puramente numerico y rechazaba cualquier otra
+  // cosa, aunque fuera ruido inofensivo.
+  const tCat = modeloCat ? tokenizar(modeloCat) : []
   const tExt = tokenizar(modeloExtraido)
   // Un token extra puramente numérico (ej. "32" fusionado de "3.2") solo es seguro
   // de ignorar si el año discrimina realmente en alguno de los dos lados. Si NO hay
