@@ -4,6 +4,7 @@
 // Ejecutar: npx tsx --env-file=.env.local scripts/auto-promote-candidatas.ts
 
 import { createClient } from '@supabase/supabase-js'
+import { extraerAtributos, cargarLineasDesdeBD } from './extract-atributos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,6 +50,10 @@ function esPala(titulo: string): boolean {
 async function main() {
   console.log('[auto-promote] Buscando candidatas para promover...')
 
+  // Sincroniza LINEAS_POR_MARCA con las líneas ya existentes en BD antes de
+  // parsear títulos — igual que hace pipeline-tiendas.ts al arrancar.
+  await cargarLineasDesdeBD(supabase)
+
   const { data: candidatas, error } = await supabase
     .from('palas_candidatas')
     .select('*')
@@ -80,10 +85,17 @@ async function main() {
       continue
     }
 
-    // Detectar año del título (ej: "2025", "2026")
-    // Si no hay año explícito → NULL (no asumir el año actual, podría ser un modelo antiguo)
+    // Parsear el título con el mismo extractor que usa el pipeline de tiendas,
+    // para no volcar el título crudo en `modelo` (bug detectado 2026-06-20:
+    // generaba filas con linea=null y modelo=título completo sin parsear,
+    // que luego chocaban como ambiguos/duplicados contra la fila limpia real).
+    const attrs = extraerAtributos(c.titulo)
+    const marca = attrs.marca || c.marca_detectada || 'Desconocida'
+
+    // Año: preferir el detectado por el extractor (más fiable, normaliza
+    // formatos tipo "2.6"→2026); si no encontró nada, fallback al regex simple.
     const añoMatch = c.titulo.match(/\b(20\d{2})\b/)
-    const año = añoMatch ? parseInt(añoMatch[1]) : null
+    const año = attrs.año ?? (añoMatch ? parseInt(añoMatch[1]) : null)
 
     // Construir slug url-friendly
     const slug = c.titulo_normalizado
@@ -104,9 +116,11 @@ async function main() {
       .insert({
         slug,
         nombre: c.titulo,
-        modelo: c.titulo,
-        marca: c.marca_detectada || 'Desconocida',
-        brand_slug: (c.marca_detectada || 'desconocida').toLowerCase().replace(/\s+/g, '-'),
+        modelo: attrs.modelo,
+        linea: attrs.linea,
+        variante: attrs.variante,
+        marca,
+        brand_slug: marca.toLowerCase().replace(/\s+/g, '-'),
         año,
         precio_pvp: c.precio_max,   // precio más alto visto = precio PVP aproximado
         precio_referencia: c.precio_min,
