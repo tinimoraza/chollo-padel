@@ -308,6 +308,21 @@ function modeloCompatible(
   // Caso 2: tienda añade palabras (catálogo subset tienda)
   if (tCat.every(t => tokenIn(t, tExt))) {
     const extra = tExt.filter(t => !tokenIn(t, tCat))
+    // Catálogo SIN modelo (tCat=[]): la condición de arriba es vacuamente
+    // cierta para CUALQUIER modeloExtraido, así que "extra" es literalmente
+    // todo lo que escribió la tienda. Usar aquí el filtro esExtraInseguro()
+    // (denylist) deja pasar como "ruido ignorable" cualquier palabra real de
+    // modelo que no esté en MODELO_DISCRIMINANTES (ej. "Crown", "Quantum",
+    // "Patron"), generando ambiguos falsos contra filas placeholder sin
+    // modelo. Bug real 2026-06-20: "Pala Black Crown Iconic Crown" matcheaba
+    // también contra la fila vacía "Black Crown / Iconic / modelo=null",
+    // quedando ambiguo con la fila correcta "Black Crown / Iconic / CROWN".
+    // Fix: cuando el catálogo no tiene modelo, exigir allowlist (solo color
+    // conocido se considera ruido seguro) en vez de denylist — invierte la
+    // carga de la prueba a favor de NO matchear con la fila vacía.
+    if (tCat.length === 0) {
+      return extra.every(t => COLORES.has(t))
+    }
     return !extra.some(esExtraInseguro)
   }
   return false
