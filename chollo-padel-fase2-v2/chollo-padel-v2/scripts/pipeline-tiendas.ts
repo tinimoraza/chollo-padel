@@ -123,6 +123,14 @@ const MODELO_DISCRIMINANTES = new Set([
   'energy',  // StarVie Energy / Nox Energy variants
   'luxury',  // Nox Luxury / StarVie Luxury variants
   'black',   // Siux Fenix 5 vs 5 Black
+  // Resto de colores (ya traducidos a inglés por MODELO_TOKEN_ALIAS antes de llegar
+  // aquí). Bug real 2026-06-20: el catálogo tiene filas con el color metido dentro
+  // de "modelo" (ej. "LS V4" vs "LS V4 ROSA") y al no ser discriminante, el color
+  // sobrante se ignoraba como ruido → 2-3 candidatos ambiguos por variante de color
+  // en vez de matchear solo la fila correcta (Wilson Blade V4 LS Rosa, Babolat
+  // Lamborghini Azul 2026, Head Bolt Rojo Negro 2026, Adidas Arrow Hit Hexagon Cup).
+  'pink', 'blue', 'green', 'yellow', 'grey', 'orange',
+  'silver', 'gold', 'purple', 'brown', 'white', 'red',
   'ls',      // Wilson Blade LS vs Blade, Defy LS vs Defy
   'prisma',  // Varlion LW Prisma vs LW
   'pansy',   // Varlion Prisma Pansy vs Prisma

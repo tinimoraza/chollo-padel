@@ -177,6 +177,7 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
   'Vibor-A': [
     'black mamba', 'king cobra', 'king kobra',
     'yarara', 'mamba', 'titan', 'bamboo', 'boa', 'naya', 'vipera', 'lethal',
+    'taipan', // bug real 2026-06-20: existe en catálogo (Vibora Taipan Liquid 2023) pero faltaba aquí → siempre sin_match
   ],
   'Drop Shot': [
     'explorer', 'axion', 'canyon', 'renegade', 'conqueror',

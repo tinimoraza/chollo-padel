@@ -28,12 +28,16 @@ const NO_ES_PALA = [
   // "polo" y "short" con contexto para evitar falsos positivos
   ' polo ', ' polo -', 'polo shirt',
   ' short ', 'shorts -', '4in shorts', '9in shorts', '2in shorts',
+  'short bullpadel', 'short adidas', 'short nike', 'short head',
   // Nike/Adidas/Asics/Fila ropa explícita
   'dri-fit', 'dri fit', 'freelift',
   // Accesorios
   'bolsa', 'mochila', 'paletero', 'funda', 'grip', 'overgrip',
   'protector', 'muñequera', 'pelotas', 'pelota',
-  'antivibrador', 'raquetero',
+  'antivibrador', 'raquetero', 'anorak', 'sandalia', 'sandalias',
+  'gorra', 'calcetin', 'calcetín', 'calcetines', 'toalla',
+  // Sets/packs — combinan pala + accesorio, el título no es una pala única
+  'set de', 'pack de',
 ]
 
 // Devuelve true si el título parece ser una pala de pádel
@@ -87,6 +91,13 @@ async function main() {
       .replace(/[^a-z0-9-]/g, '')
       .slice(0, 100)
 
+    // imagen_url: la candidata guarda en datos_extraidos la info del último
+    // scraper que la vio. Si ese scraper capturó imagen, la heredamos aquí —
+    // si no, queda null y un proceso aparte (backfill og:image) la rellena.
+    // (Bug detectado 2026-06-20: esta columna nunca se rellenaba al promover,
+    // generando palas sin imagen aunque la fuente sí la tuviera.)
+    const imagenUrl = (c.datos_extraidos as any)?.imagen_url || null
+
     // Insertar en palas
     const { data: nuevaPala, error: insertError } = await supabase
       .from('palas')
@@ -100,6 +111,7 @@ async function main() {
         precio_pvp: c.precio_max,   // precio más alto visto = precio PVP aproximado
         precio_referencia: c.precio_min,
         fuente: 'auto_promoted',
+        imagen_url: imagenUrl,
       })
       .select('id')
       .single()
