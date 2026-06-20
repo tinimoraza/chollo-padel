@@ -123,14 +123,14 @@ const MODELO_DISCRIMINANTES = new Set([
   'energy',  // StarVie Energy / Nox Energy variants
   'luxury',  // Nox Luxury / StarVie Luxury variants
   'black',   // Siux Fenix 5 vs 5 Black
-  // Resto de colores (ya traducidos a inglés por MODELO_TOKEN_ALIAS antes de llegar
-  // aquí). Bug real 2026-06-20: el catálogo tiene filas con el color metido dentro
-  // de "modelo" (ej. "LS V4" vs "LS V4 ROSA") y al no ser discriminante, el color
-  // sobrante se ignoraba como ruido → 2-3 candidatos ambiguos por variante de color
-  // en vez de matchear solo la fila correcta (Wilson Blade V4 LS Rosa, Babolat
-  // Lamborghini Azul 2026, Head Bolt Rojo Negro 2026, Adidas Arrow Hit Hexagon Cup).
-  'pink', 'blue', 'green', 'yellow', 'grey', 'orange',
-  'silver', 'gold', 'purple', 'brown', 'white', 'red',
+  // NOTA 2026-06-20: se probó añadir TODOS los colores aquí como discriminante
+  // universal para resolver ambiguos por variante de color (Wilson Blade V4 LS
+  // Rosa, Babolat Lamborghini Azul, etc). Revertido: rompía el caso contrario
+  // —catálogo con una sola fila que tiene el color metido en "modelo" y la
+  // tienda no menciona color— convirtiendo un match único correcto en
+  // sin_match (verificado en dry-run: sin_match subió 635→692, por_atributos
+  // bajó 1187→1141). La desambiguación por color real vive en
+  // resolverAmbiguosPorColor(), aplicada solo cuando ya hay >1 candidato.
   'ls',      // Wilson Blade LS vs Blade, Defy LS vs Defy
   'prisma',  // Varlion LW Prisma vs LW
   'pansy',   // Varlion Prisma Pansy vs Prisma
@@ -173,6 +173,57 @@ function tokensCompatibles(a: string, b: string): boolean {
 
 function tokenIn(t: string, arr: string[]): boolean {
   return arr.some(x => tokensCompatibles(t, x))
+}
+
+// Colores ya traducidos a inglés (ver MODELO_TOKEN_ALIAS). Usados SOLO para
+// desambiguar candidatos ya-ambiguos en resolverAmbiguosPorColor() — no son
+// discriminantes universales en modeloCompatible() (eso causó una regresión
+// real el 2026-06-20: sin_match 635→692 porque rompía el caso de una sola
+// fila de catálogo con el color metido en "modelo" y la tienda sin mencionar color).
+const COLORES = new Set([
+  'black', 'white', 'red', 'green', 'yellow', 'blue',
+  'grey', 'orange', 'pink', 'silver', 'gold', 'purple', 'brown',
+])
+
+function tokensDeModelo(s: string | null): string[] {
+  if (!s) return []
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
+}
+
+function colorDeModelo(s: string | null): string | null {
+  return tokensDeModelo(s).find(t => COLORES.has(t)) ?? null
+}
+
+function modeloSinColor(s: string | null): string {
+  return tokensDeModelo(s).filter(t => !COLORES.has(t)).join(' ')
+}
+
+// Desambigua candidatos que ya pasaron buscarPorAtributos cuando la única
+// diferencia entre ellos es el color (metido dentro de "modelo" por
+// inconsistencia de import, ej. "LS V4" vs "LS V4 ROSA"). Si la tienda
+// menciona un color explícito, nos quedamos con la fila de ese color. Si no
+// menciona ninguno, preferimos la fila "base" sin color en modelo (si hay
+// exactamente una). Casos reales: Wilson Blade V4 LS Rosa, Babolat Lamborghini
+// Azul 2026, Head Bolt Rojo Negro 2026, Adidas Arrow Hit Hexagon Cup 2026.
+function resolverAmbiguosPorColor<T extends { marca: string | null; linea: string | null; modelo: string | null; variante: string | null; año: number | null }>(
+  candidatos: T[], modeloExtraido: string | null,
+): T[] {
+  if (candidatos.length <= 1) return candidatos
+  const clave = (p: T) =>
+    `${(p.marca ?? '').toLowerCase()}|${(p.linea ?? '').toLowerCase()}|${normalizarVariante(p.variante) ?? ''}|${p.año ?? ''}|${modeloSinColor(p.modelo)}`
+  if (new Set(candidatos.map(clave)).size !== 1) return candidatos // difieren en algo más que color → seguir ambiguos
+
+  const colorTienda = colorDeModelo(modeloExtraido)
+  if (colorTienda) {
+    const exacto = candidatos.filter(p => colorDeModelo(p.modelo) === colorTienda)
+    if (exacto.length === 1) return exacto
+  } else {
+    const sinColor = candidatos.filter(p => colorDeModelo(p.modelo) === null)
+    if (sinColor.length === 1) return sinColor
+  }
+  return candidatos
 }
 
 // Aliases de tokens de modelo: normaliza abreviaturas a su forma canónica.
@@ -322,7 +373,7 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
     }
   }
 
-  return filtrados
+  return resolverAmbiguosPorColor(filtrados, attrs.modelo)
 }
 // Devuelve true si el snapshot quedó guardado (o estamos en DRY_RUN), false si falló
 // de verdad. OJO: antes esta función no devolvía nada — solo hacía console.error y
