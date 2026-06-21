@@ -657,7 +657,12 @@ async function main() {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
-    if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m))) {
+    // Bug detectado 20260621: varias entradas de EXCLUIR_MARCAS ('rox ', 'hybrid padel',
+    // 'hbl ', etc.) nunca matcheaban porque los títulos casi siempre empiezan con
+    // "Pala " (ej. "Pala Rox R-Sparky Xtreme 3D"), y startsWith(m) exige que la marca
+    // esté en la posición 0. Se comprueba también con el prefijo "pala " quitado.
+    const tituloSinPala = tituloLow.startsWith('pala ') ? tituloLow.slice(5) : tituloLow
+    if (EXCLUIR_MARCAS.some(m => tituloLow.startsWith(m) || tituloSinPala.startsWith(m))) {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
