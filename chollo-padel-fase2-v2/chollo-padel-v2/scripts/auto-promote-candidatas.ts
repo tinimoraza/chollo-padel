@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, cargarLineasDesdeBD } from './extract-atributos'
+import { buscarPorAtributos } from './lib/modelo-matching'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,9 @@ const MIN_PRECIO  = 30  // descartar accesorios baratos (grips, bolsas...)
 // IMPORTANTE: usar términos específicos para no hacer falsos positivos
 // (ej: evitar 'clay' porque hay palas con 'clay' en el nombre de color/variante)
 const NO_ES_PALA = [
+  // Pickleball — deporte distinto, no es pádel (bug real 2026-06-21: generaba
+  // filas huérfanas tipo "PICKLEBALL ADIDAS 3" / "PICKLEBALL HEAD" en `palas`)
+  'pickleball',
   // Calzado — términos inequívocos
   'zapatilla', 'zapatillas', 'shoe', 'shoes', 'footwear',
   'all court', 'gel challenger', 'gel resolution', 'solution speed',
@@ -91,6 +95,36 @@ async function main() {
     // que luego chocaban como ambiguos/duplicados contra la fila limpia real).
     const attrs = extraerAtributos(c.titulo)
     const marca = attrs.marca || c.marca_detectada || 'Desconocida'
+
+    // Si el extractor no reconoció línea, no insertar a ciegas: el título crudo
+    // acaba volcado en `modelo` (causa raíz de las 277 filas huérfanas detectadas
+    // 2026-06-21, ej. "SUPER PACK ADIDAS ZENTIX BLACK ORANGE 2026"). Mejor dejar
+    // la candidata pendiente para revisión manual en GestorCandidatas.
+    if (!attrs.linea) {
+      console.log(`[auto-promote] ⏭  Sin línea reconocida, dejo pendiente para revisión manual: "${c.titulo}"`)
+      descartadas++
+      continue
+    }
+
+    // Antes de insertar, comprobar si ya existe una pala compatible en el
+    // catálogo (misma lógica de matching que usa pipeline-tiendas.ts, vía
+    // scripts/lib/modelo-matching.ts). Sin este check se generaban duplicados
+    // semánticos tipo "Metalbone Lite 3.1" (nuevo) vs "Metalbone LITE" (ya en BD).
+    const existentes = await buscarPorAtributos(supabase, attrs)
+    if (existentes.length === 1) {
+      await supabase
+        .from('palas_candidatas')
+        .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
+        .eq('id', c.id)
+      console.log(`[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "${c.titulo}" → pala ${existentes[0].id}`)
+      promovidas++
+      continue
+    }
+    if (existentes.length > 1) {
+      console.log(`[auto-promote] ⏭  Ambiguo (${existentes.length} candidatos), dejo pendiente para revisión manual: "${c.titulo}"`)
+      descartadas++
+      continue
+    }
 
     // Año: preferir el detectado por el extractor (más fiable, normaliza
     // formatos tipo "2.6"→2026); si no encontró nada, fallback al regex simple.
