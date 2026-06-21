@@ -321,7 +321,15 @@ function modeloCompatible(
     // conocido se considera ruido seguro) en vez de denylist — invierte la
     // carga de la prueba a favor de NO matchear con la fila vacía.
     if (tCat.length === 0) {
-      return extra.every(t => COLORES.has(t))
+      // Permitimos también número-puro como ruido seguro (specs de balance/grip
+      // tipo "3.5"), pero SOLO si el año discrimina en alguno de los dos lados —
+      // mismo criterio que esExtraInseguro() para el caso simétrico. Sin esto,
+      // "Adidas Drive 3.5 2026" (justpadel) dejaba de matchear con la fila
+      // placeholder "Adidas / Drive / modelo=null" y caía en sin_match (regresión
+      // real detectada en dry-run 2026-06-20 19:06: 78 casos match→sin_match,
+      // mayoría sufijos numéricos de balance en Adidas).
+      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && (añoCat != null || añoExtraido != null))
+      return extra.every(seguro)
     }
     return !extra.some(esExtraInseguro)
   }
