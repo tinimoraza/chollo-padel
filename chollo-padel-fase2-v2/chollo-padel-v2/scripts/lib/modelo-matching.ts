@@ -226,6 +226,20 @@ export async function buscarPorAtributos(
 
   filtrados = preferirModeloEspecifico(filtrados, attrs.modelo)
 
+  // Si el título SÍ trae año y, tras filtrar por modelo, queda ambiguo entre
+  // una fila con ese año exacto y una o más filas sin año (placeholder), la
+  // fila con año exacto es estrictamente más específica — preferirla. Solo se
+  // aplica cuando hay EXACTAMENTE una fila con año exacto (si hay dos o más
+  // —p.ej. dos modelos distintos publicados el mismo año—, eso es ambigüedad
+  // real de catálogo y debe seguir yendo al Gestor, no resolverse a ciegas).
+  if (attrs.año && filtrados.length > 1) {
+    const conAñoExacto = filtrados.filter(p => p.año === attrs.año)
+    const sinAño = filtrados.filter(p => p.año == null)
+    if (conAñoExacto.length === 1 && conAñoExacto.length + sinAño.length === filtrados.length) {
+      filtrados = conAñoExacto
+    }
+  }
+
   if (!attrs.año && filtrados.length > 1) {
     const claveSinAño = (p: PalaCandidata) =>
       `${(p.marca ?? '').toLowerCase()}|${(p.linea ?? '').toLowerCase()}|${(p.modelo ?? '').toLowerCase()}|${normalizarVariante(p.variante) ?? ''}`

@@ -147,6 +147,13 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
     'drive', 'match', 'rx series', 'rx',
     'cross it', 'crossit', 'arrow', 'essnova', 'neuvortx', 'ctrl team',
     'velara', 'kardex',
+    // 'x treme' (sin guión: normalizar() convierte "X-Treme" → "x treme" antes
+    // de comparar, igual que Nox usa 'x one' en vez de 'x-one' — ver esa marca
+    // más arriba). Bug real 2026-06-21: sin esta entrada, "ADIDAS X-TREME..."
+    // no reconocía línea, "x" se descartaba como palabra de 1 letra y "treme"
+    // quedaba mal detectado como línea nueva (catálogo ya tiene 1 fila sucia
+    // linea='Treme' de este mismo bug).
+    'x treme',
     'copa del mundo', 'world cup',
   ],
   'Head': [
@@ -519,6 +526,10 @@ export function extraerAtributos(titulo: string): Atributos {
 
   // Normalizar 'Carb-on' (Lok) → 'carbon' antes de separar por guión
   titulo = titulo.replace(/carb-on/gi, 'carbon')
+  // Typo real de la tienda outletdepadel.com (no es bug nuestro): escriben
+  // "Gravitity" en vez de "Gravity" (línea real de Head) — normalizar antes
+  // de buscar línea, ya que otros títulos con la ortografía correcta sí matchean.
+  titulo = titulo.replace(/\bgravitity\b/gi, 'gravity')
   // Normalizar guiones especiales (em dash –, en dash –) a espacio
   titulo = titulo.replace(/[\u2013\u2014]/g, ' ')
   // Pre-procesar "+": "Raptor+" → "Raptor PLUS", "Astrum +" → "Astrum PLUS"
@@ -540,8 +551,18 @@ export function extraerAtributos(titulo: string): Atributos {
   // Generaciones Adidas (y otras marcas): 3.1→2022, 3.2→2023, 3.3→2024, 3.4→2025
   // Se convierte a año para que el filtro de año resuelva la ambigüedad en el matching.
   // Solo se aplica si no hay ya un año de 4 dígitos en el título.
+  // Guardamos el código original ("3.4") porque si no queda NINGÚN otro texto que
+  // identifique el modelo (título = solo "MARCA LINEA 3.4"), el año por sí solo no
+  // basta para desambiguar: pueden existir varias filas con ese mismo año y modelos
+  // distintos (bug real 2026-06-21: "Adidas Metalbone 3.4" colisionaba como ambiguo
+  // contra "Adidas Metalbone 09", ambas año 2025). Se usa como modelo de respaldo
+  // más abajo solo si tras quitar marca/línea/variante no queda nada más.
+  let generacionOriginal: string | null = null
   if (!/\b20[2-9]\d\b/.test(titulo)) {
-    titulo = titulo.replace(/\b3\.([1-4])\b/g, (_m: string, d: string) => String(2021 + parseInt(d)))
+    titulo = titulo.replace(/\b3\.([1-4])\b/g, (_m: string, d: string) => {
+      generacionOriginal = `3.${d}`
+      return String(2021 + parseInt(d))
+    })
   }
 
   const norm = normalizar(titulo)
@@ -594,6 +615,7 @@ export function extraerAtributos(titulo: string): Atributos {
     'crossit': 'Cross It',
     'vive': 'Vibe',
     'king kobra': 'King Cobra',
+    'x treme': 'Xtreme',
   }
   let lineaDetectada: string | null = null
   let lineaAliasMatched: string | null = null  // texto realmente matcheado en el título (puede diferir del canónico, ej. "vive" → "Vibe")
@@ -680,6 +702,14 @@ export function extraerAtributos(titulo: string): Atributos {
 
   // 7. MODELO — lo que queda
   let modeloDetectado: string | null = sinLinea.trim() || null
+
+  // Si no queda nada para modelo pero había un código de generación tipo "3.4"
+  // (convertido arriba a año), lo recuperamos como modelo — sin esto, títulos
+  // como "Adidas Metalbone 3.4" quedan con modelo=null y año=2025, lo que puede
+  // matchear contra CUALQUIER otra fila con año=2025 de esa línea (ambiguo falso).
+  if (!modeloDetectado && generacionOriginal) {
+    modeloDetectado = generacionOriginal
+  }
 
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
