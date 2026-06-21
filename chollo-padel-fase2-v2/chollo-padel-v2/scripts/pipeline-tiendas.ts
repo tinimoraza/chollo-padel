@@ -252,6 +252,38 @@ const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'yl': 'yellow',
 }
 
+// Extraido a nivel de modulo (antes vivia como closure dentro de modeloCompatible)
+// para poder reutilizarlo en preferirModeloEspecifico() sin duplicar la logica.
+function tokenizarModelo(s: string): string[] {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
+    .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
+    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
+}
+
+// Cuando hay >1 candidato y al menos uno tiene un modelo EXACTO (mismos tokens
+// en ambos sentidos, ni de mas ni de menos) frente al modelo extraido, ese
+// candidato gana sobre cualquier fila placeholder (modelo=null) que tambien
+// haya pasado el filtro por la via de "ruido seguro" de modeloCompatible().
+// Bug real 2026-06-21: "Pala Black Crown Piton 13" quedaba ambiguo entre la
+// fila correcta (modelo="13") y la fila vacia "Piton/modelo=null/ano=2022"
+// (colo como ruido seguro solo porque esa fila placeholder tenia ALGUN ano
+// guardado, irrelevante para el producto real). Esta funcion limpia ese tipo
+// de colision sin tener que prohibir el ruido numerico-sin-ano en general
+// (eso rompia casos legitimos de candidato unico, ej. "Dunlop Blitz Attack
+// 2.0" o "Joma Gold Pro 2.0", donde no hay ningun competidor exacto).
+function preferirModeloEspecifico<T extends { modelo: string | null }>(
+  candidatos: T[], modeloExtraido: string | null,
+): T[] {
+  if (candidatos.length <= 1 || !modeloExtraido) return candidatos
+  const tExt = tokenizarModelo(modeloExtraido)
+  const exactos = candidatos.filter(c => {
+    const tCat = c.modelo ? tokenizarModelo(c.modelo) : []
+    return tCat.length > 0 && tExt.every(t => tokenIn(t, tCat)) && tCat.every(t => tokenIn(t, tExt))
+  })
+  return (exactos.length > 0 && exactos.length < candidatos.length) ? exactos : candidatos
+}
+
 function modeloCompatible(
   modeloCat: string | null, modeloExtraido: string | null,
   añoCat: number | null = null, añoExtraido: number | null = null,
@@ -264,16 +296,7 @@ function modeloCompatible(
     // no tiene modelo (porque el 3.x fue convertido a año) → compatible; el año discrimina.
     return /^[\d.]+$/.test(modeloCat.trim())
   }
-  const tokenizar = (s: string) =>
-    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-      // Fusionar versiones "X.Y" en un solo token ANTES de partir por puntuaci\u00f3n.
-      // Sin esto, "3.3" \u2192 tokens ['3','3'] y "3.0" \u2192 ['3','0']: el '0'/'3' suelto
-      // no est\u00e1 en MODELO_DISCRIMINANTES (solo tiene palabras) y el algoritmo los
-      // trataba como compatibles por compartir el '3' \u2014 falso positivo real:
-      // "Adidas Adipower CTRL 3.0" (streetpadel) matche\u00f3 con "Adidas Adipower 3.3 CTRL".
-      .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
-      .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
-      .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
+  const tokenizar = tokenizarModelo
   // Catalogo sin modelo (modeloCat=null, ej. "SOFTEE TRIONIC" sin sufijo) se trata
   // como tokens=[] en vez de cortar aqui con un caso especial: asi el extra de la
   // tienda (modeloExtraido) pasa por el mismo filtro esExtraInseguro() de abajo -
@@ -335,7 +358,7 @@ function modeloCompatible(
       // de la fila correcta "Black Crown/Piton/13/2025". Exigir añoExtraido
       // (que la tienda mencione año) ancla la condición al producto real, no
       // a un dato incidental de una fila del catálogo que no pinta nada aquí.
-      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && añoExtraido != null)
+      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && (añoCat != null || añoExtraido != null))
       return extra.every(seguro)
     }
     return !extra.some(esExtraInseguro)
@@ -375,7 +398,7 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
   // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
   // comparar el string literal — evita falsos "sin match" por convenciones distintas
   // entre cómo lo escribe la tienda y cómo está guardado en el catálogo.
-  const filtrados = (data ?? []).filter(p => {
+  let filtrados = (data ?? []).filter(p => {
     const variantesCoinciden = normalizarVariante(p.variante) === normalizarVariante(attrs.variante)
     // Año compatible si coinciden, o si a alguno de los dos lados le falta el dato
     const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
@@ -388,6 +411,12 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
       && normalizarVariante(p.modelo) === normalizarVariante(attrs.variante)
     return (variantesCoinciden && modeloOk || cruzado) && añoCompatible
   })
+
+  // Si hay varios candidatos y alguno tiene un modelo EXACTO (no via "ruido
+  // seguro" de modeloCompatible) frente al modelo extraído, descartamos los
+  // demás (en particular, filas placeholder modelo=null) — ver comentario en
+  // preferirModeloEspecifico() arriba.
+  filtrados = preferirModeloEspecifico(filtrados, attrs.modelo)
 
   // "Sin año" auto-resolución:
   // Si el título no lleva año y hay varios candidatos que solo difieren en año
