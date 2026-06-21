@@ -418,6 +418,21 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
   // preferirModeloEspecifico() arriba.
   filtrados = preferirModeloEspecifico(filtrados, attrs.modelo)
 
+  // Año como desambiguador (bug real 2026-06-21, detectado en outletdepadel):
+  // si el título SÍ trae año y, tras filtrar por modelo, queda ambiguo entre
+  // una fila con ese año exacto y una o más filas sin año (placeholder), la de
+  // año exacto es estrictamente más específica — preferirla. Solo se aplica
+  // si hay EXACTAMENTE una fila con año exacto (si hay dos o más —p.ej. dos
+  // modelos distintos publicados el mismo año—, es ambigüedad real de
+  // catálogo y debe seguir yendo a Gestor, no resolverse a ciegas).
+  if (attrs.año && filtrados.length > 1) {
+    const conAñoExacto = filtrados.filter((p: any) => p.año === attrs.año)
+    const sinAño = filtrados.filter((p: any) => p.año == null)
+    if (conAñoExacto.length === 1 && conAñoExacto.length + sinAño.length === filtrados.length) {
+      filtrados = conAñoExacto
+    }
+  }
+
   // "Sin año" auto-resolución:
   // Si el título no lleva año y hay varios candidatos que solo difieren en año
   // → elegir el más reciente. Razonamiento: cuando una tienda lista "WILSON BELA V3"
