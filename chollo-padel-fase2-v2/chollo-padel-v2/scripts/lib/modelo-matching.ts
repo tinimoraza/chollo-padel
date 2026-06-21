@@ -186,7 +186,19 @@ export function modeloCompatible(
   if (tCat.every(t => tokenIn(t, tExt))) {
     const extra = tExt.filter(t => !tokenIn(t, tCat))
     if (tCat.length === 0) {
-      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && (añoCat != null || añoExtraido != null))
+      // Bug real 2026-06-21: antes, CUALQUIER número suelto se consideraba "ruido"
+      // si había año conocido en cualquiera de los dos lados — pero un número de
+      // generación real (ej. "2" en "Valkiria 2", "3" en "Beat 3") también es un
+      // número suelto, y el año (2026) no tiene relación con él. Esto generaba el
+      // mismo falso positivo que la Valkiria en GestorCandidatas, pero aquí en el
+      // matcher de atributos que usa también pipeline-tiendas.ts. Fix: el número
+      // solo es "ruido seguro" si coincide con el año (completo o sus 2 últimas
+      // cifras, ej. "22" cuando año=2022) — si no coincide, es un dato real
+      // (generación) y debe bloquear la compatibilidad.
+      const año = añoCat ?? añoExtraido
+      const añoCorto = año != null ? String(año % 100) : null
+      const seguro = (t: string) =>
+        COLORES.has(t) || (/^[0-9]+$/.test(t) && año != null && (t === String(año) || t === añoCorto))
       return extra.every(seguro)
     }
     return !extra.some(esExtraInseguro)

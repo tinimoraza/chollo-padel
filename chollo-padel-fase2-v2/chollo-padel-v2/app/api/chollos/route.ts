@@ -191,7 +191,17 @@ export async function GET() {
     }
 
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
-    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > MAX_SPREAD) { _dbg.push(`spread|${pala.modelo}`); continue }
+    // Bug real 2026-06-21: MAX_SPREAD=2.5 fijo descartaba chollos genuinos en
+    // productos con muchas tiendas (ej. Bullpadel Vertex 04 25 Women: 8
+    // fuentes, match_confidence=1 en todas, min=74.95 max=269.95 → spread
+    // 3.6x). El guard se diseñó para detectar matches CONTAMINADOS (precios
+    // dispares por error de matching), no para penalizar variación real de
+    // precio entre muchas tiendas independientes — y cuantas más fuentes
+    // coinciden de forma consistente, menos probable es que sea un error de
+    // matching. Fix: tolerancia de spread escalada por fuentes_count en vez
+    // de un umbral único — más fuentes = más confianza = más margen.
+    const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : MAX_SPREAD
+    if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > spreadMaximo) { _dbg.push(`spread|${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
     if (!ref || ref < MIN_REFERENCIA) { _dbg.push(`ref<MIN|ref=${ref}|${pala.modelo}`); continue }
