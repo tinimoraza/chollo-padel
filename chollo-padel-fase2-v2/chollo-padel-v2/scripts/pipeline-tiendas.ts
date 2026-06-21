@@ -322,13 +322,20 @@ function modeloCompatible(
     // carga de la prueba a favor de NO matchear con la fila vacía.
     if (tCat.length === 0) {
       // Permitimos también número-puro como ruido seguro (specs de balance/grip
-      // tipo "3.5"), pero SOLO si el año discrimina en alguno de los dos lados —
-      // mismo criterio que esExtraInseguro() para el caso simétrico. Sin esto,
-      // "Adidas Drive 3.5 2026" (justpadel) dejaba de matchear con la fila
-      // placeholder "Adidas / Drive / modelo=null" y caía en sin_match (regresión
-      // real detectada en dry-run 2026-06-20 19:06: 78 casos match→sin_match,
-      // mayoría sufijos numéricos de balance en Adidas).
-      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && (añoCat != null || añoExtraido != null))
+      // tipo "3.5"), pero SOLO si la propia tienda informa el año (añoExtraido).
+      // Sin esto, "Adidas Drive 3.5 2026" (justpadel) dejaba de matchear con la
+      // fila placeholder "Adidas / Drive / modelo=null" y caía en sin_match
+      // (regresión real detectada en dry-run 2026-06-20 19:06).
+      // OJO: usar "añoCat != null" en vez de "añoExtraido != null" reabre otro
+      // bug — cualquier fila placeholder con UN año guardado (aunque no tenga
+      // relación con el producto real, p.ej. una variante antigua de 2022)
+      // bastaba para colar el número como "seguro". Bug real 2026-06-21:
+      // "Pala Black Crown Pitón 13" (sin año en el título) quedaba ambiguo
+      // contra la fila vacía "Black Crown/Piton/modelo=null/año=2022" además
+      // de la fila correcta "Black Crown/Piton/13/2025". Exigir añoExtraido
+      // (que la tienda mencione año) ancla la condición al producto real, no
+      // a un dato incidental de una fila del catálogo que no pinta nada aquí.
+      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && añoExtraido != null)
       return extra.every(seguro)
     }
     return !extra.some(esExtraInseguro)
