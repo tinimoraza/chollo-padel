@@ -139,7 +139,12 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
   ],
   'Nox': [
     'at10', 'ml10', 'x-one', 'x one', 'vk10', 'tl10', 'la10', 'ea10',
-    'x-zero', 'x-hero', 'x-pro',
+    // 'x-zero'/'x-hero'/'x-pro' (con guión) nunca matchean: normalizar() convierte
+    // guiones en espacios antes de comparar, así que el título normalizado nunca
+    // contiene el guión literal. Mismo bug que 'x-one' (ver versión sin guión
+    // arriba) y que Adidas 'x-treme' (real, 2026-06-21) — se añaden las versiones
+    // con espacio, que son las que de verdad pueden matchear.
+    'x-zero', 'x zero', 'x-hero', 'x hero', 'x-pro', 'x pro',
     'future', 'equation', 'nextgen', 'tempo', 'ventus', 'quantum', 'ultimate',
   ],
   'Adidas': [
@@ -180,6 +185,12 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
     'electra', 'fenix', 'pegasus', 'diablo', 'adrenaline', 'savage',
     'trilogy', 'spyder', 'velox', 'beat', 'gea', 'astra', 'valkiria',
     'fusion', 'invicta',
+    // 'astral' (con "l" final): variante ortográfica que usan algunas tiendas
+    // para la línea "Astra" (bug real 2026-06-21: "Pala Siux Astral Control
+    // 2026" generaba linea="Astra"+modelo="l" suelto y no matcheaba la fila
+    // ya existente en catálogo → duplicado auto_promoted). Va antes que
+    // 'astra' en LINEAS_ALIAS (más larga primero) para que se pruebe primero.
+    'astral',
   ],
   'Vibor-A': [
     'black mamba', 'king cobra', 'king kobra',
@@ -188,7 +199,9 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
   ],
   'Drop Shot': [
     'explorer', 'axion', 'canyon', 'renegade', 'conqueror',
-    'quantum', 'bronco', 'blitz', 'cyber', 'flame', 'furia', 'prime', 'x-drive',
+    'quantum', 'bronco', 'blitz', 'cyber', 'flame', 'furia', 'prime',
+    // 'x-drive' (con guión) nunca matchea — mismo bug del guión, ver Nox arriba.
+    'x-drive', 'x drive',
   ],
   'Black Crown': [
     'piton', 'hurricane', 'gladius', 'epic', 'iconic',
@@ -214,8 +227,24 @@ export let LINEAS_POR_MARCA: Record<string, string[]> = {
     'lethal', 'summum', 'carbon', 'baseline',
   ],
   'Royal Padel': [
-    'aniversario', 'fury', 'r-ace', 'hi-lander', 'factor',
-    'whip', 'control', 'race',
+    'aniversario', 'fury',
+    // 'hi-lander' (con guión) nunca matchea — mismo bug del guión, ver Nox arriba.
+    'hi-lander', 'hi lander', 'factor',
+    'whip', 'control',
+    // 'race' antes que 'ace': si "race" estuviera después, "ace" la interceptaría
+    // como substring ("race".includes("ace")) y la línea real "Race" (modelo
+    // "RP", catálogo) se detectaría mal como "Ace".
+    'race',
+    // 'ace' SOLO (no 'r ace'/'r-ace'): el catálogo usa modelo="R" para esta línea
+    // (linea=Ace, modelo=R/R LIGHT). Si el diccionario consume "r ace" entero como
+    // línea, la "R" desaparece y el modelo queda vacío — rompe "R-Ace Light 2025"
+    // (regresión real 2026-06-21, detectada tras el fix de "M27 R-Ace 2026").
+    // Dejando solo 'ace', la "R" sobrevive como modelo en ambos casos: en
+    // "M27 R-Ace 2026" el extra "M27" queda en modelo (no hay esa fila en
+    // catálogo para 2026 → sin_match correcto, por catálogo incompleto, no por
+    // línea mal detectada); en "R-Ace Light 2025" el modelo queda limpio "R" y
+    // matchea bien contra la fila real.
+    'ace',
   ],
   'Tecnifibre': [
     'wall breaker', 'wall master', 'curva', 'bomba',
@@ -614,14 +643,38 @@ export function extraerAtributos(titulo: string): Atributos {
   const LINEAS_ALIAS: Record<string, string> = {
     'crossit': 'Cross It',
     'vive': 'Vibe',
+    'astral': 'Astra',
     'king kobra': 'King Cobra',
     'x treme': 'Xtreme',
+    'ace': 'Ace',
+    'hi lander': 'Hi-Lander',
+    'x zero': 'X-Zero',
+    'x hero': 'X-Hero',
+    'x pro': 'X-Pro',
+    // Catálogo Drop Shot llama a esta línea solo "Drive" (no "X-Drive").
+    'x drive': 'Drive',
   }
   let lineaDetectada: string | null = null
   let lineaAliasMatched: string | null = null  // texto realmente matcheado en el título (puede diferir del canónico, ej. "vive" → "Vibe")
   const lineas = LINEAS_POR_MARCA[marcaDetectada] || []
   for (const linea of lineas) {
-    if (restoNorm.includes(linea) || norm.includes(linea)) {
+    // Bug real detectado 2026-06-21: el match era con .includes() (substring
+    // puro), así que una línea conocida que es prefijo de OTRA palabra del
+    // título (ej. "Astra" dentro de "Astral") matcheaba igual, dejando suelta
+    // la letra restante ("l") que acababa contaminando `modelo`. Resultado:
+    // "Siux Astral Control 2026" se parseaba como linea="Astra", modelo="l",
+    // que ya NO coincide con la fila real existente en catálogo
+    // (linea="Astra", modelo=null) → buscarPorAtributos() no la encontraba →
+    // auto-promote-candidatas.ts creaba una fila NUEVA duplicada (sin imagen,
+    // sin price_reference, exactamente el patrón que aparece en GestorCandidatas).
+    // Fix: exigir que el carácter inmediatamente antes/después del match (si
+    // existe) no sea otra letra — así "astra" sigue matcheando en "Astra 2.0"
+    // o "Astra Control" pero no dentro de "Astral".
+    const lineaPatternCheck = linea
+      .replace(/[-+]/g, '[-+]?')
+      .replace(/\s+/g, '[-\\s]+')
+    const lineaReCheck = new RegExp('(?<![a-z])' + lineaPatternCheck + '(?![a-z])', 'i')
+    if (lineaReCheck.test(restoNorm) || lineaReCheck.test(norm)) {
       lineaAliasMatched = linea
       lineaDetectada = LINEAS_ALIAS[linea] ?? linea
         .split(' ')
