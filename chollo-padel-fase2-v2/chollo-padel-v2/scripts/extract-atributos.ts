@@ -486,6 +486,77 @@ const JUGADORES = [
   'manu martin', 'juan martin diaz', 'juan martin',
 ]
 
+// Fix real 2026-06-23 (Bullpadel Flow Legend Mujer / Alejandra Salazar 2026 —
+// aviso CRÍTICO de Patricia): cuando una tienda escribe el nombre de una
+// jugadora conocida pero NO incluye ninguna palabra de género explícita
+// ("Woman"/"W"/"Mujer"), varianteDetectada se quedaba en null — la fila gemela
+// de OTRA tienda, que sí escribía "Mujer" en el título, sacaba variante=WOMAN.
+// Mismo producto, dos filas, porque a una tienda le bastaba el nombre de la
+// jugadora para implicar género y a la extracción no. Lista = mismas
+// jugadoras del bloque "FIP Top 50 Women" de JUGADORES arriba (líneas
+// 424-477) — se mantiene como lista separada en vez de restructurar JUGADORES
+// en objetos {nombre,genero} para minimizar el blast radius del cambio.
+const JUGADORAS_MUJER = new Set([
+  'gemma triay', 'triay',
+  'delfina brea', 'delfi brea', 'delfi',
+  'bea gonzalez', 'bea gonzález', 'beatriz gonzalez',
+  'paula josemaria', 'josemaria', 'josemaría',
+  'ari sanchez', 'ariana sanchez',
+  'claudia fernandez sanchez', 'claudia fernandez', 'claudia fernández',
+  'andrea ustero', 'ustero',
+  'sofia araujo', 'araujo',
+  'tamara icardo', 'icardo',
+  'martita ortega', 'marta ortega',
+  'claudia jensen',
+  'alejandra salazar', 'ale salazar', 'salazar',
+  'martina calvo',
+  'alejandra alonso de villa',
+  'veronica virseda', 'virseda',
+  'marina guinart', 'guinart',
+  'beatriz caldera',
+  'carmen goenaga',
+  'aranzazu osoro', 'osoro',
+  'victoria iglesias',
+  'lucia sainz', 'lucía sainz',
+  'mapi sanchez', 'mapi sánchez',
+  'patricia llaguno', 'patty llaguno', 'llaguno',
+  'martina fassio', 'fassio',
+  'raquel eugenio',
+  'jessica castello',
+  'lorena rufo',
+  'jimena velasco',
+  'marta barrera',
+  'carolina orsi',
+  'giulia dal pozzo',
+  'virginia riera',
+  'alix collombon', 'collombon',
+  'noa canovas',
+  'araceli martinez arandia',
+  'agueda perez',
+  'lucia martinez gomez',
+  'julieta bidahorria',
+  'marta caparros',
+  'marta talavan', 'talavan',
+  'marta borrero',
+  'lara arruabarrena', 'arruabarrena',
+  'sofia saiz',
+  'jana montes',
+  'noemi aguilar',
+  'melania merino',
+  'ana catarina nogueira',
+  'mafalda fernandes',
+  'carolina navarro',
+])
+
+function jugadorEsMujer(texto: string): boolean {
+  const sinAcentos = texto.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  for (const j of Array.from(JUGADORAS_MUJER).sort((a, b) => b.length - a.length)) {
+    const jNorm = j.normalize('NFD').replace(/[̀-ͯ]/g, '')
+    if (new RegExp(jNorm, 'gi').test(sinAcentos)) return true
+  }
+  return false
+}
+
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 
 function quitarMarca(texto: string, marca: string): string {
@@ -811,6 +882,18 @@ export function extraerAtributos(titulo: string): Atributos {
       sinLinea = sinLinea.replace(regexInsensibleAAcentos(v), '').replace(/\s+/g, ' ').trim()
       break
     }
+  }
+
+  // Fix real 2026-06-23 (Bullpadel Flow Legend Mujer / Alejandra Salazar 2026):
+  // ver comentario de jugadorEsMujer() arriba. Si ninguna palabra de género
+  // explícita dio variante, pero el título menciona una jugadora conocida del
+  // ranking FIP Top 50 Women, infiere variante=WOMAN — mismo criterio que ya
+  // usa toda la industria (el nombre de una jugadora SIEMPRE implica la línea
+  // femenina, nunca aparece en una pala de hombre). Usa `titulo` (texto de
+  // entrada original, sin tocar) — sin riesgo de falso positivo porque
+  // JUGADORAS_MUJER son nombres propios, no palabras genéricas.
+  if (!varianteDetectada && jugadorEsMujer(titulo)) {
+    varianteDetectada = 'WOMAN'
   }
 
   // Fix real 2026-06-23 (Bullpadel Icon, Iconic — tennispoint): algunas tiendas

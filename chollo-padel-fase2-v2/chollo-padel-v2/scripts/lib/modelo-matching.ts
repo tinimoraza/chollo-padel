@@ -108,6 +108,29 @@ export const COLORES = new Set([
   'grey', 'orange', 'pink', 'silver', 'gold', 'purple', 'brown',
 ])
 
+// Fix real 2026-06-23 (barrido catálogo completo a raíz de aviso de Patricia:
+// Bullpadel Indiga Boy/Girl, Vertex JR/Woman Junior — capturas con el MISMO
+// producto repetido en varias líneas junior): "Jr" es simplemente la
+// abreviatura de "Junior" — sin alias, una tienda que escribe "Jr" y otra que
+// escribe "Junior" generan bolsas de tokens distintas para el mismo producto.
+export const JR_ALIAS: Record<string, string> = { 'jr': 'junior' }
+
+// Palabras de relleno publicitario que NO aportan información del producto.
+// Causa raíz (barrido 2026-06-23): filas antiguas, creadas ANTES del fix de
+// FRASES_MARKETING_RUIDO en extract-atributos.ts, tienen estas palabras
+// pegadas a `modelo` (ej. "W Superficie completa" en vez de solo "W") — la
+// fila gemela creada DESPUÉS del fix no las tiene, así que la bolsa de tokens
+// nunca coincidía y el mismo producto (Bullpadel Elite W 26 / Elite Woman
+// 2026) se duplicaba sin que firmaProducto() lo detectara. Se quitan aquí
+// también (no solo en extract-atributos.ts) para que la comparación retroactiva
+// de filas ya existentes en el catálogo funcione igual que la extracción de
+// filas nuevas — una sola fuente de verdad de qué es "ruido", igual que ya
+// pasa con MODELO_TOKEN_ALIAS de colores/género arriba.
+export const RUIDO_MARKETING_TOKENS = new Set([
+  'pala', 'de', 'padel', 'raqueta', 'edition', 'edicion', 'series', 'nfa',
+  'superficie', 'completa', 'mas', 'tubo', 'pelotas', 'segunda', 'mano',
+])
+
 export const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'mtw': 'multiweight',
   // Fix real 2026-06-23 (Bullpadel Elite, Flow, Indiga, Vertex; Drop Shot
@@ -149,7 +172,8 @@ export function tokensDeModelo(s: string | null): string[] {
   if (!s) return []
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
-    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
+    .filter(t => !RUIDO_MARKETING_TOKENS.has(t))
+    .map(t => MODELO_TOKEN_ALIAS[t] ?? JR_ALIAS[t] ?? t)
 }
 
 export function colorDeModelo(s: string | null): string | null {
@@ -183,7 +207,21 @@ export function tokenizarModelo(s: string): string[] {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
     .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
-    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
+    .filter(t => !RUIDO_MARKETING_TOKENS.has(t))
+    .map(t => MODELO_TOKEN_ALIAS[t] ?? JR_ALIAS[t] ?? t)
+}
+
+// Fix real 2026-06-23 (Bullpadel Indiga Boy 26 / Indiga Jr Boy 26, Indiga Girl
+// 2025 / Indiga Girl Junior 2025 — aviso de Patricia con capturas): "Boy"/
+// "Girl" ya implican junior por sí solos (no hay pala "Boy" de adulto) — pero
+// una tienda añade además el token "Junior"/"Jr" explícito y otra no. Sin
+// colapsar, la bolsa de tokens de firmaProducto() no coincide nunca aunque sea
+// el mismo producto. Solo se quita 'junior' cuando 'boy'/'girl' ya están en la
+// bolsa (si no hay marcador de género junior, 'junior' es información real y
+// se queda).
+function colapsarGeneroJunior(tokens: string[]): string[] {
+  if (!tokens.includes('boy') && !tokens.includes('girl')) return tokens
+  return tokens.filter(t => t !== 'junior')
 }
 
 export function preferirModeloEspecifico<T extends { modelo: string | null }>(
@@ -204,6 +242,13 @@ export function modeloCompatible(
 ): boolean {
   if (!modeloExtraido) {
     if (!modeloCat) return true
+    // Fix real 2026-06-23: antes, un modeloCat compuesto SOLO de ruido de
+    // marketing (ej. "Superficie completa", residuo en filas creadas antes
+    // del stripper de extract-atributos.ts) se consideraba "incompatible" con
+    // un modeloExtraido vacío, aunque en realidad no aporta ningún dato real
+    // que pueda chocar. tokenizarModelo ya quita ese ruido (RUIDO_MARKETING_TOKENS)
+    // — si tras quitarlo no queda ningún token, es compatible.
+    if (tokenizarModelo(modeloCat).length === 0) return true
     return /^[\d.]+$/.test(modeloCat.trim())
   }
   const tokenizar = tokenizarModelo
@@ -286,6 +331,7 @@ export function firmaProducto(modelo: string | null, variante: string | null, a�
     const añoCorto = String(año % 100)
     tokens = tokens.filter(t => !(/^[0-9]+$/.test(t) && (t === String(año) || t === añoCorto)))
   }
+  tokens = colapsarGeneroJunior(tokens)
   return Array.from(new Set(tokens)).sort().join('|')
 }
 
