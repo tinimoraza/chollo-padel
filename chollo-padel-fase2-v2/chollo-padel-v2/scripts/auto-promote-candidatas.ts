@@ -165,9 +165,32 @@ async function main() {
       .single()
 
     if (insertError) {
-      // Si ya existe (slug duplicado) lo ignoramos
+      // Bug real 2026-06-22: si el slug ya existe, el script solo logueaba
+      // "ignorando" y pasaba a la siguiente candidata SIN marcarla resuelta —
+      // auto_promovida seguía en false, así que al día siguiente el cron volvía
+      // a intentar la MISMA candidata, fallaba igual, y así indefinidamente.
+      // El log del 21/06 tenía 30+ candidatas atascadas así en una sola
+      // ejecución. Slug idéntico = mismo título normalizado = literalmente el
+      // mismo producto que ya está en catálogo (mucho más estricto que el
+      // matching por atributos, que a veces no lo detecta por diferencias de
+      // parseo) — así que es seguro vincular sin más comprobación, igual que
+      // en la rama "ya existe" de arriba.
       if (insertError.code === '23505') {
-        console.log(`[auto-promote] ⚠️  Slug duplicado, ignorando: "${c.titulo}"`)
+        const { data: existente } = await supabase
+          .from('palas')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle()
+        if (existente) {
+          await supabase
+            .from('palas_candidatas')
+            .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
+            .eq('id', c.id)
+          console.log(`[auto-promote] 🔗 Slug ya existía, vinculo sin duplicar: "${c.titulo}" → pala ${existente.id}`)
+          promovidas++
+        } else {
+          console.log(`[auto-promote] ⚠️  Slug duplicado pero no encuentro la pala, dejo pendiente: "${c.titulo}"`)
+        }
       } else {
         console.error(`[auto-promote] Error insertando "${c.titulo}":`, insertError.message)
       }
