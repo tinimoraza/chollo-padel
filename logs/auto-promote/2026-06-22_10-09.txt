@@ -1,0 +1,184 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+[auto-promote] Buscando candidatas para promover...
+[auto-promote] ✅ Promovida: "BULLPADEL ELITE 25" (1 fuentes, id: 13ad0b1f-e6d8-44ab-8590-81a9c70abf5a)
+[auto-promote] ✅ Promovida: "SOFTEE SPEED YELLOW POWER" (1 fuentes, id: 2b1e8a83-9eca-472d-8dd9-6af949396d4b)
+[auto-promote] ✅ Promovida: "BLACK CROWN SPECIAL PRO" (1 fuentes, id: f50854bb-29b6-48da-a983-9fd8492496aa)
+[auto-promote] ✅ Promovida: "Adidas X-Treme Ltd Negra y Blanca" (1 fuentes, id: 41f8fd33-bfe8-4498-aa59-9ed43257ee35)
+[auto-promote] ✅ Promovida: "NOX EQUATION 25" (1 fuentes, id: d033066d-608e-404e-9c03-6de2eff426d0)
+[auto-promote] ✅ Promovida: "SIUX SPYDER LITE ATTACK" (1 fuentes, id: 1f7eabd1-064d-4f48-a3b7-a5b4cee2c899)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "HEAD BOLT 2026 ROJO/NEGRO"
+[auto-promote] ✅ Promovida: "Star Vie Drax Soft 12K" (1 fuentes, id: f6ea999a-1d4b-45c3-af81-8331fd199ccf)
+[auto-promote] ✅ Promovida: "Head Coello Pro 25" (1 fuentes, id: f87b5d0a-ec28-44f2-8851-6f17ba9480ad)
+[auto-promote] ✅ Promovida: "Head Evo Extreme 23" (1 fuentes, id: c257a08e-dcbc-4135-a517-b34b09a727b9)
+[auto-promote] 🚫 No es pala, descartando: "AKKERON PROTECTOR"
+[auto-promote] ✅ Promovida: "NOX AT10 12K 25" (1 fuentes, id: 7935d504-f8b2-4040-9456-7c2c1efc5f3b)
+[auto-promote] ✅ Promovida: "NOX X-ONE EVO BLUE" (1 fuentes, id: d470aef8-67d2-49f7-bba2-e3cc64405530)
+[auto-promote] ✅ Promovida: "Head Vibe Gr 25" (1 fuentes, id: 6705fc8a-885e-4b03-a40b-94f35e4cd41d)
+[auto-promote] ✅ Promovida: "Adidas Metalbone HRD 3.3" (1 fuentes, id: 75694469-419c-4eb1-b88d-e83002734773)
+[auto-promote] ✅ Promovida: "Pala Wilson Juice Elite 2" (1 fuentes, id: 02a60d0f-6677-41f6-92ab-5fd674dde4f8)
+[auto-promote] ✅ Promovida: "Pala Joma Blast Pro SFT Orange/Black" (1 fuentes, id: 22bfc2b0-e59d-467d-b422-28b3865cc41c)
+[auto-promote] ✅ Promovida: "Pala Joma Blast Pro HRD Black/Grey" (1 fuentes, id: 863fc39c-0056-43c6-a2e5-f1692e86a23a)
+[auto-promote] ✅ Promovida: "Pala LOK Maxx Hype Yanguas World" (1 fuentes, id: 88bc8ebd-cdbd-4f92-a35e-a7f9ce70036c)
+[auto-promote] ✅ Promovida: "Pala Adidas Cross It Carbon 3.4 – Maxi Arce" (1 fuentes, id: b2b9c0e3-bbf6-42f3-a733-a83e785f96a1)
+[auto-promote] ✅ Promovida: "Pala Dunlop Aerostar Pro" (1 fuentes, id: c4f54314-c4f6-4128-9c91-7dc2e54d7f76)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Black Crown Piton White Soft"
+[auto-promote] ✅ Promovida: "Pala Joma Master Lite White/Blue" (1 fuentes, id: eed28689-eb59-421f-86ba-9a60e3b2e670)
+[auto-promote] ⏭  Ambiguo (3 candidatos), dejo pendiente para revisión manual: "Siux Beat Control"
+[auto-promote] ✅ Promovida: "Pala Dunlop Tsunami Blue" (1 fuentes, id: 5b752f7d-aff9-49f0-9bbc-dfee6f3aceb9)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "VIBOR-A LETHAL ADVANCE"
+[auto-promote] ⏭  Ambiguo (3 candidatos), dejo pendiente para revisión manual: "Pala Siux Beat Control"
+[auto-promote] ✅ Promovida: "Pala Bullpadel Indiga CTRL Tour Line" (1 fuentes, id: d85df211-b421-4b5c-9b9b-953faac2ffd0)
+[auto-promote] ✅ Promovida: "Pala Wilson Optix V1 Black" (1 fuentes, id: c72cf0cd-a710-486f-bae6-d574f00b92d1)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Siux Diablo Elite 2026"
+[auto-promote] ✅ Promovida: "Pala Joma Game Jr 2025 Negro/Turquesa" (1 fuentes, id: 366fee71-2d70-4b17-ae38-3d02a7b85354)
+[auto-promote] ✅ Promovida: "Pala Black Crown Piton Blue LTD" (1 fuentes, id: 0276e737-b4df-49c1-8e54-3fe56931516c)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Joma Game Jr Black/Green"
+[auto-promote] ✅ Promovida: "Pala Drop Shot Tivoli" (1 fuentes, id: a0c240ee-0a28-45a8-b205-acbbc977212e)
+[auto-promote] ✅ Promovida: "Pala Joma Master Lite Black/Orange" (1 fuentes, id: 7e918d1a-f188-49d7-9f91-e73f22e5a122)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala HEAD Bolt 2026 Red/Black"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Siux Astra Control"
+[auto-promote] ⏭  Ambiguo (3 candidatos), dejo pendiente para revisión manual: "Wilson Optix Lite V2"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Siux Valkiria Elite 2026"
+[auto-promote] ✅ Promovida: "Pala Black Crown Win Ultralight" (1 fuentes, id: e226a1d5-0fbf-4cc1-9528-2f5750594b22)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Enebe Space"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Babolat Technical Viper Juan Lebron 23"
+[auto-promote] ✅ Promovida: "Babolat Viper Juan Lebrón 3.0 FW" (1 fuentes, id: f5c4ac4c-dd0c-466a-af35-ad7f7b485f44)
+[auto-promote] ✅ Promovida: "Adidas Traxsel Ctrl 3.0" (1 fuentes, id: 4c4f2f64-28a4-46c7-9f23-6929aebebfd7)
+[auto-promote] ✅ Promovida: "NOX Equation WPT Advanced Series 24" (1 fuentes, id: 2a8d189e-0912-4ba5-9547-1edf0da481c6)
+[auto-promote] ✅ Promovida: "NOX ML10 Pro Cup Light 2025" (1 fuentes, id: 8e66e201-f9e1-431c-938f-b0159a462293)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Head Evo Extreme 2023" → pala c257a08e-dcbc-4135-a517-b34b09a727b9
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "NOX EA10 Ventus Attack 12K Xtreme 2026"
+[auto-promote] ✅ Promovida: "Dunlop Aero Star Team 23" (1 fuentes, id: 3317b147-7e48-4f31-8b6e-238782852fea)
+[auto-promote] ✅ Promovida: "NOX VK 10 Ventus Control 12K 2026" (1 fuentes, id: be044353-4aad-4341-8858-83145a71926b)
+[auto-promote] ✅ Promovida: "Joma Blast Pro Hrd 2026" (1 fuentes, id: 3155f105-1381-419d-8295-f830647e4048)
+[auto-promote] ✅ Promovida: "Joma Blast Pro Sft 2026" (1 fuentes, id: e745f96f-967d-4833-93f8-6df82bfae290)
+[auto-promote] ✅ Promovida: "Joma Hyper Pro Hrd 2026" (1 fuentes, id: e7ac6281-9ad6-4c86-bc32-9ac7c321ef65)
+[auto-promote] ✅ Promovida: "Joma Hyper Pro Sft 2026" (1 fuentes, id: 64be2d77-9beb-4408-b70e-46518713c38c)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "HEAD BOLT RD BK 2026"
+[auto-promote] ✅ Promovida: "Joma Master 2026" (1 fuentes, id: 52b643b9-c21e-4438-9572-9049df7befeb)
+[auto-promote] ✅ Promovida: "Joma Valkiria Pro Hrd 2026" (1 fuentes, id: 166606f7-21fa-406f-98a3-81aca34d5352)
+[auto-promote] ✅ Promovida: "Joma Valkiria Pro Sft 2026" (1 fuentes, id: 4caaa39b-8ccc-4b76-afc2-f97f4b87097c)
+[auto-promote] ✅ Promovida: "Adidas Cross It Pro Limited Edition 2025" (1 fuentes, id: ca66e0a5-06bd-4cae-ba19-4351592a84d6)
+[auto-promote] ✅ Promovida: "Bullpadel Indiga W Mujer 26" (1 fuentes, id: f4b76564-0e16-4b94-b879-c6f2ce36c418)
+[auto-promote] ✅ Promovida: "Babolat Lamborghini" (1 fuentes, id: 5b1f6780-6263-415e-92de-65fe583a061f)
+[auto-promote] ✅ Promovida: "Adidas Metalbone Team 3.3" (1 fuentes, id: 37ec1a96-8a1e-465e-bef0-c73a42872805)
+[auto-promote] ✅ Promovida: "Adidas Drive Light 3.5 2026" (1 fuentes, id: cd4f8db6-2dd1-40cf-97eb-32152d335cf3)
+[auto-promote] ✅ Promovida: "Adidas Match 3.5 2026" (1 fuentes, id: db9891ef-c732-4fa8-bc43-042bb43fdc88)
+[auto-promote] ✅ Promovida: "Adidas Match Light 3.5 2026" (1 fuentes, id: 251d2478-26fc-4ce1-a348-9c6c2d56d5d8)
+[auto-promote] ✅ Promovida: "Adidas RX Series Light 3.5 2026" (1 fuentes, id: dd12eb52-2d9f-4e98-a879-8e55da2907a7)
+[auto-promote] ✅ Promovida: "Adidas Cross It Team Ctrl 3.5 2026" (1 fuentes, id: f464a42c-f0ce-45e6-aa49-5035ab1f98bf)
+[auto-promote] ✅ Promovida: "Adidas Drive 3.5 2026" (1 fuentes, id: 8b1f2c7d-5fa3-4e38-8a02-920a6096d7d9)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Adidas Arrow Hit Jr 2026"
+[auto-promote] ✅ Promovida: "Dunlop FX JR 26" (1 fuentes, id: 062aa78d-3884-4eee-b389-502ba0fdbcc8)
+[auto-promote] ✅ Promovida: "Adidas Cross It Ctrl 3.5 2026" (1 fuentes, id: 821bf125-2d4a-46c3-9136-d78aca90c2c9)
+[auto-promote] ✅ Promovida: "Adidas Metalbone CTRL 3.5 2026" (1 fuentes, id: 11683d06-2258-4efd-8d4a-333d530efe01)
+[auto-promote] ✅ Promovida: "Adidas Metalbone 3.5 2026" (1 fuentes, id: 1d56975b-dcd8-44d9-b7cc-bc36b0a35cb2)
+[auto-promote] ✅ Promovida: "Adidas Metalbone HRD+ 3.5 2026" (1 fuentes, id: 5dfc48ad-1ef0-47b1-94ee-ca7268bd7cc1)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Babolat Lamborghini Yellow" → pala 5b1f6780-6263-415e-92de-65fe583a061f
+[auto-promote] ⏭  Ambiguo (3 candidatos), dejo pendiente para revisión manual: "Siux Valkiria Elite"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Bullpadel NEURON 02 26"
+[auto-promote] ✅ Promovida: "Bullpadel Wonder 26" (1 fuentes, id: c1978809-1418-4718-830b-59ed891bda1d)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Adidas Cross It Carbon Ctrl 3.4" → pala b2b9c0e3-bbf6-42f3-a733-a83e785f96a1
+[auto-promote] ✅ Promovida: "Siux Velox Flex Green" (1 fuentes, id: 9e5e80e2-95bf-4d10-914a-52deb9690003)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Adidas Cross It Carbon 3.4" → pala b2b9c0e3-bbf6-42f3-a733-a83e785f96a1
+[auto-promote] ✅ Promovida: "Adidas Metalbone Pro Limited Edition 2025" (1 fuentes, id: 9cd6cc25-d9ca-43fd-aacf-06d9b8329388)
+[auto-promote] ✅ Promovida: "Adidas Adipower Pro Limited Edition 2025" (1 fuentes, id: 814250ec-693a-45a3-b391-0a85c6292967)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Siux Beat Junior"
+[auto-promote] ✅ Promovida: "Bullpadel Vertex 04 Woman LTD 2026" (1 fuentes, id: bc9c5f86-a666-4efc-ad1c-4f6f0683ede1)
+[auto-promote] ✅ Promovida: "Joma Slam Pro Gris Claro Negro" (1 fuentes, id: ac1d8ad3-ded0-4c4f-945f-ad49d34bc487)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Babolat Technical Viper 25"
+[auto-promote] ✅ Promovida: "Babolat Lamborghini BL003 Blanco" (1 fuentes, id: 6cb2ca42-8b6e-4741-a32c-bdc65f9f2ce1)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Babolat Technical Viper Lebron 25"
+[auto-promote] ✅ Promovida: "Babolat Lamborghini BL003 Azul" (1 fuentes, id: ee8df9f8-79a3-4726-801a-e00043e4b910)
+[auto-promote] 🚫 No es pala, descartando: "Wilson Pack de 3 Optix V2 Lite  Más tubo de pelotas, Más raquetera"
+[auto-promote] ✅ Promovida: "Joma Tournament Soft Blanco Verde" (1 fuentes, id: 1c667445-d53c-4207-978d-4a3d55afbd19)
+[auto-promote] 🚫 No es pala, descartando: "Pala Oxdog Ultimate Court + Paletero Oxdog FEP ultra tour padel bag + Bote de pelotas Oxdog BOOST+"
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Joma Game Junior Negro Turquesa" → pala 366fee71-2d70-4b17-ae38-3d02a7b85354
+[auto-promote] ✅ Promovida: "Enebe Combat Ultrasoft Azul" (1 fuentes, id: 9e481c5f-6eeb-4ed7-bd40-525c95590675)
+[auto-promote] ✅ Promovida: "Tecnifibre Wall Master 355 2023" (1 fuentes, id: 48314326-9322-4be0-9365-51e61a0288d6)
+[auto-promote] ✅ Promovida: "Vibor-a Black Mamba Elite 3K 2025" (1 fuentes, id: 0800264f-fb4a-4bdf-8c15-9535c40d0240)
+[auto-promote] 🚫 No es pala, descartando: "Bullpadel Iconic Light 26 Más raquetera, Más tubo de pelotas"
+[auto-promote] ✅ Promovida: "Tecnifibre Wall Breaker 375" (1 fuentes, id: fed1517c-af93-4844-bb36-3a60beea9e65)
+[auto-promote] ✅ Promovida: "Enebe Combat 7.1 Reloaded 2024" (1 fuentes, id: 55e52ff6-45fe-4823-8611-85adbe6e8855)
+[auto-promote] ⏭  Ambiguo (4 candidatos), dejo pendiente para revisión manual: "Joma Slam Pro Blanco Oro"
+[auto-promote] ✅ Promovida: "Star Vie Tronix" (1 fuentes, id: 78237994-17b9-457a-94cb-b19b851fc695)
+[auto-promote] ✅ Promovida: "Enebe Massive 2021" (1 fuentes, id: 35dd4a6f-8dbb-4d2a-8ce8-dd2cdd87db79)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Babolat Technical Viper 2.5 2025"
+[auto-promote] ✅ Promovida: "Adidas Cross IT 2026 Pro EDT Marta Ortega" (1 fuentes, id: 14164ff1-66b6-496a-88fd-78250e1ad2cf)
+[auto-promote] ✅ Promovida: "Babolat Lamborghini BL002 2026 Naranja" (1 fuentes, id: 2944e73e-fb95-43d4-a56c-f1e938fa29df)
+[auto-promote] ✅ Promovida: "Joma Valkiria Flex Negro Naranja Fluor" (1 fuentes, id: 878e0310-2067-4944-8df9-e1860055bf6a)
+[auto-promote] ✅ Promovida: "Prince Pala Air V2" (1 fuentes, id: 680d0245-0ffe-43a0-b0f2-518b6295d63b)
+[auto-promote] ✅ Promovida: "Babolat Viper Juan Lebron 3.0 Azul marino Verde 2026" (1 fuentes, id: 4a7d5672-0962-452e-b848-a504b5e2b05e)
+[auto-promote] ✅ Promovida: "Enebe Combat Carbon New 21" (1 fuentes, id: 81b368a5-eee4-4ee1-8403-e6688bcd4003)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Drop Shot Axion Comfort"
+[auto-promote] ✅ Promovida: "Royal Padel 771 Efe Extreme 2026" (1 fuentes, id: c0f81a6b-40c3-4aab-b926-f0ea43906870)
+[auto-promote] ✅ Promovida: "Prince Padel Mach V2" (1 fuentes, id: 19a70efd-a281-4150-b1aa-43f8a1e3f8a9)
+[auto-promote] ✅ Promovida: "Head One Ultralight Blanco 2025" (1 fuentes, id: a1a7790e-4bcf-43e1-a4b1-8b0937ee3e30)
+[auto-promote] ✅ Promovida: "Babolat Viper Juan Lebron 3.0 Naranja 2026" (1 fuentes, id: cb80d058-a4fb-48e1-a1e7-8e311ad310cc)
+[auto-promote] ✅ Promovida: "JHayber Attack SH12K" (1 fuentes, id: 4bcdbb26-eb3a-4322-9724-eaf3057703f4)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Drop shot Furia Attack"
+[auto-promote] ✅ Promovida: "StarVie Kenta Eternal Soft 2025" (1 fuentes, id: ee9585d2-0053-4a69-9223-8a558b43b1cf)
+[auto-promote] ✅ Promovida: "Nox VK10 Ventus 12K By Aranzazu Osoro 2026" (1 fuentes, id: 098513c4-dbed-48af-bad8-0678b52a289e)
+[auto-promote] ✅ Promovida: "Prince Beast Sq" (1 fuentes, id: 328dcd2c-0b27-4795-ad97-785e313c571d)
+[auto-promote] ✅ Promovida: "Royal Padel Race Light 2025" (1 fuentes, id: b26d2f34-0116-4661-813f-f0b4d092d717)
+[auto-promote] ✅ Promovida: "Royal Padel Race 2025" (1 fuentes, id: 0df4970a-d289-4111-8dbf-8568ebcc3b14)
+[auto-promote] ✅ Promovida: "Royal Padel Race 2026" (1 fuentes, id: a4db5959-8ddd-4789-be15-1ef3a09aad78)
+[auto-promote] ✅ Promovida: "Royal Padel Race Light 2026" (1 fuentes, id: 5df87fa3-4164-4e48-ac87-869d9e848d9e)
+[auto-promote] ✅ Promovida: "Jhayber Veneno 12K White" (1 fuentes, id: 0b7d716b-270d-4008-95e5-ad65185b833a)
+[auto-promote] ✅ Promovida: "Babolat Lamborghini BL002 2026 Bronce" (1 fuentes, id: 90d49c3b-77ee-4f98-a81b-7e0127a46170)
+[auto-promote] ⏭  Ambiguo (4 candidatos), dejo pendiente para revisión manual: "Drop Shot Conqueror Attack"
+[auto-promote] ✅ Promovida: "Jhayber Warrior Carbon Negro Blanco 2023" (1 fuentes, id: 0f7d4c29-d206-4e1f-a95e-e18c82efffa8)
+[auto-promote] ✅ Promovida: "Asics Control Balance" (1 fuentes, id: 4efac19a-4200-41e3-ab99-3074e5563dd2)
+[auto-promote] 🚫 No es pala, descartando: "Anorak Bullpadel Boque Carbon"
+[auto-promote] ✅ Promovida: "J-Hayber Pala Warrior Fit 2021" (1 fuentes, id: fc09d24e-57b0-4092-bdb3-bde4834ed189)
+[auto-promote] ✅ Promovida: "Vibora King Kobra Classic Edition" (1 fuentes, id: a491838c-3355-49b0-b749-db1974d9e05a)
+[auto-promote] ✅ Promovida: "J-Hayber Dominator 12K 2021" (1 fuentes, id: fb2799dc-9dcd-4f1c-9717-d6ee4df5dd3b)
+[auto-promote] ✅ Promovida: "Drop shot X-Drive 1.0" (1 fuentes, id: fabb329e-f4fb-49b9-ba4b-6cd321e26e59)
+[auto-promote] ✅ Promovida: "Black Crown Piton 7.0 Soft" (1 fuentes, id: af3bc783-b9c6-4195-bc13-253b85d29fc8)
+[auto-promote] ✅ Promovida: "Prince Titan Ultra Light" (1 fuentes, id: 9cf32ba8-a0b1-495d-9538-b48d0ad99fc5)
+[auto-promote] ✅ Promovida: "BULLPADEL FLOW 25" (1 fuentes, id: 296a1afa-ec0b-411f-85ab-8acfb502ff02)
+[auto-promote] ✅ Promovida: "Varlion L.W. Summun Prisma Airflow W" (1 fuentes, id: c24e54b4-9dab-4167-bced-f5ca52de0044)
+[auto-promote] ✅ Promovida: "Head Coello Pro 25 LTD" (1 fuentes, id: b1431401-fba4-49e7-99d6-1c683afda910)
+[auto-promote] ✅ Promovida: "BULLPADEL PEARL 25" (1 fuentes, id: 1edaa4ab-ed9c-4a23-afce-0ff5a58f26d8)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "NOX AT10 ATTACK 12K 25"
+[auto-promote] ✅ Promovida: "ADIDAS X-TREME LTD GOLD" (1 fuentes, id: 96d899d7-1de7-4bde-91ff-36e21d8c4efe)
+[auto-promote] ✅ Promovida: "SOFTEE SUMMIT YELLOW POWER" (1 fuentes, id: f2959607-700f-4387-94f1-f42fb01e0248)
+[auto-promote] ✅ Promovida: "SIUX TRILOGY 2 CONTROL" (1 fuentes, id: 98a73bce-0379-4b3f-9b80-7fad29671588)
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Head Bolt 2026 rd bk"
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "ENEBE COMBAT RELOADED" → pala 55e52ff6-45fe-4823-8611-85adbe6e8855
+[auto-promote] ✅ Promovida: "NOX EQUATION LIGHT W 25" (1 fuentes, id: 9d575514-ed59-4c87-b799-a648fa9b99b3)
+[auto-promote] ⏭  Sin línea reconocida, dejo pendiente para revisión manual: "AT10 PRO CUP COMFORT 25"
+[auto-promote] ✅ Promovida: "Head Flash RE 23" (1 fuentes, id: c6196904-0005-4894-be23-6a36aca3288d)
+[auto-promote] ✅ Promovida: "Varlion L.W. Summum Prisma W" (1 fuentes, id: 9a595975-c784-48ac-8a3c-4fd65b9b1665)
+[auto-promote] ✅ Promovida: "Head Bolt Tl 25" (1 fuentes, id: d9649a90-8211-487f-bb0f-d8fc34dab81a)
+[auto-promote] ✅ Promovida: "Wilson Pro Staff LT" (1 fuentes, id: 52ba2d65-8c7c-4155-8716-f4a15d17b34c)
+[auto-promote] ✅ Promovida: "Pala Dunlop Aerostar Lite" (1 fuentes, id: 6687381a-d6fa-4227-b57b-6d282b17c48a)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Indiga Jr Girl 26" (1 fuentes, id: e27e8320-0dc9-48cc-b7d7-8b0696422031)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Indiga Jr Boy 26" (1 fuentes, id: 4d34aaca-6714-4a3d-8d71-3fb6a7d2e8d5)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Indiga Woman Tour Line" (1 fuentes, id: b117cb30-4737-4208-9dbb-b4d29caf65a9)
+[auto-promote] ✅ Promovida: "Adidas Cross It Carbon Ctrl 3.5 2026" (1 fuentes, id: 1a85f37e-2db8-4dcd-b5b1-2c5559b2ab25)
+[auto-promote] ✅ Promovida: "Adidas Cross It Light 3.5 2026" (1 fuentes, id: 28283335-dfbc-4fe5-81c0-6cce5db41680)
+[auto-promote] ✅ Promovida: "Siux Fenix Pro 26" (1 fuentes, id: c914bc60-3493-46c1-9ddd-ec3e06a84d30)
+[auto-promote] ✅ Promovida: "Pala Bullpadel Indiga PWR Advanced Line" (1 fuentes, id: 75ad6bdd-f63b-46a3-8c75-ca3b48146c29)
+[auto-promote] ✅ Promovida: "Adidas Cross It Team Light 3.5 2026" (1 fuentes, id: d6d46949-3d81-45a5-8925-ad39eaa2b036)
+[auto-promote] ✅ Promovida: "Siux Trilogy Pro 26" (1 fuentes, id: a0c9789b-cf77-40a0-a07e-a91debcef72b)
+[auto-promote] ✅ Promovida: "Adidas Metalbone Carbon 3.5 2026" (1 fuentes, id: 9ff1da46-dfce-487b-b2d3-a8a7b82eb8f0)
+[auto-promote] ✅ Promovida: "Siux Diablo Pro 26" (1 fuentes, id: 856479b2-b5f9-4ec0-a18b-8119f331fbb9)
+[auto-promote] ✅ Promovida: "NOX Vk10" (1 fuentes, id: 3eaacdf2-faad-49f5-acda-82a4edf7ae2b)
+[auto-promote] ✅ Promovida: "Prince Rocket Black Tatoo" (1 fuentes, id: cd95170b-c9ab-43e5-96c5-787dccf77e09)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Adidas Cross It Carbon 3.5 2026" → pala 1a85f37e-2db8-4dcd-b5b1-2c5559b2ab25
+[auto-promote] ✅ Promovida: "Adidas Metalbone Team 3.5 2026" (1 fuentes, id: cef6a1ad-96fe-4cf0-a3ea-dfa83e7dcac9)
+[auto-promote] ✅ Promovida: "Siux Beat Hybrid Air 2" (1 fuentes, id: 104390bd-fd46-4ced-92fd-b8b2f058f93a)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Adidas Metalbone Carbon CTRL 3.5 2026" → pala 9ff1da46-dfce-487b-b2d3-a8a7b82eb8f0
+[auto-promote] ✅ Promovida: "Enebe RSX 7.1 CarbonV.2 Original" (1 fuentes, id: cf01aeb7-2e75-41ab-b648-48e4ebe66224)
+[auto-promote] ✅ Promovida: "Joma Slam Pro Negro Turquesa Flúor" (1 fuentes, id: 1a80bf66-857a-4a53-8a4f-ef169ea42216)
+[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "Pala Bullpadel Indiga Control 2026" → pala 4119026b-1e31-4c87-b93e-7588b7006025
+[auto-promote] ⏭  Sin línea reconocida, dejo pendiente para revisión manual: "Pala Hybrid Ross"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Head Bolt Rojo Negro 2026"
+[auto-promote] ⏭  Ambiguo (5 candidatos), dejo pendiente para revisión manual: "Pala Babolat Lamborghini Azul 2026"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Nox Edu Alonso EA10 Ventus Attack 12K Xtreme 2026"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Bullpadel Chingotto Neuron 02 2026"
+[auto-promote] ⏭  Ambiguo (4 candidatos), dejo pendiente para revisión manual: "Pala Drop Shot Jon Sanz Axion Attack"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Dunlop Rapid Power"
+
+[auto-promote] Completado: 139 promovidas, 41 esperando más fuentes.
