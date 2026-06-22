@@ -332,7 +332,7 @@ export async function cargarLineasDesdeBD(supabase: any): Promise<void> {
 
 export const VARIANTES: string[] = [
   // Técnicas
-  'hrd+', 'hrd', 'ctrl', 'control', 'light', 'team', 'carbon',
+  'hrd+', 'hrd', 'ctrl', 'ctr', 'control', 'light', 'team', 'carbon',
   'comfort', 'confort', 'cmf', 'hybrid', 'hyb', 'attack', 'soft', 'air', 'pro',
   'elite', 'tour', 'ltd', 'limited', 'xtreme', 'xtrem', 'lite',
   'power', 'pwr', 'speed', 'motion',
@@ -735,7 +735,13 @@ export function extraerAtributos(titulo: string): Atributos {
     'mujer': 'WOMAN', 'mujeres': 'WOMAN', 'women': 'WOMAN',
     'junior': 'JUNIOR', 'jr': 'JUNIOR',
     'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD+',
-    'ctrl': 'CTRL', 'control': 'CTRL',
+    // Fix real 2026-06-23 (Bullpadel Indiga CTR 2026): 8 de 10 tiendas escriben
+    // "CTR" (sin la L final) — es la abreviatura oficial que usa Bullpadel para
+    // esta línea, no un typo de scraper. Sin este alias, "ctr" no estaba en
+    // VARIANTES y se quedaba colado en `modelo` ("modelo=CTR") mientras que la
+    // única tienda que sí escribía "CTRL" completo generaba una fila distinta
+    // con variante=CTRL correcto — mismo producto repartido en 2 filas.
+    'ctrl': 'CTRL', 'control': 'CTRL', 'ctr': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
     // Fix real 2026-06-23 (Drop Shot Conqueror): 'confort' (ortografía española,
     // sin 'm') no es un substring de 'comfort' — antes nunca matcheaba ningún
@@ -756,24 +762,18 @@ export function extraerAtributos(titulo: string): Atributos {
     'netherlands': 'Netherlands', 'usa': 'USA',
   }
 
-  // Fix real 2026-06-23 (Adidas Cross It): "Control"/"CTRL" es ruido de marketing
-  // cuando el título YA trae un tier real (Carbon/Light/Team) — Adidas (y algunas
-  // tiendas) añaden "Control"/"CTRL" de forma redundante a cualquiera de los tres
-  // tiers. Antes, el bucle de abajo elegía SOLO la palabra más larga como variante
-  // ('control'=7 letras gana a 'carbon'=6, pero 'carbon'=6 gana a 'ctrl'=4) y la
-  // otra palabra se quedaba suelta y colaba en el modelo — el mismo título
-  // ("Carbon Control" vs "Control Carbon" vs "Carbon Ctrl"...) acababa repartido
-  // de 3 formas distintas entre modelo/variante según qué palabra usara cada
-  // tienda, generando duplicados reales en `palas` que el comparador de
-  // variante exacta (limpiar-duplicados-catalogo.ts) no podía detectar porque
-  // la variante ya venía distinta entre las dos filas. Fix: si hay un tier real
-  // (carbon/light/team) en el texto, quitamos "control"/"ctrl" ANTES de elegir
-  // variante, para que nunca compita ni quede suelto en el modelo.
-  const TIERS_REALES = ['carbon', 'light', 'team']
-  const tieneTierReal = TIERS_REALES.some(t => normalizar(sinLinea).includes(t))
-  if (tieneTierReal && /\b(ctrl|control)\b/i.test(sinLinea)) {
-    sinLinea = sinLinea.replace(/\b(ctrl|control)\b/gi, '').replace(/\s+/g, ' ').trim()
-  }
+  // REVERTIDO (fix real 2026-06-23, vuelta atrás del fix de la misma fecha más
+  // arriba en el historial): este bloque trataba "Control"/"CTRL" como ruido de
+  // marketing eliminable cuando el título ya traía un tier real (Carbon/Light/
+  // Team), asumiendo que era redundante. ERROR demostrado contra datos reales:
+  // comprobado contra producto_aliases (14+ tiendas consistentes por fila) y
+  // contra palas_no_duplicados (ya marcado a mano como NO duplicado), en la gama
+  // 2026 de Adidas (Cross It, Metalbone, Arrow Hit) "Carbon" y "Carbon Control/
+  // CTRL" son DOS productos reales distintos (forma de pala distinta, no la
+  // misma con una palabra repetida). Quitar "control"/"ctrl" aquí los habría
+  // fusionado en una sola fila — falso positivo grave, justo lo que NO debe
+  // pasar nunca. "ctrl"/"control" se deja como variante/modelo real (ya están
+  // en VARIANTES_ALIAS más abajo) — nunca se elimina como ruido.
 
   // Fix real 2026-06-23 (Vibor-A "ÉLITE"): la línea de abajo quitaba la variante
   // detectada del texto con `new RegExp(v, 'gi')`, donde `v` es la palabra SIN
@@ -811,6 +811,25 @@ export function extraerAtributos(titulo: string): Atributos {
       sinLinea = sinLinea.replace(regexInsensibleAAcentos(v), '').replace(/\s+/g, ' ').trim()
       break
     }
+  }
+
+  // Fix real 2026-06-23 (Bullpadel Icon, Iconic — tennispoint): algunas tiendas
+  // añaden frases de marketing/bundle al final del título ("Pala de pádel",
+  // "Superficie completa", "Más raquetera, Más tubo de pelotas", "Raqueta de
+  // segunda mano") que no describen el modelo — son ruido fijo, no información
+  // del producto. Sin quitarlas, colaban en `modelo` (ej. modelo="Superficie
+  // completa", modelo="Mas raquetera, Mas tubo pelotas") y esa fila nunca
+  // coincidía con la fila real del mismo producto sin esas frases — duplicado.
+  // Se quitan aquí, después de extraer línea/variante y antes de fijar modelo,
+  // para no interferir con la detección de ninguno de los dos.
+  const FRASES_MARKETING_RUIDO = [
+    /pala\s+de\s+p[aá]del/gi,
+    /superficie\s+completa/gi,
+    /m[aá]s\s+raquetera,?\s*m[aá]s\s+tubo\s+de\s+pelotas/gi,
+    /raqueta\s+de\s+segunda\s+mano/gi,
+  ]
+  for (const re of FRASES_MARKETING_RUIDO) {
+    sinLinea = sinLinea.replace(re, '').replace(/\s+/g, ' ').replace(/^[,\s]+|[,\s]+$/g, '').trim()
   }
 
   // 7. MODELO — lo que queda

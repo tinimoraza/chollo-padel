@@ -51,6 +51,43 @@ function esPala(titulo: string): boolean {
   return !NO_ES_PALA.some(w => t.includes(w))
 }
 
+// Fix real 2026-06-23 (causa raíz de las 298 filas auto_promoted de hoy, 135
+// de ellas SIN NINGÚN dato): este script nunca insertaba en `producto_aliases`
+// ni en ninguna otra parte los datos reales (tienda, url, precio) de la
+// candidata — ni cuando creaba una pala nueva, ni cuando vinculaba con una
+// que ya existía. Resultado: la pala quedaba como una cáscara vacía (0 alias,
+// 0 price_snapshots) indistinguible de un fallo, y la candidata se marcaba
+// auto_promovida=true así que el cron nunca volvía a intentarlo. Esta función
+// vuelca SIEMPRE los pares tienda/url de la candidata (c.fuentes / c.urls,
+// arrays alineados por índice) a producto_aliases contra el pala_id ya
+// decidido, tanto si la pala es nueva como si ya existía. ignoreDuplicates
+// evita romper con el UNIQUE(tienda, texto_normalizado) si esta tienda ya
+// tenía un alias igual de otra ejecución.
+async function vincularAliases(
+  supabase: ReturnType<typeof createClient>,
+  candidata: { titulo: string; titulo_normalizado: string; fuentes: string[]; urls: string[]; precio_min: number; precio_max: number },
+  palaId: string,
+): Promise<void> {
+  const fuentes = candidata.fuentes ?? []
+  const urls = candidata.urls ?? []
+  if (fuentes.length === 0) return
+  const filas = fuentes.map((tienda, i) => ({
+    pala_id: palaId,
+    texto_original: candidata.titulo,
+    texto_normalizado: candidata.titulo_normalizado,
+    tienda,
+    fuente_url: urls[i] ?? null,
+    confianza: 0.9,
+    fuente: 'auto_promote',
+  }))
+  const { error } = await supabase
+    .from('producto_aliases')
+    .upsert(filas, { onConflict: 'tienda,texto_normalizado', ignoreDuplicates: true })
+  if (error) {
+    console.error(`[auto-promote] ⚠️  No se pudieron vincular alias para "${candidata.titulo}":`, error.message)
+  }
+}
+
 async function main() {
   console.log('[auto-promote] Buscando candidatas para promover...')
 
@@ -116,6 +153,7 @@ async function main() {
         .from('palas_candidatas')
         .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
         .eq('id', c.id)
+      await vincularAliases(supabase, c, existentes[0].id)
       console.log(`[auto-promote] 🔗 Ya existe, vinculo sin duplicar: "${c.titulo}" → pala ${existentes[0].id}`)
       promovidas++
       continue
@@ -182,6 +220,7 @@ async function main() {
           .eq('slug', slug)
           .maybeSingle()
         if (existente) {
+          await vincularAliases(supabase, c, existente.id)
           await supabase
             .from('palas_candidatas')
             .update({ auto_promovida: true, estado: 'matched', updated_at: new Date().toISOString() })
@@ -196,6 +235,11 @@ async function main() {
       }
       continue
     }
+
+    // Vincular los alias (tienda+url reales de la candidata) a la pala nueva
+    // ANTES de marcar promovida — si esto fallara y se reintentara, mejor
+    // reintentar el alias también que perderlo para siempre.
+    await vincularAliases(supabase, c, nuevaPala.id)
 
     // Marcar candidata como promovida
     await supabase

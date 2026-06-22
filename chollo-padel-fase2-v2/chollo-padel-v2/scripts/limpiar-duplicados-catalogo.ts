@@ -82,6 +82,31 @@ async function fetchAll<T = any>(tabla: string, columnas: string): Promise<T[]> 
 async function main() {
   const palas = await fetchAll<Pala>('palas', 'id, nombre, marca, linea, modelo, variante, año, fuente')
 
+  // Pase 3 (fix 2026-06-23, hallazgo del barrido completo de 2346 palas): si la
+  // MISMA fuente_url (la página exacta de una tienda) aparece como alias de DOS
+  // pala_id distintos, es la señal más fuerte posible de fallo de match — es,
+  // literalmente, la misma página física repartida en dos filas (ej. Wilson
+  // Defy LS V1: una pasada del scraper de tennispoint matcheó "Wilson Defy LS
+  // V1" a la fila correcta y otra pasada, mismo día, mismo URL, matcheó
+  // "Wilson Defy LS V1 Pala de pádel" a la fila de la variante SE por error).
+  // No se auto-fusiona (a veces sí son dos productos reales y el problema es
+  // solo que un alias está mal pegado, no que la fila entera sea duplicada —
+  // hay que mirar el caso), pero se reporta siempre para revisión manual.
+  const aliasUrlRows = await fetchAll<{ pala_id: string; fuente_url: string | null }>('producto_aliases', 'pala_id, fuente_url')
+  const urlAPalas = new Map<string, Set<string>>()
+  for (const r of aliasUrlRows) {
+    if (!r.fuente_url) continue
+    if (!urlAPalas.has(r.fuente_url)) urlAPalas.set(r.fuente_url, new Set())
+    urlAPalas.get(r.fuente_url)!.add(r.pala_id)
+  }
+  const urlsConflictivas = Array.from(urlAPalas.entries()).filter(([, ids]) => ids.size > 1)
+  if (urlsConflictivas.length > 0) {
+    console.log(`\n[limpiar-duplicados] ⚠️  MISMA URL en ${urlsConflictivas.length} caso(s) — alias mal repartido entre filas (revisar a mano, NO auto-fusionar):`)
+    for (const [url, ids] of urlsConflictivas) {
+      console.log(`  🔗 ${url} → palas: ${Array.from(ids).join(', ')}`)
+    }
+  }
+
   const aliasRows = await fetchAll<{ pala_id: string }>('producto_aliases', 'pala_id')
   const snapRows = await fetchAll<{ pala_id: string }>('price_snapshots', 'pala_id')
   const wallaRows = await fetchAll<{ pala_id: string }>('wallapop_cache', 'pala_id')
@@ -128,8 +153,12 @@ async function main() {
 
         // Pase 2 (fix 2026-06-23): mismo producto con las palabras repartidas
         // de otra forma entre modelo/variante — ver comentario de cabecera.
-        const firmaA = firmaProducto(a.modelo, a.variante)
-        const firmaB = firmaProducto(b.modelo, b.variante)
+        // Se pasa el año para que firmaProducto() quite el ruido del año
+        // corto metido en `modelo` por algunas tiendas (ej. "W 25" vs
+        // variante=WOMAN — ver comentario de firmaProducto en modelo-matching.ts).
+        const añoFirma = a.año ?? b.año
+        const firmaA = firmaProducto(a.modelo, a.variante, añoFirma)
+        const firmaB = firmaProducto(b.modelo, b.variante, añoFirma)
         const esDuplicadoPase2 = firmaA !== '' && firmaA === firmaB
 
         if (!esDuplicadoPase1 && !esDuplicadoPase2) continue // productos distintos (ej. colores, generaciones) — NO tocar

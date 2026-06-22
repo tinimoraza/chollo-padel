@@ -110,6 +110,21 @@ export const COLORES = new Set([
 
 export const MODELO_TOKEN_ALIAS: Record<string, string> = {
   'mtw': 'multiweight',
+  // Fix real 2026-06-23 (Bullpadel Elite, Flow, Indiga, Vertex; Drop Shot
+  // Quantum; Head Flash — barrido completo): "W" es la abreviatura estándar
+  // de "Woman/Mujer" en TODA la industria de pádel (Adidas, Bullpadel, Drop
+  // Shot, Head, Royal Padel, Varlion la usan igual — comprobado contra el
+  // catálogo completo). Cada tienda reparte esta palabra de forma distinta:
+  // unas la dejan en `variante` ("WOMAN"), otras la dejan pegada en `modelo`
+  // como "W", "Mujer" o "Women" — mismo producto, palabra distinta, en campo
+  // distinto. Sin esta alias, modeloCompatible()/firmaProducto() veían tokens
+  // que no coincidían nunca y creaban una fila nueva por cada variante de
+  // escritura. Unificarlas en un solo token soluciona TODOS los casos de este
+  // patrón de una vez (no solo Bullpadel Elite), tanto en la detección
+  // offline (limpiar-duplicados-catalogo.ts) como en el matching en vivo
+  // (buscarPorAtributos, usado por pipeline-tiendas.ts y
+  // auto-promote-candidatas.ts) — evita que se sigan creando filas nuevas.
+  'w': 'woman', 'mujer': 'woman', 'women': 'woman',
   'negra': 'black', 'negro': 'black',
   'blanca': 'white', 'blanco': 'white',
   'roja': 'red', 'rojo': 'red',
@@ -242,13 +257,34 @@ export function modeloCompatible(
 // marca+línea+año producen la MISMA firma, son el mismo producto con las
 // palabras repartidas de otra forma entre los dos campos — sin importar cuál
 // futuro bug de parseo concreto lo cause.
-const RUIDO_MARKETING = new Set(['ctrl', 'control'])
-const TIERS_REALES_FIRMA = new Set(['carbon', 'light', 'team'])
-
-export function firmaProducto(modelo: string | null, variante: string | null): string {
+// Fix real 2026-06-23 (Adidas Cross It / Metalbone 2026 — Carbon vs Carbon
+// CTRL/Control): se probó tratar "ctrl"/"control" como ruido de marketing
+// eliminable cuando había un tier real (carbon/light/team) presente, asumiendo
+// que era el mismo bug que el de Cross It arreglado antes. ERROR: comprobado
+// contra producto_aliases (14+ tiendas por fila, todas consistentes) y contra
+// palas_no_duplicados (alguien ya las había marcado explícitamente como NO
+// duplicados), "Carbon" y "Carbon Control/CTRL" son DOS productos reales
+// distintos en la gama 2026 de Adidas — control es una variante real con
+// firmware/dureza distinta, no una palabra repetida. Quitarla como "ruido"
+// habría fusionado dos palas diferentes (falso positivo grave). modeloCompatible()
+// ya trataba 'ctrl'/'control' como discriminante real (MODELO_DISCRIMINANTES,
+// arriba) — nunca los quitaba. firmaProducto() debe comportarse igual: ningún
+// ruido de marketing eliminable, solo bolsa de tokens literal.
+//
+// Fix real 2026-06-23 (Bullpadel Elite "W 25" vs "Woman 2025"): algunas
+// tiendas meten el año corto (ej. "25") dentro de `modelo` aunque el año ya
+// se sepa por separado — ese "25" no es información real del producto, es
+// ruido del año repetido. Sin quitarlo, la firma de esa fila nunca coincidía
+// con la de una fila idéntica sin ese número. Misma cautela que ya existe en
+// modeloCompatible() (línea ~217): solo se quita un número si coincide
+// exactamente con el año (completo o sus 2 últimas cifras) — un número de
+// generación real (ej. "2" en "Valkiria 2") que no coincida con el año NO se
+// toca, porque sí es información real del producto.
+export function firmaProducto(modelo: string | null, variante: string | null, año: number | null = null): string {
   let tokens = [...tokenizarModelo(modelo ?? ''), ...tokenizarModelo(variante ?? '')]
-  if (tokens.some(t => TIERS_REALES_FIRMA.has(t))) {
-    tokens = tokens.filter(t => !RUIDO_MARKETING.has(t))
+  if (año != null) {
+    const añoCorto = String(año % 100)
+    tokens = tokens.filter(t => !(/^[0-9]+$/.test(t) && (t === String(año) || t === añoCorto)))
   }
   return Array.from(new Set(tokens)).sort().join('|')
 }
@@ -294,6 +330,31 @@ export async function buscarPorAtributos(
   // resultado) para decidir que insertar.
   if (filtrados.length === 0 && !attrs.modelo && attrs.jugadorMencionado) {
     filtrados = filtrarConModelo(attrs.jugadorMencionado)
+  }
+
+  // Fix real 2026-06-23 (mismo punto ciego que ya tenía
+  // limpiar-duplicados-catalogo.ts, pero AQUÍ — en el matching EN VIVO — es
+  // donde realmente importa: este es el sitio donde se decide si una fila
+  // nueva hace falta o no. El filtro de arriba exige variante exacta; si una
+  // tienda reparte las mismas palabras de otra forma entre modelo/variante
+  // (ej. "CTRL CARBON" vs "Carbon Control", o "W 25" vs variante=WOMAN), no
+  // encuentra nada y auto-promote-candidatas.ts/pipeline-tiendas.ts crea una
+  // fila DUPLICADA nueva — el catálogo se ensucia otra vez en el próximo
+  // pipeline aunque limpiar-duplicados-catalogo.ts lo arregle hoy. Antes de
+  // rendirse, se prueba la firma combinada (misma lógica que el pase 2 del
+  // script de limpieza): si exactamente UNA fila del catálogo tiene la misma
+  // bolsa de palabras, es el mismo producto — se reutiliza en vez de duplicar.
+  // Si hay 0 o 2+ coincidencias por firma no se decide nada aquí (ambigüedad
+  // real va al Gestor, no se resuelve a ciegas).
+  if (filtrados.length === 0) {
+    const firmaExtraida = firmaProducto(attrs.modelo ?? attrs.jugadorMencionado ?? null, attrs.variante, attrs.año)
+    if (firmaExtraida !== '') {
+      const porFirma = data.filter(p => {
+        const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
+        return añoCompatible && firmaProducto(p.modelo, p.variante, p.año ?? attrs.año) === firmaExtraida
+      })
+      if (porFirma.length === 1) filtrados = porFirma
+    }
   }
 
   filtrados = preferirModeloEspecifico(filtrados, attrs.modelo ?? attrs.jugadorMencionado ?? null)
