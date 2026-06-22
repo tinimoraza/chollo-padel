@@ -122,6 +122,46 @@ async function main() {
 
   const vacia = (id: string) => !conAlias.has(id) && !conSnap.has(id) && !conWalla.has(id) && !conPriceRef.has(id)
 
+  // Pase 4 (fix 2026-06-22): filas con linea=null. El agrupado de abajo exige
+  // `p.marca && p.linea` (línea siguiente), así que estas filas NUNCA entraban
+  // en ningún grupo y nunca se detectaban como duplicado aunque lo fueran —
+  // causa raíz de los ~34 duplicados que se acumularon sin que este script los
+  // viera (vienen de versiones viejas de auto-promote-candidatas.ts, anteriores
+  // al guard "if (!attrs.linea) continue" del 2026-06-20, que volcaban el
+  // título crudo completo en `modelo`). No se auto-fusionan (un título sin línea
+  // reconocida puede ser un producto real con línea nueva, no necesariamente un
+  // duplicado) — solo se reportan con el mejor candidato por similitud de
+  // tokens del nombre, misma marca, para revisión manual.
+  function tokensNombre(s: string | null): Set<string> {
+    return new Set((s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean))
+  }
+  function jaccard(a: Set<string>, b: Set<string>): number {
+    if (a.size === 0 || b.size === 0) return 0
+    let inter = 0
+    for (const t of a) if (b.has(t)) inter++
+    return inter / (a.size + b.size - inter)
+  }
+  const sinLinea = (palas as Pala[]).filter(p => !p.linea)
+  const conLinea = (palas as Pala[]).filter(p => p.linea && p.marca)
+  if (sinLinea.length > 0) {
+    console.log(`\n[limpiar-duplicados] ⚠️  ${sinLinea.length} fila(s) con linea=null (parsing roto, fuera del agrupado normal) — candidato más parecido por marca+tokens:`)
+    for (const rota of sinLinea) {
+      const tokRota = tokensNombre(rota.nombre)
+      let mejor: Pala | null = null, mejorScore = 0
+      for (const c of conLinea) {
+        if ((c.marca ?? '').toLowerCase() !== (rota.marca ?? '').toLowerCase()) continue
+        const score = jaccard(tokRota, tokensNombre(c.nombre))
+        if (score > mejorScore) { mejorScore = score; mejor = c }
+      }
+      if (mejor && mejorScore >= 0.5) {
+        console.log(`  🔎 [${(mejorScore * 100).toFixed(0)}%] "${rota.nombre}" (${rota.id}) ≈ "${mejor.nombre}" (${mejor.id}) — REVISAR A MANO`)
+      } else {
+        console.log(`  ❓ "${rota.nombre}" (${rota.id}) — sin candidato claro, probablemente producto real sin línea reconocida (corregir atributos a mano)`)
+      }
+    }
+  }
+
   // Agrupar por marca + linea normalizada
   const grupos = new Map<string, Pala[]>()
   for (const p of (palas as Pala[])) {

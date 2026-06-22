@@ -71,6 +71,51 @@ function claveNorm(p: any): string {
   return `${marca}|${linea}|${modelo}|${variante}|${año}`
 }
 
+// ─── Detección de filas con parsing roto (linea=null) ─────────────────────────
+// Causa raíz histórica: versiones antiguas de auto-promote-candidatas.ts (antes
+// del guard "if (!attrs.linea) continue" añadido 2026-06-20) volcaban el título
+// crudo completo en `modelo` cuando el extractor no reconocía la línea. claveNorm()
+// las salta (linea vacía → clave ''), así que NUNCA aparecían en `duplicados` aunque
+// fueran un duplicado exacto de una fila bien parseada. Esto es justo el patrón que
+// generó los ~34 duplicados detectados manualmente en 2026-06-22 y que el detector
+// anterior no veía. Aquí no se fusiona nada automáticamente (requiere juicio
+// humano — un título puede llevar un nombre de jugador que SÍ sea una variante
+// real, ej. "Metalbone HRD+ Ale Galán"): solo se reporta como aviso con el mejor
+// candidato de coincidencia por similitud de tokens, para revisión manual.
+function tokensTitulo(s: string): Set<string> {
+  return new Set(normStr(s).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean))
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const t of a) if (b.has(t)) inter++
+  return inter / (a.size + b.size - inter)
+}
+
+function detectarLineaNull(todas: any[]): { rota: any; mejorCandidato: any; score: number }[] {
+  const rotas = todas.filter(p => !p.linea)
+  if (rotas.length === 0) return []
+  const buenas = todas.filter(p => p.linea && p.marca)
+  const avisos: { rota: any; mejorCandidato: any; score: number }[] = []
+
+  for (const rota of rotas) {
+    const marcaRota = normStr(rota.marca ?? '')
+    const tokRota = tokensTitulo(rota.nombre ?? rota.modelo ?? '')
+    let mejor: any = null
+    let mejorScore = 0
+    for (const candidata of buenas) {
+      if (normStr(candidata.marca ?? '') !== marcaRota) continue
+      const score = jaccard(tokRota, tokensTitulo(candidata.nombre ?? ''))
+      if (score > mejorScore) { mejorScore = score; mejor = candidata }
+    }
+    if (mejor && mejorScore >= 0.5) {
+      avisos.push({ rota, mejorCandidato: mejor, score: mejorScore })
+    }
+  }
+  return avisos
+}
+
 // ─── Lógica de "qué pala conservar" ──────────────────────────────────────────
 // Prioridad de fuente: padelful > padelzoom > padelnuestro > revision_manual > resto
 const FUENTE_PRIORIDAD: Record<string, number> = {
@@ -184,8 +229,21 @@ async function main() {
 
   const duplicados = [...map.values()].filter(g => g.length > 1)
 
+  // ── Aviso de filas con linea=null (no se fusionan solas, requieren revisión) ──
+  const avisosLineaNull = detectarLineaNull(todas)
+  if (avisosLineaNull.length > 0) {
+    console.log(`\n⚠️  ${avisosLineaNull.length} filas con linea=null parecen coincidir con una pala ya catalogada (revisión manual, NO se fusionan automáticamente):\n`)
+    for (const a of avisosLineaNull) {
+      console.log(`  🔎 [${(a.score * 100).toFixed(0)}%] "${a.rota.nombre}"  (${a.rota.id})`)
+      console.log(`       ≈ "${a.mejorCandidato.nombre}"  (${a.mejorCandidato.id})`)
+    }
+    console.log()
+  } else if (todas.some(p => !p.linea)) {
+    console.log(`\nℹ️  Hay filas con linea=null pero ninguna coincide por similitud con una pala catalogada (probablemente producto distinto real, revisar a mano).\n`)
+  }
+
   if (duplicados.length === 0) {
-    console.log('✅ No se detectaron duplicados.\n')
+    if (avisosLineaNull.length === 0) console.log('✅ No se detectaron duplicados.\n')
     return
   }
 
@@ -213,9 +271,13 @@ async function main() {
       sqlLineas.push(`-- Conservar: ${conservar.id} [${conservar.fuente}]`)
       for (const b of borrar) {
         sqlLineas.push(`-- Borrar:    ${b.id} [${b.fuente}] ${b.nombre}`)
-        // Redirigir price_snapshots y aliases al canónico antes de borrar
+        // Redirigir price_snapshots, aliases y wallapop_cache al canónico antes de
+        // borrar. wallapop_cache faltaba aquí (bug detectado 2026-06-22): pala_id
+        // no tiene UNIQUE en esa tabla, así que migrar es siempre seguro, pero si
+        // no se hace los anuncios de segunda mano del duplicado borrado se pierden.
         sqlLineas.push(`UPDATE price_snapshots SET pala_id = '${conservar.id}' WHERE pala_id = '${b.id}';`)
         sqlLineas.push(`UPDATE producto_aliases  SET pala_id = '${conservar.id}' WHERE pala_id = '${b.id}';`)
+        sqlLineas.push(`UPDATE wallapop_cache    SET pala_id = '${conservar.id}' WHERE pala_id = '${b.id}';`)
         sqlLineas.push(`DELETE FROM palas WHERE id = '${b.id}';`)
       }
       sqlLineas.push('')
