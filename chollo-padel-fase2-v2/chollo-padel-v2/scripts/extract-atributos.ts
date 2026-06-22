@@ -534,6 +534,14 @@ export interface Atributos {
   modelo:   string | null
   variante: string | null
   año:      number | null
+  // Jugador mencionado en el titulo cuando no se uso ni como linea ni como
+  // modelo (ver fix 2026-06-22 mas abajo). Solo sirve como pista de RETRY para
+  // encontrar una fila YA EXISTENTE en el catalogo cuyo campo modelo coincida
+  // con el nombre del jugador (ej. Bullpadel Flow "Ale Salazar") — nunca se usa
+  // para rellenar el modelo de una fila NUEVA, porque muchas lineas con codigo
+  // de jugador (Nox AT10, La10, Tl10...) tienen filas reales con modelo=null y
+  // promocionar ahi metiendo el jugador como modelo crearia una fila duplicada.
+  jugadorMencionado: string | null
 }
 
 export function extraerAtributos(titulo: string): Atributos {
@@ -615,7 +623,7 @@ export function extraerAtributos(titulo: string): Atributos {
     }
   }
 
-  if (!marcaDetectada) return { marca: null, linea: null, modelo: null, variante: null, año }
+  if (!marcaDetectada) return { marca: null, linea: null, modelo: null, variante: null, año, jugadorMencionado: null }
 
   // 3. Limpiar título: quitar marca, año, jugadores y "by" residual
   let resto = quitarMarca(titulo, marcaDetectada)
@@ -769,16 +777,28 @@ export function extraerAtributos(titulo: string): Atributos {
   // quitarJugadores ya eliminó del texto en el paso 3), el nombre del jugador
   // se perdía sin dejar rastro. Algunas líneas usan el nombre del jugador como
   // modelo en el catálogo (ej. Bullpadel Flow "Ale Salazar", Vairo "Coki
-  // Nieto") — sin este fallback, la candidata salía con modelo=null mientras
+  // Nieto") — sin esta pista, la candidata salía con modelo=null mientras
   // la fila real del catálogo tenía modelo="Ale Salazar", modeloCompatible()
   // los consideraba incompatibles y auto-promote generaba un duplicado
   // (caso real: "Pala Bullpadel Ale Salazar Flow Woman 2025" duplicando
-  // "BULLPADEL FLOW WOMAN 2025"). Solo aplica si la línea no se resolvió ya
-  // usando ese mismo jugador (evitar duplicarlo como línea Y modelo).
+  // "BULLPADEL FLOW WOMAN 2025").
+  //
+  // OJO (revisión 2026-06-22): la primera versión de este fix asignaba el
+  // jugador directamente a modeloDetectado. Eso es peligroso: muchas líneas
+  // usan códigos con nombre de jugador (Nox AT10, La10, Tl10...) donde la fila
+  // real del catálogo tiene modelo=null a propósito (línea plana sin variante
+  // de modelo). Si auto-promote crea una fila NUEVA usando ese jugador como
+  // modelo, se generaría una fila distinta a la placeholder modelo=null en vez
+  // de matchear con ella. Por eso el jugador se guarda en un campo separado
+  // (jugadorMencionado) que SOLO se usa como pista de retry en buscarPorAtributos
+  // (modelo-matching.ts) para encontrar una fila YA EXISTENTE — nunca para
+  // rellenar el modelo de una fila nueva. Solo aplica si la línea no se
+  // resolvió ya usando ese mismo jugador (evitar duplicarlo como línea Y modelo).
+  let jugadorMencionado: string | null = null
   if (!modeloDetectado) {
     const jugadorDetectado = detectarJugador(restoAntesDeJugadores)
     if (jugadorDetectado && jugadorDetectado !== lineaDetectada) {
-      modeloDetectado = jugadorDetectado
+      jugadorMencionado = jugadorDetectado
     }
   }
 
@@ -801,6 +821,7 @@ export function extraerAtributos(titulo: string): Atributos {
     modelo:   modeloDetectado,
     variante: varianteDetectada,
     año,
+    jugadorMencionado,
   }
 }
 

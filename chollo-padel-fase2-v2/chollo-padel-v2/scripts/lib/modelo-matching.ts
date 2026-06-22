@@ -26,6 +26,14 @@ export interface AtributosExtraidos {
   variante: string | null
   // eslint-disable-next-line @typescript-eslint/naming-convention
   año:      number | null
+  // Opcional: jugador mencionado en el titulo cuando extract-atributos.ts no
+  // pudo usarlo ni como linea ni como modelo (ver fix 2026-06-22 en
+  // extract-atributos.ts). Solo se usa abajo como pista de RETRY para
+  // encontrar una fila YA EXISTENTE cuyo modelo coincida con el jugador
+  // (ej. Bullpadel Flow "Ale Salazar") cuando la busqueda normal (sin
+  // jugador) no devuelve ningun candidato. Nunca debe usarse para decidir
+  // el modelo de una fila nueva.
+  jugadorMencionado?: string | null
 }
 
 export interface PalaCandidata {
@@ -227,16 +235,29 @@ export async function buscarPorAtributos(
   const { data: _rawData } = await q
   const data = (_rawData ?? []) as PalaCandidata[]
 
-  let filtrados = data.filter(p => {
+  const filtrarConModelo = (modeloParaFiltrar: string | null) => data.filter(p => {
     const variantesCoinciden = normalizarVariante(p.variante) === normalizarVariante(attrs.variante)
     const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
-    const modeloOk = modeloCompatible(p.modelo, attrs.modelo, p.año, attrs.año)
-    const cruzado = !attrs.modelo && !!attrs.variante && !p.variante
+    const modeloOk = modeloCompatible(p.modelo, modeloParaFiltrar, p.año, attrs.año)
+    const cruzado = !modeloParaFiltrar && !!attrs.variante && !p.variante
       && normalizarVariante(p.modelo) === normalizarVariante(attrs.variante)
     return (variantesCoinciden && modeloOk || cruzado) && añoCompatible
   })
 
-  filtrados = preferirModeloEspecifico(filtrados, attrs.modelo)
+  let filtrados = filtrarConModelo(attrs.modelo)
+
+  // Retry con jugadorMencionado (ver comentario en AtributosExtraidos): solo si
+  // la busqueda normal no encontro NADA y no habia modelo extraido. Sirve para
+  // encontrar una fila YA EXISTENTE en el catalogo que use el nombre del
+  // jugador como modelo (ej. Bullpadel Flow "Ale Salazar") sin arriesgarse a
+  // que jugadorMencionado se use luego para poblar el modelo de una fila
+  // nueva — auto-promote-candidatas.ts sigue usando attrs.modelo (no este
+  // resultado) para decidir que insertar.
+  if (filtrados.length === 0 && !attrs.modelo && attrs.jugadorMencionado) {
+    filtrados = filtrarConModelo(attrs.jugadorMencionado)
+  }
+
+  filtrados = preferirModeloEspecifico(filtrados, attrs.modelo ?? attrs.jugadorMencionado ?? null)
 
   // Si el título SÍ trae año y, tras filtrar por modelo, queda ambiguo entre
   // una fila con ese año exacto y una o más filas sin año (placeholder), la
@@ -262,5 +283,5 @@ export async function buscarPorAtributos(
     }
   }
 
-  return resolverAmbiguosPorColor(filtrados, attrs.modelo)
+  return resolverAmbiguosPorColor(filtrados, attrs.modelo ?? attrs.jugadorMencionado ?? null)
 }

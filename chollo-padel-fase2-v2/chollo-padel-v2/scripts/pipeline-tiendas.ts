@@ -19,16 +19,22 @@
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, normalizar, cargarLineasDesdeBD } from './extract-atributos'
 import { main as postPipeline } from './post-pipeline.ts'
-
-// Interfaz explícita para evitar que ts-node falle con ReturnType<> sobre props con ñ
-interface AtributosExtraidos {
-  marca:    string | null
-  linea:    string | null
-  modelo:   string | null
-  variante: string | null
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  año:      number | null
-}
+// Fix 2026-06-22: este archivo tenía su PROPIA copia duplicada de toda la lógica
+// de matching (normalizarLinea, modeloCompatible, buscarPorAtributos...) en vez
+// de importarla de scripts/lib/modelo-matching.ts, a pesar de que el docstring
+// de ese módulo afirma que "ambos importan de aquí — una sola fuente de verdad".
+// Las dos copias ya habían divergido en producción: la rama de modeloCompatible()
+// para catálogo-sin-modelo (tCat.length===0) aquí solo exigía que ALGÚN lado
+// tuviera año conocido, sin comprobar que el número coincidiera con ese año —
+// exactamente el bug que el comentario de modelo-matching.ts dice haber
+// arreglado el 2026-06-21. pipeline-tiendas.ts nunca recibió ese fix porque no
+// importaba de ahí. Ahora sí importa, así que un fix futuro en modelo-matching.ts
+// beneficia automáticamente a los dos pipelines (tiendas + auto-promote) sin
+// tener que recordar tocar este archivo también.
+import {
+  buscarPorAtributos as buscarPorAtributosCompartido,
+  type AtributosExtraidos,
+} from './lib/modelo-matching'
 
 // Cargar .env.local si existe (entorno local). En CI las vars vienen del entorno del runner.
 try { require('dotenv').config({ path: '.env.local' }) } catch (_) {}
@@ -46,6 +52,16 @@ if (!TIENDA) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
+
+// Wrapper fino: la lógica de matching real vive en modelo-matching.ts (compartida
+// con auto-promote-candidatas.ts). Solo adaptamos la firma porque ese módulo
+// recibe el cliente supabase como parámetro explícito en vez de usar uno de
+// módulo. La función solo se EJECUTA dentro de main(), momento en el que
+// `supabase` (declarado arriba) ya está inicializado, así que no hay problema
+// de referenciar una const definida más abajo en el archivo.
+async function buscarPorAtributos(attrs: AtributosExtraidos) {
+  return buscarPorAtributosCompartido(supabase, attrs)
+}
 
 // ─── Helpers BD ──────────────────────────────────────────────────────────────
 
@@ -72,74 +88,6 @@ async function buscarPorAlias(textoNorm: string): Promise<string | null> {
   return data?.[0]?.pala_id ?? null
 }
 
-// Traduce la variante a una forma común para comparar candidata vs catálogo,
-// sin importar si está escrita "CTRL" o "CONTROL" (mismo significado, distinta palabra).
-// OJO: esta tabla es una lista cerrada y controlada — solo se añaden pares aquí
-// cuando se ha confirmado que significan EXACTAMENTE lo mismo (ver caso Light/Lite,
-// que demostró que no todas las abreviaturas son intercambiables).
-const LINEA_EQUIVALENCIAS: Record<string, string> = {
-  'jr': 'Junior',
-  'copa del mundo': 'World Cup',
-  'world cup': 'World Cup',
-}
-
-function normalizarLinea(l: string | null): string | null {
-  if (!l) return null
-  const norm = l.toLowerCase().trim()
-  return LINEA_EQUIVALENCIAS[norm] ?? l
-}
-
-const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
-  'paises bajos': 'netherlands',
-  'estados unidos': 'usa',
-  'control': 'ctrl', 'ctrl': 'ctrl', 'ctr': 'ctrl',
-  'hybrid': 'hybrid', 'hyb': 'hybrid',
-  'power': 'power', 'pwr': 'power',
-  'xtrem': 'xtrem', 'xtreme': 'xtrem',
-  'cmf': 'comfort',
-  'wpt': 'world padel tour', 'world padel tour': 'world padel tour',
-}
-
-function normalizarVariante(v: string | null): string | null {
-  if (!v) return null
-  const norm = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-  return VARIANTE_EQUIVALENCIAS[norm] ?? norm
-}
-
-// Tokens que, si aparecen en el catálogo pero no en lo extraído, indican un producto
-// distinto (no solo "especificación adicional"). Impide que "3.4" matchee "CTRL 3.4"
-// o que "Cross It" matchee "Cross It Team" cuando la tienda no menciona Team.
-// Regla: "Genius 12K" ⊆ "Genius 12K Alum" → extra='alum' → no discriminante → OK.
-//        "3.4" ⊆ "CTRL 3.4"               → extra='ctrl' → discriminante → NO match.
-const MODELO_DISCRIMINANTES = new Set([
-  'ctrl', 'control', 'team', 'hybrid', 'air', 'carbon', 'light',
-  'plus', 'elite', 'power', 'soft', 'iron', 'speed', 'hard', 'free',
-  'betis', 'miami',
-  'se',      // Wilson Special Edition
-  'gen',     // LOK Gen 1/2/3
-  'cloud',   // Bullpadel Cloud variants
-  'geo',     // Bullpadel GEO series
-  'premier', // Bullpadel Premier Padel edition
-  'energy',  // StarVie Energy / Nox Energy variants
-  'luxury',  // Nox Luxury / StarVie Luxury variants
-  'black',   // Siux Fenix 5 vs 5 Black
-  // NOTA 2026-06-20: se probó añadir TODOS los colores aquí como discriminante
-  // universal para resolver ambiguos por variante de color (Wilson Blade V4 LS
-  // Rosa, Babolat Lamborghini Azul, etc). Revertido: rompía el caso contrario
-  // —catálogo con una sola fila que tiene el color metido en "modelo" y la
-  // tienda no menciona color— convirtiendo un match único correcto en
-  // sin_match (verificado en dry-run: sin_match subió 635→692, por_atributos
-  // bajó 1187→1141). La desambiguación por color real vive en
-  // resolverAmbiguosPorColor(), aplicada solo cuando ya hay >1 candidato.
-  'ls',      // Wilson Blade LS vs Blade, Defy LS vs Defy
-  'prisma',  // Varlion LW Prisma vs LW
-  'pansy',   // Varlion Prisma Pansy vs Prisma
-  'world',   // Lok Hype World vs Hype
-  'lite',    // Nox AT10 Genius 12K Alum Xtrem vs ...Xtrem LITE (variante más ligera,
-             // NO la misma pala) — sin esto, "lite" como extra no discriminaba y
-             // contaminó aliases/price_snapshots de dos pala_id distintos (detectado
-             // en BD, no reproducido aún en pipeline real, pero el hueco existía).
-])
 
 // Marcas que no están (ni se van a dar de alta) en el catálogo `palas` y que generan
 // ruido constante en "Pendientes que requieren revisión manual" (estado sin_match,
@@ -157,146 +105,9 @@ function tituloTieneMarcaExcluida(titulo: string): boolean {
   return MARCAS_EXCLUIDAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(norm))
 }
 
-// Devuelve true si los tokens del modelo extraído son todos subconjunto del modelo
-// del catálogo, o viceversa. Permite matchear "GENIUS 12K" con "Genius 12K Alum":
-// la tienda omitió "Alum" pero no contradice el catálogo.
-// Si no hay modelo extraído → no filtramos por modelo (cualquier modelo vale).
 
-// Dos tokens son "compatibles" si son iguales o difieren solo en 1 carácter final
-// (e.g., "xtrem"/"xtreme"). Solo aplica a tokens >=4 chars.
-function tokensCompatibles(a: string, b: string): boolean {
-  if (a === b) return true
-  if (a.length < 4 || b.length < 4) return false
-  if (Math.abs(a.length - b.length) === 1) return a.startsWith(b) || b.startsWith(a)
-  return false
-}
-
-function tokenIn(t: string, arr: string[]): boolean {
-  return arr.some(x => tokensCompatibles(t, x))
-}
-
-// Colores ya traducidos a inglés (ver MODELO_TOKEN_ALIAS). Usados SOLO para
-// desambiguar candidatos ya-ambiguos en resolverAmbiguosPorColor() — no son
-// discriminantes universales en modeloCompatible() (eso causó una regresión
-// real el 2026-06-20: sin_match 635→692 porque rompía el caso de una sola
-// fila de catálogo con el color metido en "modelo" y la tienda sin mencionar color).
-const COLORES = new Set([
-  'black', 'white', 'red', 'green', 'yellow', 'blue',
-  'grey', 'orange', 'pink', 'silver', 'gold', 'purple', 'brown',
-])
-
-function tokensDeModelo(s: string | null): string[] {
-  if (!s) return []
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
-    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
-}
-
-function colorDeModelo(s: string | null): string | null {
-  return tokensDeModelo(s).find(t => COLORES.has(t)) ?? null
-}
-
-function modeloSinColor(s: string | null): string {
-  return tokensDeModelo(s).filter(t => !COLORES.has(t)).join(' ')
-}
-
-// Desambigua candidatos que ya pasaron buscarPorAtributos cuando la única
-// diferencia entre ellos es el color (metido dentro de "modelo" por
-// inconsistencia de import, ej. "LS V4" vs "LS V4 ROSA"). Si la tienda
-// menciona un color explícito, nos quedamos con la fila de ese color. Si no
-// menciona ninguno, preferimos la fila "base" sin color en modelo (si hay
-// exactamente una). Casos reales: Wilson Blade V4 LS Rosa, Babolat Lamborghini
-// Azul 2026, Head Bolt Rojo Negro 2026, Adidas Arrow Hit Hexagon Cup 2026.
-function resolverAmbiguosPorColor<T extends { marca: string | null; linea: string | null; modelo: string | null; variante: string | null; año: number | null }>(
-  candidatos: T[], modeloExtraido: string | null,
-): T[] {
-  if (candidatos.length <= 1) return candidatos
-  const clave = (p: T) =>
-    `${(p.marca ?? '').toLowerCase()}|${(p.linea ?? '').toLowerCase()}|${normalizarVariante(p.variante) ?? ''}|${p.año ?? ''}|${modeloSinColor(p.modelo)}`
-  if (new Set(candidatos.map(clave)).size !== 1) return candidatos // difieren en algo más que color → seguir ambiguos
-
-  const colorTienda = colorDeModelo(modeloExtraido)
-  if (colorTienda) {
-    const exacto = candidatos.filter(p => colorDeModelo(p.modelo) === colorTienda)
-    if (exacto.length === 1) return exacto
-  } else {
-    const sinColor = candidatos.filter(p => colorDeModelo(p.modelo) === null)
-    if (sinColor.length === 1) return sinColor
-  }
-  return candidatos
-}
-
-// Aliases de tokens de modelo: normaliza abreviaturas a su forma canónica.
-// Permite que "MTW" (abreviatura de Adidas) matchee con "Multiweight".
-const MODELO_TOKEN_ALIAS: Record<string, string> = {
-  'mtw': 'multiweight',
-  // Traducciones de color español→inglés (tiendas ES usan español, BD usa inglés)
-  'negra': 'black', 'negro': 'black',
-  'blanca': 'white', 'blanco': 'white',
-  'roja': 'red', 'rojo': 'red',
-  'verde': 'green',
-  'amarilla': 'yellow', 'amarillo': 'yellow',
-  'azul': 'blue',
-  'gris': 'grey',
-  'naranja': 'orange',
-  'rosa': 'pink',
-  'plata': 'silver', 'plateado': 'silver', 'plateada': 'silver',
-  'oro': 'gold', 'dorado': 'gold', 'dorada': 'gold',
-  'morado': 'purple', 'morada': 'purple', 'lila': 'purple', 'violeta': 'purple',
-  'marron': 'brown', 'marrón': 'brown',
-  // Abreviaturas de color en inglés (tiendas usan Bk/Bl/Rd/Wh/Yl)
-  'bk': 'black',
-  'bl': 'blue',
-  'rd': 'red',
-  'wh': 'white',
-  'yl': 'yellow',
-}
-
-// Extraido a nivel de modulo (antes vivia como closure dentro de modeloCompatible)
-// para poder reutilizarlo en preferirModeloEspecifico() sin duplicar la logica.
-function tokenizarModelo(s: string): string[] {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/\b(\d+)\.(\d+)\b/g, '$1$2')
-    .replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean)
-    .map(t => MODELO_TOKEN_ALIAS[t] ?? t)
-}
-
-// Cuando hay >1 candidato y al menos uno tiene un modelo EXACTO (mismos tokens
-// en ambos sentidos, ni de mas ni de menos) frente al modelo extraido, ese
-// candidato gana sobre cualquier fila placeholder (modelo=null) que tambien
-// haya pasado el filtro por la via de "ruido seguro" de modeloCompatible().
-// Bug real 2026-06-21: "Pala Black Crown Piton 13" quedaba ambiguo entre la
-// fila correcta (modelo="13") y la fila vacia "Piton/modelo=null/ano=2022"
-// (colo como ruido seguro solo porque esa fila placeholder tenia ALGUN ano
-// guardado, irrelevante para el producto real). Esta funcion limpia ese tipo
-// de colision sin tener que prohibir el ruido numerico-sin-ano en general
-// (eso rompia casos legitimos de candidato unico, ej. "Dunlop Blitz Attack
-// 2.0" o "Joma Gold Pro 2.0", donde no hay ningun competidor exacto).
-function preferirModeloEspecifico<T extends { modelo: string | null }>(
-  candidatos: T[], modeloExtraido: string | null,
-): T[] {
-  if (candidatos.length <= 1 || !modeloExtraido) return candidatos
-  const tExt = tokenizarModelo(modeloExtraido)
-  const exactos = candidatos.filter(c => {
-    const tCat = c.modelo ? tokenizarModelo(c.modelo) : []
-    return tCat.length > 0 && tExt.every(t => tokenIn(t, tCat)) && tCat.every(t => tokenIn(t, tExt))
-  })
-  return (exactos.length > 0 && exactos.length < candidatos.length) ? exactos : candidatos
-}
-
-function modeloCompatible(
-  modeloCat: string | null, modeloExtraido: string | null,
-  añoCat: number | null = null, añoExtraido: number | null = null,
-): boolean {
-  // Si la tienda no especifica modelo → solo matchea palas que tampoco tienen modelo.
-  // "CROSS IT CTRL" no debe ir a "Cross It Team CTRL" solo porque Team no se menciona.
-  if (!modeloExtraido) {
-    if (!modeloCat) return true
-    // Si el catálogo tiene solo un número de versión ("3.3", "3.4") y el extractor
-    // no tiene modelo (porque el 3.x fue convertido a año) → compatible; el año discrimina.
-    return /^[\d.]+$/.test(modeloCat.trim())
-  }
-  const tokenizar = tokenizarModelo
+/* CODIGO_MUERTO_A_BORRAR
+  const tokenizar = (s: string) => [] as string[]
   // Catalogo sin modelo (modeloCat=null, ej. "SOFTEE TRIONIC" sin sufijo) se trata
   // como tokens=[] en vez de cortar aqui con un caso especial: asi el extra de la
   // tienda (modeloExtraido) pasa por el mismo filtro esExtraInseguro() de abajo -
@@ -453,8 +264,7 @@ async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: stri
     }
   }
 
-  return resolverAmbiguosPorColor(filtrados, attrs.modelo)
-}
+CODIGO_MUERTO_A_BORRAR_FIN */
 // Devuelve true si el snapshot quedó guardado (o estamos en DRY_RUN), false si falló
 // de verdad. OJO: antes esta función no devolvía nada — solo hacía console.error y
 // seguía. Eso provocaba un bug real: si el insert fallaba (transitorio o no), el
