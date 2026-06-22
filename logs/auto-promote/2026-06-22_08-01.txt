@@ -1,0 +1,19 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+[auto-promote] Buscando candidatas para promover...
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "HEAD BOLT 2026 ROJO/NEGRO"
+[auto-promote] 🚫 No es pala, descartando: "AKKERON PROTECTOR"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "VIBOR-A LETHAL ADVANCE"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "HEAD BOLT RD BK 2026"
+[auto-promote] 🚫 No es pala, descartando: "Wilson Pack de 3 Optix V2 Lite  Más tubo de pelotas, Más raquetera"
+[auto-promote] 🚫 No es pala, descartando: "Pala Oxdog Ultimate Court + Paletero Oxdog FEP ultra tour padel bag + Bote de pelotas Oxdog BOOST+"
+[auto-promote] 🚫 No es pala, descartando: "Bullpadel Iconic Light 26 Más raquetera, Más tubo de pelotas"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Bullpadel Indiga Control 2026"
+[auto-promote] ⏭  Sin línea reconocida, dejo pendiente para revisión manual: "Pala Hybrid Ross"
+[auto-promote] ⏭  Ambiguo (3 candidatos), dejo pendiente para revisión manual: "Pala Babolat Lamborghini Azul 2026"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Head Bolt Rojo Negro 2026"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Nox Edu Alonso EA10 Ventus Attack 12K Xtreme 2026"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Bullpadel Chingotto Neuron 02 2026"
+[auto-promote] ⏭  Ambiguo (4 candidatos), dejo pendiente para revisión manual: "Pala Drop Shot Jon Sanz Axion Attack"
+[auto-promote] ⏭  Ambiguo (2 candidatos), dejo pendiente para revisión manual: "Pala Dunlop Rapid Power"
+
+[auto-promote] Completado: 0 promovidas, 15 esperando más fuentes.
