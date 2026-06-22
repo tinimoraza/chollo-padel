@@ -14,14 +14,23 @@ env:
 
 # NOTA (fix 2026-06-18): este job era uno solo, secuencial, con las 19+ tiendas
 # scrapeadas una detrás de otra → superaba el timeout-minutes: 60 ("the job has
-# exceeded the maximum execution time of 1h0m0s"). Se divide en 3 jobs paralelos
-# por tipo de scraper (igual que ya hace scrape-precios.yml): 2 grupos fetch/cheerio
+# exceeded the maximum execution time of 1h0m0s"). Se divide en jobs paralelos
+# por tipo de scraper (igual que ya hace scrape-precios.yml): grupos fetch/cheerio
 # (sin Playwright, rápidos) + 1 grupo Playwright (más lento, solo las que lo
-# necesitan). Un job final "post-pipeline" espera a los 3 con needs+if:always().
+# necesitan). Un job final "post-pipeline" espera a todos con needs+if:always().
+#
+# NOTA (fix 2026-06-23): al añadir 3 tiendas más a "Scrape A" (task #65,
+# futurapadelshop/justpadel/m1padel) ese job pasó a tener 13 tiendas y superó
+# el timeout-minutes: 30 ("the job has exceeded the maximum execution time of
+# 30m0s"). 2 grupos de 13/11 tiendas ya iban ajustados de tiempo; con 24
+# tiendas no-Playwright en total, repartir en 3 grupos de 8 da más margen por
+# job y deja sitio para seguir añadiendo tiendas sin volver a tocar esto cada
+# vez. Si en el futuro un grupo vuelve a acercarse al límite, repartir en más
+# grupos (no solo subir timeout-minutes — eso es parche, no solución).
 
 jobs:
   scrape-grupo-a:
-    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda, padelkiwi, virtualpadel, futurapadelshop, justpadel, m1padel"
+    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -50,6 +59,21 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts ofertasdepadel --no-post
       - name: Scrape padeltienda
         run: npx tsx scripts/pipeline-tiendas.ts padeltienda --no-post
+
+  scrape-grupo-b:
+    name: "Scrape B: padelkiwi, virtualpadel, futurapadelshop, justpadel, m1padel, padelvice, streetpadel, zonadepadel"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
       - name: Scrape padelkiwi
         run: npx tsx scripts/pipeline-tiendas.ts padelkiwi --no-post
       - name: Scrape virtualpadel
@@ -63,9 +87,15 @@ jobs:
       - name: Scrape m1padel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts m1padel --no-post
+      - name: Scrape padelvice
+        run: npx tsx scripts/pipeline-tiendas.ts padelvice --no-post
+      - name: Scrape streetpadel
+        run: npx tsx scripts/pipeline-tiendas.ts streetpadel --no-post
+      - name: Scrape zonadepadel
+        run: npx tsx scripts/pipeline-tiendas.ts zonadepadel --no-post
 
-  scrape-grupo-b:
-    name: "Scrape B: padelvice, streetpadel, zonadepadel, latiendadelpadel, padelspain, padelstyle, time2padel, padelmania, originalpadel, outletdepadel, stockpadel"
+  scrape-grupo-c:
+    name: "Scrape C: latiendadelpadel, padelspain, padelstyle, time2padel, padelmania, originalpadel, outletdepadel, stockpadel"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -78,12 +108,6 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
-      - name: Scrape padelvice
-        run: npx tsx scripts/pipeline-tiendas.ts padelvice --no-post
-      - name: Scrape streetpadel
-        run: npx tsx scripts/pipeline-tiendas.ts streetpadel --no-post
-      - name: Scrape zonadepadel
-        run: npx tsx scripts/pipeline-tiendas.ts zonadepadel --no-post
       - name: Scrape latiendadelpadel
         run: npx tsx scripts/pipeline-tiendas.ts latiendadelpadel --no-post
       - name: Scrape padelspain
@@ -135,7 +159,7 @@ jobs:
     name: "Post-pipeline (match + recalcular precios)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [scrape-grupo-a, scrape-grupo-b, scrape-grupo-playwright]
+    needs: [scrape-grupo-a, scrape-grupo-b, scrape-grupo-c, scrape-grupo-playwright]
     if: always()
     defaults:
       run:
