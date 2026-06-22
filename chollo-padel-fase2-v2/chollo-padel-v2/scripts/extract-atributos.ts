@@ -764,6 +764,24 @@ export function extraerAtributos(titulo: string): Atributos {
     modeloDetectado = generacionOriginal
   }
 
+  // Bug real 2026-06-22: si tras quitar marca/línea/variante no queda nada
+  // para el modelo, pero el título sí mencionaba un jugador conocido (que
+  // quitarJugadores ya eliminó del texto en el paso 3), el nombre del jugador
+  // se perdía sin dejar rastro. Algunas líneas usan el nombre del jugador como
+  // modelo en el catálogo (ej. Bullpadel Flow "Ale Salazar", Vairo "Coki
+  // Nieto") — sin este fallback, la candidata salía con modelo=null mientras
+  // la fila real del catálogo tenía modelo="Ale Salazar", modeloCompatible()
+  // los consideraba incompatibles y auto-promote generaba un duplicado
+  // (caso real: "Pala Bullpadel Ale Salazar Flow Woman 2025" duplicando
+  // "BULLPADEL FLOW WOMAN 2025"). Solo aplica si la línea no se resolvió ya
+  // usando ese mismo jugador (evitar duplicarlo como línea Y modelo).
+  if (!modeloDetectado) {
+    const jugadorDetectado = detectarJugador(restoAntesDeJugadores)
+    if (jugadorDetectado && jugadorDetectado !== lineaDetectada) {
+      modeloDetectado = jugadorDetectado
+    }
+  }
+
   if (modeloDetectado) {
     modeloDetectado = modeloDetectado
       .replace(/\b(pala|padel|de|la|el|by|raqueta|edition|edicion|series|nfa)\b/gi, '')
