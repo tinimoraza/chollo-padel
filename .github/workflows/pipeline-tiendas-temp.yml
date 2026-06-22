@@ -21,7 +21,7 @@ env:
 
 jobs:
   scrape-grupo-a:
-    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda, padelkiwi, virtualpadel"
+    name: "Scrape A: padelmarket, padelnuestro, padelzoom, tennispoint, padelproshop, starvie, ofertasdepadel, padeltienda, padelkiwi, virtualpadel, futurapadelshop, justpadel, m1padel"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -54,9 +54,18 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts padelkiwi --no-post
       - name: Scrape virtualpadel
         run: npx tsx scripts/pipeline-tiendas.ts virtualpadel --no-post
+      - name: Scrape futurapadelshop
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts futurapadelshop --no-post
+      - name: Scrape justpadel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts justpadel --no-post
+      - name: Scrape m1padel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts m1padel --no-post
 
   scrape-grupo-b:
-    name: "Scrape B: padelvice, streetpadel, zonadepadel, latiendadelpadel, padelspain, padelstyle, time2padel, padelmania"
+    name: "Scrape B: padelvice, streetpadel, zonadepadel, latiendadelpadel, padelspain, padelstyle, time2padel, padelmania, originalpadel, outletdepadel, stockpadel"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -85,6 +94,15 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts time2padel --no-post
       - name: Scrape padelmania
         run: npx tsx scripts/pipeline-tiendas.ts padelmania --no-post
+      - name: Scrape originalpadel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts originalpadel --no-post
+      - name: Scrape outletdepadel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts outletdepadel --no-post
+      - name: Scrape stockpadel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts stockpadel --no-post
 
   scrape-grupo-playwright:
     name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado"
