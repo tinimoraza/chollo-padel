@@ -333,7 +333,7 @@ export async function cargarLineasDesdeBD(supabase: any): Promise<void> {
 export const VARIANTES: string[] = [
   // Técnicas
   'hrd+', 'hrd', 'ctrl', 'control', 'light', 'team', 'carbon',
-  'comfort', 'cmf', 'hybrid', 'hyb', 'attack', 'soft', 'air', 'pro',
+  'comfort', 'confort', 'cmf', 'hybrid', 'hyb', 'attack', 'soft', 'air', 'pro',
   'elite', 'tour', 'ltd', 'limited', 'xtreme', 'xtrem', 'lite',
   'power', 'pwr', 'speed', 'motion',
   // Género
@@ -737,6 +737,13 @@ export function extraerAtributos(titulo: string): Atributos {
     'hrd+': 'HRD+', 'hrd plus': 'HRD+', 'hrd': 'HRD+',
     'ctrl': 'CTRL', 'control': 'CTRL',
     'cmf': 'COMFORT', 'comfort': 'COMFORT',
+    // Fix real 2026-06-23 (Drop Shot Conqueror): 'confort' (ortografía española,
+    // sin 'm') no es un substring de 'comfort' — antes nunca matcheaba ningún
+    // elemento de VARIANTES, así que la palabra entera se quedaba en el modelo
+    // (ej. modelo="Confort 1.0" en vez de variante="COMFORT"). Misma tienda u
+    // otra escribiendo "Comfort" sí generaba variante=COMFORT → dos filas para
+    // el mismo producto. 'confort' ya está también en VARIANTES (arriba).
+    'confort': 'COMFORT',
     'wpt': 'WORLD PADEL TOUR', 'world padel tour': 'WORLD PADEL TOUR',
     // Países Copa del Mundo — formas en español
     'espana': 'España', 'alemania': 'Alemania', 'argentina': 'Argentina',
@@ -768,6 +775,32 @@ export function extraerAtributos(titulo: string): Atributos {
     sinLinea = sinLinea.replace(/\b(ctrl|control)\b/gi, '').replace(/\s+/g, ' ').trim()
   }
 
+  // Fix real 2026-06-23 (Vibor-A "ÉLITE"): la línea de abajo quitaba la variante
+  // detectada del texto con `new RegExp(v, 'gi')`, donde `v` es la palabra SIN
+  // acento tal cual está en VARIANTES (ej. "elite"). Esa regex es insensible a
+  // mayúsculas pero NO a acentos, así que si el título traía la palabra
+  // acentuada ("ÉLITE"), la detección (que sí compara sobre texto normalizado)
+  // funcionaba, pero la limpieza posterior no la encontraba en el texto
+  // original y la dejaba intacta — se quedaba duplicada dentro del modelo
+  // ("ÉLITE 3K 2.0" en vez de "3K 2.0") mientras la variante quedaba correcta
+  // ("ELITE"). Resultado: misma fila físicamente repartida con residuo según
+  // si la tienda acentuaba o no. Fix: construir la regex de limpieza letra a
+  // letra, aceptando la vocal con o sin cualquier acento/diéresis común.
+  const ACENTOS: Record<string, string> = {
+    a: '[aàáâä]', e: '[eèéêë]', i: '[iìíîï]', o: '[oòóôö]', u: '[uùúûü]',
+  }
+  function regexInsensibleAAcentos(palabra: string): RegExp {
+    const patron = palabra.split('').map(c => ACENTOS[c.toLowerCase()] ?? c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('')
+    // OJO: \b NO sirve aquí — \b se basa en \w, que en JS (sin flag /u con
+    // \p{}) NO incluye letras acentuadas. Si la palabra empieza/acaba en una
+    // vocal acentuada (ej. "Élite"), el carácter previo (espacio) y la É
+    // serían los dos "no-word" para \b → nunca se consideraría límite y la
+    // regex no matchearía nada. Por eso el límite se comprueba a mano con
+    // lookaround contra una clase de caracteres que SÍ incluye acentos.
+    const limite = '[a-z0-9àáâäèéêëìíîïòóôöùúûü]'
+    return new RegExp(`(?<!${limite})${patron}(?!${limite})`, 'gi')
+  }
+
   // 6. VARIANTE — buscar en el texto restante (más específico primero)
   let varianteDetectada: string | null = null
   const sinLineaNorm = normalizar(sinLinea)
@@ -775,7 +808,7 @@ export function extraerAtributos(titulo: string): Atributos {
     const vNorm = normalizar(v)
     if (sinLineaNorm.includes(vNorm)) {
       varianteDetectada = VARIANTES_ALIAS[v] ?? VARIANTES_ALIAS[vNorm] ?? v.toUpperCase()
-      sinLinea = sinLinea.replace(new RegExp(v, 'gi'), '').replace(/\s+/g, ' ').trim()
+      sinLinea = sinLinea.replace(regexInsensibleAAcentos(v), '').replace(/\s+/g, ' ').trim()
       break
     }
   }

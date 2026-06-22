@@ -22,6 +22,19 @@
  *   - NO_ES_DUPLICADO: modeloCompatible()=false → son productos distintos,
  *     se descartan del problema (aunque el Gestor los siga marcando).
  *
+ * Fix real 2026-06-23 (barrido completo: Adidas Metalbone, Vibor-A, Drop Shot,
+ * Wilson): el pase de arriba (variante exacta + modeloCompatible) tiene un
+ * punto ciego estructural — si el extractor reparte las MISMAS palabras de
+ * forma distinta entre `modelo` y `variante` según el título exacto de cada
+ * tienda (ej. "CTRL CARBON" → modelo=CTRL/variante=CARBON en una tienda,
+ * "Carbon Control" → modelo=Carbon/variante=CTRL en otra), la condición
+ * `normalizarVariante(a.variante) === normalizarVariante(b.variante)` nunca
+ * se cumple y el par ni se evalúa. Se añade un SEGUNDO pase con
+ * firmaProducto() (modelo-matching.ts): combina modelo+variante en una sola
+ * bolsa de tokens y compara esa bolsa completa en vez de exigir que la
+ * variante caiga en el mismo campo — detecta el mismo problema de fondo sin
+ * importar cuál futuro bug de parseo concreto lo cause.
+ *
  * Uso:
  *   npx tsx --env-file=.env.local scripts/limpiar-duplicados-catalogo.ts            # dry-run (default)
  *   npx tsx --env-file=.env.local scripts/limpiar-duplicados-catalogo.ts --ejecutar # borra los DUPLICADO_SEGURO
@@ -29,7 +42,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { normalizarLinea, normalizarVariante, modeloCompatible, type PalaCandidata } from './lib/modelo-matching'
+import { normalizarLinea, normalizarVariante, modeloCompatible, firmaProducto, type PalaCandidata } from './lib/modelo-matching'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,13 +118,21 @@ async function main() {
         const parKey = [a.id, b.id].sort().join('|')
         if (yaProcesados.has(parKey)) continue
 
-        const variantesCoinciden = normalizarVariante(a.variante) === normalizarVariante(b.variante)
-        if (!variantesCoinciden) continue
         const añoCompatible = !a.año || !b.año || a.año === b.año
         if (!añoCompatible) continue
-        const ab = modeloCompatible(a.modelo, b.modelo, a.año, b.año)
-        const ba = modeloCompatible(b.modelo, a.modelo, b.año, a.año)
-        if (!ab || !ba) continue // productos distintos (ej. colores, generaciones) — NO tocar
+
+        const variantesCoinciden = normalizarVariante(a.variante) === normalizarVariante(b.variante)
+        const esDuplicadoPase1 = variantesCoinciden
+          && modeloCompatible(a.modelo, b.modelo, a.año, b.año)
+          && modeloCompatible(b.modelo, a.modelo, b.año, a.año)
+
+        // Pase 2 (fix 2026-06-23): mismo producto con las palabras repartidas
+        // de otra forma entre modelo/variante — ver comentario de cabecera.
+        const firmaA = firmaProducto(a.modelo, a.variante)
+        const firmaB = firmaProducto(b.modelo, b.variante)
+        const esDuplicadoPase2 = firmaA !== '' && firmaA === firmaB
+
+        if (!esDuplicadoPase1 && !esDuplicadoPase2) continue // productos distintos (ej. colores, generaciones) — NO tocar
 
         yaProcesados.add(parKey)
         const aVacia = vacia(a.id), bVacia = vacia(b.id)

@@ -72,6 +72,10 @@ const VARIANTE_EQUIVALENCIAS: Record<string, string> = {
   'power': 'power', 'pwr': 'power',
   'xtrem': 'xtrem', 'xtreme': 'xtrem',
   'cmf': 'comfort',
+  // Fix real 2026-06-23 (Drop Shot Conqueror): 'confort' (sin 'm', ortografía
+  // española) generaba una fila distinta de la que usaba 'comfort' — ver
+  // mismo fix en extract-atributos.ts (VARIANTES/VARIANTES_ALIAS).
+  'confort': 'comfort',
   'wpt': 'world padel tour', 'world padel tour': 'world padel tour',
 }
 
@@ -217,6 +221,36 @@ export function modeloCompatible(
     return !extra.some(esExtraInseguro)
   }
   return false
+}
+
+// Fix real 2026-06-23 (Adidas Metalbone, Vibor-A, Drop Shot, Wilson — barrido
+// completo del catálogo): limpiar-duplicados-catalogo.ts solo comparaba
+// duplicados cuando normalizarVariante(a.variante) === normalizarVariante(b.variante)
+// — pero el bug de fondo (extract-atributos.ts reparte las mismas palabras de
+// forma distinta entre `modelo` y `variante` según el orden/ortografía exacta
+// del título de cada tienda) genera precisamente filas donde la VARIANTE no
+// coincide aunque sean el mismo producto. Esa comprobación previa descartaba
+// el caso antes de poder detectarlo — punto ciego estructural, no un bug de
+// lógica del script.
+//
+// firmaProducto() es la pieza que cierra ese punto ciego de forma genérica
+// (no solo para el caso "Control/Ctrl" ya arreglado en extract-atributos.ts):
+// combina TODAS las palabras de modelo+variante en una única bolsa de tokens
+// (reutilizando tokenizarModelo, que ya quita acentos/mayúsculas y unifica
+// alias de color), quita ruido marketing redundante cuando hay un tier real
+// presente, y la deja ordenada y deduplicada. Si dos filas con la misma
+// marca+línea+año producen la MISMA firma, son el mismo producto con las
+// palabras repartidas de otra forma entre los dos campos — sin importar cuál
+// futuro bug de parseo concreto lo cause.
+const RUIDO_MARKETING = new Set(['ctrl', 'control'])
+const TIERS_REALES_FIRMA = new Set(['carbon', 'light', 'team'])
+
+export function firmaProducto(modelo: string | null, variante: string | null): string {
+  let tokens = [...tokenizarModelo(modelo ?? ''), ...tokenizarModelo(variante ?? '')]
+  if (tokens.some(t => TIERS_REALES_FIRMA.has(t))) {
+    tokens = tokens.filter(t => !RUIDO_MARKETING.has(t))
+  }
+  return Array.from(new Set(tokens)).sort().join('|')
 }
 
 /**
