@@ -51,6 +51,11 @@ const LINEA_EQUIVALENCIAS: Record<string, string> = {
   'jr': 'Junior',
   'copa del mundo': 'World Cup',
   'world cup': 'World Cup',
+  // Fix real 2026-06-23: varias tiendas (ej. la que genera títulos en mayúsculas
+  // "ADIDAS CROSSIT ... PALA DE PÁDEL") escriben la línea de Adidas pegada
+  // ("Crossit") en vez de "Cross It". Al no normalizarse, esas filas nunca
+  // cruzaban con las de "Cross It" — mismo producto, registrado dos veces.
+  'crossit': 'Cross It',
 }
 
 export function normalizarLinea(l: string | null): string | null {

@@ -749,6 +749,25 @@ export function extraerAtributos(titulo: string): Atributos {
     'netherlands': 'Netherlands', 'usa': 'USA',
   }
 
+  // Fix real 2026-06-23 (Adidas Cross It): "Control"/"CTRL" es ruido de marketing
+  // cuando el título YA trae un tier real (Carbon/Light/Team) — Adidas (y algunas
+  // tiendas) añaden "Control"/"CTRL" de forma redundante a cualquiera de los tres
+  // tiers. Antes, el bucle de abajo elegía SOLO la palabra más larga como variante
+  // ('control'=7 letras gana a 'carbon'=6, pero 'carbon'=6 gana a 'ctrl'=4) y la
+  // otra palabra se quedaba suelta y colaba en el modelo — el mismo título
+  // ("Carbon Control" vs "Control Carbon" vs "Carbon Ctrl"...) acababa repartido
+  // de 3 formas distintas entre modelo/variante según qué palabra usara cada
+  // tienda, generando duplicados reales en `palas` que el comparador de
+  // variante exacta (limpiar-duplicados-catalogo.ts) no podía detectar porque
+  // la variante ya venía distinta entre las dos filas. Fix: si hay un tier real
+  // (carbon/light/team) en el texto, quitamos "control"/"ctrl" ANTES de elegir
+  // variante, para que nunca compita ni quede suelto en el modelo.
+  const TIERS_REALES = ['carbon', 'light', 'team']
+  const tieneTierReal = TIERS_REALES.some(t => normalizar(sinLinea).includes(t))
+  if (tieneTierReal && /\b(ctrl|control)\b/i.test(sinLinea)) {
+    sinLinea = sinLinea.replace(/\b(ctrl|control)\b/gi, '').replace(/\s+/g, ' ').trim()
+  }
+
   // 6. VARIANTE — buscar en el texto restante (más específico primero)
   let varianteDetectada: string | null = null
   const sinLineaNorm = normalizar(sinLinea)
