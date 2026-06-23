@@ -28,8 +28,8 @@ export interface CholloTienda {
   tag:               'CHOLLO' | 'OFERTA'
 }
 
-const UMBRAL_CHOLLO = 0.70
-const UMBRAL_OFERTA = 0.82
+const UMBRAL_CHOLLO = 0.65
+const UMBRAL_OFERTA = 0.75
 const MIN_REFERENCIA = 50
 const MIN_FUENTES = 2
 const MAX_SPREAD  = 2.5
