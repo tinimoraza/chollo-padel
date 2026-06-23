@@ -896,6 +896,30 @@ export function extraerAtributos(titulo: string): Atributos {
     varianteDetectada = 'WOMAN'
   }
 
+  // Fix real 2026-06-23 (latiendadelpadel, "BULLPADEL VERTEX 04 W PREMIER
+  // 2025" — colisión real de pala_id detectada en producción tras el fix de
+  // flushMatches): catálogo SÍ tiene la fila correcta y distinta para este
+  // producto ("BULLPADEL VERTEX 04 WOMAN 2025", modelo "04 Delfi Brea"), pero
+  // el título de esta tienda no menciona a la jugadora ("Delfi Brea") ni
+  // escribe la palabra completa "Woman"/"Mujer" — solo la abreviatura suelta
+  // "W". Por eso el fix de jugadorEsMujer() (arriba) no aplica aquí: no hay
+  // nombre de jugadora que detectar. 'w' tampoco se puede añadir a VARIANTES
+  // (esa lista detecta por `.includes()` sobre el texto completo, así que una
+  // sola letra matchearía CASI CUALQUIER título al azar — "wpt", "world",
+  // "show"... falso positivo masivo). Se comprueba aquí aparte, como TOKEN
+  // EXACTO con límites de palabra (\bw\b), que NO matchea dentro de otra
+  // palabra. Patrón ya confirmado contra la propia BD: el catálogo ya tiene
+  // varias filas con "W" suelta como marcador de género ("VERTEX 04 W TF 2024
+  // MUJER", "Vertex W JR 25"). Sin este fix, "W" se quedaba como residuo
+  // suelto en `modelo` (ej. modelo="04 W Premier") con variante=null, y
+  // buscarPorAtributos() colapsaba contra la pala unisex base en vez de la
+  // variante WOMAN correcta — falso positivo de identidad de producto, no un
+  // simple duplicado de título.
+  if (!varianteDetectada && /\bw\b/i.test(sinLinea)) {
+    varianteDetectada = 'WOMAN'
+    sinLinea = sinLinea.replace(/\bw\b/gi, '').replace(/\s+/g, ' ').trim()
+  }
+
   // Fix real 2026-06-23 (Bullpadel Icon, Iconic — tennispoint): algunas tiendas
   // añaden frases de marketing/bundle al final del título ("Pala de pádel",
   // "Superficie completa", "Más raquetera, Más tubo de pelotas", "Raqueta de
