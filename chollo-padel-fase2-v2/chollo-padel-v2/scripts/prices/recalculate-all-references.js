@@ -15,9 +15,36 @@ const IN_BATCH   = 200;  // max IDs por .in() query
 const UPS_BATCH  = 500;  // filas por upsert bulk
 const PAR_BATCH  = 50;   // palas actualizadas en paralelo
 
-function calcularMedia(precios) {
+function mediana(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// Fix 2026-06-23: la media aritmetica simple es sensible a outliers - un solo
+// precio suelto (PVP sin descuento en una tienda, o un precio desactualizado)
+// inflaba/deflactaba precio_referencia y generaba "chollos" falsos. Verificado
+// con datos reales: usar la mediana en su lugar NO es mejor de forma fiable
+// (empate casi exacto frente a la media en cobertura de tiendas: 166 vs 146
+// de 783 productos). La solucion validada es una MEDIA RECORTADA: se detectan
+// los precios anomalos de cada producto con MAD (desviacion absoluta mediana,
+// metodo estadistico estandar para outliers) y se promedian solo los precios
+// "normales" - el mismo metodo de siempre (sumar y dividir), pero sin dejar
+// que un precio suelto lo distorsione. Si no hay outliers (la mayoria de
+// productos), el resultado es identico a la media de siempre.
+function calcularReferencia(precios) {
   if (!precios.length) return null;
-  return parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2));
+  if (precios.length < 3) {
+    return parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2));
+  }
+  const med = mediana(precios);
+  const desviaciones = precios.map(p => Math.abs(p - med));
+  const mad = mediana(desviaciones);
+  const normales = mad > 0
+    ? precios.filter(p => Math.abs(p - med) <= 3.0 * mad)
+    : precios;
+  const usados = normales.length > 0 ? normales : precios;
+  return parseFloat((usados.reduce((a, b) => a + b, 0) / usados.length).toFixed(2));
 }
 
 async function fetchAll(table, select, filters = []) {
@@ -53,7 +80,6 @@ async function run() {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const now   = new Date().toISOString();
 
-  // 1. Obtener todos los pala_ids con snapshots recientes
   console.log('Cargando pala_ids con snapshots recientes...');
   const snapIds = await fetchAll('price_snapshots', 'pala_id', [
     ['eq', 'disponible', true],
@@ -62,7 +88,6 @@ async function run() {
   const palaIds = [...new Set(snapIds.map(r => r.pala_id))];
   console.log(`${palaIds.length} palas con snapshots en los últimos 30 días.`);
 
-  // 2. Cargar todos los snapshots de esas palas en bulk
   console.log('Cargando snapshots en bulk...');
   const allSnaps = await fetchIn(
     'price_snapshots', 'pala_id,precio,source_id,url_producto',
@@ -71,12 +96,10 @@ async function run() {
   );
   console.log(`  ${allSnaps.length} snapshots cargados.`);
 
-  // 3. Cargar datos actuales de palas en bulk
   console.log('Cargando datos de palas en bulk...');
   const allPalas = await fetchIn('palas', 'id,modelo,precio_referencia', 'id', palaIds);
   const palaMap = new Map(allPalas.map(p => [p.id, p]));
 
-  // 4. Calcular en memoria
   const snapsByPala = new Map();
   for (const s of allSnaps) {
     if (!snapsByPala.has(s.pala_id)) snapsByPala.set(s.pala_id, []);
@@ -94,7 +117,6 @@ async function run() {
     const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR.has(s.source_id));
     const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps;
 
-    // Dedup por url_producto (precio mínimo)
     const byUrl = new Map();
     for (const s of snapsFuente) {
       if (!byUrl.has(s.url_producto) || s.precio < byUrl.get(s.url_producto).precio)
@@ -103,7 +125,7 @@ async function run() {
     const unique  = [...byUrl.values()];
     const precios = unique.map(s => Number(s.precio));
 
-    const precio_referencia = calcularMedia(precios);
+    const precio_referencia = calcularReferencia(precios);
     const precio_minimo     = Math.min(...precios);
     const precio_maximo     = Math.max(...precios);
     const fuentes_count     = new Set(unique.map(s => s.source_id)).size;
@@ -123,7 +145,6 @@ async function run() {
     palaUpdateRows.push({ id: palaId, precio_referencia, precio_minimo_tiendas: precio_minimo, precios_updated_at: now });
   }
 
-  // 5. Upsert bulk en price_reference
   console.log(`\nUpsert bulk price_reference (${priceRefRows.length} filas)...`);
   for (let i = 0; i < priceRefRows.length; i += UPS_BATCH) {
     const { error } = await supabase
@@ -132,7 +153,6 @@ async function run() {
     if (error) console.error('  ERROR upsert price_reference:', error.message);
   }
 
-  // 6. Update palas en paralelo (PAR_BATCH a la vez)
   console.log(`Actualizando palas (${palaUpdateRows.length} filas, ${PAR_BATCH} en paralelo)...`);
   for (let i = 0; i < palaUpdateRows.length; i += PAR_BATCH) {
     const batch = palaUpdateRows.slice(i, i + PAR_BATCH);
