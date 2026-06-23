@@ -344,17 +344,33 @@ export function firmaProducto(modelo: string | null, variante: string | null, a�
 export async function buscarPorAtributos(
   supabase: { from: (table: string) => any },
   attrs: AtributosExtraidos,
+  // Fix real 2026-06-23 (causa raíz del timeout de 30min en GitHub Actions):
+  // esta función hacía 1 consulta a `palas` POR PRODUCTO. Con tiendas de
+  // 800+ productos eso eran miles de round-trips secuenciales a Supabase
+  // (~150-250ms cada uno) — confirmado por SQL que el grupo "Scrape A" tenía
+  // ~3.124 productos, suficiente para superar el timeout-minutes:30 él solo.
+  // Si el llamador ya tiene el catálogo completo cargado en memoria (ver
+  // pipeline-tiendas.ts), se lo pasa aquí y nos ahorramos la consulta.
+  // auto-promote-candidatas.ts no pasa este parámetro → sigue consultando
+  // Supabase como antes, sin cambio de comportamiento para él.
+  catalogoPreCargado?: PalaCandidata[],
 ): Promise<PalaCandidata[]> {
   if (!attrs.marca || !attrs.linea) return []
 
-  const q = supabase
-    .from('palas')
-    .select('id, nombre, marca, linea, modelo, variante, año')
-    .eq('marca', attrs.marca)
-    .eq('linea', normalizarLinea(attrs.linea))
+  const lineaNorm = normalizarLinea(attrs.linea)
+  let data: PalaCandidata[]
+  if (catalogoPreCargado) {
+    data = catalogoPreCargado.filter(p => p.marca === attrs.marca && p.linea === lineaNorm)
+  } else {
+    const q = supabase
+      .from('palas')
+      .select('id, nombre, marca, linea, modelo, variante, año')
+      .eq('marca', attrs.marca)
+      .eq('linea', lineaNorm)
 
-  const { data: _rawData } = await q
-  const data = (_rawData ?? []) as PalaCandidata[]
+    const { data: _rawData } = await q
+    data = (_rawData ?? []) as PalaCandidata[]
+  }
 
   const filtrarConModelo = (modeloParaFiltrar: string | null) => data.filter(p => {
     const variantesCoinciden = normalizarVariante(p.variante) === normalizarVariante(attrs.variante)

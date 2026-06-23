@@ -34,6 +34,7 @@ import { main as postPipeline } from './post-pipeline.ts'
 import {
   buscarPorAtributos as buscarPorAtributosCompartido,
   type AtributosExtraidos,
+  type PalaCandidata,
 } from './lib/modelo-matching'
 
 // Cargar .env.local si existe (entorno local). En CI las vars vienen del entorno del runner.
@@ -53,14 +54,71 @@ if (!TIENDA) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
+// Catálogo completo y mapa de aliases, precargados UNA VEZ por ejecución en
+// main() (ver cargarCatalogoCompleto/cargarAliasMap más abajo). Antes,
+// buscarPorAtributos() y buscarPorAlias() hacían 1 consulta a Supabase POR
+// PRODUCTO — con tiendas de 800+ productos eso eran miles de round-trips
+// secuenciales, causa raíz confirmada del timeout-minutes:30 superado en
+// GitHub Actions (2026-06-23: ~3.124 productos del grupo "Scrape A" × ~3.5
+// round-trips × ~200ms ≈ 36 min, casi exactamente el tiempo del fallo real).
+let catalogoCompleto: PalaCandidata[] = []
+let aliasMap: Map<string, string> = new Map()
+
 // Wrapper fino: la lógica de matching real vive en modelo-matching.ts (compartida
 // con auto-promote-candidatas.ts). Solo adaptamos la firma porque ese módulo
 // recibe el cliente supabase como parámetro explícito en vez de usar uno de
 // módulo. La función solo se EJECUTA dentro de main(), momento en el que
-// `supabase` (declarado arriba) ya está inicializado, así que no hay problema
-// de referenciar una const definida más abajo en el archivo.
+// `supabase` y `catalogoCompleto` (declarados arriba) ya están inicializados,
+// así que no hay problema de referenciar consts/lets definidos más abajo.
 async function buscarPorAtributos(attrs: AtributosExtraidos) {
-  return buscarPorAtributosCompartido(supabase, attrs)
+  return buscarPorAtributosCompartido(supabase, attrs, catalogoCompleto)
+}
+
+// Sustituye la consulta a `producto_aliases` por producto por una búsqueda en
+// el mapa precargado en memoria (cargarAliasMap, llamado una vez en main()).
+function buscarPorAlias(textoNorm: string): string | null {
+  return aliasMap.get(textoNorm) ?? null
+}
+
+async function cargarCatalogoCompleto(): Promise<PalaCandidata[]> {
+  const out: PalaCandidata[] = []
+  let from = 0
+  const PAGE = 1000
+  while (true) {
+    const { data, error } = await supabase
+      .from('palas')
+      .select('id, nombre, marca, linea, modelo, variante, año')
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(`cargarCatalogoCompleto: ${error.message}`)
+    if (!data || data.length === 0) break
+    out.push(...(data as unknown as PalaCandidata[]))
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return out
+}
+
+async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  let from = 0
+  const PAGE = 1000
+  while (true) {
+    const { data, error } = await supabase
+      .from('producto_aliases')
+      .select('pala_id, texto_normalizado')
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(`cargarAliasMapDesdeBD: ${error.message}`)
+    if (!data || data.length === 0) break
+    for (const row of data as { pala_id: string; texto_normalizado: string }[]) {
+      // El mismo texto_normalizado puede repetirse en varias tiendas (clave
+      // única real es tienda+texto) — basta con la primera ocurrencia, igual
+      // que hacía antes el .limit(1) de la consulta por producto.
+      if (!map.has(row.texto_normalizado)) map.set(row.texto_normalizado, row.pala_id)
+    }
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return map
 }
 
 // ─── Helpers BD ──────────────────────────────────────────────────────────────
@@ -75,196 +133,22 @@ async function getSourceId(slug: string): Promise<string> {
   return data.id
 }
 
-async function buscarPorAlias(textoNorm: string): Promise<string | null> {
-  // Usamos .limit(1) en lugar de .maybeSingle() porque el mismo texto puede estar
-  // aliaseado en varias tiendas (texto_normalizado no es unique solo — la clave única
-  // es (tienda, texto_normalizado)). Con maybeSingle(), si hay >1 fila devuelve null
-  // y el alias lookup falla silenciosamente aunque el alias exista.
-  const { data } = await supabase
-    .from('producto_aliases')
-    .select('pala_id')
-    .eq('texto_normalizado', textoNorm)
-    .limit(1)
-  return data?.[0]?.pala_id ?? null
-}
-
-
 // Marcas que no están (ni se van a dar de alta) en el catálogo `palas` y que generan
 // ruido constante en "Pendientes que requieren revisión manual" (estado sin_match,
 // marca_detectada=null). En vez de crear una candidata para que el Gestor las descarte
 // a mano cada vez, se descartan aquí directamente antes de insertarCandidata().
 // Revisar y quitar de esta lista si en el futuro se decide dar soporte a alguna.
 // Nota: "wing[ -]?padel" porque las tiendas escriben tanto "WINGPADEL" (una palabra)
-// como "WING PADEL" / "WING-PADEL" (separado) seg\u00fan el producto.
+// como "WING PADEL" / "WING-PADEL" (separado) según el producto.
 const MARCAS_EXCLUIDAS = [
   'ares', 'eclypse', 'leyenda', 'orygen', 'wing[ -]?padel', 'pala set', 'kugan', 'dreampadel',
 ]
 
 function tituloTieneMarcaExcluida(titulo: string): boolean {
-  const norm = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const norm = titulo.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   return MARCAS_EXCLUIDAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(norm))
 }
 
-
-/* CODIGO_MUERTO_A_BORRAR
-  const tokenizar = (s: string) => [] as string[]
-  // Catalogo sin modelo (modeloCat=null, ej. "SOFTEE TRIONIC" sin sufijo) se trata
-  // como tokens=[] en vez de cortar aqui con un caso especial: asi el extra de la
-  // tienda (modeloExtraido) pasa por el mismo filtro esExtraInseguro() de abajo -
-  // ruido real (colores, "Yellow", "Wmn"...) no discrimina, pero un numero de
-  // version SIN ano en ningun lado sigue discriminando igual que en el resto de
-  // casos. Bug real 2026-06-20: "Pala Softee Trionic Yellow 2025" caia en
-  // sin_match contra la fila plana "SOFTEE TRIONIC" porque el caso especial
-  // anterior solo aceptaba modelo puramente numerico y rechazaba cualquier otra
-  // cosa, aunque fuera ruido inofensivo.
-  const tCat = modeloCat ? tokenizar(modeloCat) : []
-  const tExt = tokenizar(modeloExtraido)
-  // Un token extra puramente numérico (ej. "32" fusionado de "3.2") solo es seguro
-  // de ignorar si el año discrimina realmente en alguno de los dos lados. Si NO hay
-  // año conocido en ninguno de los dos, ese número es la ÚNICA pista de versión que
-  // tenemos y SÍ debe discriminar — caso real: tienda "Pala adidas Metalbone Youth 3.4"
-  // (sin año) matcheó contra catálogo "Youth 3.2" porque el "2" sobrante no contaba
-  // como discriminante y no había año de ningún lado para frenarlo.
-  // Un token "vXpY" (fusión de versión "X.Y", ej. "1.0"→"v1p0") es SIEMPRE
-  // discriminante — nunca ruido ignorable. Bug real: "Drop Shot Canyon Pro
-  // Control 1.0" matcheaba contra catálogo "Pro" (sin número, variante Control,
-  // 2024 Y 2025) porque "v1p0" no pasaba ni MODELO_DISCRIMINANTES ni el test
-  // de numérico puro (tiene letras v/p) → no se consideraba inseguro → 3 candidatos
-  // ambiguos en vez de 1 (solo "Pro 1.0" CTRL 2025).
-  const esExtraInseguro = (t: string) =>
-    MODELO_DISCRIMINANTES.has(t) || /^v\d+p\d+$/.test(t) || (/^[0-9]+$/.test(t) && añoCat == null && añoExtraido == null)
-  // Caso 1: tienda omite palabras (e.g., "GENIUS 12K" subset "Genius 12K Alum")
-  // Solo permitido si las palabras extra del catálogo no son discriminantes.
-  if (tExt.every(t => tokenIn(t, tCat))) {
-    const extra = tCat.filter(t => !tokenIn(t, tExt))
-    return !extra.some(esExtraInseguro)
-  }
-  // Caso 2: tienda añade palabras (catálogo subset tienda)
-  if (tCat.every(t => tokenIn(t, tExt))) {
-    const extra = tExt.filter(t => !tokenIn(t, tCat))
-    // Catálogo SIN modelo (tCat=[]): la condición de arriba es vacuamente
-    // cierta para CUALQUIER modeloExtraido, así que "extra" es literalmente
-    // todo lo que escribió la tienda. Usar aquí el filtro esExtraInseguro()
-    // (denylist) deja pasar como "ruido ignorable" cualquier palabra real de
-    // modelo que no esté en MODELO_DISCRIMINANTES (ej. "Crown", "Quantum",
-    // "Patron"), generando ambiguos falsos contra filas placeholder sin
-    // modelo. Bug real 2026-06-20: "Pala Black Crown Iconic Crown" matcheaba
-    // también contra la fila vacía "Black Crown / Iconic / modelo=null",
-    // quedando ambiguo con la fila correcta "Black Crown / Iconic / CROWN".
-    // Fix: cuando el catálogo no tiene modelo, exigir allowlist (solo color
-    // conocido se considera ruido seguro) en vez de denylist — invierte la
-    // carga de la prueba a favor de NO matchear con la fila vacía.
-    if (tCat.length === 0) {
-      // Permitimos también número-puro como ruido seguro (specs de balance/grip
-      // tipo "3.5"), pero SOLO si la propia tienda informa el año (añoExtraido).
-      // Sin esto, "Adidas Drive 3.5 2026" (justpadel) dejaba de matchear con la
-      // fila placeholder "Adidas / Drive / modelo=null" y caía en sin_match
-      // (regresión real detectada en dry-run 2026-06-20 19:06).
-      // OJO: usar "añoCat != null" en vez de "añoExtraido != null" reabre otro
-      // bug — cualquier fila placeholder con UN año guardado (aunque no tenga
-      // relación con el producto real, p.ej. una variante antigua de 2022)
-      // bastaba para colar el número como "seguro". Bug real 2026-06-21:
-      // "Pala Black Crown Pitón 13" (sin año en el título) quedaba ambiguo
-      // contra la fila vacía "Black Crown/Piton/modelo=null/año=2022" además
-      // de la fila correcta "Black Crown/Piton/13/2025". Exigir añoExtraido
-      // (que la tienda mencione año) ancla la condición al producto real, no
-      // a un dato incidental de una fila del catálogo que no pinta nada aquí.
-      const seguro = (t: string) => COLORES.has(t) || (/^[0-9]+$/.test(t) && (añoCat != null || añoExtraido != null))
-      return extra.every(seguro)
-    }
-    return !extra.some(esExtraInseguro)
-  }
-  return false
-}
-
-async function buscarPorAtributos(attrs: AtributosExtraidos): Promise<{ id: string }[]> {
-  if (!attrs.marca || !attrs.linea) return []
-
-  let q = supabase
-    .from('palas')
-    .select('id, nombre, marca, linea, modelo, variante, año')
-    .eq('marca', attrs.marca)
-    .eq('linea', normalizarLinea(attrs.linea))
-
-  // OJO: NO filtramos modelo en SQL — usamos match por subconjunto de tokens en
-  // memoria (ver modeloCompatible). Motivo: algunas tiendas escriben "GENIUS 12K"
-  // donde el catálogo tiene "Genius 12K Alum". Un ilike exacto los trataría como
-  // productos distintos y crearía una fila duplicada.
-
-  // OJO: NO filtramos por año en la consulta SQL. Si lo hiciéramos con
-  // `.eq('año', attrs.año)`, cualquier pala ya existente con año=null quedaría
-  // excluida aunque sea el mismo producto (caso real: "Siux Electra Lite ST3" -
-  // Padelful trae año=2023, Padelzoom no informa año → se creó una fila duplicada
-  // porque el filtro SQL descartó la fila sin año). Filtramos el año en memoria,
-  // tratando "sin año" como comodín compatible con cualquier año.
-
-  const { data: _rawData } = await q
-  // Supabase type inference falla con 'ñ' en el nombre de columna ('año').
-  // Cast explícito para evitar ParserError<"Unexpected input: ño">.
-  const data = (_rawData ?? []) as unknown as {
-    id: string; nombre: string; marca: string | null
-    linea: string | null; modelo: string | null
-    variante: string | null; año: number | null
-  }[]
-  // Comparamos variante "traducida" en memoria (CTRL == CONTROL, etc.) en vez de
-  // comparar el string literal — evita falsos "sin match" por convenciones distintas
-  // entre cómo lo escribe la tienda y cómo está guardado en el catálogo.
-  let filtrados = (data ?? []).filter(p => {
-    const variantesCoinciden = normalizarVariante(p.variante) === normalizarVariante(attrs.variante)
-    // Año compatible si coinciden, o si a alguno de los dos lados le falta el dato
-    const añoCompatible = !attrs.año || !p.año || p.año === attrs.año
-    // Modelo compatible si los tokens del extraído son subconjunto del catálogo o viceversa.
-    // Permite que "GENIUS 12K" (tienda) matchee con "Genius 12K Alum" (catálogo).
-    const modeloOk = modeloCompatible(p.modelo, attrs.modelo, p.año, attrs.año)
-    // Caso cruzado: extractor clasifica algo como variante pero el catálogo lo tiene como modelo
-    // (ej: Bullpadel Indiga CTRL 2026 → attrs.variante="CTRL" pero DB tiene modelo="CTR", variante=null)
-    const cruzado = !attrs.modelo && !!attrs.variante && !p.variante
-      && normalizarVariante(p.modelo) === normalizarVariante(attrs.variante)
-    return (variantesCoinciden && modeloOk || cruzado) && añoCompatible
-  })
-
-  // Si hay varios candidatos y alguno tiene un modelo EXACTO (no via "ruido
-  // seguro" de modeloCompatible) frente al modelo extraído, descartamos los
-  // demás (en particular, filas placeholder modelo=null) — ver comentario en
-  // preferirModeloEspecifico() arriba.
-  filtrados = preferirModeloEspecifico(filtrados, attrs.modelo)
-
-  // Año como desambiguador (bug real 2026-06-21, detectado en outletdepadel):
-  // si el título SÍ trae año y, tras filtrar por modelo, queda ambiguo entre
-  // una fila con ese año exacto y una o más filas sin año (placeholder), la de
-  // año exacto es estrictamente más específica — preferirla. Solo se aplica
-  // si hay EXACTAMENTE una fila con año exacto (si hay dos o más —p.ej. dos
-  // modelos distintos publicados el mismo año—, es ambigüedad real de
-  // catálogo y debe seguir yendo a Gestor, no resolverse a ciegas).
-  if (attrs.año && filtrados.length > 1) {
-    const conAñoExacto = filtrados.filter((p: any) => p.año === attrs.año)
-    const sinAño = filtrados.filter((p: any) => p.año == null)
-    if (conAñoExacto.length === 1 && conAñoExacto.length + sinAño.length === filtrados.length) {
-      filtrados = conAñoExacto
-    }
-  }
-
-  // "Sin año" auto-resolución:
-  // Si el título no lleva año y hay varios candidatos que solo difieren en año
-  // → elegir el más reciente. Razonamiento: cuando una tienda lista "WILSON BELA V3"
-  // sin año está vendiendo la versión actual, que es la más reciente del catálogo.
-  // Solo activamos la regla si todos los candidatos comparten marca+linea+modelo+variante
-  // (diferencia ÚNICAMENTE en año). Si difieren en otro campo, seguimos siendo
-  // ambiguos — no queremos falsos positivos.
-  if (!attrs.año && filtrados.length > 1) {
-    const claveSinAño = (p: any) =>
-      `${(p.marca ?? '').toLowerCase()}|${(p.linea ?? '').toLowerCase()}|${(p.modelo ?? '').toLowerCase()}|${normalizarVariante(p.variante) ?? ''}`
-    const claves = new Set(filtrados.map(claveSinAño))
-    if (claves.size === 1) {
-      // Todos iguales salvo año → quedarse con el de mayor año
-      const masReciente = filtrados.reduce((best: any, p: any) =>
-        (p.año ?? 0) > (best.año ?? 0) ? p : best
-      )
-      return [masReciente]
-    }
-  }
-
-CODIGO_MUERTO_A_BORRAR_FIN */
 // Devuelve true si el snapshot quedó guardado (o estamos en DRY_RUN), false si falló
 // de verdad. OJO: antes esta función no devolvía nada — solo hacía console.error y
 // seguía. Eso provocaba un bug real: si el insert fallaba (transitorio o no), el
@@ -274,53 +158,83 @@ CODIGO_MUERTO_A_BORRAR_FIN */
 // snapshot inexistente). Ahora se reintenta una vez (por si es un fallo de red
 // puntual) y el resultado se propaga para que el llamador NO cree el alias si el
 // snapshot de verdad falló.
-async function insertarSnapshot(palaId: string, sourceId: string, producto: {
-  precio: number; precioOriginal?: number; url: string; titulo: string
-}): Promise<boolean> {
-  if (DRY_RUN) return true
-  const payload = {
-    pala_id:          palaId,
-    source_id:        sourceId,
-    precio:           producto.precio,
-    precio_original:  producto.precioOriginal ?? null,
-    url_producto:     producto.url,
-    match_confidence: 1.0,
-    disponible:       true,
-    scraped_at:       new Date().toISOString(),
-  }
-  for (let intento = 1; intento <= 2; intento++) {
-    const { error } = await supabase.from('price_snapshots')
-      .upsert(payload, { onConflict: 'pala_id,source_id' })
-    if (!error) return true
-    if (intento === 1) {
-      console.error(`  ⚠️  [snapshot] ${producto.titulo}: ${error.message} — reintentando…`)
-      await new Promise(r => setTimeout(r, 1000))
-    } else {
-      console.error(`  ❌ [snapshot] ${producto.titulo}: ${error.message} (tras reintento, NO se crea alias)`)
+// Un producto matcheado (por alias o por atributos), pendiente de guardar en
+// BD. En vez de escribir snapshot+alias+imagen por producto (1-3 round-trips
+// secuenciales cada uno), el bucle principal de main() solo acumula aquí y
+// flushMatches() lo escribe todo en bloques al final — ver nota de causa raíz
+// más arriba (catalogoCompleto/aliasMap).
+interface MatchPendiente {
+  palaId: string
+  precio: number
+  precioOriginal?: number
+  url: string
+  titulo: string
+  image?: string | null
+  crearAlias: boolean // true solo si vino por atributos (por alias ya existe)
+}
+
+// Vuelca los matches pendientes en bloques de CHUNK. Devuelve cuántos
+// snapshots fallaron (para que el llamador no cree alias de ese bloque ni
+// los cuente como éxito en el resumen final).
+async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Promise<number> {
+  const CHUNK = 300
+  const CONCURRENCIA_IMG = 15
+  let fallidos = 0
+
+  for (let i = 0; i < pendientes.length; i += CHUNK) {
+    const chunk = pendientes.slice(i, i + CHUNK)
+    const payloadSnaps = chunk.map(m => ({
+      pala_id:          m.palaId,
+      source_id:        sourceId,
+      precio:           m.precio,
+      precio_original:  m.precioOriginal ?? null,
+      url_producto:     m.url,
+      match_confidence:  1.0,
+      disponible:       true,
+      scraped_at:       new Date().toISOString(),
+    }))
+
+    let ok = false
+    for (let intento = 1; intento <= 2; intento++) {
+      const { error } = await supabase.from('price_snapshots')
+        .upsert(payloadSnaps, { onConflict: 'pala_id,source_id' })
+      if (!error) { ok = true; break }
+      if (intento === 1) {
+        console.error(`  ⚠️  [snapshot batch ${i}-${i + chunk.length}] ${error.message} — reintentando…`)
+        await new Promise(r => setTimeout(r, 1000))
+      } else {
+        console.error(`  ❌ [snapshot batch ${i}-${i + chunk.length}] ${error.message} (tras reintento, NO se crean aliases de este bloque)`)
+      }
+    }
+    if (!ok) { fallidos += chunk.length; continue }
+
+    const aliasesNuevos = chunk.filter(m => m.crearAlias).map(m => ({
+      pala_id:           m.palaId,
+      texto_original:    m.titulo,
+      texto_normalizado: normalizar(m.titulo),
+      tienda:            TIENDA,
+      fuente_url:        m.url,
+      confianza:         1.0,
+    }))
+    if (aliasesNuevos.length > 0) {
+      const { error: errAlias } = await supabase.from('producto_aliases')
+        .upsert(aliasesNuevos, { onConflict: 'tienda,texto_normalizado', ignoreDuplicates: true })
+      if (errAlias) console.error(`  ⚠️  [alias batch ${i}-${i + chunk.length}] ${errAlias.message}`)
+    }
+
+    // Imagen: solo si imagen_url es NULL en BD — no se puede batchear en un
+    // único upsert (cada fila lleva una URL distinta y no queremos arriesgar
+    // pisar otras columnas), así que se paraleliza con concurrencia limitada
+    // en vez de secuencial uno a uno.
+    const conImagen = chunk.filter(m => m.image)
+    for (let j = 0; j < conImagen.length; j += CONCURRENCIA_IMG) {
+      await Promise.all(conImagen.slice(j, j + CONCURRENCIA_IMG).map(m =>
+        supabase.from('palas').update({ imagen_url: m.image }).eq('id', m.palaId).is('imagen_url', null)
+      ))
     }
   }
-  return false
-}
 
-async function actualizarImagenSiNull(palaId: string, imageUrl: string | null | undefined) {
-  if (DRY_RUN || !imageUrl) return
-  // Solo actualiza si imagen_url es NULL — no pisa imágenes ya existentes
-  await supabase.from('palas')
-    .update({ imagen_url: imageUrl })
-    .eq('id', palaId)
-    .is('imagen_url', null)
-}
-
-async function insertarAlias(palaId: string, textoOriginal: string, tienda: string, url?: string) {
-  if (DRY_RUN) return
-  await supabase.from('producto_aliases').upsert({
-    pala_id:           palaId,
-    texto_original:    textoOriginal,
-    texto_normalizado: normalizar(textoOriginal),
-    tienda,
-    fuente_url:        url ?? null,
-    confianza:         1.0,
-  }, { onConflict: 'tienda,texto_normalizado', ignoreDuplicates: true })
+  return fallidos
 }
 
 async function insertarCandidata(producto: {
@@ -412,6 +326,15 @@ async function main() {
   // 1b. Cargar lineas desde BD (sincroniza LINEAS_POR_MARCA automaticamente)
   await cargarLineasDesdeBD(supabase)
 
+  // 1c. Precargar catálogo completo + mapa de aliases UNA VEZ (ver nota de
+  // causa raíz junto a la declaración de catalogoCompleto/aliasMap arriba).
+  // Se hace también en --dry-run porque el matching (no la escritura) sigue
+  // necesitando catálogo y aliases para decidir alias/atribs/ambiguo/sin-match.
+  console.log('\n📚 Precargando catálogo y aliases…')
+  catalogoCompleto = await cargarCatalogoCompleto()
+  aliasMap = await cargarAliasMapDesdeBD()
+  console.log(`  → ${catalogoCompleto.length} palas, ${aliasMap.size} aliases en memoria`)
+
   // 2. Scrape
   console.log(`\n📥 Scrapeando ${TIENDA}...`)
   const productos = await scrape(TIENDA)
@@ -420,6 +343,9 @@ async function main() {
   // 3. Matching
   let porAlias = 0, porAtributos = 0, ambiguos = 0, sinMatch = 0, snapshotsFallidos = 0
   const titulosProcessed = new Set<string>()
+  // Acumulador de matches para escribirlos todos en bloques al final del
+  // bucle (flushMatches) en vez de un round-trip a Supabase por producto.
+  const pendientesMatch: MatchPendiente[] = []
 
   // Prefijos que indican que NO es una pala individual
   const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ', 'pala de padel open']
@@ -508,17 +434,15 @@ async function main() {
     titulosProcessed.add(textoNorm)
 
     // ── Vía 1: alias (cache) ─────────────────────────────────────────────────
-    const palaIdAlias = await buscarPorAlias(textoNorm)
+    const palaIdAlias = buscarPorAlias(textoNorm)
     if (palaIdAlias) {
       if (DRY_RUN) {
         console.log(`  ✅ [alias] ${p.title}`)
       } else {
-        const ok = await insertarSnapshot(palaIdAlias, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
-        if (ok) {
-          await actualizarImagenSiNull(palaIdAlias, p.image)
-        } else {
-          snapshotsFallidos++
-        }
+        pendientesMatch.push({
+          palaId: palaIdAlias, precio: p.price, precioOriginal: p.precio_original,
+          url: p.url, titulo: p.title, image: p.image, crearAlias: false,
+        })
       }
       porAlias++
       continue
@@ -534,13 +458,10 @@ async function main() {
       if (DRY_RUN) {
         console.log(`  ✅ [atribs] ${p.title}`)
       } else {
-        const ok = await insertarSnapshot(palaId, sourceId, { precio: p.price, precioOriginal: p.precio_original, url: p.url, titulo: p.title })
-        if (ok) {
-          await insertarAlias(palaId, p.title, TIENDA, p.url)
-          await actualizarImagenSiNull(palaId, p.image)
-        } else {
-          snapshotsFallidos++
-        }
+        pendientesMatch.push({
+          palaId, precio: p.price, precioOriginal: p.precio_original,
+          url: p.url, titulo: p.title, image: p.image, crearAlias: true,
+        })
       }
       porAtributos++
     } else if (candidatos.length > 1) {
@@ -560,6 +481,14 @@ async function main() {
         if (await insertarCandidata({ titulo: p.title, precio: p.price, url: p.url, tienda: TIENDA, imagen: p.image }, 'sin_match', attrs)) sinMatch++
       }
     }
+  }
+
+  // Volcar a BD todos los matches acumulados durante el bucle, en bloques
+  // (ver flushMatches) — esto sustituye los 1-3 round-trips por producto que
+  // eran la causa raíz del timeout.
+  if (!DRY_RUN && pendientesMatch.length > 0) {
+    console.log(`\n💾 Guardando ${pendientesMatch.length} matches en BD (en bloques)...`)
+    snapshotsFallidos = await flushMatches(pendientesMatch, sourceId)
   }
 
   // Limpiar candidatas obsoletas de esta tienda: titulos que ya no saca el scraper
@@ -615,4 +544,3 @@ main().catch(err => {
   console.error('💥 Error fatal:', err)
   process.exit(1)
 })
- 
