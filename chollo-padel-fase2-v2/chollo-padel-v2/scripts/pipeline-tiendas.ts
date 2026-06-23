@@ -182,7 +182,38 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
   let fallidos = 0
 
   for (let i = 0; i < pendientes.length; i += CHUNK) {
-    const chunk = pendientes.slice(i, i + CHUNK)
+    const chunkBruto = pendientes.slice(i, i + CHUNK)
+
+    // Fix real 2026-06-23 (latiendadelpadel, "ON CONFLICT DO UPDATE command
+    // cannot affect row a second time"): un upsert multi-fila con
+    // onConflict:'pala_id,source_id' revienta si DOS productos del mismo
+    // bloque resuelven al mismo pala_id (la misma tienda no puede tener 2
+    // precios simultáneos para la misma pala). Antes esto abortaba el
+    // bloque ENTERO (hasta 300 productos sin snapshot ni alias) tras 2
+    // intentos idénticos — el reintento nunca podía arreglar un conflicto
+    // que viene de los propios datos del lote, no de la red. Causa raíz real
+    // es de matching (dos títulos distintos colapsando al mismo pala_id),
+    // pero aquí — al volcar a BD — es donde hay que blindarse: se queda solo
+    // con la primera ocurrencia de cada pala_id y se loggean las demás como
+    // colisión para poder investigar el matching después, en vez de perder
+    // el bloque completo por un solo par conflictivo.
+    const vistos = new Map<string, MatchPendiente>()
+    const colisiones: MatchPendiente[] = []
+    for (const m of chunkBruto) {
+      const previo = vistos.get(m.palaId)
+      if (previo) {
+        colisiones.push(m)
+      } else {
+        vistos.set(m.palaId, m)
+      }
+    }
+    if (colisiones.length > 0) {
+      for (const c of colisiones) {
+        const original = vistos.get(c.palaId)
+        console.error(`  ⚠️  [colisión pala_id] "${c.titulo}" y "${original?.titulo}" resolvieron a la misma pala (${c.palaId}) en el mismo scrape — se descarta "${c.titulo}", revisar matching`)
+      }
+    }
+    const chunk = Array.from(vistos.values())
     const payloadSnaps = chunk.map(m => ({
       pala_id:          m.palaId,
       source_id:        sourceId,
@@ -206,7 +237,7 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
         console.error(`  ❌ [snapshot batch ${i}-${i + chunk.length}] ${error.message} (tras reintento, NO se crean aliases de este bloque)`)
       }
     }
-    if (!ok) { fallidos += chunk.length; continue }
+    if (!ok) { fallidos += chunkBruto.length; continue }
 
     const aliasesNuevos = chunk.filter(m => m.crearAlias).map(m => ({
       pala_id:           m.palaId,
