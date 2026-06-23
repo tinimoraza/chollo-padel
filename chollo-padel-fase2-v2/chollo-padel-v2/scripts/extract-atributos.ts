@@ -589,9 +589,9 @@ function quitarJugadores(texto: string): string {
 function detectarJugador(texto: string): string | null {
   // Devuelve el nombre del jugador encontrado en el texto (en forma canónica Title Case)
   // para usarlo como linea cuando no se detecta ninguna otra.
-  const sinAcentos = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const sinAcentos = texto.normalize('NFD').replace(/[̀-ͯ]/g, '')
   for (const j of JUGADORES.sort((a, b) => b.length - a.length)) {
-    const jNorm = j.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const jNorm = j.normalize('NFD').replace(/[̀-ͯ]/g, '')
     if (new RegExp(jNorm, 'gi').test(sinAcentos)) {
       return j.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     }
@@ -639,7 +639,7 @@ export function extraerAtributos(titulo: string): Atributos {
   // de buscar línea, ya que otros títulos con la ortografía correcta sí matchean.
   titulo = titulo.replace(/\bgravitity\b/gi, 'gravity')
   // Normalizar guiones especiales (em dash –, en dash –) a espacio
-  titulo = titulo.replace(/[\u2013\u2014]/g, ' ')
+  titulo = titulo.replace(/[–—]/g, ' ')
   // Pre-procesar "+": "Raptor+" → "Raptor PLUS", "Astrum +" → "Astrum PLUS"
   titulo = titulo.replace(/(\w)\+/g, '$1 PLUS')  // + pegado a letra (sin espacio)
   titulo = titulo.replace(/(?<=\S) \+(?=\s|$)/g, ' PLUS').replace(/(?<=\s)\+(?=\s|$)/g, 'PLUS')
@@ -948,8 +948,22 @@ export function extraerAtributos(titulo: string): Atributos {
   // (modelo-matching.ts) para encontrar una fila YA EXISTENTE — nunca para
   // rellenar el modelo de una fila nueva. Solo aplica si la línea no se
   // resolvió ya usando ese mismo jugador (evitar duplicarlo como línea Y modelo).
+  //
+  // Fix real 2026-06-23 (Bullpadel Vertex 05 W 26 - Delfi Brea, futurapadelshop
+  // - falso positivo grave reportado por Patricia): este cálculo estaba dentro
+  // de `if (!modeloDetectado)`. Pero "modeloDetectado" se contamina fácilmente
+  // con ruido suelto que NO es el modelo real (aquí, una "W" suelta de género
+  // que ninguna tienda separa con espacio del número de modelo: "05 W" en vez
+  // de "05"). Con modeloDetectado="05 W" (truthy), jugadorMencionado se quedaba
+  // SIEMPRE en null aunque el título mencionara claramente a "Delfi Brea" — y
+  // sin esa pista, buscarPorAtributos() (modelo-matching.ts) no tenía forma de
+  // encontrar la fila ya existente "05 Delfi Brea" / WOMAN, y el alias acabó
+  // matcheando por error a la pala unisex base. jugadorMencionado es solo una
+  // PISTA DE RETRY (nunca rellena el modelo de una fila nueva, ver comentario
+  // arriba) — calcularla siempre, sin condicionarla al resultado de modelo, es
+  // seguro y cierra este punto ciego para cualquier línea con el mismo patrón.
   let jugadorMencionado: string | null = null
-  if (!modeloDetectado) {
+  {
     const jugadorDetectado = detectarJugador(restoAntesDeJugadores)
     if (jugadorDetectado && jugadorDetectado !== lineaDetectada) {
       jugadorMencionado = jugadorDetectado

@@ -367,14 +367,25 @@ export async function buscarPorAtributos(
 
   let filtrados = filtrarConModelo(attrs.modelo)
 
-  // Retry con jugadorMencionado (ver comentario en AtributosExtraidos): solo si
-  // la busqueda normal no encontro NADA y no habia modelo extraido. Sirve para
-  // encontrar una fila YA EXISTENTE en el catalogo que use el nombre del
+  // Retry con jugadorMencionado (ver comentario en AtributosExtraidos): si la
+  // busqueda normal no encontro NADA, prueba con el jugador como modelo. Sirve
+  // para encontrar una fila YA EXISTENTE en el catalogo que use el nombre del
   // jugador como modelo (ej. Bullpadel Flow "Ale Salazar") sin arriesgarse a
   // que jugadorMencionado se use luego para poblar el modelo de una fila
   // nueva — auto-promote-candidatas.ts sigue usando attrs.modelo (no este
   // resultado) para decidir que insertar.
-  if (filtrados.length === 0 && !attrs.modelo && attrs.jugadorMencionado) {
+  //
+  // Fix real 2026-06-23 (Bullpadel Vertex 05 W 26 - Delfi Brea, falso positivo
+  // grave reportado por Patricia): antes exigia `!attrs.modelo` para entrar
+  // aqui. Pero attrs.modelo puede venir "contaminado" con ruido suelto que NO
+  // es el modelo real (aqui, una "W" de genero pegada al numero: "05 W" en vez
+  // de "05") — eso hacia que la busqueda normal fallara (ninguna fila tiene
+  // modelo "05 W") Y que este retry se saltara (attrs.modelo no estaba vacio),
+  // dejando 0 candidatos → riesgo de fila duplicada o match erroneo por otra
+  // via. El retry con jugadorMencionado debe intentarse SIEMPRE que la
+  // busqueda normal no encontro nada, sin importar si attrs.modelo estaba
+  // vacio o solo sucio.
+  if (filtrados.length === 0 && attrs.jugadorMencionado) {
     filtrados = filtrarConModelo(attrs.jugadorMencionado)
   }
 
