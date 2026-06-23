@@ -75,7 +75,11 @@ async function scrape() {
       if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
       seen.add(pUrl)
       const image = p.images?.[0]?.src ?? null
-      allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl, image })
+      // Piloto coste-beneficio 2026-06-23: Shopify ya incluye "sku" por variante
+      // en el mismo JSON, sin petición extra. Se guarda sin tocar el
+      // matching/extracción existente — solo para comparar empíricamente si
+      // coincide con el de otras tiendas antes de usarlo en el matching real.
+      allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl, image, sku: variant.sku || null })
     }
   } else {
     console.log('[padelkiwi] ⚠️  No se pudo detectar plataforma — revisar manualmente padelkiwi.com')
@@ -83,7 +87,7 @@ async function scrape() {
 
   console.log(`[padelkiwi] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, scraped_at }))
+  return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, sku: p.sku ?? null, scraped_at }))
 }
 
 module.exports = { scrape, SOURCE_KEY }

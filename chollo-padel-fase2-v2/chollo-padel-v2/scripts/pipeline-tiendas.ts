@@ -170,6 +170,13 @@ interface MatchPendiente {
   url: string
   titulo: string
   image?: string | null
+  // Piloto coste-beneficio 2026-06-23: referencia/SKU que algunas tiendas (las
+  // que usan WooCommerce Store API o Shopify products.json) ya traen gratis
+  // en el mismo JSON. Se guarda en price_snapshots.sku SOLO para poder
+  // comparar más adelante si el valor es consistente entre tiendas para el
+  // mismo producto — de momento NO se usa en ningún punto del matching, así
+  // que no afecta a la lógica de buscarPorAtributos/buscarPorAlias existente.
+  sku?: string | null
   crearAlias: boolean // true solo si vino por atributos (por alias ya existe)
 }
 
@@ -223,6 +230,7 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
       match_confidence:  1.0,
       disponible:       true,
       scraped_at:       new Date().toISOString(),
+      sku:              m.sku ?? null,
     }))
 
     let ok = false
@@ -337,7 +345,7 @@ function decodeHtmlEntities(texto: string): string {
     .replace(/&([a-zA-Z]+);/g, (m, nombre) => ENTIDADES_HTML[nombre] ?? m)
 }
 
-async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null }[]> {
+async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null; sku?: string | null }[]> {
   const scraper = require(`./prices/scrapers/${tienda}.js`)
   const productos = scraper.scrape ? await scraper.scrape() : await scraper()
   return productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
@@ -472,7 +480,7 @@ async function main() {
       } else {
         pendientesMatch.push({
           palaId: palaIdAlias, precio: p.price, precioOriginal: p.precio_original,
-          url: p.url, titulo: p.title, image: p.image, crearAlias: false,
+          url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: false,
         })
       }
       porAlias++
@@ -491,7 +499,7 @@ async function main() {
       } else {
         pendientesMatch.push({
           palaId, precio: p.price, precioOriginal: p.precio_original,
-          url: p.url, titulo: p.title, image: p.image, crearAlias: true,
+          url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: true,
         })
       }
       porAtributos++

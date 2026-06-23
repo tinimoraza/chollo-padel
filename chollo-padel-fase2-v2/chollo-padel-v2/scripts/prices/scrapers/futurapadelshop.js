@@ -63,6 +63,11 @@ async function scrape() {
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url:             pUrl,
         image,
+        // Piloto coste-beneficio 2026-06-23: Shopify ya incluye "sku" por
+        // variante en el mismo JSON, sin petición extra. Se guarda sin tocar
+        // el matching/extracción existente — solo para comparar empíricamente
+        // si coincide con el de otras tiendas antes de usarlo en el matching real.
+        sku: variant.sku || null,
       })
     }
 
@@ -80,6 +85,7 @@ async function scrape() {
     precio_original: p.precio_original ?? null,
     url:             p.url,
     image:           p.image ?? null,
+    sku:             p.sku ?? null,
     scraped_at,
   }))
 }

@@ -78,6 +78,12 @@ async function scrape() {
         precio_original,
         url,
         image: bestImage(p.images),
+        // Piloto coste-beneficio 2026-06-23: la Store API ya incluye "sku" de
+        // forma gratuita (mismo JSON, sin petición extra). Se guarda sin
+        // tocar el matching/extracción existente — solo para poder comparar
+        // empíricamente si el valor coincide con el de otras tiendas para el
+        // mismo producto antes de decidir si se integra en el matching real.
+        sku: p.sku || null,
       })
     }
 
@@ -97,6 +103,7 @@ async function scrape() {
     precio_original: p.precio_original,
     url:             p.url,
     image:           p.image,
+    sku:             p.sku ?? null,
     scraped_at,
   }))
 }
