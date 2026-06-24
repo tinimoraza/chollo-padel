@@ -1,0 +1,58 @@
+name: Analizar Patrones de Precio
+
+# Lee price_history_log (histórico insert-only que se acumula con cada
+# pipeline-tiendas.ts) y detecta, por tienda, si hay horas/días donde los
+# precios bajan más a menudo. Guarda el resultado en price_patterns_summary
+# y lo deja también en el log del run.
+#
+# Solo workflow_dispatch por ahora: price_history_log empezó a poblarse el
+# 2026-06-24 y el propio script marca `confiable: false` mientras no haya
+# al menos 14 días de histórico por tienda. No tiene sentido programarlo en
+# cron todavía — se lanza a mano cuando se quiera ver el estado del histórico.
+# Cuando haya semanas de datos, se puede descomentar el schedule.
+
+on:
+  # schedule:
+  #   - cron: '0 9 * * 1'  # lunes 09:00 UTC, cuando haya histórico suficiente
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Analizar patrones de precio (con log)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          FECHA=$(date -u +"%Y-%m-%d_%H-%M")
+          mkdir -p ../../logs/patrones-precio
+          npx tsx scripts/analizar-patrones-precio.ts 2>&1 | tee ../../logs/patrones-precio/${FECHA}.txt
+
+      - name: Commit log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C ../.. add logs/patrones-precio/
+          git -C ../.. diff --cached --quiet || git -C ../.. commit -m "log: analizar-patrones-precio $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C ../.. push

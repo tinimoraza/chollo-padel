@@ -247,6 +247,15 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
     }
     if (!ok) { fallidos += chunkBruto.length; continue }
 
+    // Histórico insert-only (2026-06-24): price_snapshots se sobrescribe
+    // (upsert por pala_id,source_id) y solo guarda el último precio visto.
+    // price_history_log acumula CADA scrape como fila nueva, para poder
+    // analizar más adelante a qué horas/días baja de precio cada tienda.
+    // Fallo aquí NO debe tirar el pipeline ni descartar el snapshot ya
+    // guardado: solo se loggea.
+    const { error: errHist } = await supabase.from('price_history_log').insert(payloadSnaps)
+    if (errHist) console.error(`  ⚠️  [history batch ${i}-${i + chunk.length}] ${errHist.message}`)
+
     const aliasesNuevos = chunk.filter(m => m.crearAlias).map(m => ({
       pala_id:           m.palaId,
       texto_original:    m.titulo,
