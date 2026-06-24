@@ -1,11 +1,16 @@
 name: Pipeline Tiendas + Chollos (temporal)
 
-# Corre a las 09:00 y 18:00 hora española (UTC+2 en verano)
-# UTC+2 → 07:00 UTC y 16:00 UTC
+# Corre cada 3h (8 veces/día) — fix 2026-06-24: antes eran solo 2 pasadas/día
+# (09:00 y 18:00 hora española). Se sube la frecuencia para acumular histórico
+# en price_history_log más rápido y poder analizarlo con
+# analizar-patrones-precio.ts (necesita >=14 días con datos suficientes por
+# franja horaria). El run completo (4 grupos en paralelo + post-pipeline)
+# tarda como mucho ~65 min en el peor caso (grupo Playwright 50 min + post-
+# pipeline 15 min) — de sobra por debajo de las 3h entre ejecuciones, así que
+# no hay riesgo de solapamiento entre runs.
 on:
   schedule:
-    - cron: '0 7 * * *'
-    - cron: '0 16 * * *'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 env:
