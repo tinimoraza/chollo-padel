@@ -178,6 +178,11 @@ interface MatchPendiente {
   // que no afecta a la lógica de buscarPorAtributos/buscarPorAlias existente.
   sku?: string | null
   crearAlias: boolean // true solo si vino por atributos (por alias ya existe)
+  // Fix root-cause 2026-06-24 (Futura Padel Shop "agotada" mostrada como
+  // disponible): antes se hardcodeaba disponible=true en flushMatches sin
+  // leer el stock real de la tienda. Ahora se propaga aquí desde el scraper
+  // (p.disponible, cuando lo trae) y, si no viene, se asume true como antes.
+  disponible?: boolean
 }
 
 // Vuelca los matches pendientes en bloques de CHUNK. Devuelve cuántos
@@ -228,7 +233,10 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
       precio_original:  m.precioOriginal ?? null,
       url_producto:     m.url,
       match_confidence:  1.0,
-      disponible:       true,
+      // Fix root-cause 2026-06-24: antes siempre true, ignorando el stock
+      // real. Si el scraper trae disponible (p.ej. Shopify variant.available),
+      // se respeta; si no lo trae, se asume true (comportamiento previo).
+      disponible:       m.disponible ?? true,
       scraped_at:       new Date().toISOString(),
       sku:              m.sku ?? null,
     }))
@@ -354,7 +362,7 @@ function decodeHtmlEntities(texto: string): string {
     .replace(/&([a-zA-Z]+);/g, (m, nombre) => ENTIDADES_HTML[nombre] ?? m)
 }
 
-async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null; sku?: string | null }[]> {
+async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null; sku?: string | null; disponible?: boolean }[]> {
   const scraper = require(`./prices/scrapers/${tienda}.js`)
   const productos = scraper.scrape ? await scraper.scrape() : await scraper()
   return productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
@@ -490,6 +498,7 @@ async function main() {
         pendientesMatch.push({
           palaId: palaIdAlias, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: false,
+          disponible: p.disponible,
         })
       }
       porAlias++
@@ -509,6 +518,7 @@ async function main() {
         pendientesMatch.push({
           palaId, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: true,
+          disponible: p.disponible,
         })
       }
       porAtributos++

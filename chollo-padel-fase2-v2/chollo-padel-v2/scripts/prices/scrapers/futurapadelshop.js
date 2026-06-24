@@ -70,6 +70,11 @@ async function scrape() {
         // el matching/extracción existente — solo para comparar empíricamente
         // si coincide con el de otras tiendas antes de usarlo en el matching real.
         sku: variant.sku || null,
+        // Fix root-cause 2026-06-24: disponibilidad real de Shopify (antes no
+        // se leía y el pipeline guardaba siempre disponible=true). Se
+        // sobrescribe con el valor más fresco dentro de refreshShopifyPrices
+        // si la ficha individual responde.
+        disponible: typeof variant.available === 'boolean' ? variant.available : true,
       })
     }
 
@@ -90,6 +95,7 @@ async function scrape() {
     url:             p.url,
     image:           p.image ?? null,
     sku:             p.sku ?? null,
+    disponible:      p.disponible ?? true,
     scraped_at,
   }))
 }

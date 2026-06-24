@@ -2,15 +2,19 @@
 //
 // Fix root-cause 2026-06-24 (futurapadelshop): el listado de colección de
 // Shopify (/collections/X/products.json) puede servir precios cacheados y
-// desactualizados durante horas, mientras la ficha individual del producto
-// (/products/<handle>.json) siempre refleja el precio real vigente.
-// Confirmado: dos scrapes de futurapadelshop separados por >1h capturaron el
-// mismo precio (= precio real / 1.21) desde el listado, mientras la ficha
-// individual ya tenía el precio correcto desde 2h antes del primer scrape.
+// desactualizados durante horas. Inicialmente se asumió que la ficha
+// individual del producto (/products/<handle>.json) siempre refleja el
+// precio real vigente — pero esto resultó ser falso: confirmado con datos
+// reales que la ficha individual TAMBIÉN se sirve desde caché de CDN
+// (un scrape posterior al cambio real de precio en Shopify siguió leyendo
+// el valor viejo desde la ficha individual).
 //
-// Por eso, para cualquier tienda Shopify, el precio fiable es el de la ficha
-// individual, no el del listado. Esta función re-pide cada ficha y corrige
-// el precio (y precio_original) en el array de productos ya recolectados.
+// Fix root-cause 2026-06-24 (v2): se añade un parámetro anti-caché
+// (`_=timestamp`) a la URL + cabecera `Cache-Control: no-cache` para forzar
+// a la CDN a tratar cada petición como única y no servir una respuesta cacheada.
+//
+// Esta función re-pide cada ficha y corrige el precio (y precio_original,
+// y disponibilidad real) en el array de productos ya recolectados.
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -20,11 +24,15 @@ async function refreshShopifyPrices(products, { delayMs = 300, headers, minPrice
 
   for (const p of products) {
     try {
-      const res = await fetch(`${p.url}.json`, {
+      const bustUrl = `${p.url}.json?_=${Date.now()}`
+      const res = await fetch(bustUrl, {
         headers: headers ?? {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         },
+        cache: 'no-store',
       })
 
       if (res.ok) {
@@ -37,6 +45,12 @@ async function refreshShopifyPrices(products, { delayMs = 300, headers, minPrice
             if (freshPrice !== p.price) corregidos++
             p.price = freshPrice
             p.precio_original = (!isNaN(freshCompare) && freshCompare > freshPrice) ? freshCompare : null
+          }
+          // Disponibilidad real de Shopify (variante o, si falta, producto).
+          if (typeof variant.available === 'boolean') {
+            p.disponible = variant.available
+          } else if (typeof data.product?.available === 'boolean') {
+            p.disponible = data.product.available
           }
         }
       } else {
