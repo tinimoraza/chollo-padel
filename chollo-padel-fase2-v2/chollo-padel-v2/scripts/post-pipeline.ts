@@ -193,7 +193,7 @@ async function autoPromover(): Promise<number> {
           datos_extraidos: { ...d, pala_id_promovida: dupFuzzy.id },
         }).eq('id', c.id)
       }
-      console.log(`  🔗 [dup\u2192match] ${nombre} \u2192 ${dupFuzzy.nombre}`)
+      console.log(`  🔗 [dup→match] ${nombre} → ${dupFuzzy.nombre}`)
       aliasResueltas++
       continue
     }
@@ -361,21 +361,33 @@ export async function main() {
     .select('*', { count: 'exact', head: true })
     .eq('estado', 'pendiente')
 
+  // Fix root-cause 2026-06-24: antes, si no había candidatas pendientes, la
+  // función entera se cortaba aquí con un `return` — y eso se saltaba TAMBIÉN
+  // el Paso 3 (recalcular precio_referencia), que no depende en absoluto de
+  // las candidatas pendientes, sino de los price_snapshots recién escritos
+  // por el scrape. Resultado real: cualquier vez que la cola de candidatas
+  // estuviera vacía (cada vez más habitual, porque el Gestor la vacía a
+  // mano), el post-pipeline terminaba en ~2s SIN recalcular precio_referencia
+  // para ninguna pala, dejando ese campo (y por tanto el % de descuento de
+  // /chollos) desactualizado de forma silenciosa — el job seguía marcando
+  // "success" en GitHub Actions. Ahora los Pasos 1-2 (que sí dependen de
+  // candidatas) se saltan si no hay pendientes, pero el Paso 3 se ejecuta
+  // siempre.
+  let marcadas = 0
   if (!totalPendientes) {
-    console.log('✅ No hay candidatas pendientes. Nada que hacer.\n')
-    return
+    console.log('✅ No hay candidatas pendientes — se salta Paso 1/2.\n')
+  } else {
+    console.log(`📋 Candidatas pendientes al inicio: ${totalPendientes}\n`)
+
+    // Paso 1
+    console.log('── Paso 1: Limpiar false negatives ──────────────────────')
+    marcadas = await limpiarFalseNegatives()
+    console.log(`   → ${marcadas} marcadas como matched\n`)
+
+    // Paso 2 — AUTO-PROMOVER DESACTIVADO
+    // Las candidatas sin match van al Gestor para revisión manual.
+    console.log('── Paso 2: Auto-promover nuevas ── DESACTIVADO (usar Gestor)')
   }
-
-  console.log(`📋 Candidatas pendientes al inicio: ${totalPendientes}\n`)
-
-  // Paso 1
-  console.log('── Paso 1: Limpiar false negatives ──────────────────────')
-  const marcadas = await limpiarFalseNegatives()
-  console.log(`   → ${marcadas} marcadas como matched\n`)
-
-  // Paso 2 — AUTO-PROMOVER DESACTIVADO
-  // Las candidatas sin match van al Gestor para revisión manual.
-  console.log('── Paso 2: Auto-promover nuevas ── DESACTIVADO (usar Gestor)')
 
   // Paso 3
   console.log('── Paso 3: Recalcular precios de referencia ─────────────')

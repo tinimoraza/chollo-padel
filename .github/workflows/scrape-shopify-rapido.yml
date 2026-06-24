@@ -1,0 +1,79 @@
+name: Scrape Rápido Shopify (precios volátiles)
+
+# Fix 2026-06-24: futurapadelshop (y previsiblemente otras tiendas Shopify)
+# cambian su precio real en bloque cada ~1-3h, en un ciclo más rápido o
+# comparable al de pipeline-tiendas-temp.yml (cada 3h) — confirmado
+# comparando price_snapshots en BD vs ficha individual en vivo: 3 productos
+# distintos subieron de precio en una ventana de ~2 segundos, 28 minutos
+# después de nuestro scrape, con precio_nuevo = precio_viejo × 1.21 (IVA),
+# es decir, el descuento temporal terminó. Ningún cambio en el scraper puede
+# arreglar esto — hay que scrapear estas tiendas más a menudo para que
+# /chollos no muestre un PVP ya caducado.
+#
+# Por eso este workflow solo cubre las tiendas Shopify-JSON puras (sin
+# Playwright, fetch directo a /products/<handle>.json, scrape de pocos
+# segundos por tienda) y corre cada 30 min, independiente del ciclo de
+# 3h de pipeline-tiendas-temp.yml que sigue cubriendo el resto de tiendas.
+#
+# Al final se llama a post-pipeline.ts para recalcular precio_referencia
+# con los precios recién actualizados (Paso 3 — ya no depende de si hay
+# candidatas pendientes, ver fix en post-pipeline.ts del mismo día).
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+jobs:
+  scrape-shopify-rapido:
+    name: "Scrape: futurapadelshop, starvie, padelmarket, padelkiwi, tennispoint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Scrape futurapadelshop
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts futurapadelshop --no-post
+      - name: Scrape starvie
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts starvie --no-post
+      - name: Scrape padelmarket
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts padelmarket --no-post
+      - name: Scrape padelkiwi
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts padelkiwi --no-post
+      - name: Scrape tennispoint
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts tennispoint --no-post
+
+  post-pipeline:
+    name: "Post-pipeline (recalcular precios)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [scrape-shopify-rapido]
+    if: always()
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Post-pipeline (recalcular precio_referencia)
+        run: npx tsx scripts/post-pipeline.ts
