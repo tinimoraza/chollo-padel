@@ -8,6 +8,8 @@
 // Ejecutar:
 //   node scripts/prices/pipeline.js padelkiwi
 
+const { refreshShopifyPrices } = require('./_shopify-utils')
+
 const SOURCE_KEY = 'padelkiwi'
 const DELAY_MS   = 700
 const LIMIT      = 250
@@ -86,6 +88,8 @@ async function scrape() {
   }
 
   console.log(`[padelkiwi] Total palas: ${allProducts.length}`)
+  console.log('[padelkiwi] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
+  await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, sku: p.sku ?? null, scraped_at }))
 }

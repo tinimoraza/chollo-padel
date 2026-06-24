@@ -6,6 +6,8 @@
 // Ejecutar:
 //   node scripts/prices/pipeline.js starvie
 
+const { refreshShopifyPrices } = require('./_shopify-utils')
+
 const SOURCE_KEY = 'starvie'
 const BASE_URL   = 'https://starvie.com'
 const LIMIT      = 250
@@ -82,6 +84,8 @@ async function scrape() {
   }
 
   console.log(`[starvie] Total palas: ${allProducts.length}`)
+  console.log('[starvie] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
+  await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,

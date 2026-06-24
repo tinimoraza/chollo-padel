@@ -2,6 +2,8 @@
 // Shopify JSON API — collection "palas"
 // ~310 palas en 2 páginas (250 + 60)
 
+const { refreshShopifyPrices } = require('./_shopify-utils')
+
 const SOURCE_KEY = 'padelmarket'
 const BASE_URL   = 'https://padelmarket.com/collections/palas/products.json'
 const LIMIT      = 250
@@ -67,6 +69,8 @@ async function scrape() {
   }
 
   console.log(`[padelmarket] Total palas: ${allProducts.length}`)
+  console.log('[padelmarket] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
+  await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,

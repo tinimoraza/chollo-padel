@@ -3,6 +3,8 @@
 // URL colección: https://futurapadelshop.com/collections/palas
 // Paginación: ?limit=250&page=N
 
+const { refreshShopifyPrices } = require('./_shopify-utils')
+
 const SOURCE_KEY = 'futurapadelshop'
 const BASE_URL   = 'https://futurapadelshop.com'
 const COLLECTION = 'palas'
@@ -77,6 +79,8 @@ async function scrape() {
   }
 
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
+  console.log('[futurapadelshop] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
+  await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,

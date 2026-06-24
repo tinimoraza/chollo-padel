@@ -2,6 +2,8 @@
 // v2 (2026-05-29): Shopify JSON API — filtra product_type='Padel rackets'
 // Tennis-Point migró a Shopify, URL antigua /padel/palas-de-padel/ da 404
 
+const { refreshShopifyPrices } = require('./_shopify-utils')
+
 const SOURCE_KEY = 'tennispoint'
 const BASE_URL   = 'https://www.tennis-point.es/collections/padel/products.json'
 const LIMIT      = 250
@@ -79,6 +81,8 @@ async function scrape() {
   }
 
   console.log(`[tennispoint] Total palas: ${allProducts.length}`)
+  console.log('[tennispoint] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
+  await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,
