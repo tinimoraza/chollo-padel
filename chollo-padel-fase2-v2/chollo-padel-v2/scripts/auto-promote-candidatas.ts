@@ -43,12 +43,26 @@ const NO_ES_PALA = [
   'gorra', 'calcetin', 'calcetín', 'calcetines', 'toalla',
   // Sets/packs — combinan pala + accesorio, el título no es una pala única
   'set de', 'pack de',
+  // Babolat "Premura" — línea de raqueta de TENIS junior (no pádel). Distinto
+  // de "Babolat Jet" pala, pero el título completo incluye "Premura" siempre
+  // que es la raqueta de tenis (fix 2026-06-24, caso "Jet Premura Clay Junior").
+  'premura',
+]
+
+// Términos que requieren coincidencia de palabra completa (no substring) para
+// evitar falsos positivos por colisión léxica — ej. 'ross' como substring
+// rompería "Adidas Cross It" / "Crossit" (fix 2026-06-24, caso "Pala Hybrid
+// Ross": marca no reconocida, candidata pendiente que Patricia pidió filtrar).
+const NO_ES_PALA_PALABRA_COMPLETA = [
+  'ross',
 ]
 
 // Devuelve true si el título parece ser una pala de pádel
 function esPala(titulo: string): boolean {
   const t = titulo.toLowerCase()
-  return !NO_ES_PALA.some(w => t.includes(w))
+  if (NO_ES_PALA.some(w => t.includes(w))) return false
+  if (NO_ES_PALA_PALABRA_COMPLETA.some(w => new RegExp(`\\b${w}\\b`).test(t))) return false
+  return true
 }
 
 // Fix real 2026-06-23 (causa raíz de las 298 filas auto_promoted de hoy, 135
@@ -119,9 +133,18 @@ async function main() {
       continue
     }
 
-    // Filtrar productos que no son palas (ropa, zapatillas, accesorios)
+    // Filtrar productos que no son palas (ropa, zapatillas, accesorios).
+    // Fix raíz 2026-06-24: antes esto solo hacía `continue` sin tocar `estado`,
+    // así que la candidata se quedaba en 'pendiente' para siempre — cada run
+    // del cron la volvía a evaluar y descartar, pero nunca desaparecía de la
+    // cola de revisión (GestorCandidatas). Ahora se marca 'ignorada' la
+    // primera vez que se detecta, igual que ya se hace tras promover/vincular.
     if (!esPala(c.titulo)) {
-      console.log(`[auto-promote] 🚫 No es pala, descartando: "${c.titulo}"`)
+      console.log(`[auto-promote] 🚫 No es pala, ignorando: "${c.titulo}"`)
+      await supabase
+        .from('palas_candidatas')
+        .update({ estado: 'ignorada', updated_at: new Date().toISOString() })
+        .eq('id', c.id)
       descartadas++
       continue
     }
