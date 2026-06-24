@@ -81,11 +81,11 @@ export default function ChollosPage() {
             </div>
             <div style={{ ...s.statBox, borderColor: '#FF5F1F44' }}>
               <span style={{ ...s.statNum, color: '#FF5F1F' }}>{totalStats.chollos}</span>
-              <span style={s.statLbl}>🔥 CHOLLOS ≥30%</span>
+              <span style={s.statLbl}>🔥 CHOLLOS ≥35%</span>
             </div>
             <div style={{ ...s.statBox, borderColor: '#FFB80044' }}>
               <span style={{ ...s.statNum, color: '#FFB800' }}>{totalStats.ofertas}</span>
-              <span style={s.statLbl}>⚡ OFERTAS ≥18%</span>
+              <span style={s.statLbl}>⚡ OFERTAS ≥25%</span>
             </div>
           </div>
         )}
