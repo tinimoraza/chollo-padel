@@ -3,25 +3,18 @@
 // URL colección: https://futurapadelshop.com/collections/palas
 // Paginación: ?limit=250&page=N
 
-// NOTA: No usamos refreshShopifyPrices de _shopify-utils porque desde
-// GitHub Actions el JSON API de Shopify devuelve precios sin IVA (ex-VAT)
-// a IPs de datacenter no-ES. Fix: forzar sesión española en todas las
-// peticiones con Accept-Language + Cookie de país/moneda. Confirmado:
-// 102.48 × 1.21 = 123.99 ≈ 124€ — era exactamente el precio sin IVA.
-// _shopify-utils.js no se toca → resto de tiendas sin riesgo.
+// NOTA IVA: Futura Padel Shop tiene mercados internacionales activos en Shopify.
+// Desde IPs de datacenter (GitHub Actions) el JSON API devuelve precios sin IVA (ex-VAT).
+// Confirmado: 102.48 × 1.21 = 123.99 ≈ 124€ (precio real con IVA 21%).
+// Fix: multiplicar precio y compare_at_price × 1.21 y redondear a 2 decimales.
+// El resto de tiendas Shopify del proyecto no tienen este problema (verificado).
 
 const SOURCE_KEY = 'futurapadelshop'
 const BASE_URL   = 'https://futurapadelshop.com'
 const COLLECTION = 'palas'
 const LIMIT      = 250
 const DELAY_MS   = 600
-
-const ES_HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept':          'application/json',
-  'Accept-Language': 'es-ES,es;q=0.9',
-  'Cookie':          'cart_currency=EUR; _shopify_country=ES',
-}
+const IVA        = 1.21
 
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'pack ']
@@ -32,49 +25,8 @@ function isPala(title) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-async function refreshFuturaPrices(products, delayMs = 1500) {
-  let corregidos = 0
-  let fallidos   = 0
-
-  for (const p of products) {
-    try {
-      const bustUrl = `${p.url}.json?fields=id,variants,title&_=${Date.now()}`
-      const res = await fetch(bustUrl, { headers: ES_HEADERS })
-
-      if (res.ok) {
-        const data    = await res.json()
-        const variant = data.product?.variants?.[0]
-        if (variant) {
-          const freshPrice   = parseFloat(variant.price)
-          const freshCompare = parseFloat(variant.compare_at_price)
-          if (!isNaN(freshPrice) && freshPrice >= 30) {
-            if (freshPrice !== p.price) {
-              console.log(`  [refresh] ${p.url} → listado=${p.price} ficha=${freshPrice}`)
-              corregidos++
-            }
-            p.price           = freshPrice
-            p.precio_original = (!isNaN(freshCompare) && freshCompare > freshPrice) ? freshCompare : null
-          }
-          if (typeof variant.available === 'boolean') {
-            p.disponible = variant.available
-          } else if (typeof data.product?.available === 'boolean') {
-            p.disponible = data.product.available
-          }
-        }
-      } else {
-        console.warn(`  [refresh] HTTP ${res.status} → ${p.url}`)
-        fallidos++
-      }
-    } catch (err) {
-      console.warn(`  [refresh] ERROR → ${p.url}: ${err.message}`)
-      fallidos++
-    }
-
-    await sleep(delayMs)
-  }
-
-  console.log(`  → refreshFuturaPrices: ${corregidos} precios corregidos vs listado, ${fallidos} fichas no accesibles (de ${products.length})`)
-  return products
+function conIVA(price) {
+  return Math.round(price * IVA * 100) / 100
 }
 
 async function scrape() {
@@ -88,7 +40,12 @@ async function scrape() {
     const url = `${BASE_URL}/collections/${COLLECTION}/products.json?limit=${LIMIT}&page=${page}`
     console.log(`[futurapadelshop] Página ${page}: ${url}`)
 
-    const res = await fetch(url, { headers: ES_HEADERS })
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':     'application/json',
+      },
+    })
 
     if (!res.ok) { console.error(`[futurapadelshop] HTTP ${res.status}`); break }
 
@@ -102,18 +59,20 @@ async function scrape() {
       if (!isPala(p.title)) continue
       const variant = p.variants?.[0]
       if (!variant) continue
-      const price   = parseFloat(variant.price)
-      const compare = parseFloat(variant.compare_at_price)
-      const pUrl    = `${BASE_URL}/products/${p.handle}`
-      if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
+      const priceRaw   = parseFloat(variant.price)
+      const compareRaw = parseFloat(variant.compare_at_price)
+      const pUrl       = `${BASE_URL}/products/${p.handle}`
+      if (isNaN(priceRaw) || priceRaw < 30 || seen.has(pUrl)) continue
       seen.add(pUrl)
 
-      const image = p.images?.[0]?.src?.split('?')[0] ?? null
+      const price   = conIVA(priceRaw)
+      const compare = (!isNaN(compareRaw) && compareRaw > priceRaw) ? conIVA(compareRaw) : null
+      const image   = p.images?.[0]?.src?.split('?')[0] ?? null
 
       allProducts.push({
         title:           p.title,
         price,
-        precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+        precio_original: compare,
         url:             pUrl,
         image,
         sku:             variant.sku || null,
@@ -127,9 +86,6 @@ async function scrape() {
   }
 
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
-  console.log('[futurapadelshop] Muestra precios listado:', allProducts.slice(0, 5).map(p => `${p.title}: ${p.price}`).join(' | '))
-  console.log('[futurapadelshop] Verificando precios contra ficha individual (anti-IVA CDN)…')
-  await refreshFuturaPrices(allProducts)
 
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
