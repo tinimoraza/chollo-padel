@@ -3,7 +3,13 @@
 // URL colección: https://futurapadelshop.com/collections/palas
 // Paginación: ?limit=250&page=N
 
-const { refreshShopifyPrices } = require('./_shopify-utils')
+// NOTA: No usamos refreshShopifyPrices de _shopify-utils porque desde
+// GitHub Actions la CDN de Shopify sirve respuestas cacheadas incluso con
+// Cache-Control: no-cache (Node.js ignora la opción `cache: 'no-store'` del
+// fetch nativo — es una opción de browser API, no de Node). Fix local:
+// función inline que añade ?fields=id,variants,title&_=timestamp a la URL
+// de ficha individual, lo que fuerza una cache key única en la CDN.
+// _shopify-utils.js no se toca → resto de tiendas sin riesgo.
 
 const SOURCE_KEY = 'futurapadelshop'
 const BASE_URL   = 'https://futurapadelshop.com'
@@ -19,6 +25,60 @@ function isPala(title) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+async function refreshFuturaPrices(products, delayMs = 300) {
+  let corregidos = 0
+  let fallidos   = 0
+
+  for (const p of products) {
+    try {
+      // ?fields= fuerza cache key única en la CDN de Shopify.
+      // ?_= añade timestamp como segunda barrera anti-caché.
+      const bustUrl = `${p.url}.json?fields=id,variants,title&_=${Date.now()}`
+      const res = await fetch(bustUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept':     'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma':        'no-cache',
+        },
+      })
+
+      if (res.ok) {
+        const data    = await res.json()
+        const variant = data.product?.variants?.[0]
+        if (variant) {
+          const freshPrice   = parseFloat(variant.price)
+          const freshCompare = parseFloat(variant.compare_at_price)
+          if (!isNaN(freshPrice) && freshPrice >= 30) {
+            if (freshPrice !== p.price) {
+              console.log(`  [refresh] ${p.url} → listado=${p.price} ficha=${freshPrice}`)
+              corregidos++
+            }
+            p.price           = freshPrice
+            p.precio_original = (!isNaN(freshCompare) && freshCompare > freshPrice) ? freshCompare : null
+          }
+          if (typeof variant.available === 'boolean') {
+            p.disponible = variant.available
+          } else if (typeof data.product?.available === 'boolean') {
+            p.disponible = data.product.available
+          }
+        }
+      } else {
+        console.warn(`  [refresh] HTTP ${res.status} → ${p.url}`)
+        fallidos++
+      }
+    } catch (err) {
+      console.warn(`  [refresh] ERROR → ${p.url}: ${err.message}`)
+      fallidos++
+    }
+
+    await sleep(delayMs)
+  }
+
+  console.log(`  → refreshFuturaPrices: ${corregidos} precios corregidos vs listado, ${fallidos} fichas no accesibles (de ${products.length})`)
+  return products
+}
 
 async function scrape() {
   console.log('[futurapadelshop] Iniciando scraper (Shopify JSON API)…')
@@ -40,7 +100,7 @@ async function scrape() {
 
     if (!res.ok) { console.error(`[futurapadelshop] HTTP ${res.status}`); break }
 
-    const data = await res.json()
+    const data     = await res.json()
     const products = data.products ?? []
 
     console.log(`[futurapadelshop]  → ${products.length} productos`)
@@ -48,15 +108,14 @@ async function scrape() {
 
     for (const p of products) {
       if (!isPala(p.title)) continue
-      const variant  = p.variants?.[0]
+      const variant = p.variants?.[0]
       if (!variant) continue
-      const price    = parseFloat(variant.price)
-      const compare  = parseFloat(variant.compare_at_price)
-      const pUrl     = `${BASE_URL}/products/${p.handle}`
+      const price   = parseFloat(variant.price)
+      const compare = parseFloat(variant.compare_at_price)
+      const pUrl    = `${BASE_URL}/products/${p.handle}`
       if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
       seen.add(pUrl)
 
-      // Imagen principal
       const image = p.images?.[0]?.src?.split('?')[0] ?? null
 
       allProducts.push({
@@ -65,16 +124,8 @@ async function scrape() {
         precio_original: (!isNaN(compare) && compare > price) ? compare : null,
         url:             pUrl,
         image,
-        // Piloto coste-beneficio 2026-06-23: Shopify ya incluye "sku" por
-        // variante en el mismo JSON, sin petición extra. Se guarda sin tocar
-        // el matching/extracción existente — solo para comparar empíricamente
-        // si coincide con el de otras tiendas antes de usarlo en el matching real.
-        sku: variant.sku || null,
-        // Fix root-cause 2026-06-24: disponibilidad real de Shopify (antes no
-        // se leía y el pipeline guardaba siempre disponible=true). Se
-        // sobrescribe con el valor más fresco dentro de refreshShopifyPrices
-        // si la ficha individual responde.
-        disponible: typeof variant.available === 'boolean' ? variant.available : true,
+        sku:             variant.sku || null,
+        disponible:      typeof variant.available === 'boolean' ? variant.available : true,
       })
     }
 
@@ -84,8 +135,9 @@ async function scrape() {
   }
 
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
-  console.log('[futurapadelshop] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
-  await refreshShopifyPrices(allProducts)
+  console.log('[futurapadelshop] Verificando precios contra ficha individual (anti-caché CDN)…')
+  await refreshFuturaPrices(allProducts)
+
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,
