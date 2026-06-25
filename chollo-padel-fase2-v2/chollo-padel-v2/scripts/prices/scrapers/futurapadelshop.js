@@ -4,11 +4,10 @@
 // Paginación: ?limit=250&page=N
 
 // NOTA: No usamos refreshShopifyPrices de _shopify-utils porque desde
-// GitHub Actions la CDN de Shopify sirve respuestas cacheadas incluso con
-// Cache-Control: no-cache (Node.js ignora la opción `cache: 'no-store'` del
-// fetch nativo — es una opción de browser API, no de Node). Fix local:
-// función inline que añade ?fields=id,variants,title&_=timestamp a la URL
-// de ficha individual, lo que fuerza una cache key única en la CDN.
+// GitHub Actions el JSON API de Shopify devuelve precios sin IVA (ex-VAT)
+// a IPs de datacenter no-ES. Fix: forzar sesión española en todas las
+// peticiones con Accept-Language + Cookie de país/moneda. Confirmado:
+// 102.48 × 1.21 = 123.99 ≈ 124€ — era exactamente el precio sin IVA.
 // _shopify-utils.js no se toca → resto de tiendas sin riesgo.
 
 const SOURCE_KEY = 'futurapadelshop'
@@ -16,6 +15,13 @@ const BASE_URL   = 'https://futurapadelshop.com'
 const COLLECTION = 'palas'
 const LIMIT      = 250
 const DELAY_MS   = 600
+
+const ES_HEADERS = {
+  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Accept':          'application/json',
+  'Accept-Language': 'es-ES,es;q=0.9',
+  'Cookie':          'cart_currency=EUR; _shopify_country=ES',
+}
 
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'pack ']
@@ -32,17 +38,8 @@ async function refreshFuturaPrices(products, delayMs = 1500) {
 
   for (const p of products) {
     try {
-      // ?fields= fuerza cache key única en la CDN de Shopify.
-      // ?_= añade timestamp como segunda barrera anti-caché.
       const bustUrl = `${p.url}.json?fields=id,variants,title&_=${Date.now()}`
-      const res = await fetch(bustUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept':     'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma':        'no-cache',
-        },
-      })
+      const res = await fetch(bustUrl, { headers: ES_HEADERS })
 
       if (res.ok) {
         const data    = await res.json()
@@ -91,12 +88,7 @@ async function scrape() {
     const url = `${BASE_URL}/collections/${COLLECTION}/products.json?limit=${LIMIT}&page=${page}`
     console.log(`[futurapadelshop] Página ${page}: ${url}`)
 
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept':     'application/json',
-      },
-    })
+    const res = await fetch(url, { headers: ES_HEADERS })
 
     if (!res.ok) { console.error(`[futurapadelshop] HTTP ${res.status}`); break }
 
@@ -135,7 +127,7 @@ async function scrape() {
   }
 
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
-  console.log('[futurapadelshop] Verificando precios contra ficha individual (anti-caché CDN)…')
+  console.log('[futurapadelshop] Verificando precios contra ficha individual (anti-IVA CDN)…')
   await refreshFuturaPrices(allProducts)
 
   const scraped_at = new Date().toISOString()
