@@ -115,11 +115,18 @@ async function scrape() {
   await refreshShopifyPrices(allProducts)
 
   console.log('[futurapadelshop] Corrigiendo precio final (con impuestos) leído del HTML de cada ficha…')
+  let htmlCorregidos = 0, htmlFallidos = 0
   for (const p of allProducts) {
     const renderedPrice = await fetchRenderedPrice(p.url)
-    if (renderedPrice !== null) p.price = renderedPrice
+    if (renderedPrice !== null) {
+      if (renderedPrice !== p.price) htmlCorregidos++
+      p.price = renderedPrice
+    } else {
+      htmlFallidos++
+    }
     await sleep(DELAY_MS)
   }
+  console.log(`  → fetchRenderedPrice: ${htmlCorregidos} precios corregidos vs JSON, ${htmlFallidos} fichas HTML no accesibles/sin meta tag (de ${allProducts.length})`)
 
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
