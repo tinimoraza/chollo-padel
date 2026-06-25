@@ -26,7 +26,7 @@ function isPala(title) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-async function refreshFuturaPrices(products, delayMs = 300) {
+async function refreshFuturaPrices(products, delayMs = 1500) {
   let corregidos = 0
   let fallidos   = 0
 
