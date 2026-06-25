@@ -20,6 +20,33 @@ function isPala(title) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
+// Fix root-cause 2026-06-25: el JSON de Shopify (listado y ficha individual)
+// devuelve variant.price SIN impuestos. El precio que ve el cliente (el que
+// queremos guardar) sí los incluye, y Shopify lo deja ya calculado en el HTML
+// de la ficha, en la etiqueta <meta property="og:price:amount">. Se lee ese
+// valor directamente — sin asumir ningún % de IVA — y se usa para sobrescribir
+// el precio del JSON, que puede venir desfasado por este motivo.
+async function fetchRenderedPrice(url) {
+  try {
+    const res = await fetch(`${url}?_=${Date.now()}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Cache-Control': 'no-cache',
+      },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const html = await res.text()
+    const m = html.match(/property=["']og:price:amount["']\s+content=["']([\d.,]+)["']/)
+    if (!m) return null
+    const normalized = m[1].replace(/\./g, '').replace(',', '.')
+    const price = parseFloat(normalized)
+    return isNaN(price) ? null : price
+  } catch {
+    return null
+  }
+}
+
 async function scrape() {
   console.log('[futurapadelshop] Iniciando scraper (Shopify JSON API)…')
 
@@ -86,6 +113,14 @@ async function scrape() {
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
   console.log('[futurapadelshop] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
   await refreshShopifyPrices(allProducts)
+
+  console.log('[futurapadelshop] Corrigiendo precio final (con impuestos) leído del HTML de cada ficha…')
+  for (const p of allProducts) {
+    const renderedPrice = await fetchRenderedPrice(p.url)
+    if (renderedPrice !== null) p.price = renderedPrice
+    await sleep(DELAY_MS)
+  }
+
   const scraped_at = new Date().toISOString()
   return allProducts.map(p => ({
     source_key:      SOURCE_KEY,
