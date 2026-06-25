@@ -127,6 +127,7 @@ async function scrape() {
   }
 
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
+  console.log('[futurapadelshop] Muestra precios listado:', allProducts.slice(0, 5).map(p => `${p.title}: ${p.price}`).join(' | '))
   console.log('[futurapadelshop] Verificando precios contra ficha individual (anti-IVA CDN)…')
   await refreshFuturaPrices(allProducts)
 
