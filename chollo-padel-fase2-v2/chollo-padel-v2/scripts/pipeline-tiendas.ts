@@ -477,7 +477,26 @@ async function main() {
   // esta tienda. Validado en vivo solo contra padelmania.com de momento (ver
   // _discount-utils.js); el resto de scrapers no llaman al detector aun, así
   // que aquí valdrá null para ellos y no cambia nada de su comportamiento.
-  const codigoDescuentoTienda = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null
+  let codigoDescuentoTienda = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null
+
+  // Fallback manual (tarea #177): si el scraper no detectó un código automático
+  // para esta tienda, se usa el que Patricia haya introducido a mano desde
+  // GestorCandidatas (pestaña "💸 Códigos" → tabla codigos_descuento_manual).
+  // Útil para las tiendas donde el detector genérico no aplica (Shopify/WooCommerce
+  // JSON-only) o no encuentra nada. Se aplica igual a todos los productos del
+  // run, igual que el código automático.
+  if (!codigoDescuentoTienda && !DRY_RUN) {
+    const { data: manual } = await supabase
+      .from('codigos_descuento_manual')
+      .select('codigo, descuento_pct')
+      .eq('source_id', sourceId)
+      .eq('activo', true)
+      .maybeSingle()
+    if (manual) {
+      codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
+      console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)`)
+    }
+  }
 
   for (const p of productos) {
     const tituloLow = p.title.toLowerCase()
