@@ -197,6 +197,11 @@ interface MatchPendiente {
   // leer el stock real de la tienda. Ahora se propaga aquí desde el scraper
   // (p.disponible, cuando lo trae) y, si no viene, se asume true como antes.
   disponible?: boolean
+  // Codigo de descuento detectado por _discount-utils.js a nivel de pagina
+  // (banner de tienda, no por producto individual) — ver nota junto a
+  // codigoDescuentoTienda en el bucle principal.
+  codigoDescuento?: string | null
+  descuentoPct?: number | null
 }
 
 // Vuelca los matches pendientes en bloques de CHUNK. Devuelve cuántos
@@ -253,6 +258,8 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
       disponible:       m.disponible ?? true,
       scraped_at:       new Date().toISOString(),
       sku:              m.sku ?? null,
+      codigo_descuento: m.codigoDescuento ?? null,
+      descuento_pct:    m.descuentoPct ?? null,
     }))
 
     let ok = false
@@ -376,10 +383,18 @@ function decodeHtmlEntities(texto: string): string {
     .replace(/&([a-zA-Z]+);/g, (m, nombre) => ENTIDADES_HTML[nombre] ?? m)
 }
 
-async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null; sku?: string | null; disponible?: boolean }[]> {
+async function scrape(tienda: string): Promise<{ title: string; price: number; precio_original?: number; url: string; image?: string | null; sku?: string | null; disponible?: boolean; codigoDescuento?: string | null; descuentoPct?: number | null }[]> {
   const scraper = require(`./prices/scrapers/${tienda}.js`)
   const productos = scraper.scrape ? await scraper.scrape() : await scraper()
-  return productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
+  // Piloto 2026-06-28: algunos scrapers HTML (ver _discount-utils.js) marcan
+  // el array devuelto con una propiedad `codigoDescuento` cuando detectan un
+  // banner de cupon a nivel de pagina (no por producto). `.map()` crea un
+  // array NUEVO que no hereda esa propiedad, así que hay que rescatarla del
+  // array original ANTES de mapear y volver a colgarla del resultado.
+  const codigoDescuento = (productos as any).codigoDescuento ?? null
+  const mapeados = productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
+  ;(mapeados as any).codigoDescuento = codigoDescuento
+  return mapeados
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -457,6 +472,13 @@ async function main() {
     return MARCAS_NO_CATALOGADAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(tituloLow))
   }
 
+  // Piloto 2026-06-28: codigo de descuento detectado a nivel de pagina (no
+  // por producto) — se aplica igual a todos los productos de este scrape de
+  // esta tienda. Validado en vivo solo contra padelmania.com de momento (ver
+  // _discount-utils.js); el resto de scrapers no llaman al detector aun, así
+  // que aquí valdrá null para ellos y no cambia nada de su comportamiento.
+  const codigoDescuentoTienda = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null
+
   for (const p of productos) {
     const tituloLow = p.title.toLowerCase()
     if (EXCLUIR_PREFIJOS.some(pref => tituloLow.startsWith(pref))) {
@@ -513,6 +535,8 @@ async function main() {
           palaId: palaIdAlias, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: false,
           disponible: p.disponible,
+          codigoDescuento: codigoDescuentoTienda?.codigo ?? null,
+          descuentoPct: codigoDescuentoTienda?.descuento_pct ?? null,
         })
       }
       porAlias++
@@ -533,6 +557,8 @@ async function main() {
           palaId, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: true,
           disponible: p.disponible,
+          codigoDescuento: codigoDescuentoTienda?.codigo ?? null,
+          descuentoPct: codigoDescuentoTienda?.descuento_pct ?? null,
         })
       }
       porAtributos++
