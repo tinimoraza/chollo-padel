@@ -76,8 +76,9 @@ async function buscarPorAtributos(attrs: AtributosExtraidos) {
 
 // Sustituye la consulta a `producto_aliases` por producto por una búsqueda en
 // el mapa precargado en memoria (cargarAliasMap, llamado una vez en main()).
-function buscarPorAlias(textoNorm: string): string | null {
-  return aliasMap.get(textoNorm) ?? null
+// Clave compuesta tienda+texto (ver nota de causa raíz junto a claveAlias()).
+function buscarPorAlias(tienda: string, textoNorm: string): string | null {
+  return aliasMap.get(claveAlias(tienda, textoNorm)) ?? null
 }
 
 async function cargarCatalogoCompleto(): Promise<PalaCandidata[]> {
@@ -98,6 +99,22 @@ async function cargarCatalogoCompleto(): Promise<PalaCandidata[]> {
   return out
 }
 
+// Fix root-cause 2026-06-28: la clave única real de producto_aliases es
+// `tienda + texto_normalizado` (así se guarda con onConflict:'tienda,texto_normalizado'
+// y así lo edita GestorCandidatas al reasignar a mano). Pero este mapa se
+// indexaba SOLO por texto_normalizado, ignorando la tienda — cuando el mismo
+// título normalizado existe en varias tiendas (frecuente: la misma pala la
+// vende medio mercado con un título casi idéntico), solo sobrevivía el
+// primer alias que llegara al paginar, y ese podía ser el de OTRA tienda con
+// un match erróneo. Consecuencia real reportada: Patricia reasignaba a mano
+// el alias correcto de una tienda en GestorCandidatas → Verificación, y en
+// el siguiente scrape esa tienda seguía cayendo en la pala equivocada,
+// porque el alias "ganador" en memoria era el de otra tienda, no el suyo.
+// Fix: indexar por tienda+texto_normalizado, igual que la clave real en BD.
+function claveAlias(tienda: string, textoNorm: string): string {
+  return `${tienda}::${textoNorm}`
+}
+
 async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   let from = 0
@@ -105,15 +122,12 @@ async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
   while (true) {
     const { data, error } = await supabase
       .from('producto_aliases')
-      .select('pala_id, texto_normalizado')
+      .select('pala_id, texto_normalizado, tienda')
       .range(from, from + PAGE - 1)
     if (error) throw new Error(`cargarAliasMapDesdeBD: ${error.message}`)
     if (!data || data.length === 0) break
-    for (const row of data as { pala_id: string; texto_normalizado: string }[]) {
-      // El mismo texto_normalizado puede repetirse en varias tiendas (clave
-      // única real es tienda+texto) — basta con la primera ocurrencia, igual
-      // que hacía antes el .limit(1) de la consulta por producto.
-      if (!map.has(row.texto_normalizado)) map.set(row.texto_normalizado, row.pala_id)
+    for (const row of data as { pala_id: string; texto_normalizado: string; tienda: string }[]) {
+      map.set(claveAlias(row.tienda, row.texto_normalizado), row.pala_id)
     }
     if (data.length < PAGE) break
     from += PAGE
@@ -490,7 +504,7 @@ async function main() {
     titulosProcessed.add(textoNorm)
 
     // ── Vía 1: alias (cache) ─────────────────────────────────────────────────
-    const palaIdAlias = buscarPorAlias(textoNorm)
+    const palaIdAlias = buscarPorAlias(TIENDA, textoNorm)
     if (palaIdAlias) {
       if (DRY_RUN) {
         console.log(`  ✅ [alias] ${p.title}`)
