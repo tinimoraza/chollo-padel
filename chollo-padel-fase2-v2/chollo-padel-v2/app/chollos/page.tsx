@@ -13,7 +13,7 @@ const TIENDA_LABEL: Record<string, string> = {
   romasport:     'Roma Sport',
   padelcoronado: 'Padel Coronado',
   padelmarket:   'Padelmarket',
-  padeliberico:  'Padel Ibérico',
+  padeliberico:  'Padel Iberico',
   tennispoint:   'Tennis Point',
 }
 
@@ -66,13 +66,13 @@ export default function ChollosPage() {
       <main style={s.main}>
         {/* Cabecera */}
         <div style={s.pageHeader}>
-          <h1 style={s.title}>🔥 CHOLLOS</h1>
+          <h1 style={s.title}>CHOLLOS</h1>
           <p style={s.subtitle}>
-            BAJADAS DE PRECIO EN TIENDAS · ACTUALIZADO {totalStats.updated_at ? timeAgo(totalStats.updated_at).toUpperCase() : 'HOY'}
+            BAJADAS DE PRECIO EN TIENDAS - ACTUALIZADO {totalStats.updated_at ? timeAgo(totalStats.updated_at).toUpperCase() : 'HOY'}
           </p>
         </div>
 
-        {/* Stats rápidos */}
+        {/* Stats rapidos */}
         {!loading && !error && (
           <div style={s.statsRow}>
             <div style={s.statBox}>
@@ -81,11 +81,11 @@ export default function ChollosPage() {
             </div>
             <div style={{ ...s.statBox, borderColor: '#FF5F1F44' }}>
               <span style={{ ...s.statNum, color: '#FF5F1F' }}>{totalStats.chollos}</span>
-              <span style={s.statLbl}>🔥 CHOLLOS ≥35%</span>
+              <span style={s.statLbl}>CHOLLOS &gt;=35%</span>
             </div>
             <div style={{ ...s.statBox, borderColor: '#FFB80044' }}>
               <span style={{ ...s.statNum, color: '#FFB800' }}>{totalStats.ofertas}</span>
-              <span style={s.statLbl}>⚡ OFERTAS ≥25%</span>
+              <span style={s.statLbl}>OFERTAS &gt;=25%</span>
             </div>
           </div>
         )}
@@ -103,8 +103,8 @@ export default function ChollosPage() {
                 }}
               >
                 {f === 'todos' ? `TODOS (${totalStats.total})`
-                  : f === 'CHOLLO' ? `🔥 CHOLLO (${totalStats.chollos})`
-                  : `⚡ OFERTA (${totalStats.ofertas})`}
+                  : f === 'CHOLLO' ? `CHOLLO (${totalStats.chollos})`
+                  : `OFERTA (${totalStats.ofertas})`}
               </button>
             ))}
           </div>
@@ -128,7 +128,7 @@ export default function ChollosPage() {
           <div style={s.estado}>
             <p style={s.estadoTxt}>No hay bajadas de precio significativas ahora mismo.</p>
             <p style={{ ...s.estadoTxt, fontSize: 12, marginTop: 8, color: 'rgba(255,255,255,0.2)' }}>
-              Los precios se actualizan automáticamente 4 veces al día.
+              Los precios se actualizan automaticamente 4 veces al dia.
             </p>
           </div>
         )}
@@ -144,14 +144,14 @@ export default function ChollosPage() {
                   background: c.tag === 'CHOLLO' ? '#FF5F1F' : '#FFB800',
                   color: c.tag === 'CHOLLO' ? '#fff' : '#000',
                 }}>
-                  {c.tag === 'CHOLLO' ? '🔥 CHOLLO' : '⚡ OFERTA'}
+                  {c.tag === 'CHOLLO' ? 'CHOLLO' : 'OFERTA'}
                 </div>
 
                 {/* Imagen */}
                 <div style={s.imgWrap}>
                   {c.imagen_url
                     ? <img src={c.imagen_url} alt={c.nombre} style={s.img} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    : <div style={s.imgPlaceholder}>🏓</div>
+                    : <div style={s.imgPlaceholder}>PADEL</div>
                   }
                 </div>
 
@@ -160,9 +160,19 @@ export default function ChollosPage() {
                   <p style={s.marca}>{c.marca}</p>
                   <p style={s.modelo}>{formatModelo(c.nombre, c.marca)}</p>
 
+                  {/* Banner codigo de descuento (tarea #175) */}
+                  {c.codigo_descuento && (
+                    <div style={s.codigoBanner}>
+                      CODIGO {c.codigo_descuento} -{c.descuento_codigo_pct}% EXTRA
+                    </div>
+                  )}
+
                   {/* Precios */}
                   <div style={s.precios}>
                     <span style={s.precioActual}>{c.precio_actual.toFixed(2)}€</span>
+                    {c.precio_sin_codigo && (
+                      <span style={s.precioSinCodigo}>{c.precio_sin_codigo.toFixed(2)}€</span>
+                    )}
                     <span style={s.precioRef}>
                       <span style={s.precioRefTachado}>ref {c.precio_referencia.toFixed(0)}€</span>
                     </span>
@@ -190,8 +200,8 @@ export default function ChollosPage() {
         {/* Nota explicativa */}
         {!loading && !error && (
           <p style={s.nota}>
-            El precio de referencia es la media de las últimas 4 semanas en tiendas.
-            Se actualiza automáticamente 4 veces al día.
+            El precio de referencia es la media de las ultimas 4 semanas en tiendas.
+            Se actualiza automaticamente 4 veces al dia.
           </p>
         )}
       </main>
@@ -341,7 +351,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: 12,
   },
   imgPlaceholder: {
-    fontSize: 48,
+    fontSize: 18,
     opacity: 0.2,
   },
   info: {
@@ -388,6 +398,24 @@ const s: Record<string, React.CSSProperties> = {
   },
   precioRefTachado: {
     textDecoration: 'line-through',
+  },
+  precioSinCodigo: {
+    fontFamily: 'Barlow Condensed, sans-serif',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.3)',
+    textDecoration: 'line-through',
+  },
+  codigoBanner: {
+    fontFamily: 'Barlow Condensed, sans-serif',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    color: '#00D2A0',
+    background: 'rgba(0,210,160,0.1)',
+    border: '1px solid rgba(0,210,160,0.3)',
+    padding: '3px 8px',
+    marginTop: 6,
+    width: 'fit-content',
   },
   descuento: {
     fontFamily: 'Barlow Condensed, sans-serif',

@@ -26,6 +26,12 @@ export interface CholloTienda {
   tienda_slug:       string
   scraped_at:        string
   tag:               'CHOLLO' | 'OFERTA'
+  // Codigo de descuento extra detectado por el scraper (banner de tienda) o
+  // introducido a mano via la tool de gestion. Si esta presente, precio_actual
+  // YA lleva aplicado el descuento_codigo_pct (ver bucle principal mas abajo).
+  codigo_descuento:     string | null
+  precio_sin_codigo:    number | null
+  descuento_codigo_pct: number | null
 }
 
 const UMBRAL_CHOLLO = 0.65
@@ -93,6 +99,18 @@ function esDescartadoPorGuardias(
   return null
 }
 
+// Precio real que pagaria el usuario si existe un codigo_descuento detectado
+// (o introducido a mano) en este snapshot. Se usa tanto para decidir que
+// snapshot es "el mas barato" por pala (dedup) como para el ratio CHOLLO/
+// OFERTA - asi una tienda con codigo activo puede ganar a otra mas cara sin
+// codigo, que es justo el caso real que motivo la tarea #175.
+function precioEfectivo(snap: { precio: number; codigo_descuento?: string | null; descuento_pct?: number | null }): number {
+  if (snap.codigo_descuento && snap.descuento_pct && snap.descuento_pct > 0) {
+    return snap.precio * (1 - snap.descuento_pct / 100)
+  }
+  return snap.precio
+}
+
 export async function GET() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
@@ -100,17 +118,17 @@ export async function GET() {
   // con IN de 1000+ UUIDs que excede el limite de URL de PostgREST.
   //
   // NOTA (fix 2026-06-19): Supabase (PostgREST) tiene un tope "Max Rows" por
-  // request (por defecto 1000) que IGNORA el .range(0, 5000) que pedíamos —
-  // cualquier .range() que pida más de ese tope se trunca silenciosamente a
+  // request (por defecto 1000) que IGNORA el .range(0, 5000) que pediamos -
+  // cualquier .range() que pida mas de ese tope se trunca silenciosamente a
   // 1000 filas, SIN error. Con 19+ tiendas activas ya hay >5000 snapshots en
-  // 24h (confirmado: 5053), así que una sola query SIEMPRE se quedaba corta.
-  // Al venir ordenado por scraped_at DESC, se truncaban las filas más
-  // ANTIGUAS dentro de la ventana de 24h — es decir, justo las tiendas cuyo
+  // 24h (confirmado: 5053), asi que una sola query SIEMPRE se quedaba corta.
+  // Al venir ordenado por scraped_at DESC, se truncaban las filas mas
+  // ANTIGUAS dentro de la ventana de 24h - es decir, justo las tiendas cuyo
   // job de GitHub Actions termina antes en el batch (caso real: latiendadelpadel,
   // que escanea en el job "scrape-grupo-b" y termina ~10-15 min antes que
   // padelcoronado/ofertasdepadel en grupo-a). Sus snapshots quedaban fuera de
-  // la query y nunca llegaban a evaluarse en los guards/ratio → ningún chollo
-  // de esas tiendas podía aparecer aunque el precio fuera el más barato.
+  // la query y nunca llegaban a evaluarse en los guards/ratio -> ningun chollo
+  // de esas tiendas podia aparecer aunque el precio fuera el mas barato.
   // Fix: paginar en bloques de 1000 hasta agotar los resultados.
   const PAGE_SIZE = 1000
   function fetchPage(from: number, to: number) {
@@ -123,6 +141,8 @@ export async function GET() {
         url_producto,
         scraped_at,
         source_id,
+        codigo_descuento,
+        descuento_pct,
         price_sources ( nombre, slug ),
         palas ( *, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
       `)
@@ -158,7 +178,7 @@ export async function GET() {
   const byKey = new Map<string, typeof snapshots[0]>()
   for (const snap of Array.from(byTienda.values())) {
     const existing = byKey.get(snap.pala_id)
-    if (!existing || snap.precio < existing.precio) byKey.set(snap.pala_id, snap)
+    if (!existing || precioEfectivo(snap) < precioEfectivo(existing)) byKey.set(snap.pala_id, snap)
   }
 
   const urlToPalaIds = new Map<string, Set<string>>()
@@ -193,13 +213,13 @@ export async function GET() {
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
     // Bug real 2026-06-21: MAX_SPREAD=2.5 fijo descartaba chollos genuinos en
     // productos con muchas tiendas (ej. Bullpadel Vertex 04 25 Women: 8
-    // fuentes, match_confidence=1 en todas, min=74.95 max=269.95 → spread
-    // 3.6x). El guard se diseñó para detectar matches CONTAMINADOS (precios
-    // dispares por error de matching), no para penalizar variación real de
-    // precio entre muchas tiendas independientes — y cuantas más fuentes
+    // fuentes, match_confidence=1 en todas, min=74.95 max=269.95 -> spread
+    // 3.6x). El guard se diseno para detectar matches CONTAMINADOS (precios
+    // dispares por error de matching), no para penalizar variacion real de
+    // precio entre muchas tiendas independientes - y cuantas mas fuentes
     // coinciden de forma consistente, menos probable es que sea un error de
     // matching. Fix: tolerancia de spread escalada por fuentes_count en vez
-    // de un umbral único — más fuentes = más confianza = más margen.
+    // de un umbral unico - mas fuentes = mas confianza = mas margen.
     const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : MAX_SPREAD
     if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > spreadMaximo) { _dbg.push(`spread|${pala.modelo}`); continue }
 
@@ -216,7 +236,14 @@ export async function GET() {
     const motivo = esDescartadoPorGuardias(snap.url_producto, palaAno, pala.modelo, palaIdsEnEstaUrl)
     if (motivo) { _dbg.push(`guardia:${motivo}|${pala.modelo}`); continue }
 
-    const ratio = snap.precio / ref
+    // Tarea #175: si el snapshot tiene un codigo de descuento extra (detectado
+    // por el scraper o introducido a mano via la tool), el precio real que
+    // paga el usuario es precioFinal - y es ESE el que decide ratio/tag/orden,
+    // no el precio bruto scrapeado.
+    const tieneCodigo = !!(snap.codigo_descuento && snap.descuento_pct && snap.descuento_pct > 0)
+    const precioFinal = precioEfectivo(snap)
+
+    const ratio = precioFinal / ref
     if (ratio > UMBRAL_OFERTA) { _dbg.push(`ratio=${ratio.toFixed(3)}>${UMBRAL_OFERTA}|${pala.modelo}`); continue }
 
     const descuento_pct = Math.round((1 - ratio) * 100)
@@ -230,7 +257,7 @@ export async function GET() {
       ano:               palaAno,
       slug:              pala.slug,
       imagen_url:        pala.imagen_url,
-      precio_actual:     snap.precio,
+      precio_actual:     precioFinal,
       precio_original:   snap.precio_original,
       precio_referencia: ref,
       descuento_pct,
@@ -239,6 +266,9 @@ export async function GET() {
       tienda_slug:       fuente.slug,
       scraped_at:        snap.scraped_at,
       tag,
+      codigo_descuento:     tieneCodigo ? snap.codigo_descuento : null,
+      precio_sin_codigo:    tieneCodigo ? snap.precio : null,
+      descuento_codigo_pct: tieneCodigo ? snap.descuento_pct : null,
     })
   }
 
