@@ -60,10 +60,49 @@ async function scrape() {
     return []
   }
 
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
+  function parseProductos($) {
+    const out = []
+    $('article.product-miniature').each((_, el) => {
+      const $el = $(el)
+
+      const title = $el.find('.product-title a').first().text().trim()
+        || $el.find('h3.product-title').first().text().trim()
+      if (!title) return
+      if (!isPala(title)) return
+
+      const link = $el.find('a.product-thumbnail').first().attr('href')
+        || $el.find('.product-title a').first().attr('href')
+      if (!link || !link.startsWith('http')) return
+
+      const priceText    = $el.find('span.product-price').first().text()
+      const originalText = $el.find('span.regular-price').first().text()
+      const price    = parsePrice(priceText)
+      const original = parsePrice(originalText)
+      if (isNaN(price) || price < 30) return
+
+      const imgEl  = $el.find('a.product-thumbnail img, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
+      out.push({
+        title,
+        price,
+        precio_original: (!isNaN(original) && original > price) ? original : null,
+        url: link,
+        image,
+      })
+    })
+    return out
+  }
+
   const allProducts = []
   const seen = new Set()
   let pageNum = 1
   let hasMore = true
+  let codigoDescuento = null
+  let rebajasUrls = []
 
   while (hasMore && pageNum <= MAX_PAGES) {
     const url = pageNum === 1
@@ -86,51 +125,25 @@ async function scrape() {
     }
 
     const $ = cheerio.load(html)
+
+    if (pageNum === 1) {
+      codigoDescuento = detectarCodigoDescuento($('body').text())
+      if (codigoDescuento) {
+        console.log(`[ofertasdepadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+      if (rebajasUrls.length > 0) {
+        console.log(`[ofertasdepadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
+    }
+
     const pageProducts = []
-
-    $('article.product-miniature').each((_, el) => {
-      const $el = $(el)
-
-      // Título
-      const title = $el.find('.product-title a').first().text().trim()
-        || $el.find('h3.product-title').first().text().trim()
-      if (!title) return
-
-      // Filtrar no-palas
-      if (!isPala(title)) return
-
-      // URL producto
-      const link = $el.find('a.product-thumbnail').first().attr('href')
-        || $el.find('.product-title a').first().attr('href')
-      if (!link || !link.startsWith('http')) return
-
-      // Deduplicar
-      if (seen.has(link)) return
-      seen.add(link)
-
-      // Precios
-      const priceText    = $el.find('span.product-price').first().text()
-      const originalText = $el.find('span.regular-price').first().text()
-
-      const price    = parsePrice(priceText)
-      const original = parsePrice(originalText)
-
-      if (isNaN(price) || price < 30) return  // precio mínimo razonable para una pala
-
-      // Imagen — PrestaShop suele hacer lazy-load (data-src con la url real,
-      // "src" empieza siendo un placeholder base64/1x1). Descartamos "data:".
-      const imgEl  = $el.find('a.product-thumbnail img, img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-
-      pageProducts.push({
-        title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: link,
-        image,
-      })
-    })
+    for (const item of parseProductos($)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      pageProducts.push(item)
+    }
 
     console.log(`[ofertasdepadel]   → ${pageProducts.length} palas en página ${pageNum}`)
     allProducts.push(...pageProducts)
@@ -142,10 +155,31 @@ async function scrape() {
     if (hasMore) await sleep(DELAY_MS)
   }
 
-  console.log(`[ofertasdepadel] Total palas: ${allProducts.length}`)
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try {
+      const res = await fetch(rebajasUrl, { headers: HEADERS })
+      if (!res.ok) { console.log(`[ofertasdepadel] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      html = await res.text()
+    } catch (err) {
+      console.error(`[ofertasdepadel] Error sección rebajas ${rebajasUrl}:`, err.message)
+      continue
+    }
+    const $ = cheerio.load(html)
+    let added = 0
+    for (const item of parseProductos($)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+      added++
+    }
+    console.log(`[ofertasdepadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    await sleep(DELAY_MS)
+  }
 
+  console.log(`[ofertasdepadel] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -154,6 +188,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }
