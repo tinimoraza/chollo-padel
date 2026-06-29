@@ -434,6 +434,16 @@ async function main() {
 
   // Prefijos que indican que NO es una pala individual
   const EXCLUIR_PREFIJOS = ['pack ', 'super pack ', 'pala test ', 'bolso ', 'accesorio ', 'pala de padel open']
+
+  // Fix 20260629: ropa, calzado y paleteros coladas en pendientes desde tiendas
+  // sin filtro propio de categoría (padelcoronado, zonadepadel, padelnuestro,
+  // tiendapadel5 — confirmado vía SQL real: 70 filas en pendientes hoy, todas
+  // de estas 4 tiendas). Estos 4 scrapers no tienen su propio isPala()/EXCLUIR
+  // (a diferencia de futurapadelshop.js, que sí filtra en origen), así que caían
+  // siempre en "sin match" → Gestor. Filtro central por palabra completa (\b)
+  // para no generar falsos positivos con nombres de modelo de pala.
+  const ROPA_CALZADO_ACCESORIOS =
+    /\b(camisetas?|sudaderas?|polos?|shorts?|pantal[oó]n(es)?|faldas?|mallas?|chalecos?|cortavientos|calcet[ií]n(es)?|zapatillas?|paleteros?)\b/i
   // Marcas que no queremos trackear (entrenamiento, marcas residuales, etc.)
   const EXCLUIR_MARCAS = [
     'paddle coach', 'just ten',
@@ -527,6 +537,10 @@ async function main() {
     }
     if (tituloLow.includes('pickleball')) {
       if (DRY_RUN) console.log(`  🚫 [excluido pickleball] ${p.title}`)
+      continue
+    }
+    if (ROPA_CALZADO_ACCESORIOS.test(p.title)) {
+      if (DRY_RUN) console.log(`  🚫 [ropa/calzado/accesorio] ${p.title}`)
       continue
     }
     if (tituloLow.includes('beach tennis') || /\bbt\b/i.test(p.title)) {
