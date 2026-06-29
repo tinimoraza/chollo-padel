@@ -82,7 +82,7 @@ async function limpiarFalseNegatives(): Promise<number> {
     const d = c.datos_extraidos as Record<string, any>
     if (!d.marca || !d.linea) continue
 
-    const match = (catalogo ?? []).find(p => {
+    const matches = (catalogo ?? []).filter(p => {
       if (p.marca !== d.marca) return false
       if (!p.linea || p.linea.toLowerCase() !== d.linea?.toLowerCase()) return false
       if (d.modelo && p.modelo && p.modelo.toLowerCase() !== d.modelo.toLowerCase()) return false
@@ -90,6 +90,16 @@ async function limpiarFalseNegatives(): Promise<number> {
       const añoOk = !d.año || !p.año || String(p.año) === String(d.año)
       return añoOk
     })
+
+    if (matches.length > 1) {
+      // Ambiguo (p.ej. modelo no especificado y varias variantes en catálogo):
+      // no auto-resolver para no asignar la pala equivocada. Queda pendiente
+      // para revisión manual en el Gestor.
+      console.log(`  ⚠️  [ambiguo, ${matches.length} candidatos] ${c.titulo} — se deja pendiente`)
+      continue
+    }
+
+    const match = matches[0]
 
     if (match) {
       console.log(`  🔗 [ya existe] ${c.titulo} → ${match.id}`)
