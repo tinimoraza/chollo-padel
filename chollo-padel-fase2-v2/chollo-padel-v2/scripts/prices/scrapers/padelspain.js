@@ -50,10 +50,41 @@ async function scrape() {
     console.error('[padelspain] cheerio no instalado'); return []
   }
 
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
+  function parseCards($, cards) {
+    const out = []
+    cards.each((_, el) => {
+      const $card = $(el)
+      const titleEl = $card.find('a[title]').filter((_, a) => $(a).attr('class') === '' || !$(a).attr('class')).first()
+      const title = (titleEl.attr('title') || titleEl.text().trim() || '').trim()
+      const link = titleEl.attr('href')
+      if (!title || !isPala(title) || !link || !link.startsWith('http')) return
+
+      const price    = parsePrice($card.find('[itemprop="price"], span.product-price, .price').first().text())
+      const original = parsePrice($card.find('.regular-price, .old-price').first().text())
+      if (isNaN(price) || price < 30) return
+
+      const imgEl  = $card.find('a.tm_gallery_item_box img, img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
+      out.push({
+        title, price,
+        precio_original: (!isNaN(original) && original > price) ? original : null,
+        url: link,
+        image,
+      })
+    })
+    return out
+  }
+
   const allProducts = []
   const seen = new Set()
   let page = 1
   let lastPage = 1
+  let codigoDescuento = null
+  let rebajasUrls = []
 
   while (page <= MAX_PAGES) {
     const url = page === 1
@@ -68,6 +99,18 @@ async function scrape() {
     const cards = $('.js-product-miniature, article.product-miniature')
     if (cards.length === 0) break
 
+    if (page === 1) {
+      codigoDescuento = detectarCodigoDescuento($('body').text())
+      if (codigoDescuento) {
+        console.log(`[padelspain] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+      if (rebajasUrls.length > 0) {
+        console.log(`[padelspain] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
+    }
+
     $('.pagination a').each((_, a) => {
       const href = $(a).attr('href') || ''
       const m = href.match(/page=(\d+)/)
@@ -77,31 +120,11 @@ async function scrape() {
       }
     })
 
-    cards.each((_, el) => {
-      const $card = $(el)
-      // El <a> del título no tiene clase propia; se identifica por el atributo title=
-      const titleEl = $card.find('a[title]').filter((_, a) => $(a).attr('class') === '' || !$(a).attr('class')).first()
-      const title = (titleEl.attr('title') || titleEl.text().trim() || '').trim()
-      const link = titleEl.attr('href')
-      if (!title || !isPala(title) || !link || !link.startsWith('http') || seen.has(link)) return
-      seen.add(link)
-
-      const price    = parsePrice($card.find('[itemprop="price"], span.product-price, .price').first().text())
-      const original = parsePrice($card.find('.regular-price, .old-price').first().text())
-      if (isNaN(price) || price < 30) return
-
-      // Imagen — PrestaShop, posible lazy-load (data-src con la url real).
-      const imgEl  = $card.find('a.tm_gallery_item_box img, img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-
-      allProducts.push({
-        title, price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: link,
-        image,
-      })
-    })
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+    }
 
     console.log(`[padelspain] página ${page}/${lastPage} → ${cards.length} cards`)
 
@@ -110,9 +133,26 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try { html = await fetchPage(rebajasUrl) }
+    catch (e) { console.error(`[padelspain] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    const $ = cheerio.load(html)
+    const cards = $('.js-product-miniature, article.product-miniature')
+    let added = 0
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+      added++
+    }
+    console.log(`[padelspain] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[padelspain] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -121,6 +161,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

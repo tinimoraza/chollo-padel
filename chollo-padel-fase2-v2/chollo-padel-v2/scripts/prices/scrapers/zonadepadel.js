@@ -95,7 +95,43 @@ async function completarAñoSiFalta(load, products) {
   }
 }
 
-async function scrapeBrandCat(load, catPath) {
+function parseArticles($, articles) {
+  const out = []
+  articles.each((_, art) => {
+    const $a = $(art)
+    const titleEl = $a.find('.product-title a, h2 a, h3 a').first()
+    const title = titleEl.text().trim()
+    const url   = titleEl.attr('href')
+    if (!title || !url) return
+
+    const price    = parsePrice($a.find('.boxed-price').first().text())
+    const original = parsePrice($a.find('.regular-price').first().text())
+
+    // Si no hay .boxed-price, buscar .price directamente
+    const fallbackPrice = isNaN(price)
+      ? parsePrice($a.find('.price').first().text())
+      : price
+
+    const finalPrice = isNaN(price) ? fallbackPrice : price
+    if (isNaN(finalPrice) || finalPrice < 30) return
+
+    // Imagen — PrestaShop, posible lazy-load (data-src con la url real).
+    const imgEl  = $a.find('a.product-thumbnail img, img').first()
+    const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+    const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
+    out.push({
+      title,
+      price: finalPrice,
+      precio_original: (!isNaN(original) && original > finalPrice) ? original : null,
+      url,
+      image,
+    })
+  })
+  return out
+}
+
+async function scrapeBrandCat(load, catPath, detectarCodigoDescuento, filtrarUrlsRebajas, state) {
   const products = []
   let page = 1
 
@@ -112,6 +148,20 @@ async function scrapeBrandCat(load, catPath) {
     const articles = $('article.product-miniature')
     if (articles.length === 0) break
 
+    if (page === 1 && state && !state.checked) {
+      state.checked = true
+      state.codigoDescuento = detectarCodigoDescuento($('body').text())
+      if (state.codigoDescuento) {
+        console.log(`[zonadepadel] codigo detectado: ${state.codigoDescuento.codigo} (-${state.codigoDescuento.descuento_pct}%)`)
+      }
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      const excludeUrls = BRAND_CATS.map(c => `${BASE_URL}${c}`)
+      state.rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL, excludeUrls)
+      if (state.rebajasUrls.length > 0) {
+        console.log(`[zonadepadel] sección(es) de rebajas detectada(s): ${state.rebajasUrls.join(', ')}`)
+      }
+    }
+
     // Detect last page
     let lastPage = page
     $('.pagination a').each((_, a) => {
@@ -119,37 +169,7 @@ async function scrapeBrandCat(load, catPath) {
       if (!isNaN(n) && n > lastPage) lastPage = n
     })
 
-    articles.each((_, art) => {
-      const $a = $(art)
-      const titleEl = $a.find('.product-title a, h2 a, h3 a').first()
-      const title = titleEl.text().trim()
-      const url   = titleEl.attr('href')
-      if (!title || !url) return
-
-      const price    = parsePrice($a.find('.boxed-price').first().text())
-      const original = parsePrice($a.find('.regular-price').first().text())
-
-      // Si no hay .boxed-price, buscar .price directamente
-      const fallbackPrice = isNaN(price)
-        ? parsePrice($a.find('.price').first().text())
-        : price
-
-      const finalPrice = isNaN(price) ? fallbackPrice : price
-      if (isNaN(finalPrice) || finalPrice < 30) return
-
-      // Imagen — PrestaShop, posible lazy-load (data-src con la url real).
-      const imgEl  = $a.find('a.product-thumbnail img, img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-
-      products.push({
-        title,
-        price: finalPrice,
-        precio_original: (!isNaN(original) && original > finalPrice) ? original : null,
-        url,
-        image,
-      })
-    })
+    products.push(...parseArticles($, articles))
 
     console.log(`[zonadepadel] ${catPath} p${page}/${lastPage} → ${articles.length} productos`)
 
@@ -168,16 +188,36 @@ async function scrape() {
   try { ({ load } = require('cheerio')) }
   catch { console.error('[zonadepadel] cheerio no instalado'); return [] }
 
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
   const allProducts = []
   const seen = new Set()
+  const state = { checked: false, codigoDescuento: null, rebajasUrls: [] }
 
   for (const catPath of BRAND_CATS) {
-    const products = await scrapeBrandCat(load, catPath)
+    const products = await scrapeBrandCat(load, catPath, detectarCodigoDescuento, filtrarUrlsRebajas, state)
     for (const p of products) {
       if (seen.has(p.url)) continue
       seen.add(p.url)
       allProducts.push(p)
     }
+    await sleep(DELAY_MS)
+  }
+
+  for (const rebajasUrl of state.rebajasUrls) {
+    let html
+    try { html = await fetchPage(rebajasUrl) }
+    catch (e) { console.error(`[zonadepadel] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    const $ = load(html)
+    const articles = $('article.product-miniature')
+    let added = 0
+    for (const p of parseArticles($, articles)) {
+      if (seen.has(p.url)) continue
+      seen.add(p.url)
+      allProducts.push(p)
+      added++
+    }
+    console.log(`[zonadepadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 
@@ -190,7 +230,7 @@ async function scrape() {
   }
 
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -199,6 +239,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = state.codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

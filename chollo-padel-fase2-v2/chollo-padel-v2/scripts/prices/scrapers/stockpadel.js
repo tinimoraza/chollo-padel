@@ -46,10 +46,47 @@ async function scrape() {
     console.error('[stockpadel] cheerio no instalado'); return []
   }
 
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
+  function parseCards($, cards) {
+    const out = []
+    cards.each((_, el) => {
+      const $card = $(el)
+
+      const linkEl = $card.find('h3.product-title a').first()
+      const title  = linkEl.text().trim()
+      const href   = linkEl.attr('href')
+      if (!title || !href || !isPala(title)) return
+
+      const priceEl = $card.find('span.product-price').first()
+      const price   = priceEl.attr('content')
+        ? parseFloat(priceEl.attr('content'))
+        : parsePrice(priceEl.text())
+      if (isNaN(price) || price < 30) return
+
+      const original = parsePrice($card.find('.regular-price').first().text())
+
+      const imgEl  = $card.find('img.product-thumbnail-first').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') || rawImg.includes('blank.png') ? null : (rawImg.split('?')[0] || null)
+
+      out.push({
+        title,
+        price,
+        precio_original: (!isNaN(original) && original > price) ? original : null,
+        url: href,
+        image,
+      })
+    })
+    return out
+  }
+
   const allProducts = []
   const seen = new Set()
   let page = 1
   let lastPage = 1
+  let codigoDescuento = null
+  let rebajasUrls = []
 
   while (page <= MAX_PAGES) {
     const url = page === 1
@@ -64,6 +101,18 @@ async function scrape() {
     const cards = $('article.product-miniature, .js-product-miniature')
     if (cards.length === 0) break
 
+    if (page === 1) {
+      codigoDescuento = detectarCodigoDescuento($('body').text())
+      if (codigoDescuento) {
+        console.log(`[stockpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+      if (rebajasUrls.length > 0) {
+        console.log(`[stockpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
+    }
+
     // Detectar última página desde la paginación
     $('.pagination a').each((_, a) => {
       const href = $(a).attr('href') || ''
@@ -74,39 +123,11 @@ async function scrape() {
       }
     })
 
-    cards.each((_, el) => {
-      const $card = $(el)
-
-      // Título y URL — stockpadel usa <h3 class="product-title"><a href="...">Título</a></h3>
-      const linkEl = $card.find('h3.product-title a').first()
-      const title  = linkEl.text().trim()
-      const href   = linkEl.attr('href')
-      if (!title || !href || !isPala(title) || seen.has(href)) return
-      seen.add(href)
-
-      // Precio — <span class="product-price" content="109.99">109,99 €</span>
-      const priceEl = $card.find('span.product-price').first()
-      const price   = priceEl.attr('content')
-        ? parseFloat(priceEl.attr('content'))
-        : parsePrice(priceEl.text())
-      if (isNaN(price) || price < 30) return
-
-      // Precio original tachado — <span class="regular-price">220,00 €</span>
-      const original = parsePrice($card.find('.regular-price').first().text())
-
-      // Imagen — lazy load en data-src de img.product-thumbnail-first
-      const imgEl  = $card.find('img.product-thumbnail-first').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') || rawImg.includes('blank.png') ? null : (rawImg.split('?')[0] || null)
-
-      allProducts.push({
-        title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: href,
-        image,
-      })
-    })
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+    }
 
     console.log(`[stockpadel] página ${page}/${lastPage} → ${cards.length} cards`)
 
@@ -115,9 +136,26 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try { html = await fetchPage(rebajasUrl) }
+    catch (e) { console.error(`[stockpadel] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    const $ = cheerio.load(html)
+    const cards = $('article.product-miniature, .js-product-miniature')
+    let added = 0
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+      added++
+    }
+    console.log(`[stockpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[stockpadel] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -126,6 +164,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

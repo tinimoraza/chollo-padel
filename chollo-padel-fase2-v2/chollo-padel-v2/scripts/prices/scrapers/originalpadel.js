@@ -67,10 +67,46 @@ async function scrape() {
     console.error('[originalpadel] cheerio no instalado'); return []
   }
 
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
+  function parseCards($, cards) {
+    const out = []
+    cards.each((_, el) => {
+      const $c = $(el)
+
+      const linkEl = $c.find('div.name a').first()
+      const title  = linkEl.text().trim()
+      let   href   = linkEl.attr('href') || ''
+
+      if (!title || !href || href.includes('?product_id=') || !isPala(title)) return
+
+      try { href = new URL(href).pathname.replace(/\/$/, '') + '/' } catch { /* mantener tal cual */ }
+      if (!href.startsWith('http')) href = BASE_URL + href
+
+      const priceNew  = parsePrice($c.find('span.price-new').first().text())
+      const priceNorm = parsePrice($c.find('span.price-normal').first().text())
+      const priceOld  = parsePrice($c.find('span.price-old').first().text())
+
+      const price    = !isNaN(priceNew) ? priceNew : priceNorm
+      const original = (!isNaN(priceOld) && priceOld > price) ? priceOld : null
+
+      if (isNaN(price) || price < 30) return
+
+      const imgEl  = $c.find('img.img-first').first()
+      const rawImg = imgEl.attr('src') || ''
+      const image  = rawImg || null
+
+      out.push({ title, price, precio_original: original, url: href, image })
+    })
+    return out
+  }
+
   const allProducts = []
   const seen = new Set()
   let page = 1
   let lastPage = 1
+  let codigoDescuento = null
+  let rebajasUrls = []
 
   while (page <= MAX_PAGES) {
     const url = pageUrl(page)
@@ -84,6 +120,10 @@ async function scrape() {
 
     // Detectar última página desde paginación OpenCart
     if (page === 1) {
+      codigoDescuento = detectarCodigoDescuento($('body').text())
+      if (codigoDescuento) {
+        console.log(`[originalpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
       $('.pagination a').each((_, a) => {
         const href = $(a).attr('href') || ''
         const m = href.match(/\/page\/(\d+)\//)
@@ -100,46 +140,19 @@ async function scrape() {
         if (!isNaN(n) && n > lastPage) lastPage = n
       }
       console.log(`[originalpadel] Total páginas: ${lastPage}`)
+
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CAT_PATH}`)
+      if (rebajasUrls.length > 0) {
+        console.log(`[originalpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
     }
 
-    cards.each((_, el) => {
-      const $c = $(el)
-
-      // Título y URL — OpenCart Journal3: div.name > a
-      const linkEl = $c.find('div.name a').first()
-      const title  = linkEl.text().trim()
-      let   href   = linkEl.attr('href') || ''
-
-      // Algunos productos rotos tienen href con ?product_id= en vez de slug — los descartamos
-      if (!title || !href || href.includes('?product_id=') || !isPala(title)) return
-
-      // Limpiar query params del href (vienen con ?sort=... &order=... &limit=...)
-      try { href = new URL(href).pathname.replace(/\/$/, '') + '/' } catch { /* mantener tal cual */ }
-      // Si la URL ya es absoluta la dejamos; si es relativa la completamos
-      if (!href.startsWith('http')) href = BASE_URL + href
-
-      if (seen.has(href)) return
-      seen.add(href)
-
-      // Precio — dos casos:
-      // 1. Producto en oferta: <span class="price-new">178.47€</span> <span class="price-old">198.35€</span>
-      // 2. Precio normal:      <span class="price-normal">159.95€</span>
-      const priceNew  = parsePrice($c.find('span.price-new').first().text())
-      const priceNorm = parsePrice($c.find('span.price-normal').first().text())
-      const priceOld  = parsePrice($c.find('span.price-old').first().text())
-
-      const price    = !isNaN(priceNew) ? priceNew : priceNorm
-      const original = (!isNaN(priceOld) && priceOld > price) ? priceOld : null
-
-      if (isNaN(price) || price < 30) return
-
-      // Imagen — img.img-first tiene src directo (no lazy load en OpenCart Journal3)
-      const imgEl  = $c.find('img.img-first').first()
-      const rawImg = imgEl.attr('src') || ''
-      const image  = rawImg || null
-
-      allProducts.push({ title, price, precio_original: original, url: href, image })
-    })
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+    }
 
     console.log(`[originalpadel] página ${page}/${lastPage} → ${cards.length} cards, ${allProducts.length} acumuladas`)
 
@@ -148,9 +161,26 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try { html = await fetchPage(rebajasUrl) }
+    catch (e) { console.error(`[originalpadel] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    const $ = cheerio.load(html)
+    const cards = $('div.product-layout')
+    let added = 0
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+      added++
+    }
+    console.log(`[originalpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[originalpadel] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -159,6 +189,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

@@ -29,6 +29,57 @@ try {
   process.exit(1);
 }
 
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js');
+
+// El campo `template` de la API FacetWP solo trae el fragmento de la grid de
+// productos, nunca el header/banner de la página. Para detectar un código de
+// descuento sitewide (ej. banner "SPRINGDAYS10") hace falta una petición
+// adicional, una sola vez, a la página estática del catálogo.
+function fetchStaticPage(url) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':     'text/html,application/xhtml+xml',
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(20_000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.end();
+  });
+}
+
+async function detectarCodigoYRebajas() {
+  try {
+    const html = await fetchStaticPage('https://padelzoom.es/palas/');
+    const $ = cheerio.load(html);
+    const codigo = detectarCodigoDescuento($('body').text());
+    if (codigo) {
+      console.log(`[padelzoom] codigo detectado: ${codigo.codigo} (-${codigo.descuento_pct}%)`);
+    }
+    const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get();
+    const rebajasUrls = filtrarUrlsRebajas(hrefs, 'https://padelzoom.es/palas/');
+    if (rebajasUrls.length > 0) {
+      console.log(`[padelzoom] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`);
+    }
+    return { codigo, rebajasUrls };
+  } catch (e) {
+    console.error('[padelzoom] No se pudo comprobar codigo de descuento / rebajas:', e.message);
+    return { codigo: null, rebajasUrls: [] };
+  }
+}
+
 // ── HTTP POST ────────────────────────────────────────────────────────────────
 function postJson(url, body) {
   return new Promise((resolve, reject) => {
@@ -188,8 +239,25 @@ async function scrape() {
 
   console.log(`[padelzoom] ✅ Total scrapeado: ${allProducts.length} palas`);
 
+  const { codigo: codigoDescuento, rebajasUrls } = await detectarCodigoYRebajas();
+
+  for (const rebajasUrl of rebajasUrls) {
+    try {
+      const html = await fetchStaticPage(rebajasUrl);
+      const products = parseTemplate(html);
+      let added = 0;
+      for (const p of products) {
+        if (!seen.has(p.url)) { seen.add(p.url); allProducts.push(p); added++; }
+      }
+      console.log(`[padelzoom] sección rebajas ${rebajasUrl} → ${added} productos nuevos`);
+    } catch (e) {
+      console.error(`[padelzoom] Error sección rebajas ${rebajasUrl}:`, e.message);
+    }
+    await sleep(DELAY_MS);
+  }
+
   const scraped_at = new Date().toISOString();
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key: SOURCE_KEY,
     title:      p.title,
     price:      p.price,
@@ -197,6 +265,8 @@ async function scrape() {
     image:      p.image ?? null,
     scraped_at,
   }));
+  resultado.codigoDescuento = codigoDescuento;
+  return resultado;
 }
 
 module.exports = { scrape, SOURCE_KEY };
