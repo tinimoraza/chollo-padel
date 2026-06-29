@@ -6,6 +6,8 @@
 // campo que Shopify devuelve para las palas/raquetas en este catálogo.
 // Paginación: ?limit=250&page=N
 
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
+
 const SOURCE_KEY = 'justpadel'
 const BASE_URL   = 'https://justpadel.com'
 const LIMIT      = 250
@@ -80,9 +82,54 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Tienda Shopify JSON-only (sin colección de palas): petición HTML extra
+  // de solo lectura a la home, exclusivamente para código de descuento / rebajas.
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(BASE_URL, BASE_URL)
+  if (codigoDescuento) {
+    console.log(`[justpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[justpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+  }
+  for (const rebajasUrl of rebajasUrls) {
+    const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+    if (!slugMatch) continue
+    try {
+      const res = await fetch(`${BASE_URL}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'application/json' },
+      })
+      if (!res.ok) { console.error(`[justpadel] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      const data = await res.json()
+      let added = 0
+      for (const p of data.products ?? []) {
+        if (!isPala(p)) continue
+        const variant = p.variants?.[0]
+        if (!variant) continue
+        const price   = parseFloat(variant.price)
+        const compare = parseFloat(variant.compare_at_price)
+        const pUrl    = `${BASE_URL}/products/${p.handle}`
+        if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
+        seen.add(pUrl)
+        allProducts.push({
+          title: p.title,
+          price,
+          precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+          url: pUrl,
+          image: p.images?.[0]?.src?.split('?')[0] ?? null,
+          sku: variant.sku || null,
+        })
+        added++
+      }
+      console.log(`[justpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[justpadel] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[justpadel] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -92,6 +139,8 @@ async function scrape() {
     sku:             p.sku ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

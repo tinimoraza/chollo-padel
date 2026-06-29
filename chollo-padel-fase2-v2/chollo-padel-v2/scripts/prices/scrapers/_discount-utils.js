@@ -21,10 +21,11 @@
 //
 // Uso previsto: scrapers que ya parsean HTML con cheerio le pasan el texto
 // plano de la pagina (`$('body').text()`), NO el HTML crudo - asi se evita
-// ruido de atributos/clases. Las tiendas Shopify-JSON-only (futurapadelshop,
-// justpadel, padelkiwi, padelmarket, starvie, tennispoint) no tienen HTML de
-// pagina que escanear con este mecanismo: su JSON de producto no incluye
-// banners promocionales, asi que NO se les aplica este detector.
+// ruido de atributos/clases. Las tiendas API-only (Shopify JSON, WooCommerce
+// Store API, Clerk.io) no descargan HTML como parte de su flujo normal de
+// productos - para esas se usa el helper detectarRebajasYCodigoViaHtml() de
+// mas abajo, que hace una peticion HTML adicional solo para alimentar este
+// detector, sin tocar la extraccion de productos via API.
 
 const VENTANA = 80 // caracteres de margen para buscar el % cerca del codigo
 const PALABRAS_GENERICAS = new Set([
@@ -143,4 +144,39 @@ function filtrarUrlsRebajas(hrefs, baseUrl, excludeUrls = []) {
   return [...found.values()]
 }
 
-module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas }
+// -----------------------------------------------------------------------
+// Helper para tiendas API-only (Shopify JSON, WooCommerce Store API,
+// Clerk.io): estas tiendas no descargan HTML como parte de su flujo normal
+// de extraccion de productos (todo via API JSON), asi que no tienen texto
+// de pagina ni <a href> que pasarle a detectarCodigoDescuento/
+// filtrarUrlsRebajas. Este helper hace UNA peticion HTTP adicional, de solo
+// lectura, a una URL HTML (home o pagina de categoria) exclusivamente para
+// alimentar esos dos detectores - nunca toca ni reemplaza la logica de
+// extraccion de productos via API, que sigue exactamente igual. Disenado
+// para no romper nunca el scrape: cualquier fallo de red o HTTP devuelve
+// "nada detectado" en vez de lanzar excepcion.
+//
+// @param {string} url URL HTML a descargar (home o pagina de categoria)
+// @param {string} [baseUrl] URL base para resolver relativos / exclusion (por defecto, url)
+// @returns {Promise<{ codigoDescuento: {codigo:string,descuento_pct:number}|null, rebajasUrls: string[] }>}
+async function detectarRebajasYCodigoViaHtml(url, baseUrl) {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'es-ES,es;q=0.9',
+      },
+    })
+    if (!res.ok) return { codigoDescuento: null, rebajasUrls: [] }
+    const html = await res.text()
+    const codigoDescuento = detectarCodigoDescuento(html)
+    const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
+    const rebajasUrls = filtrarUrlsRebajas(hrefs, baseUrl || url)
+    return { codigoDescuento, rebajasUrls }
+  } catch {
+    return { codigoDescuento: null, rebajasUrls: [] }
+  }
+}
+
+module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas, detectarRebajasYCodigoViaHtml }

@@ -23,6 +23,13 @@
 // título, ya que es ruido específico del feed de esta tienda (no del extractor
 // genérico, que no debe tocarse para no afectar a otras tiendas).
 
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
+
+// Dominio real de la tienda (no estaba referenciado en el resto del fichero,
+// que solo usa la API de Clerk.io) — confirmado vía búsqueda web 2026-06-29:
+// www.misterpadel.com (palas: /es/palas-de-padel/).
+const SITE_URL    = 'https://www.misterpadel.com/es/'
+
 const SOURCE_KEY  = 'misterpadel'
 const CLERK_KEY   = 'oViLXCkVp3oqPERmIdkGDadmGGSm9FA8'
 const CAT_PALAS   = 1
@@ -90,8 +97,21 @@ async function scrape() {
   })
 
   console.log(`[misterpadel] Total palas únicas: ${unique.length}`)
+
+  // Tienda Clerk.io API-only: petición HTML extra de solo lectura a la home,
+  // exclusivamente para detección (código + enlaces a rebajas). No se intenta
+  // mergear productos de la sección detectada: Clerk.io no tiene un mapeo
+  // fiable URL→categoría aquí, así que nos limitamos a detectar y loguear.
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(SITE_URL, SITE_URL)
+  if (codigoDescuento) {
+    console.log(`[misterpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[misterpadel] sección(es) de rebajas detectada(s) (no scrapeada automáticamente): ${rebajasUrls.join(', ')}`)
+  }
+
   const scraped_at = new Date().toISOString()
-  return unique.map(p => ({
+  const resultado = unique.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -100,6 +120,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

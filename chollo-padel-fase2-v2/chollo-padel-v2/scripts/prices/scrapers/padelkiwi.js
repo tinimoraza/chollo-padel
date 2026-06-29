@@ -9,6 +9,7 @@
 //   node scripts/prices/pipeline.js padelkiwi
 
 const { refreshShopifyPrices } = require('./_shopify-utils')
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
 
 const SOURCE_KEY = 'padelkiwi'
 const DELAY_MS   = 700
@@ -52,6 +53,7 @@ async function scrape() {
   const seen = new Set()
   const allProducts = []
   const shopifyRes = await tryShopify()
+  let codigoDescuento = null
 
   if (shopifyRes) {
     const { base, col } = shopifyRes
@@ -83,6 +85,45 @@ async function scrape() {
       // coincide con el de otras tiendas antes de usarlo en el matching real.
       allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl, image, sku: variant.sku || null })
     }
+
+    // Tienda Shopify JSON-only: petición HTML extra de solo lectura a la
+    // colección detectada, exclusivamente para código de descuento / rebajas.
+    const detect = await detectarRebajasYCodigoViaHtml(`${base}/collections/${col}`, base)
+    codigoDescuento = detect.codigoDescuento
+    if (codigoDescuento) {
+      console.log(`[padelkiwi] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+    }
+    if (detect.rebajasUrls.length > 0) {
+      console.log(`[padelkiwi] sección(es) de rebajas detectada(s): ${detect.rebajasUrls.join(', ')}`)
+    }
+    for (const rebajasUrl of detect.rebajasUrls) {
+      const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+      if (!slugMatch) continue
+      try {
+        const res = await fetch(`${base}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+        })
+        if (!res.ok) { console.error(`[padelkiwi] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+        const data = await res.json()
+        let added = 0
+        for (const p of data.products ?? []) {
+          if (!isPala(p.title)) continue
+          const variant = p.variants?.[0]
+          if (!variant) continue
+          const price = parseFloat(variant.price)
+          const compare = parseFloat(variant.compare_at_price)
+          const pUrl = `${base}/products/${p.handle}`
+          if (isNaN(price) || price < 30 || seen.has(pUrl)) continue
+          seen.add(pUrl)
+          allProducts.push({ title: p.title, price, precio_original: (!isNaN(compare) && compare > price) ? compare : null, url: pUrl, image: p.images?.[0]?.src ?? null, sku: variant.sku || null })
+          added++
+        }
+        console.log(`[padelkiwi] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+      } catch (e) {
+        console.error(`[padelkiwi] Error sección rebajas ${rebajasUrl}:`, e.message)
+      }
+      await sleep(DELAY_MS)
+    }
   } else {
     console.log('[padelkiwi] ⚠️  No se pudo detectar plataforma — revisar manualmente padelkiwi.com')
   }
@@ -91,7 +132,9 @@ async function scrape() {
   console.log('[padelkiwi] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
   await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, sku: p.sku ?? null, scraped_at }))
+  const resultado = allProducts.map(p => ({ source_key: SOURCE_KEY, title: p.title, price: p.price, precio_original: p.precio_original ?? null, url: p.url, image: p.image ?? null, sku: p.sku ?? null, scraped_at }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

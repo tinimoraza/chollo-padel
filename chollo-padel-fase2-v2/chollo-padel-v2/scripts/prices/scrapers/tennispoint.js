@@ -3,13 +3,27 @@
 // Tennis-Point migró a Shopify, URL antigua /padel/palas-de-padel/ da 404
 
 const { refreshShopifyPrices } = require('./_shopify-utils')
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
 
 const SOURCE_KEY = 'tennispoint'
+const SITE_URL   = 'https://www.tennis-point.es'
 const BASE_URL   = 'https://www.tennis-point.es/collections/padel/products.json'
 const LIMIT      = 250
 const DELAY_MS   = 600
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+function limpiarTitulo(p) {
+  const cleanTitle = p.title
+    .replace(/\s*[+|]\s*Más\s+[^|+]+/gi, '')
+    .replace(/\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
+    .replace(/\s*,\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
+    .replace(/\s*Pala de pádel\s*$/i, '')
+    .replace(/\s*Pala de padel\s*$/i, '')
+    .replace(/[,;]\s*$/, '')
+    .trim()
+  return p.vendor ? `${p.vendor} ${cleanTitle}` : cleanTitle
+}
 
 async function scrape() {
   console.log('[tennispoint] Iniciando scraper (Shopify JSON API)…')
@@ -50,15 +64,7 @@ async function scrape() {
       // Shopify devuelve p.vendor con la marca (ej: "Wilson", "Bullpadel")
       // Los títulos de Tennis-Point no incluyen la marca, lo añadimos aquí
       // Limpiar sufijos de pack: "Más raquetera", "Más tubo de pelotas", etc.
-      const cleanTitle = p.title
-        .replace(/\s*[+|]\s*Más\s+[^|+]+/gi, '')
-        .replace(/\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
-        .replace(/\s*,\s*Más\s+(raquetera|tubo de pelotas|bolsa|mochila|funda|paletero)[^,]*/gi, '')
-        .replace(/\s*Pala de pádel\s*$/i, '')
-        .replace(/\s*Pala de padel\s*$/i, '')
-        .replace(/[,;]\s*$/, '')  // quitar comas/puntos colgantes
-        .trim()
-      const title = p.vendor ? `${p.vendor} ${cleanTitle}` : cleanTitle
+      const title = limpiarTitulo(p)
       // Shopify devuelve la imagen en p.image.src (o p.images[0].src como fallback)
       const image = p.image?.src ?? p.images?.[0]?.src ?? null
       allProducts.push({
@@ -80,11 +86,58 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Tienda Shopify JSON-only: petición HTML extra de solo lectura a la
+  // colección, exclusivamente para código de descuento / rebajas.
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(
+    `${SITE_URL}/collections/padel`, SITE_URL
+  )
+  if (codigoDescuento) {
+    console.log(`[tennispoint] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[tennispoint] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+  }
+  for (const rebajasUrl of rebajasUrls) {
+    const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+    if (!slugMatch) continue
+    try {
+      const res = await fetch(`${SITE_URL}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'application/json' },
+      })
+      if (!res.ok) { console.error(`[tennispoint] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      const data = await res.json()
+      let added = 0
+      for (const p of (data.products ?? []).filter(p => p.product_type === 'Padel rackets')) {
+        const variant = p.variants?.[0]
+        if (!variant) continue
+        const price   = parseFloat(variant.price)
+        const compare = parseFloat(variant.compare_at_price)
+        const url     = `${SITE_URL}/products/${p.handle}`
+        if (isNaN(price) || price < 30 || seen.has(url)) continue
+        if (/\btest\b/i.test(p.title)) continue
+        seen.add(url)
+        allProducts.push({
+          title: limpiarTitulo(p),
+          price,
+          precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+          url,
+          image: p.image?.src ?? p.images?.[0]?.src ?? null,
+          sku: variant.sku || null,
+        })
+        added++
+      }
+      console.log(`[tennispoint] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[tennispoint] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[tennispoint] Total palas: ${allProducts.length}`)
   console.log('[tennispoint] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
   await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -94,6 +147,8 @@ async function scrape() {
     sku:             p.sku ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

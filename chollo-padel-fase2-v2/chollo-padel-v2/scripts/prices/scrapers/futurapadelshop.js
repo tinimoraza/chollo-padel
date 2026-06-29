@@ -16,6 +16,8 @@ const LIMIT      = 250
 const DELAY_MS   = 600
 const IVA        = 1.21
 
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
+
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla', 'pack ']
 
@@ -85,10 +87,59 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Estas tiendas (Shopify JSON API) no descargan HTML normalmente — petición
+  // extra de solo lectura a la página de colección para detectar banners de
+  // código de descuento y enlaces a secciones de rebajas no contempladas.
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(
+    `${BASE_URL}/collections/${COLLECTION}`, BASE_URL
+  )
+  if (codigoDescuento) {
+    console.log(`[futurapadelshop] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[futurapadelshop] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+  }
+  for (const rebajasUrl of rebajasUrls) {
+    const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+    if (!slugMatch) continue
+    try {
+      const res = await fetch(`${BASE_URL}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'application/json' },
+      })
+      if (!res.ok) { console.error(`[futurapadelshop] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      const data = await res.json()
+      let added = 0
+      for (const p of data.products ?? []) {
+        if (!isPala(p.title)) continue
+        const variant = p.variants?.[0]
+        if (!variant) continue
+        const priceRaw = parseFloat(variant.price)
+        const compareRaw = parseFloat(variant.compare_at_price)
+        const pUrl = `${BASE_URL}/products/${p.handle}`
+        if (isNaN(priceRaw) || priceRaw < 30 || seen.has(pUrl)) continue
+        seen.add(pUrl)
+        allProducts.push({
+          title: p.title,
+          price: conIVA(priceRaw),
+          precio_original: (!isNaN(compareRaw) && compareRaw > priceRaw) ? conIVA(compareRaw) : null,
+          url: pUrl,
+          image: p.images?.[0]?.src?.split('?')[0] ?? null,
+          sku: variant.sku || null,
+          disponible: typeof variant.available === 'boolean' ? variant.available : true,
+        })
+        added++
+      }
+      console.log(`[futurapadelshop] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[futurapadelshop] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[futurapadelshop] Total palas: ${allProducts.length}`)
 
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -99,6 +150,8 @@ async function scrape() {
     disponible:      p.disponible ?? true,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

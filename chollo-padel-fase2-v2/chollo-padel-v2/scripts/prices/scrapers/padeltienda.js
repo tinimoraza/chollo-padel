@@ -2,6 +2,8 @@
 // WooCommerce — API REST pública (wc/store/v1), no hace falta cheerio/HTML
 // https://padel.tienda/wp-json/wc/store/v1/products?category=palas-padel
 
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
+
 const SOURCE_KEY = 'padeltienda'
 const BASE_URL   = 'https://padel.tienda'
 const CATEGORY   = 'palas-padel'
@@ -95,8 +97,22 @@ async function scrape() {
 
   console.log(`[padeltienda] Total palas: ${allProducts.length}`)
 
+  // Tienda WooCommerce Store API: petición HTML extra de solo lectura a la
+  // home, exclusivamente para detección (código + enlaces a rebajas). No se
+  // intenta mergear productos de la sección detectada: mapear esa URL al
+  // parámetro "category" correcto de la Store API no es fiable aquí, así que
+  // nos limitamos a detectar y loguear (igual que en otras tiendas best-effort
+  // del proyecto).
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(BASE_URL, BASE_URL)
+  if (codigoDescuento) {
+    console.log(`[padeltienda] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[padeltienda] sección(es) de rebajas detectada(s) (no scrapeada automáticamente): ${rebajasUrls.join(', ')}`)
+  }
+
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -106,6 +122,8 @@ async function scrape() {
     sku:             p.sku ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

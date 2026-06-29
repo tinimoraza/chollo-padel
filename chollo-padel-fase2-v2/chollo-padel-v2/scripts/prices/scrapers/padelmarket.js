@@ -3,8 +3,10 @@
 // ~310 palas en 2 páginas (250 + 60)
 
 const { refreshShopifyPrices } = require('./_shopify-utils')
+const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
 
 const SOURCE_KEY = 'padelmarket'
+const SITE_URL   = 'https://padelmarket.com'
 const BASE_URL   = 'https://padelmarket.com/collections/palas/products.json'
 const LIMIT      = 250
 const DELAY_MS   = 600
@@ -68,11 +70,60 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Tienda Shopify JSON-only: petición HTML extra de solo lectura a la
+  // colección, exclusivamente para detectar código de descuento / secciones
+  // de rebajas no contempladas (no toca la extracción de productos vía API).
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(
+    `${SITE_URL}/collections/palas`, SITE_URL
+  )
+  if (codigoDescuento) {
+    console.log(`[padelmarket] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  }
+  if (rebajasUrls.length > 0) {
+    console.log(`[padelmarket] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+  }
+  for (const rebajasUrl of rebajasUrls) {
+    const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+    if (!slugMatch) continue
+    try {
+      const res = await fetch(`${SITE_URL}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'application/json' },
+      })
+      if (!res.ok) { console.error(`[padelmarket] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      const data = await res.json()
+      let added = 0
+      for (const p of data.products ?? []) {
+        const variant = p.variants?.[0]
+        if (!variant) continue
+        const price   = parseFloat(variant.price)
+        const compare = parseFloat(variant.compare_at_price)
+        const url     = `${SITE_URL}/products/${p.handle}`
+        if (isNaN(price) || price < 30 || seen.has(url)) continue
+        seen.add(url)
+        let image = p.image?.src ?? p.images?.[0]?.src ?? null
+        if (image && image.startsWith('//')) image = `https:${image}`
+        allProducts.push({
+          title: p.title,
+          price,
+          precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+          url,
+          image,
+          sku: variant.sku || null,
+        })
+        added++
+      }
+      console.log(`[padelmarket] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[padelmarket] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
+    await sleep(DELAY_MS)
+  }
+
   console.log(`[padelmarket] Total palas: ${allProducts.length}`)
   console.log('[padelmarket] Verificando precios contra ficha individual (el listado puede ir cacheado)…')
   await refreshShopifyPrices(allProducts)
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -82,6 +133,8 @@ async function scrape() {
     sku:             p.sku ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }
