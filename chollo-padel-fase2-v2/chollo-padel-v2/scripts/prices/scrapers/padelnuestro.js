@@ -2,6 +2,7 @@
 // Scraper Padel Nuestro — Puppeteer + Magento 2
 
 const puppeteer = require("puppeteer");
+const { detectarCodigoDescuento } = require("./_discount-utils.js");
 
 const BASE_URL = "https://www.padelnuestro.com/palas-padel";
 const SOURCE_KEY = "padelnuestro";
@@ -57,11 +58,18 @@ async function scrape() {
 
   const allProducts = [];
   let pageNum = 1;
+  let codigoDescuento = null;
 
   try {
     console.log(`[padelnuestro] Abriendo ${BASE_URL} …`);
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForSelector("div.product-item-info", { timeout: 30_000 });
+
+    const bodyText = await page.evaluate(() => document.body.innerText);
+    codigoDescuento = detectarCodigoDescuento(bodyText);
+    if (codigoDescuento) {
+      console.log(`[padelnuestro] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`);
+    }
 
     while (true) {
       console.log(`[padelnuestro] Extrayendo página ${pageNum} …`);
@@ -92,7 +100,7 @@ async function scrape() {
   }
 
   const scraped_at = new Date().toISOString();
-  return allProducts.map((p) => ({
+  const resultado = allProducts.map((p) => ({
     source_key: SOURCE_KEY,
     title: p.title,
     price: p.price,
@@ -100,6 +108,8 @@ async function scrape() {
     image: p.image ?? null,
     scraped_at,
   }));
+  resultado.codigoDescuento = codigoDescuento;
+  return resultado;
 }
 
 module.exports = { scrape, SOURCE_KEY };

@@ -16,6 +16,8 @@ const SOURCE_KEY   = 'padeliberico'
 const BASE_URL     = 'https://www.padeliberico.es/palas-de-padel'
 const DELAY_MS     = 1500
 
+const { detectarCodigoDescuento } = require('./_discount-utils.js')
+
 async function extractProducts(page) {
   return page.evaluate(() => {
     const articles = Array.from(document.querySelectorAll('article.product-miniature'))
@@ -76,6 +78,7 @@ async function scrape() {
 
   const allProducts = []
   let pageNum = 1
+  let codigoDescuento = null
 
   try {
     while (true) {
@@ -96,6 +99,14 @@ async function scrape() {
       } catch {
         console.log(`[padeliberico] Sin productos en página ${pageNum} — fin`)
         break
+      }
+
+      if (pageNum === 1) {
+        const bodyText = await page.evaluate(() => document.body.innerText)
+        codigoDescuento = detectarCodigoDescuento(bodyText)
+        if (codigoDescuento) {
+          console.log(`[padeliberico] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+        }
       }
 
       const products = await extractProducts(page)
@@ -133,7 +144,7 @@ async function scrape() {
 
   console.log(`[padeliberico] Total palas únicas: ${unique.length}`)
   const scraped_at = new Date().toISOString()
-  return unique.map(p => ({
+  const resultado = unique.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -142,6 +153,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

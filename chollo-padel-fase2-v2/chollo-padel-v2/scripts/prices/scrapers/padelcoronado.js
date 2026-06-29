@@ -1,4 +1,6 @@
 // scripts/prices/scrapers/padelcoronado.js
+const { detectarCodigoDescuento } = require('./_discount-utils.js')
+
 const SOURCE_KEY      = 'padelcoronado'
 const CATEGORY_URL    = 'https://padelcoronado.com/categoria-producto/palas-padel/'
 const SCROLL_PAUSE_MS = 4000
@@ -22,7 +24,7 @@ async function safeEvaluate(page, fn, attempts = 3) {
   return null
 }
 
-async function scrapeBrandPage(page, url) {
+async function scrapeBrandPage(page, url, state) {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 40000 }).catch(() => {})
   await page.waitForTimeout(2500)
 
@@ -31,6 +33,15 @@ async function scrapeBrandPage(page, url) {
   } catch {
     console.log(`[padelcoronado]   Sin productos en ${url}`)
     return []
+  }
+
+  if (state && !state.checked) {
+    state.checked = true
+    const bodyText = await page.evaluate(() => document.body.innerText).catch(() => '')
+    state.codigoDescuento = detectarCodigoDescuento(bodyText)
+    if (state.codigoDescuento) {
+      console.log(`[padelcoronado] codigo detectado: ${state.codigoDescuento.codigo} (-${state.codigoDescuento.descuento_pct}%)`)
+    }
   }
 
   // Scroll hasta estabilizar
@@ -173,10 +184,11 @@ async function scrape() {
 
   // Scrapear cada marca
   const allProducts = []
+  const state = { checked: false, codigoDescuento: null }
   for (const brandUrl of brandUrls) {
     const brand = brandUrl.match(/marca-palas-([^/]+)/)?.[1] ?? 'global'
     console.log(`[padelcoronado] Scrapeando: ${brand}`)
-    const products = await scrapeBrandPage(page, brandUrl)
+    const products = await scrapeBrandPage(page, brandUrl, state)
     console.log(`[padelcoronado]   → ${products.length} palas`)
     allProducts.push(...products)
   }
@@ -194,7 +206,7 @@ async function scrape() {
   console.log(`[padelcoronado] Total palas únicas: ${unique.length}`)
 
   const scraped_at = new Date().toISOString()
-  return unique.map(p => ({
+  const resultado = unique.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -203,6 +215,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = state.codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }

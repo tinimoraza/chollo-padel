@@ -6,6 +6,8 @@ const BASE_URL   = 'https://padelproshop.com/collections/palas-padel'
 const SECTION_ID = 'template--26596133339441__main'
 const DELAY_MS   = 600
 
+const { detectarCodigoDescuento } = require('./_discount-utils.js')
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 function extractFromHtml(html) {
@@ -58,6 +60,7 @@ async function scrape() {
   const allProducts = []
   const seen        = new Set()
   let page          = 1
+  let codigoDescuento = null
 
   while (true) {
     const url = `${BASE_URL}?page=${page}&section_id=${SECTION_ID}`
@@ -78,6 +81,13 @@ async function scrape() {
     } catch (err) {
       console.error(`[padelproshop] Error:`, err.message)
       break
+    }
+
+    if (page === 1) {
+      codigoDescuento = detectarCodigoDescuento(html)
+      if (codigoDescuento) {
+        console.log(`[padelproshop] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
     }
 
     const products = extractFromHtml(html)
@@ -103,7 +113,7 @@ async function scrape() {
   console.log(`[padelproshop] Total palas únicas: ${allProducts.length}`)
 
   const scraped_at = new Date().toISOString()
-  return allProducts.map(p => ({
+  const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
@@ -112,6 +122,8 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
+  resultado.codigoDescuento = codigoDescuento
+  return resultado
 }
 
 module.exports = { scrape, SOURCE_KEY }
