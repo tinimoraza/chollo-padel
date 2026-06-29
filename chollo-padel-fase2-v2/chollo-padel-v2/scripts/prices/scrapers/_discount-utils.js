@@ -28,10 +28,17 @@
 // detector, sin tocar la extraccion de productos via API.
 
 const VENTANA = 80 // caracteres de margen para buscar el % cerca del codigo
+const VENTANA_EXCLUSION = 150 // margen mas amplio para detectar contexto de newsletter
 const PALABRAS_GENERICAS = new Set([
   'DESCUENTO', 'EXTRA', 'OFERTA', 'OFERTAS', 'PROMOCION', 'PROMO', 'PADEL',
   'GRATIS', 'NUEVO', 'NUEVA', 'WEB',
 ])
+// Banners de "suscribete a la newsletter y consigue X% con el codigo ..." son
+// un patron habitual en Shopify/tiendas: el "codigo" mostrado suele ser
+// generico/decorativo (el codigo real, si existe, se genera y se envia por
+// email al suscribirte) - no es un codigo de caja operativo. Se descartan
+// estas coincidencias para no reportar codigos que no funcionan en checkout.
+const RE_CONTEXTO_NEWSLETTER = /newsletter|suscr[ií]bete|suscripci[oó]n|bolet[ií]n/i
 
 function limpiarTexto(input) {
   if (!input) return ''
@@ -66,6 +73,11 @@ function detectarCodigoDescuento(textoPagina) {
     if (mPct) {
       const pct = parseInt(mPct[1], 10)
       if (pct > 0 && pct <= 50) {
+        const inicioExcl = Math.max(0, m.index - VENTANA_EXCLUSION)
+        const finExcl = Math.min(texto.length, m.index + m[0].length + VENTANA_EXCLUSION)
+        const entornoExcl = texto.slice(inicioExcl, finExcl)
+        if (RE_CONTEXTO_NEWSLETTER.test(entornoExcl)) continue
+
         return { codigo, descuento_pct: pct }
       }
     }
