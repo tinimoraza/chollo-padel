@@ -2,7 +2,7 @@
 // Scraper Padel Nuestro — Puppeteer + Magento 2
 
 const puppeteer = require("puppeteer");
-const { detectarCodigoDescuento } = require("./_discount-utils.js");
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require("./_discount-utils.js");
 
 const BASE_URL = "https://www.padelnuestro.com/palas-padel";
 const SOURCE_KEY = "padelnuestro";
@@ -71,6 +71,12 @@ async function scrape() {
       console.log(`[padelnuestro] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`);
     }
 
+    const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll("a[href]")).map((a) => a.href));
+    const rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL);
+    if (rebajasUrls.length > 0) {
+      console.log(`[padelnuestro] sección(es) de rebajas detectada(s): ${rebajasUrls.join(", ")}`);
+    }
+
     while (true) {
       console.log(`[padelnuestro] Extrayendo página ${pageNum} …`);
       const products = await extractProducts(page);
@@ -94,6 +100,25 @@ async function scrape() {
         break;
       }
       pageNum++;
+    }
+
+    const seen = new Set(allProducts.map((p) => p.url));
+    for (const rebajasUrl of rebajasUrls) {
+      try {
+        await page.goto(rebajasUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+        await page.waitForSelector("div.product-item-info", { timeout: 20_000 });
+        const products = await extractProducts(page);
+        let added = 0;
+        for (const p of products) {
+          if (seen.has(p.url)) continue;
+          seen.add(p.url);
+          allProducts.push(p);
+          added++;
+        }
+        console.log(`[padelnuestro] sección rebajas ${rebajasUrl} → ${added} productos nuevos`);
+      } catch (e) {
+        console.error(`[padelnuestro] Error sección rebajas ${rebajasUrl}:`, e.message);
+      }
     }
   } finally {
     await browser.close();

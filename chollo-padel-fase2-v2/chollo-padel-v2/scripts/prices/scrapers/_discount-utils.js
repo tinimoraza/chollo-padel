@@ -72,4 +72,75 @@ function detectarCodigoDescuento(textoPagina) {
   return null
 }
 
-module.exports = { detectarCodigoDescuento }
+// -----------------------------------------------------------------------
+// Detector de secciones de "rebajas" no contempladas (URLs nuevas tipo
+// /rebajas-verano-2026, /black-friday, /liquidacion) a partir de los
+// enlaces <a href> que cada scraper ya tiene disponibles en su pagina 1
+// (via DOM en Playwright/Puppeteer, o via cheerio/regex en scrapers de
+// solo-HTML). No hace ninguna peticion de red por si misma - los
+// scrapers son los que deciden si fetchear las URLs candidatas.
+//
+// Deliberadamente conservador: solo dispara con 3 palabras clave de alta
+// precision en el PATH de la URL (no en el texto del enlace, que es mucho
+// mas ruidoso) y excluye paginas administrativas (blog, legal, etc.) y
+// cualquier URL ya conocida/usada por el scraper (BASE_URL, categorias
+// existentes), para no generar falsos positivos ni re-scrapear lo mismo.
+//
+// Validado 2026-06-29 contra HTML real: padeliberico.es tiene un enlace
+// de menu a https://www.padeliberico.es/rebajas-verano-2026 que NO esta
+// en la lista de categorias que scrapea hoy padeliberico.js (que solo usa
+// /palas-de-padel) - ese es el caso real que motiva este detector.
+
+const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion/i
+const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module)/i
+
+function normalizarUrl(url, origin) {
+  try {
+    const u = new URL(url, origin || undefined)
+    u.hash = ''
+    let path = u.pathname.toLowerCase()
+    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
+    return u.origin.toLowerCase() + path
+  } catch {
+    return String(url).toLowerCase()
+  }
+}
+
+/**
+ * @param {string[]} hrefs lista de hrefs (absolutos o relativos) ya extraidos por el scraper
+ * @param {string} baseUrl URL base/categoria principal del scraper (se usa para resolver relativos y como exclusion)
+ * @param {string[]} excludeUrls otras URLs ya conocidas/scrapeadas que no deben considerarse "nuevas"
+ * @returns {string[]} URLs absolutas candidatas a sección de rebajas, unicas, sin las ya conocidas
+ */
+function filtrarUrlsRebajas(hrefs, baseUrl, excludeUrls = []) {
+  if (!Array.isArray(hrefs) || hrefs.length === 0) return []
+
+  let origin = null
+  try { origin = baseUrl ? new URL(baseUrl).origin : null } catch { origin = null }
+
+  const excludeSet = new Set(
+    [...(baseUrl ? [baseUrl] : []), ...excludeUrls].map(u => normalizarUrl(u, origin))
+  )
+
+  const found = new Map()
+  for (const raw of hrefs) {
+    if (!raw || typeof raw !== 'string') continue
+
+    let abs
+    try { abs = new URL(raw, origin || undefined).toString() } catch { continue }
+
+    if (!REBAJAS_KEYWORDS.test(abs)) continue
+    if (REBAJAS_EXCLUDE_PATH.test(abs)) continue
+    if (origin) {
+      try { if (new URL(abs).origin.toLowerCase() !== origin.toLowerCase()) continue } catch { continue }
+    }
+
+    const key = normalizarUrl(abs, origin)
+    if (excludeSet.has(key)) continue
+    if (!found.has(key)) found.set(key, abs.split('#')[0])
+  }
+
+  return [...found.values()]
+}
+
+module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas }

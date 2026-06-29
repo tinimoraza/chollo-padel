@@ -4,7 +4,7 @@ const SOURCE_KEY   = 'romasport'
 const BASE_URL     = 'https://romasport.es/categoria-producto/padel/padel-palas/'
 const DELAY_MS     = 2000
 
-const { detectarCodigoDescuento } = require('./_discount-utils.js')
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 async function extractProducts(page) {
   return page.evaluate(() => {
@@ -65,6 +65,7 @@ async function scrape() {
   const allProducts = []
   let pageNum = 1
   let codigoDescuento = null
+  let rebajasUrls = []
 
   try {
     while (true) {
@@ -99,6 +100,11 @@ async function scrape() {
         if (codigoDescuento) {
           console.log(`[romasport] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         }
+        const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
+        rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
+        if (rebajasUrls.length > 0) {
+          console.log(`[romasport] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+        }
       }
 
       const products = await extractProducts(page)
@@ -122,9 +128,22 @@ async function scrape() {
     }
   } catch (err) {
     console.error('[romasport] Error:', err.message)
-  } finally {
-    await browser.close()
   }
+
+  for (const rebajasUrl of rebajasUrls) {
+    try {
+      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.waitForSelector('li.product, .type-product, article.product', { timeout: 15000 })
+      const products = await extractProducts(page)
+      console.log(`[romasport] sección rebajas ${rebajasUrl} → ${products.length} productos`)
+      allProducts.push(...products)
+    } catch (e) {
+      console.error(`[romasport] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
+    await page.waitForTimeout(DELAY_MS)
+  }
+
+  await browser.close()
 
   const seen   = new Set()
   const unique = allProducts.filter(p => {

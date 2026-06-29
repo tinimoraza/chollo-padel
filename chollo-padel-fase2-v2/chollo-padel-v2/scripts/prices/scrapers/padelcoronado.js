@@ -1,5 +1,5 @@
 // scripts/prices/scrapers/padelcoronado.js
-const { detectarCodigoDescuento } = require('./_discount-utils.js')
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 const SOURCE_KEY      = 'padelcoronado'
 const CATEGORY_URL    = 'https://padelcoronado.com/categoria-producto/palas-padel/'
@@ -24,7 +24,7 @@ async function safeEvaluate(page, fn, attempts = 3) {
   return null
 }
 
-async function scrapeBrandPage(page, url, state) {
+async function scrapeBrandPage(page, url, state, excludeUrls = []) {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 40000 }).catch(() => {})
   await page.waitForTimeout(2500)
 
@@ -41,6 +41,11 @@ async function scrapeBrandPage(page, url, state) {
     state.codigoDescuento = detectarCodigoDescuento(bodyText)
     if (state.codigoDescuento) {
       console.log(`[padelcoronado] codigo detectado: ${state.codigoDescuento.codigo} (-${state.codigoDescuento.descuento_pct}%)`)
+    }
+    const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)).catch(() => [])
+    state.rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL, excludeUrls)
+    if (state.rebajasUrls.length > 0) {
+      console.log(`[padelcoronado] sección(es) de rebajas detectada(s): ${state.rebajasUrls.join(', ')}`)
     }
   }
 
@@ -184,12 +189,19 @@ async function scrape() {
 
   // Scrapear cada marca
   const allProducts = []
-  const state = { checked: false, codigoDescuento: null }
+  const state = { checked: false, codigoDescuento: null, rebajasUrls: [] }
   for (const brandUrl of brandUrls) {
     const brand = brandUrl.match(/marca-palas-([^/]+)/)?.[1] ?? 'global'
     console.log(`[padelcoronado] Scrapeando: ${brand}`)
-    const products = await scrapeBrandPage(page, brandUrl, state)
+    const products = await scrapeBrandPage(page, brandUrl, state, brandUrls)
     console.log(`[padelcoronado]   → ${products.length} palas`)
+    allProducts.push(...products)
+  }
+
+  for (const rebajasUrl of state.rebajasUrls) {
+    console.log(`[padelcoronado] Scrapeando sección rebajas: ${rebajasUrl}`)
+    const products = await scrapeBrandPage(page, rebajasUrl, null, brandUrls)
+    console.log(`[padelcoronado]   sección rebajas → ${products.length} palas`)
     allProducts.push(...products)
   }
 

@@ -10,7 +10,7 @@ const SOURCE_KEY  = 'tiendapadelpoint'
 const BASE_URL    = 'https://www.tiendapadelpoint.com/palas-de-padel'
 const DELAY_MS    = 800
 
-const { detectarCodigoDescuento } = require('./_discount-utils.js')
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -143,6 +143,12 @@ async function scrape() {
     console.log(`[tiendapadelpoint] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
   }
 
+  const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
+  const rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
+  if (rebajasUrls.length > 0) {
+    console.log(`[tiendapadelpoint] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+  }
+
   while (pageNum <= totalPages) {
     if (pageNum > 1) {
       await page.goto(`${BASE_URL}?page=${pageNum}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
@@ -164,6 +170,25 @@ async function scrape() {
     if (newInPage === 0 && pageNum > 3) break
 
     pageNum++
+    await sleep(DELAY_MS)
+  }
+
+  for (const rebajasUrl of rebajasUrls) {
+    try {
+      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForTimeout(1500)
+      const products = await extractProductsFromPage(page)
+      let added = 0
+      for (const p of products) {
+        if (seen.has(p.url)) continue
+        seen.add(p.url)
+        allProducts.push(p)
+        added++
+      }
+      console.log(`[tiendapadelpoint] sección rebajas ${rebajasUrl} → ${added} palas nuevas`)
+    } catch (e) {
+      console.error(`[tiendapadelpoint] Error sección rebajas ${rebajasUrl}:`, e.message)
+    }
     await sleep(DELAY_MS)
   }
 

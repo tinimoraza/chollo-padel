@@ -46,7 +46,44 @@ async function scrape() {
     console.error('[padelmania] cheerio no instalado'); return []
   }
 
-  const { detectarCodigoDescuento } = require('./_discount-utils.js')
+  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+
+  function parseCards($, cards) {
+    const out = []
+    cards.each((_, el) => {
+      const $card = $(el)
+
+      // Titulo y URL
+      const linkEl = $card.find('h3.product-title a, h2.product-title a').first()
+      const title  = linkEl.text().trim()
+      const href   = linkEl.attr('href')
+      if (!title || !href || !isPala(title)) return
+
+      // Precio
+      const priceEl = $card.find('span.product-price').first()
+      const price   = priceEl.attr('content')
+        ? parseFloat(priceEl.attr('content'))
+        : parsePrice(priceEl.text())
+      if (isNaN(price) || price < 30) return
+
+      // Precio original tachado
+      const original = parsePrice($card.find('.regular-price').first().text())
+
+      // Imagen - lazy load en data-src
+      const imgEl  = $card.find('img').first()
+      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
+      out.push({
+        title,
+        price,
+        precio_original: (!isNaN(original) && original > price) ? original : null,
+        url: href,
+        image,
+      })
+    })
+    return out
+  }
 
   const allProducts = []
   const seen = new Set()
@@ -57,6 +94,7 @@ async function scrape() {
   // categoria - basta con mirar la pagina 1, no hace falta repetir por
   // pagina. Validado contra HTML real (ver _discount-utils.js).
   let codigoDescuento = null
+  let rebajasUrls = []
 
   while (page <= MAX_PAGES) {
     const url = page === 1
@@ -76,6 +114,11 @@ async function scrape() {
       if (codigoDescuento) {
         console.log(`[padelmania] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
+      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+      if (rebajasUrls.length > 0) {
+        console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
     }
 
     // Detectar ultima pagina desde la paginacion
@@ -88,44 +131,33 @@ async function scrape() {
       }
     })
 
-    cards.each((_, el) => {
-      const $card = $(el)
-
-      // Titulo y URL
-      const linkEl = $card.find('h3.product-title a, h2.product-title a').first()
-      const title  = linkEl.text().trim()
-      const href   = linkEl.attr('href')
-      if (!title || !href || !isPala(title) || seen.has(href)) return
-      seen.add(href)
-
-      // Precio
-      const priceEl = $card.find('span.product-price').first()
-      const price   = priceEl.attr('content')
-        ? parseFloat(priceEl.attr('content'))
-        : parsePrice(priceEl.text())
-      if (isNaN(price) || price < 30) return
-
-      // Precio original tachado
-      const original = parsePrice($card.find('.regular-price').first().text())
-
-      // Imagen - lazy load en data-src
-      const imgEl  = $card.find('img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-
-      allProducts.push({
-        title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: href,
-        image,
-      })
-    })
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+    }
 
     console.log(`[padelmania] pagina ${page}/${lastPage} -> ${cards.length} cards`)
 
     if (page >= lastPage) break
     page++
+    await sleep(DELAY_MS)
+  }
+
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try { html = await fetchPage(rebajasUrl) }
+    catch (e) { console.error(`[padelmania] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    const $ = cheerio.load(html)
+    const cards = $('article.product-miniature, .js-product-miniature')
+    let added = 0
+    for (const item of parseCards($, cards)) {
+      if (seen.has(item.url)) continue
+      seen.add(item.url)
+      allProducts.push(item)
+      added++
+    }
+    console.log(`[padelmania] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 

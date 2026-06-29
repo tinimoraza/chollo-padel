@@ -6,7 +6,7 @@ const BASE_URL   = 'https://padelproshop.com/collections/palas-padel'
 const SECTION_ID = 'template--26596133339441__main'
 const DELAY_MS   = 600
 
-const { detectarCodigoDescuento } = require('./_discount-utils.js')
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -61,6 +61,7 @@ async function scrape() {
   const seen        = new Set()
   let page          = 1
   let codigoDescuento = null
+  let rebajasUrls = []
 
   while (true) {
     const url = `${BASE_URL}?page=${page}&section_id=${SECTION_ID}`
@@ -88,6 +89,11 @@ async function scrape() {
       if (codigoDescuento) {
         console.log(`[padelproshop] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
+      const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
+      rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
+      if (rebajasUrls.length > 0) {
+        console.log(`[padelproshop] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
     }
 
     const products = extractFromHtml(html)
@@ -107,6 +113,34 @@ async function scrape() {
     if (added === 0) break
 
     page++
+    await sleep(DELAY_MS)
+  }
+
+  for (const rebajasUrl of rebajasUrls) {
+    let html
+    try {
+      const res = await fetch(`${rebajasUrl}${rebajasUrl.includes('?') ? '&' : '?'}section_id=${SECTION_ID}`, {
+        headers: {
+          'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept':          'text/html',
+          'Accept-Language': 'es-ES,es;q=0.9',
+        },
+      })
+      if (!res.ok) { console.error(`[padelproshop] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      html = await res.text()
+    } catch (err) {
+      console.error(`[padelproshop] Error sección rebajas ${rebajasUrl}:`, err.message)
+      continue
+    }
+    const products = extractFromHtml(html)
+    let added = 0
+    for (const p of products) {
+      if (seen.has(p.url)) continue
+      seen.add(p.url)
+      allProducts.push(p)
+      added++
+    }
+    console.log(`[padelproshop] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 
