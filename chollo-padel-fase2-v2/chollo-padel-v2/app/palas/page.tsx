@@ -103,13 +103,15 @@ function TiendasSection({ pala }: { pala: Pala }) {
   useEffect(() => {
     let activo = true
     setLoading(true)
+    // Primero intentamos con disponible=true; si no hay, mostramos todas
+    // las tiendas conocidas (pueden estar sin stock puntualmente).
     supabase
       .from('price_snapshots')
-      .select('precio, url_producto, price_sources ( nombre, slug )')
+      .select('precio, disponible, url_producto, price_sources ( nombre, slug )')
       .eq('pala_id', pala.id)
-      .eq('disponible', true)
+      .order('disponible', { ascending: false }) // disponibles primero
       .order('precio', { ascending: true })
-      .limit(3)
+      .limit(5)
       .then(({ data, error }) => {
         if (!activo) return
         if (error) { console.error(error); setItems([]) }
@@ -123,26 +125,41 @@ function TiendasSection({ pala }: { pala: Pala }) {
     return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Buscando mejores precios...</div>
   }
   if (items.length === 0) {
-    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin precios de tienda disponibles ahora mismo.</div>
+    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin datos de tienda disponibles ahora mismo.</div>
   }
+
+  // Deduplicar por tienda (quedarse con el más barato de cada fuente)
+  const porTienda = new Map<string, any>()
+  for (const item of items) {
+    const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
+    const key = fuente?.slug ?? 'desconocida'
+    if (!porTienda.has(key) || Number(item.precio) < Number(porTienda.get(key).precio)) {
+      porTienda.set(key, item)
+    }
+  }
+  const deduped = Array.from(porTienda.values()).slice(0, 3)
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-      {items.map((item: any, i: number) => {
+      {deduped.map((item: any, i: number) => {
         const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
         const precio = Number(item.precio)
-        const saving = pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - precio) / pala.precio_referencia) * 100) : 0
+        const disponible = item.disponible
+        const saving = disponible && pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - precio) / pala.precio_referencia) * 100) : 0
         return (
           <a key={`${fuente?.slug ?? 'tienda'}-${i}`} href={item.url_producto} target="_blank" rel="noopener noreferrer"
-            style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.07)', padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s' }}
+            style={{ background: '#161616', border: `1px solid ${disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)'}`, padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s', opacity: disponible ? 1 : 0.55 }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(200,255,0,0.25)')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)')}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#C8FF00' }}>{precio.toFixed(2)} €</span>
-              {saving > 0 && (
-                <span style={{ background: 'rgba(200,255,0,0.15)', color: '#C8FF00', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px' }}>-{saving}%</span>
-              )}
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? '#C8FF00' : 'rgba(255,255,255,0.35)' }}>{precio.toFixed(2)} €</span>
+              {!disponible
+                ? <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
+                : saving > 0
+                  ? <span style={{ background: 'rgba(200,255,0,0.15)', color: '#C8FF00', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px' }}>-{saving}%</span>
+                  : null
+              }
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
           </a>
@@ -253,9 +270,14 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {(pala.precio_referencia > 0 || pala.precio_pvp > 0) && (
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{(pala.precio_referencia || pala.precio_pvp).toFixed(0)} €</span>
-          )}
+          {pala.precio_referencia > 0 ? (
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{pala.precio_referencia.toFixed(0)} €</span>
+          ) : pala.precio_pvp > 0 ? (
+            <span>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{pala.precio_pvp.toFixed(0)} €</span>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>PVP</span>
+            </span>
+          ) : null}
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
         </div>
       </div>
