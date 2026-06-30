@@ -34,7 +34,7 @@ export default function ClubesLandingPage() {
           {[
             'Nombre del equipo y división de liga',
             'Plantilla de jugadores con sus datos de contacto',
-            'Acceso privado solo para el capitán, sin contraseñas que recordar',
+            'Acceso privado solo para capitanes invitados',
           ].map(item => (
             <li key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14.5, color: 'rgba(255,255,255,0.8)' }}>
               <span style={{ color: '#C8FF00', fontWeight: 700 }}>→</span>
