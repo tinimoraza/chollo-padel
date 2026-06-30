@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Resend } from 'resend'
 import { searchWallapop } from '@/lib/wallapop'
 
@@ -190,3 +190,4 @@ function buildEmailFavorito(alerta: any, item: any) {
     </div>
   `
 }
+
