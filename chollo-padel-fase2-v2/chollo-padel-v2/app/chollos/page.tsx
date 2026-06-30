@@ -15,6 +15,7 @@ const TIENDA_LABEL: Record<string, string> = {
   padelmarket:   'Padelmarket',
   padeliberico:  'Padel Iberico',
   tennispoint:   'Tennis Point',
+  keepadel:      'Keepadel',
 }
 
 function formatModelo(nombre: string, marca: string): string {
