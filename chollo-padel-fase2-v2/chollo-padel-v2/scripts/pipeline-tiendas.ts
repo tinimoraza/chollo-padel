@@ -475,6 +475,9 @@ async function main() {
     'hbl', 'goliat', 'cartri', 'alacran', 'kelme', 'endless', 'stiga', 'osaka',
     'indian maharadja', 'maharadja', 'by vp', 'tactical', 'hirostar', 'xcalion',
     'armani ea7', 'ea7', 'fila', 'salming', 'prokennex', 'bb zeus', 'eqsi', 'futura',
+    // Ampliado 20260630 (dry-run real keepadel): power padel, sanyo, bonabola
+    // → no tienen filas en `palas`, no las queremos en catalogo.
+    'power padel', 'sanyo', 'bonabola',
     // 'rox' y 'hybrid' ya cubiertas como prefijo en EXCLUIR_MARCAS ('rox ', 'hybrid padel');
     // 'set' se deja fuera de aquí por ser demasiado genérica (falsos positivos con "set platinum").
   ]

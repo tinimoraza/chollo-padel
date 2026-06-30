@@ -1,39 +1,59 @@
 // scripts/prices/scrapers/keepadel.js
-// Keepadel — PrestaShop HTML scraping (mismo motor que padelspain.js)
+// Keepadel - PrestaShop HTML scraping (mismo motor que padelspain.js)
 // URL real (verificada en vivo 2026-06-30):
-//   https://keepadel.com/es/9-palas-de-padel        (catálogo completo de palas)
+//   https://keepadel.com/es/9-palas-de-padel        (catalogo completo de palas)
 //   https://keepadel.com/es/95-ofertas-en-palas-de-padel  (subconjunto en oferta,
-//     176/187 productos — ya incluido en el catálogo completo, no se scrapea
+//     176/187 productos - ya incluido en el catalogo completo, no se scrapea
 //     aparte para no duplicar peticiones)
-// Soporta ?resultsPerPage=99999 (botón "Mostrar todo" visto en la web), lo
-// que permite traer el catálogo completo en 1 sola petición en vez de paginar
-// 15 veces — con fallback a paginación normal por si el parámetro deja de
-// funcionar o el catálogo crece mucho.
+// v2 (2026-06-30): el dry-run real de Patricia dio HTTP 403 en la primera
+// peticion (?resultsPerPage=99999). Ese parametro es poco habitual (no lo
+// pide un visitante normal) y es plausible que dispare una regla anti-bot/
+// WAF - se quita y se vuelve a paginacion normal ?page=N, igual que
+// padelspain.js (que si funciona ahi). Tambien se amplia el set de headers
+// para parecerse mas a una peticion real de navegador (Accept-Encoding,
+// Connection, Sec-Fetch-*, Referer en paginas >1). Pendiente de confirmar
+// con un nuevo --dry-run si esto resuelve el 403 - si sigue dando 403 con
+// headers de navegador completos, lo mas probable es un WAF (Cloudflare o
+// similar) con verificacion de TLS/JS que no se puede pasar con fetch()
+// plano y haria falta Playwright (como ya se hace con otras tiendas
+// protegidas en el grupo "Playwright" del workflow).
 //
 // NOTA selectores (2026-06-30): no se ha podido verificar el HTML crudo con
-// curl (sandbox sin acceso de red directo, solo vía fetch-tool que devuelve
+// curl (sandbox sin acceso de red directo, solo via fetch-tool que devuelve
 // markdown ya limpiado de clases). Los selectores de abajo cubren los
-// patrones de marcado más comunes en temas PrestaShop 1.6/1.7 (incl. el
-// mismo patrón que ya usa padelspain.js, que es la misma plataforma) más
-// alguna alternativa extra. Si el primer --dry-run en CI (con red real) da
-// 0 productos, hay que reabrir y ajustar el selector de tarjeta/título —
-// NO asumir que funciona sin confirmarlo con un run real.
+// patrones de marcado mas comunes en temas PrestaShop 1.6/1.7 (incl. el
+// mismo patron que ya usa padelspain.js, que es la misma plataforma) mas
+// alguna alternativa extra. Si el dry-run (con red real) da 0 productos
+// tras resolver el 403, hay que reabrir y ajustar el selector de tarjeta o
+// titulo - NO asumir que funciona sin confirmarlo con un run real.
 
 const SOURCE_KEY     = 'keepadel'
 const BASE_URL       = 'https://keepadel.com'
 const CATEGORY_PATH  = '/es/9-palas-de-padel'
 const DELAY_MS       = 800
-const MAX_PAGES      = 40
+// v3 (2026-06-30): el dry-run real con el fix del 403 detecto lastPage=93
+// via paginacion (.pagination a), pero el tope MAX_PAGES=40 cortaba la
+// recoleccion antes de llegar al final -> se perdian potencialmente
+// cientos de palas del catalogo completo. Se sube el tope a 150 para
+// dar margen sobre las 93 paginas reales observadas.
+const MAX_PAGES      = 150
 
 const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-  'Accept':          'text/html,application/xhtml+xml',
-  'Accept-Language': 'es-ES,es;q=0.9',
+  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Connection':      'keep-alive',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest':  'document',
+  'Sec-Fetch-Mode':  'navigate',
+  'Sec-Fetch-Site':  'none',
+  'Sec-Fetch-User':  '?1',
 }
 
 const EXCLUIR = ['zapatilla', 'mochila', 'paletero', 'bolsa', 'grip', 'overgrip',
-  'pelota', 'pelotas', 'camiseta', 'funda', 'muñequera', 'protector', 'pack ',
-  'gafas', 'gorra', 'calcetin', 'calcetín', 'neceser']
+  'pelota', 'pelotas', 'camiseta', 'funda', 'munequera', 'protector', 'pack ',
+  'gafas', 'gorra', 'calcetin', 'neceser']
 
 function isPala(title) {
   const t = title.toLowerCase()
@@ -49,14 +69,15 @@ function parsePrice(text) {
   return parseFloat(m[1].replace('.', '').replace(',', '.'))
 }
 
-async function fetchPage(url) {
-  const res = await fetch(url, { headers: HEADERS })
+async function fetchPage(url, referer) {
+  const headers = referer ? { ...HEADERS, Referer: referer } : HEADERS
+  const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.text()
 }
 
 async function scrape() {
-  console.log('[keepadel] Iniciando scraper (PrestaShop HTML)…')
+  console.log('[keepadel] Iniciando scraper (PrestaShop HTML)...')
 
   let cheerio
   try { cheerio = require('cheerio') } catch {
@@ -72,9 +93,9 @@ async function scrape() {
     cards.each((_, el) => {
       const $card = $(el)
 
-      // Título + link: preferimos el enlace dentro del título de producto
-      // (h2/h3.product-title), con fallback genérico a a[title] que no sea
-      // la imagen/miniatura (mismo patrón ya validado en padelspain.js).
+      // Titulo + link: preferimos el enlace dentro del titulo de producto
+      // (h2/h3.product-title), con fallback generico a a[title] que no sea
+      // la imagen/miniatura (mismo patron ya validado en padelspain.js).
       let titleEl = $card.find('h2.product-title a, h3.product-title a, .product-title a').first()
       if (titleEl.length === 0) {
         titleEl = $card.find('a[title]').filter((_, a) => $(a).attr('class') === '' || !$(a).attr('class')).first()
@@ -110,11 +131,12 @@ async function scrape() {
 
   while (page <= MAX_PAGES) {
     const url = page === 1
-      ? `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=99999`
+      ? `${BASE_URL}${CATEGORY_PATH}`
       : `${BASE_URL}${CATEGORY_PATH}?page=${page}`
+    const referer = page === 1 ? BASE_URL : `${BASE_URL}${CATEGORY_PATH}${page > 2 ? `?page=${page - 1}` : ''}`
 
     let html
-    try { html = await fetchPage(url) }
+    try { html = await fetchPage(url, referer) }
     catch (e) { console.error(`[keepadel] Error ${url}:`, e.message); break }
 
     const $ = cheerio.load(html)
@@ -129,7 +151,7 @@ async function scrape() {
       const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
       rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
       if (rebajasUrls.length > 0) {
-        console.log(`[keepadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+        console.log(`[keepadel] secciones de rebajas detectadas: ${rebajasUrls.join(', ')}`)
       }
     }
 
@@ -148,10 +170,8 @@ async function scrape() {
       allProducts.push(item)
     }
 
-    console.log(`[keepadel] página ${page}/${lastPage} → ${cards.length} cards (resultsPerPage=99999 en página 1)`)
+    console.log(`[keepadel] pagina ${page}/${lastPage} -> ${cards.length} cards`)
 
-    // Con resultsPerPage=99999 en la página 1, lo normal es que ya no haya
-    // paginación real (lastPage se queda en 1) y el bucle termine aquí.
     if (page >= lastPage) break
     page++
     await sleep(DELAY_MS)
@@ -160,7 +180,7 @@ async function scrape() {
   for (const rebajasUrl of rebajasUrls) {
     let html
     try { html = await fetchPage(rebajasUrl) }
-    catch (e) { console.error(`[keepadel] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
+    catch (e) { console.error(`[keepadel] Error seccion rebajas ${rebajasUrl}:`, e.message); continue }
     const $ = cheerio.load(html)
     const cards = $(CARD_SEL)
     let added = 0
@@ -170,7 +190,7 @@ async function scrape() {
       allProducts.push(item)
       added++
     }
-    console.log(`[keepadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    console.log(`[keepadel] seccion rebajas ${rebajasUrl} -> ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 
