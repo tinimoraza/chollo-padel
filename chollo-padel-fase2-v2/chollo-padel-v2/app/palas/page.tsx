@@ -193,12 +193,17 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: '#C8FF00', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
-            {pala.precio_pvp > 0 && (
+            {pala.precio_referencia > 0 ? (
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#C8FF00', marginBottom: 16 }}>
+                {pala.precio_referencia.toFixed(2)} €
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>precio medio tiendas</span>
+              </div>
+            ) : pala.precio_pvp > 0 ? (
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#C8FF00', marginBottom: 16 }}>
                 {pala.precio_pvp.toFixed(2)} €
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>PVP</span>
               </div>
-            )}
+            ) : null}
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
               {pala.forma && <Tag>{pala.forma}</Tag>}
