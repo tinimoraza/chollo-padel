@@ -107,11 +107,11 @@ function TiendasSection({ pala }: { pala: Pala }) {
     // las tiendas conocidas (pueden estar sin stock puntualmente).
     supabase
       .from('price_snapshots')
-      .select('precio, disponible, url_producto, price_sources ( nombre, slug )')
+      .select('precio, disponible, url_producto, codigo_descuento, descuento_pct, price_sources ( nombre, slug )')
       .eq('pala_id', pala.id)
       .order('disponible', { ascending: false }) // disponibles primero
       .order('precio', { ascending: true })
-      .limit(5)
+      .limit(10)
       .then(({ data, error }) => {
         if (!activo) return
         if (error) { console.error(error); setItems([]) }
@@ -128,32 +128,45 @@ function TiendasSection({ pala }: { pala: Pala }) {
     return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin datos de tienda disponibles ahora mismo.</div>
   }
 
-  // Deduplicar por tienda (quedarse con el más barato de cada fuente)
+  // Precio efectivo aplicando código de descuento si existe
+  const precioEfectivo = (item: any) => {
+    const base = Number(item.precio)
+    if (item.descuento_pct && Number(item.descuento_pct) > 0) {
+      return base * (1 - Number(item.descuento_pct) / 100)
+    }
+    return base
+  }
+
+  // Deduplicar por tienda (quedarse con el más barato efectivo de cada fuente)
   const porTienda = new Map<string, any>()
   for (const item of items) {
     const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
     const key = fuente?.slug ?? 'desconocida'
-    if (!porTienda.has(key) || Number(item.precio) < Number(porTienda.get(key).precio)) {
+    if (!porTienda.has(key) || precioEfectivo(item) < precioEfectivo(porTienda.get(key))) {
       porTienda.set(key, item)
     }
   }
-  const deduped = Array.from(porTienda.values()).slice(0, 3)
+  const deduped = Array.from(porTienda.values())
+    .sort((a, b) => precioEfectivo(a) - precioEfectivo(b))
+    .slice(0, 3)
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
       {deduped.map((item: any, i: number) => {
         const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
-        const precio = Number(item.precio)
+        const precioBase = Number(item.precio)
+        const pEfectivo = precioEfectivo(item)
+        const tieneDescuento = pEfectivo < precioBase
         const disponible = item.disponible
-        const saving = disponible && pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - precio) / pala.precio_referencia) * 100) : 0
+        const saving = disponible && pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - pEfectivo) / pala.precio_referencia) * 100) : 0
         return (
           <a key={`${fuente?.slug ?? 'tienda'}-${i}`} href={item.url_producto} target="_blank" rel="noopener noreferrer"
             style={{ background: '#161616', border: `1px solid ${disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)'}`, padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s', opacity: disponible ? 1 : 0.55 }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(200,255,0,0.25)')}
             onMouseLeave={e => (e.currentTarget.style.borderColor = disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)')}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? '#C8FF00' : 'rgba(255,255,255,0.35)' }}>{precio.toFixed(2)} €</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? '#C8FF00' : 'rgba(255,255,255,0.35)' }}>{pEfectivo.toFixed(2)} €</span>
               {!disponible
                 ? <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
                 : saving > 0
@@ -161,6 +174,14 @@ function TiendasSection({ pala }: { pala: Pala }) {
                   : null
               }
             </div>
+            {tieneDescuento && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>{precioBase.toFixed(2)} €</span>
+                {item.codigo_descuento && (
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: '#C8FF00', background: 'rgba(200,255,0,0.1)', padding: '1px 5px', border: '1px solid rgba(200,255,0,0.2)' }}>{item.codigo_descuento}</span>
+                )}
+              </div>
+            )}
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
           </a>
         )
