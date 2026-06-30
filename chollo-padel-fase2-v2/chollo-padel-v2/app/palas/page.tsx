@@ -35,6 +35,10 @@ interface Pala {
   rating_manejabilidad: number
   rating_punto_dulce: number
   precio_pvp: number
+  // Media que calculamos nosotros a partir de los price_snapshots reales de
+  // tiendas (ver _bd_recalcular_price_reference en GestorCandidatas) — es el
+  // precio que queremos mostrar en catálogo, no el PVP de fábrica.
+  precio_referencia: number
   imagen_url: string
   padelful_slug: string
 }
@@ -87,46 +91,60 @@ function TechRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ChollosSection({ pala }: { pala: Pala }) {
+// tarea (2026-06-30): antes este bloque buscaba "chollos" de segunda mano
+// (Wallapop/Vinted) por texto libre marca+modelo, lo que muchas veces no
+// tenía nada que ver con la pala real. Patricia pidió que al entrar en una
+// pala se vea el TOP de mejores precios reales en TIENDA (price_snapshots),
+// de menor a mayor — igual que ya hacemos para decidir el precio_referencia.
+function TiendasSection({ pala }: { pala: Pala }) {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const searchQuery = `${pala.marca} ${pala.modelo}`.trim()
-    fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&platforms=wallapop,vinted`)
-      .then(r => r.json())
-      .then(data => {
-        setItems(Array.isArray(data) ? data.slice(0, 6) : [])
+    let activo = true
+    setLoading(true)
+    supabase
+      .from('price_snapshots')
+      .select('precio, url_producto, price_sources ( nombre, slug )')
+      .eq('pala_id', pala.id)
+      .eq('disponible', true)
+      .order('precio', { ascending: true })
+      .limit(3)
+      .then(({ data, error }) => {
+        if (!activo) return
+        if (error) { console.error(error); setItems([]) }
+        else setItems(data ?? [])
         setLoading(false)
       })
-      .catch(() => setLoading(false))
-  }, [pala.marca, pala.modelo])
+    return () => { activo = false }
+  }, [pala.id])
 
   if (loading) {
-    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Buscando chollos...</div>
+    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Buscando mejores precios...</div>
   }
   if (items.length === 0) {
-    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin chollos activos ahora mismo.</div>
+    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin precios de tienda disponibles ahora mismo.</div>
   }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-      {items.map(item => {
-        const saving = pala.precio_pvp > 0 ? Math.round(((pala.precio_pvp - item.price) / pala.precio_pvp) * 100) : 0
+      {items.map((item: any, i: number) => {
+        const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
+        const precio = Number(item.precio)
+        const saving = pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - precio) / pala.precio_referencia) * 100) : 0
         return (
-          <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer"
+          <a key={`${fuente?.slug ?? 'tienda'}-${i}`} href={item.url_producto} target="_blank" rel="noopener noreferrer"
             style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.07)', padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s' }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(200,255,0,0.25)')}
             onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#C8FF00' }}>{item.price.toFixed(0)} €</span>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#C8FF00' }}>{precio.toFixed(2)} €</span>
               {saving > 0 && (
                 <span style={{ background: 'rgba(200,255,0,0.15)', color: '#C8FF00', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px' }}>-{saving}%</span>
               )}
             </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 6 }}>{item.title}</div>
-            <div style={{ fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', color: item.platform === 'vinted' ? '#9B6BFF' : '#FF5F1F', fontFamily: "'Barlow Condensed', sans-serif" }}>{item.platform}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
           </a>
         )
       })}
@@ -199,8 +217,8 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1.5rem 2rem', background: '#0D0D0D' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 12, textTransform: 'uppercase' }}>Chollos activos en segunda mano</div>
-          <ChollosSection pala={pala} />
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
+          <TiendasSection pala={pala} />
         </div>
       </div>
     </div>
@@ -235,10 +253,10 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {pala.precio_pvp > 0 && (
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{pala.precio_pvp.toFixed(0)} €</span>
+          {(pala.precio_referencia > 0 || pala.precio_pvp > 0) && (
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{(pala.precio_referencia || pala.precio_pvp).toFixed(0)} €</span>
           )}
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Ver chollos →</span>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
         </div>
       </div>
     </div>
@@ -340,6 +358,22 @@ export default function PalasPage() {
   const [filters, setFilters] = useState<Filters>({ marca: '', forma: '', balance: '', juego: '', onlyChollos: false })
   const [selected, setSelected] = useState<Pala | null>(null)
   const [search, setSearch] = useState('')
+  // tarea (2026-06-30): el toggle "Solo con chollos" no filtraba nada — para
+  // que filtre de verdad reutilizamos la MISMA logica de deteccion de chollos
+  // que ya usa /chollos (umbrales, guards, etc. en app/api/chollos/route.ts),
+  // en vez de reimplementarla aqui y arriesgar que las dos definiciones
+  // diverjan con el tiempo.
+  const [cholloPalaIds, setCholloPalaIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    fetch('/api/chollos')
+      .then(r => r.json())
+      .then(data => {
+        const ids = new Set<string>((data.chollos ?? []).map((c: any) => c.pala_id))
+        setCholloPalaIds(ids)
+      })
+      .catch(err => console.error('Error cargando /api/chollos para el filtro', err))
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -371,6 +405,7 @@ export default function PalasPage() {
     if (filters.forma && p.forma?.toLowerCase() !== filters.forma.toLowerCase()) return false
     if (filters.balance && p.balance?.toLowerCase() !== filters.balance.toLowerCase()) return false
     if (filters.juego && p.juego?.toLowerCase() !== filters.juego.toLowerCase()) return false
+    if (filters.onlyChollos && !cholloPalaIds.has(p.id)) return false
     if (search) {
       const q = search.toLowerCase()
       if (!p.marca?.toLowerCase().includes(q) && !p.nombre?.toLowerCase().includes(q)) return false
