@@ -12,6 +12,12 @@
 // "-N%"/"N% extra" cerca de ese token - para no generar falsos positivos
 // con texto de marketing generico.
 //
+// Fix 2026-07-01: limpiarTexto() ahora extrae tambien los valores de
+// atributos HTML relevantes (data-*, alt, title, placeholder) ANTES de
+// eliminar las etiquetas, para capturar cupones en sliders/carousels tipo
+// Revolution Slider o Elementor donde el texto va en data-text/data-title
+// en vez de como nodo de texto visible.
+//
 // Validado 2026-06-28 contra HTML real (no inventado):
 //   - padelmania.com  -> SI detecta: "-10% EXTRA EN TODA LA WEB POR TIEMPO
 //     LIMITADO. CODIGO: PADELMANIA10" -> { codigo: 'PADELMANIA10', descuento_pct: 10 }
@@ -42,16 +48,27 @@ const RE_CONTEXTO_NEWSLETTER = /newsletter|suscr[ií]bete|suscripci[oó]n|bolet[
 
 function limpiarTexto(input) {
   if (!input) return ''
-  return input
+  // Extraer valores de atributos relevantes ANTES de eliminar etiquetas.
+  // Necesario para cupones en sliders/carousels (Revolution Slider, Elementor)
+  // donde el texto aparece en data-text, data-title, alt, etc., no como nodo
+  // de texto visible. Sin esto se pierde al hacer el strip de <tag...>.
+  let attrText = ''
+  const reAttr = /\s(?:data-[a-z][a-z0-9_-]*|alt|title|placeholder)\s*=\s*["']([^"'<>]{1,300})["']/gi
+  let ma
+  while ((ma = reAttr.exec(input)) !== null) attrText += ' ' + ma[1]
+
+  return (input
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
+    + attrText)
     .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**
- * @param {string} textoPagina texto plano de la pagina (p.ej. $('body').text())
+ * @param {string} textoPagina texto plano o HTML de la pagina
  * @returns {{ codigo: string, descuento_pct: number } | null}
  */
 function detectarCodigoDescuento(textoPagina) {
@@ -123,7 +140,7 @@ function normalizarUrl(url, origin) {
  * @param {string[]} hrefs lista de hrefs (absolutos o relativos) ya extraidos por el scraper
  * @param {string} baseUrl URL base/categoria principal del scraper (se usa para resolver relativos y como exclusion)
  * @param {string[]} excludeUrls otras URLs ya conocidas/scrapeadas que no deben considerarse "nuevas"
- * @returns {string[]} URLs absolutas candidatas a sección de rebajas, unicas, sin las ya conocidas
+ * @returns {string[]} URLs absolutas candidatas a seccion de rebajas, unicas, sin las ya conocidas
  */
 function filtrarUrlsRebajas(hrefs, baseUrl, excludeUrls = []) {
   if (!Array.isArray(hrefs) || hrefs.length === 0) return []
