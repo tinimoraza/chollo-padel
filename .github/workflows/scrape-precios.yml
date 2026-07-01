@@ -19,6 +19,8 @@ on:
 env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
   WORKDIR: chollo-padel-fase2-v2/chollo-padel-v2
 
 jobs:
@@ -139,3 +141,5 @@ jobs:
         run: node scripts/prices/recalculate-all-references.js
       - name: Recalcular Top Oportunidades
         run: npx tsx scripts/top-oportunidades.ts
+      - name: Notificar chollos nuevos por Telegram
+        run: npx tsx --env-file=.env.local scripts/notify-chollos-telegram.ts || true
