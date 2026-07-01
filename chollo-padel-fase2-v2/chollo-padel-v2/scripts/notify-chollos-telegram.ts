@@ -87,12 +87,17 @@ function formatMensaje(chollo: {
   url_producto: string
   tienda: string
   primera_vez_at: string
+  codigo_descuento?: string | null
 }): string {
   const emoji = chollo.descuento_pct >= 35 ? '🔥🔥' : '🔥'
   const desde = new Date(chollo.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
+  const lineaCodigo = chollo.codigo_descuento
+    ? `🏷️ Código: <code>${chollo.codigo_descuento}</code>\n`
+    : ''
   return (
     `${emoji} <b>NUEVO CHOLLO</b> — ${chollo.nombre_pala}\n` +
     `💰 <b>${chollo.precio.toFixed(2)} €</b>  (ref. ${chollo.precio_referencia.toFixed(0)} €, −${chollo.descuento_pct}%)\n` +
+    lineaCodigo +
     `🏪 ${chollo.tienda}\n` +
     `🕐 Detectado a las ${desde}\n` +
     `🔗 ${chollo.url_producto}`
@@ -141,7 +146,7 @@ async function cargarChollosActuales() {
   const chollos: Array<{
     pala_id: string; source_id: number; precio: number; precio_referencia: number
     descuento_pct: number; url_producto: string; nombre_pala: string; marca: string | null
-    tienda: string; tienda_slug: string
+    tienda: string; tienda_slug: string; codigo_descuento: string | null
   }> = []
 
   for (const snap of byKey.values()) {
@@ -175,6 +180,7 @@ async function cargarChollosActuales() {
       marca:             pala.marca,
       tienda:            fuente.nombre,
       tienda_slug:       fuente.slug,
+      codigo_descuento:  snap.codigo_descuento ?? null,
     })
   }
 
@@ -223,6 +229,7 @@ async function sincronizarYNotificar(
           tienda:            c.tienda,
           primera_vez_at:    new Date().toISOString(),
           activo:            true,
+          codigo_descuento:  c.codigo_descuento,
         })
       }
       insertados++
@@ -234,7 +241,7 @@ async function sincronizarYNotificar(
         await supabase.from('chollos_notificados')
           .update({ activo: true, precio: c.precio, precio_referencia: c.precio_referencia,
                     descuento_pct: c.descuento_pct, primera_vez_at: new Date().toISOString(),
-                    telegram_enviado_at: null })
+                    telegram_enviado_at: null, codigo_descuento: c.codigo_descuento })
           .eq('pala_id', c.pala_id)
           .eq('source_id', c.source_id)
       }
