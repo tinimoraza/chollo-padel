@@ -32,6 +32,8 @@ export interface CholloTienda {
   codigo_descuento:     string | null
   precio_sin_codigo:    number | null
   descuento_codigo_pct: number | null
+  // Cuándo apareció este chollo por primera vez (de chollos_notificados)
+  primera_vez_at:       string | null
 }
 
 const UMBRAL_CHOLLO = 0.65
@@ -113,6 +115,16 @@ function precioEfectivo(snap: { precio: number; codigo_descuento?: string | null
 
 export async function GET() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  // Cargar mapa de primera_vez_at desde chollos_notificados
+  const { data: notificados } = await supabaseAdmin
+    .from('chollos_notificados')
+    .select('pala_id, source_id, primera_vez_at')
+    .eq('activo', true)
+  const notificadosMap = new Map<string, string>()
+  for (const n of (notificados ?? [])) {
+    notificadosMap.set(`${n.pala_id}__${n.source_id}`, n.primera_vez_at)
+  }
 
   // price_reference se incluye inline en el join para evitar una segunda query
   // con IN de 1000+ UUIDs que excede el limite de URL de PostgREST.
@@ -269,6 +281,7 @@ export async function GET() {
       codigo_descuento:     tieneCodigo ? snap.codigo_descuento : null,
       precio_sin_codigo:    tieneCodigo ? snap.precio : null,
       descuento_codigo_pct: tieneCodigo ? snap.descuento_pct : null,
+      primera_vez_at:       notificadosMap.get(`${snap.pala_id}__${snap.source_id}`) ?? null,
     })
   }
 

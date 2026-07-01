@@ -31,6 +31,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { normalizar } from './extract-atributos'
+import { notificarChollos } from './notify-chollos-telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -406,6 +407,9 @@ export async function main() {
 
   // Paso 4
   await reportarPendientes()
+
+  // Paso 5
+  await notificarChollos()
 
   // Resumen
   console.log(`\n${'─'.repeat(60)}`)

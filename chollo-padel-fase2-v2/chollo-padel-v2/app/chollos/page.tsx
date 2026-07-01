@@ -148,6 +148,20 @@ export default function ChollosPage() {
                   {c.tag === 'CHOLLO' ? 'CHOLLO' : 'OFERTA'}
                 </div>
 
+                {/* Badge NUEVO (chollo detectado en las últimas 48h) */}
+                {c.primera_vez_at && (Date.now() - new Date(c.primera_vez_at).getTime()) < 48 * 60 * 60 * 1000 && (
+                  <div style={{
+                    position: 'absolute', top: 8, right: 8,
+                    background: '#C8FF00', color: '#000',
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                    padding: '2px 7px', textTransform: 'uppercase',
+                    boxShadow: '0 0 8px rgba(200,255,0,0.5)',
+                  }}>
+                    NUEVO
+                  </div>
+                )}
+
                 {/* Imagen */}
                 <div style={s.imgWrap}>
                   {c.imagen_url
