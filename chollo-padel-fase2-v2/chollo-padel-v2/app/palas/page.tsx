@@ -55,6 +55,59 @@ const FORMAS = ['Redonda', 'Diamante', 'Lágrima']
 const BALANCES = ['Alto', 'Medio', 'Bajo']
 const JUEGOS = ['Iniciación', 'Intermedio', 'Avanzado', 'Competición']
 
+// Rating Trustpilot (★ sobre 5) — auditado 2026-07-01
+const TIENDA_TP: Record<string, number | null> = {
+  padelnuestro:    4,
+  padeliberico:    4.5,
+  misterpadel:     5,
+  padelproshop:    4.5,
+  padelmarket:     4,
+  padelkiwi:       4.5,
+  tiendapadelpoint:4.5,
+  justpadel:       4.5,
+  time2padel:      4,
+  ofertasdepadel:  4,
+  tiendapadel5:    4,
+  zonadepadel:     4,
+  padelmania:      4.5,
+  virtualpadel:    4,
+  keepadel:        4.5,
+  stockpadel:      4,
+  tennispoint:     3.5,
+  allforpadel:     3.5,
+  padelstyle:      3.5,
+  originalpadel:   3,
+  futurapadelshop: 3,
+  padelspain:      3,
+}
+
+function tpColor(stars: number): string {
+  if (stars >= 4)   return '#00B67A'
+  if (stars >= 3.5) return '#FFB800'
+  return '#FF5F1F'
+}
+
+function TpBadge({ slug }: { slug?: string }) {
+  if (!slug) return null
+  const stars = TIENDA_TP[slug]
+  if (stars == null) return null
+  const color = tpColor(stars)
+  const full = Math.floor(stars)
+  const half = stars % 1 >= 0.5
+  const empty = 5 - full - (half ? 1 : 0)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
+      <span style={{ color, fontSize: 12, letterSpacing: 1, lineHeight: 1 }}>
+        {'★'.repeat(full)}
+        {half && <span style={{ opacity: 0.5 }}>★</span>}
+        <span style={{ opacity: 0.2 }}>{'★'.repeat(empty)}</span>
+      </span>
+      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
+      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase' }}>Trustpilot</span>
+    </div>
+  )
+}
+
 function StatBar({ label, value }: { label: string; value: number }) {
   const pct = Math.min(Math.max((value / 10) * 100, 0), 100)
   return (
@@ -182,7 +235,10 @@ function TiendasSection({ pala }: { pala: Pala }) {
                 )}
               </div>
             )}
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
+            <div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
+              <TpBadge slug={fuente?.slug} />
+            </div>
           </a>
         )
       })}
