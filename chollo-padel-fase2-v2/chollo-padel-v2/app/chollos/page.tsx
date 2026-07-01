@@ -8,14 +8,80 @@ import BottomNav from '@/components/BottomNav'
 type Filtro = 'todos' | 'CHOLLO' | 'OFERTA'
 
 const TIENDA_LABEL: Record<string, string> = {
-  padelnuestro:  'Padel Nuestro',
-  padelzoom:     'PadelZoom',
-  romasport:     'Roma Sport',
-  padelcoronado: 'Padel Coronado',
-  padelmarket:   'Padelmarket',
-  padeliberico:  'Padel Iberico',
-  tennispoint:   'Tennis Point',
-  keepadel:      'Keepadel',
+  padelnuestro:    'Padel Nuestro',
+  padelzoom:       'PadelZoom',
+  romasport:       'Roma Sport',
+  padelcoronado:   'Padel Coronado',
+  padelmarket:     'Padelmarket',
+  padeliberico:    'Padel Iberico',
+  tennispoint:     'Tennis Point',
+  keepadel:        'Keepadel',
+  time2padel:      'Time2Padel',
+  padelproshop:    'Padel Pro Shop',
+  padelspain:      'Padel Spain',
+  padeltienda:     'Padel Tienda',
+  padelvice:       'Padelvice',
+  stockpadel:      'Stock Padel',
+  starvie:         'Starvie',
+  ofertasdepadel:  'Ofertas de Padel',
+  zonadepadel:     'Zona de Padel',
+  padelkiwi:       'Padelkiwi',
+  padelstyle:      'Padelstyle',
+  misterpadel:     'Mister Padel',
+  outletdepadel:   'Outlet de Padel',
+  originalpadel:   'Original Padel',
+  streetpadel:     'Street Padel',
+  m1padel:         'M1 Padel',
+  justpadel:       'Just Padel',
+  futurapadelshop: 'Futura Padel',
+  virtualpadel:    'Virtual Padel',
+  padelmania:      'Padelmania',
+  allforpadel:     'All For Padel',
+  tiendapadel5:    'Tienda Padel 5',
+  tiendapadelpoint:'Padelpoint',
+}
+
+// Rating Trustpilot (★ sobre 5) — auditado 2026-07-01
+// null = sin perfil o sin reseñas suficientes
+const TIENDA_TP: Record<string, number | null> = {
+  padelnuestro:    4,
+  padeliberico:    4.5,
+  misterpadel:     5,
+  padelproshop:    4.5,
+  padelmarket:     4,
+  padelkiwi:       4.5,
+  tiendapadelpoint:4.5,
+  justpadel:       4.5,
+  time2padel:      4,
+  ofertasdepadel:  4,
+  tiendapadel5:    4,
+  zonadepadel:     4,
+  padelmania:      4.5,
+  virtualpadel:    4,
+  keepadel:        4.5,
+  stockpadel:      4,
+  tennispoint:     3.5,
+  allforpadel:     3.5,
+  padelstyle:      3.5,
+  originalpadel:   3,
+  futurapadelshop: 3,
+  padelspain:      3,
+  // sin datos / sin reseñas suficientes
+  outletdepadel:   null,
+  padelzoom:       null,
+  padeltienda:     null,
+  romasport:       null,
+  padelcoronado:   null,
+  padelvice:       null,
+  streetpadel:     null,
+  m1padel:         null,
+  starvie:         null,
+}
+
+function tpColor(stars: number): string {
+  if (stars >= 4)   return '#00B67A' // verde Trustpilot
+  if (stars >= 3.5) return '#FFB800' // amarillo
+  return '#FF5F1F'                   // rojo/naranja
 }
 
 function formatModelo(nombre: string, marca: string): string {
@@ -201,9 +267,16 @@ export default function ChollosPage() {
                     -{c.descuento_pct}% vs precio medio tiendas
                   </div>
 
-                  {/* Tienda y tiempo */}
+                  {/* Tienda, rating Trustpilot y tiempo */}
                   <div style={s.footer}>
-                    <span style={s.tienda}>{TIENDA_LABEL[c.tienda_slug] ?? c.tienda}</span>
+                    <span style={s.tienda}>
+                      {TIENDA_LABEL[c.tienda_slug] ?? c.tienda}
+                      {TIENDA_TP[c.tienda_slug] != null && (
+                        <span style={{ ...s.tpStars, color: tpColor(TIENDA_TP[c.tienda_slug]!) }}>
+                          {' '}★{TIENDA_TP[c.tienda_slug]}
+                        </span>
+                      )}
+                    </span>
                     <span style={s.tiempo}>{timeAgo(c.scraped_at)}</span>
                   </div>
                 </div>
@@ -453,6 +526,12 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
     color: 'rgba(255,255,255,0.25)',
     textTransform: 'uppercase',
+  },
+  tpStars: {
+    fontFamily: 'Barlow Condensed, sans-serif',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
   },
   tiempo: {
     fontFamily: 'Barlow Condensed, sans-serif',
