@@ -127,7 +127,7 @@ async function scrape() {
     const $ = cheerio.load(html)
 
     if (pageNum === 1) {
-      codigoDescuento = detectarCodigoDescuento($('body').text())
+      codigoDescuento = detectarCodigoDescuento(html)
       if (codigoDescuento) {
         console.log(`[ofertasdepadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
