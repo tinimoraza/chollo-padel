@@ -278,8 +278,8 @@ async function sincronizarYNotificar(
         .eq('id', p.id)
       enviados++
     }
-    // Pausa mínima entre mensajes para no saturar la API de Telegram
-    await new Promise(r => setTimeout(r, 500))
+    // Pausa entre mensajes: Telegram limita a ~1 msg/s; con 2s hay margen suficiente
+    await new Promise(r => setTimeout(r, 2000))
   }
 
   return { insertados, enviados }
