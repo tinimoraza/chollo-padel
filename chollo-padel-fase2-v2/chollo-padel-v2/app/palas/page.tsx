@@ -246,6 +246,232 @@ function TiendasSection({ pala }: { pala: Pala }) {
   )
 }
 
+
+const CHART_COLORS = ['#C8FF00', '#00B67A', '#FFB800', '#00D2A0', '#A78BFA', '#FF5F1F']
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+function PriceHistorySection({ pala }: { pala: Pala }) {
+  const [rows, setRows] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+    supabase
+      .from('price_history_log')
+      .select('scraped_at, precio, url_producto, disponible, price_sources(slug, nombre)')
+      .eq('pala_id', pala.id)
+      .eq('disponible', true)
+      .gte('scraped_at', since)
+      .order('scraped_at', { ascending: true })
+      .limit(800)
+      .then(({ data, error }) => {
+        if (!active) return
+        if (!error) setRows(data ?? [])
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [pala.id])
+
+  if (loading) return (
+    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif", padding: '16px 0' }}>
+      Cargando historial...
+    </div>
+  )
+
+  // ── Agrupar por tienda ──────────────────────────────────────────────────────
+  type StoreEntry = { nombre: string; slug: string; points: Array<{ ts: number; precio: number; url: string }> }
+  const byStore = new Map<string, StoreEntry>()
+  for (const row of rows) {
+    const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
+    if (!src) continue
+    if (!byStore.has(src.slug)) byStore.set(src.slug, { nombre: src.nombre, slug: src.slug, points: [] })
+    byStore.get(src.slug)!.points.push({ ts: new Date(row.scraped_at).getTime(), precio: Number(row.precio), url: row.url_producto })
+  }
+  const stores = Array.from(byStore.values()).filter(s => s.points.length > 0)
+
+  if (stores.length === 0) return (
+    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
+  )
+
+  // ── Rango global ────────────────────────────────────────────────────────────
+  let minPrice = Infinity, maxPrice = -Infinity, minTs = Infinity, maxTs = -Infinity
+  let minRecord: { precio: number; store: string; url: string } | null = null
+
+  for (const store of stores) {
+    for (const pt of store.points) {
+      if (pt.precio < minPrice) { minPrice = pt.precio; minRecord = { precio: pt.precio, store: store.nombre, url: pt.url } }
+      if (pt.precio > maxPrice) maxPrice = pt.precio
+      if (pt.ts < minTs) minTs = pt.ts
+      if (pt.ts > maxTs) maxTs = pt.ts
+    }
+  }
+
+  const priceRange = maxPrice - minPrice || 10
+  const pMin = minPrice - priceRange * 0.05
+  const pMax = maxPrice + priceRange * 0.18
+  const tsRange = maxTs - minTs || 1
+
+  // ── Dimensiones SVG ─────────────────────────────────────────────────────────
+  const W = 560, H = 190
+  const PAD = { top: 14, right: 16, bottom: 28, left: 54 }
+  const cW = W - PAD.left - PAD.right
+  const cH = H - PAD.top - PAD.bottom
+
+  const toX = (ts: number) => PAD.left + ((ts - minTs) / tsRange) * cW
+  const toY = (p: number)  => PAD.top  + (1 - (p - pMin) / (pMax - pMin)) * cH
+
+  // ── Puntos para cada tienda (step-chart: L a,b L a,c) ─────────────────────
+  function buildPath(points: StoreEntry['points'], close: boolean) {
+    if (points.length === 0) return ''
+    let d = `M ${toX(points[0].ts).toFixed(1)},${toY(points[0].precio).toFixed(1)}`
+    for (let i = 1; i < points.length; i++) {
+      // Step horizontal→vertical
+      d += ` L ${toX(points[i].ts).toFixed(1)},${toY(points[i - 1].precio).toFixed(1)}`
+      d += ` L ${toX(points[i].ts).toFixed(1)},${toY(points[i].precio).toFixed(1)}`
+    }
+    if (close) {
+      d += ` L ${toX(points[points.length - 1].ts).toFixed(1)},${(PAD.top + cH).toFixed(1)}`
+      d += ` L ${toX(points[0].ts).toFixed(1)},${(PAD.top + cH).toFixed(1)} Z`
+    }
+    return d
+  }
+
+  // ── Ticks ───────────────────────────────────────────────────────────────────
+  const yTicks = [0, 1, 2, 3].map(i => pMin + (i / 3) * (pMax - pMin))
+  const numXTicks = Math.min(5, stores[0]?.points.length ?? 1)
+  const xTicks = Array.from({ length: numXTicks }, (_, i) => minTs + (i / (numXTicks - 1 || 1)) * tsRange)
+
+  // ── Marcador de mínimo histórico ────────────────────────────────────────────
+  const allPts = stores.flatMap(s => s.points)
+  const minPt  = allPts.reduce((a, b) => b.precio < a.precio ? b : a, allPts[0])
+  const mxX = toX(minPt.ts)
+  const mxY = toY(minPt.precio)
+
+  return (
+    <div>
+      {/* Badge mínimo histórico */}
+      {minRecord && (
+        <a href={minRecord.url} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
+            padding: '8px 16px', background: 'rgba(200,255,0,0.05)',
+            border: '1px solid rgba(200,255,0,0.18)', textDecoration: 'none' }}>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2,
+            color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>Mínimo histórico</span>
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#C8FF00', lineHeight: 1 }}>
+            {minRecord.precio.toFixed(2)}€
+          </span>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            en {minRecord.store}
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(200,255,0,0.6)' }}>↗</span>
+        </a>
+      )}
+
+      {/* Gráfico SVG */}
+      <div style={{ background: '#090909', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
+          <defs>
+            {stores.map((store, i) => (
+              <linearGradient key={store.slug} id={`hgrad-${store.slug}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0" />
+              </linearGradient>
+            ))}
+          </defs>
+
+          {/* Grid horizontal */}
+          {yTicks.map((tick, i) => (
+            <line key={i}
+              x1={PAD.left} x2={W - PAD.right}
+              y1={toY(tick).toFixed(1)} y2={toY(tick).toFixed(1)}
+              stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+          ))}
+
+          {/* Y axis labels */}
+          {yTicks.map((tick, i) => (
+            <text key={i}
+              x={PAD.left - 6} y={(toY(tick) + 4).toFixed(1)}
+              textAnchor="end" fill="rgba(255,255,255,0.22)"
+              fontSize="10" fontFamily="Barlow Condensed, sans-serif">
+              {tick.toFixed(0)}€
+            </text>
+          ))}
+
+          {/* X axis labels */}
+          {xTicks.map((ts, i) => {
+            const d = new Date(ts)
+            const lbl = `${d.getDate()} ${MESES[d.getMonth()]}`
+            const x = toX(ts)
+            return (
+              <text key={i}
+                x={x.toFixed(1)} y={H - 6}
+                textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
+                fill="rgba(255,255,255,0.2)"
+                fontSize="9" fontFamily="Barlow Condensed, sans-serif">
+                {lbl}
+              </text>
+            )
+          })}
+
+          {/* Clip rect (no salirse del área del gráfico) */}
+          <clipPath id="chart-clip">
+            <rect x={PAD.left} y={PAD.top} width={cW} height={cH} />
+          </clipPath>
+
+          {/* Áreas rellenas */}
+          {stores.map((store, i) => (
+            <path key={`area-${store.slug}`}
+              d={buildPath(store.points, true)}
+              fill={`url(#hgrad-${store.slug})`}
+              clipPath="url(#chart-clip)" />
+          ))}
+
+          {/* Líneas */}
+          {stores.map((store, i) => (
+            <path key={`line-${store.slug}`}
+              d={buildPath(store.points, false)}
+              fill="none"
+              stroke={CHART_COLORS[i % CHART_COLORS.length]}
+              strokeWidth={stores.length === 1 ? 2 : 1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity="0.9"
+              clipPath="url(#chart-clip)" />
+          ))}
+
+          {/* Línea vertical en el mínimo */}
+          <line x1={mxX.toFixed(1)} x2={mxX.toFixed(1)}
+            y1={PAD.top} y2={PAD.top + cH}
+            stroke="rgba(200,255,0,0.15)" strokeWidth="1" strokeDasharray="3 3"
+            clipPath="url(#chart-clip)" />
+
+          {/* Marcador del mínimo */}
+          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="6"
+            fill="#090909" stroke="#C8FF00" strokeWidth="2" />
+          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="3" fill="#C8FF00" />
+          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="12"
+            fill="none" stroke="#C8FF00" strokeWidth="0.5" opacity="0.25" />
+        </svg>
+      </div>
+
+      {/* Leyenda */}
+      {stores.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 10 }}>
+          {stores.map((store, i) => (
+            <div key={store.slug} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 18, height: 2, background: CHART_COLORS[i % CHART_COLORS.length], opacity: 0.9, borderRadius: 1 }} />
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11,
+                color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 }}>{store.nombre}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -318,6 +544,11 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1.5rem 2rem', background: '#0D0D0D' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
           <TiendasSection pala={pala} />
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1.5rem 2rem', background: '#080808' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
+          <PriceHistorySection pala={pala} />
         </div>
       </div>
     </div>
