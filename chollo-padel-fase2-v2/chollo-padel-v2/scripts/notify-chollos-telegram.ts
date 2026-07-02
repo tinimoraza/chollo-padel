@@ -28,7 +28,7 @@ const supabase = createClient(
 const DRY_RUN        = process.argv.includes('--dry-run')
 const BOT_TOKEN      = process.env.TELEGRAM_BOT_TOKEN
 const CHAT_ID        = process.env.TELEGRAM_CHAT_ID
-const SITE_URL       = 'https://chollo-padel.vercel.app'
+const SITE_URL       = 'https://huntpadel.com'
 
 // Umbrales idénticos a los de /api/chollos
 const UMBRAL_CHOLLO  = 0.65
@@ -68,23 +68,46 @@ async function sendTelegram(text: string): Promise<boolean> {
   }
 }
 
-async function sendTelegramPhoto(imageUrl: string, caption: string): Promise<boolean> {
+async function sendTelegramPhoto(imageUrl: string, caption?: string): Promise<boolean> {
   if (!BOT_TOKEN || !CHAT_ID) return false
   if (DRY_RUN) {
-    console.log('   [dry-run] Telegram photo:', imageUrl.slice(0, 60), '| caption:', caption.slice(0, 80), '…')
+    console.log('   [dry-run] Telegram photo:', imageUrl.slice(0, 60))
     return true
   }
   try {
+    const body: Record<string, unknown> = { chat_id: CHAT_ID, photo: imageUrl }
+    if (caption) { body.caption = caption; body.parse_mode = 'HTML' }
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, photo: imageUrl, caption, parse_mode: 'HTML' }),
+      body: JSON.stringify(body),
     })
     if (!res.ok) { console.error('   ❌ Telegram photo error:', await res.text()); return false }
     return true
   } catch (e) {
     console.error('   ❌ Telegram photo excepción:', e); return false
   }
+}
+
+function generarDescripcion(pala: any): string {
+  if (!pala) return ''
+  const partes: string[] = []
+
+  const juego   = pala.juego   ? (pala.juego === 'control' ? 'control' : pala.juego === 'potencia' ? 'potencia' : 'juego mixto') : null
+  const forma   = pala.forma   ? ({ redonda: 'redonda', diamante: 'diamante', lagrima: 'lágrima' }[pala.forma as string] ?? pala.forma) : null
+  const balance = pala.balance ? ({ bajo: 'bajo', medio: 'medio', alto: 'alto' }[pala.balance as string] ?? pala.balance) : null
+
+  if (juego || forma || balance) {
+    const atrs = [juego && `juego de ${juego}`, forma && `forma ${forma}`, balance && `balance ${balance}`].filter(Boolean)
+    partes.push(atrs.join(', '))
+  }
+
+  const mats: string[] = []
+  if (pala.material_cara) mats.push(`cara de ${(pala.material_cara as string).toLowerCase()}`)
+  if (pala.material_nucleo) mats.push(`núcleo de ${(pala.material_nucleo as string).toLowerCase()}`)
+  if (mats.length) partes.push(mats.join(' y '))
+
+  return partes.length ? partes.join(' · ') + '.' : ''
 }
 
 type CholloDatos = {
@@ -99,31 +122,20 @@ type CholloDatos = {
   codigo_descuento?: string | null
 }
 
-/** Mensaje completo (sin imagen) */
-function formatMensaje(c: CholloDatos): string {
+/** Mensaje de texto principal (se envía siempre; foto va después como mensaje aparte) */
+export function formatMensaje(c: CholloDatos, descripcion = ''): string {
   const emoji = c.descuento_pct >= 40 ? '🔥🔥' : '🔥'
   const desde = new Date(c.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
-  const cod = c.codigo_descuento ? `\n🏷️ Código: <code>${c.codigo_descuento}</code>` : ''
+  const cod = c.codigo_descuento
+    ? `\n🏷️ Código descuento: <code>${c.codigo_descuento}</code>`
+    : ''
+  const desc = descripcion ? `\n\n📋 ${descripcion}` : ''
   return (
     `🎾 PÁDEL <b>#CholloPadel</b> 🇪🇸\n\n` +
-    `${emoji} <b>${c.nombre_pala}</b> por <b>${c.precio.toFixed(2)}€</b>\n` +
-    `<s>${c.precio_referencia.toFixed(0)}€</s>  →  −${c.descuento_pct}% sobre precio medio${cod}\n\n` +
-    `🛒 Comprar en <a href="${c.url_producto}">${c.tienda}</a>\n\n` +
-    `🕐 Detectado a las ${desde}\n` +
-    `🌐 <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>`
-  )
-}
-
-/** Caption corto para sendPhoto (máx ~1024 chars) */
-function formatCaption(c: CholloDatos): string {
-  const emoji = c.descuento_pct >= 40 ? '🔥🔥' : '🔥'
-  const desde = new Date(c.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
-  const cod = c.codigo_descuento ? `\n🏷️ Código: <code>${c.codigo_descuento}</code>` : ''
-  return (
-    `🎾 <b>#CholloPadel</b> 🇪🇸\n\n` +
     `${emoji} <b>${c.nombre_pala}</b>\n` +
-    `💰 <b>${c.precio.toFixed(2)}€</b>  <s>${c.precio_referencia.toFixed(0)}€</s>  −${c.descuento_pct}%${cod}\n\n` +
-    `🛒 <a href="${c.url_producto}">${c.tienda}</a>\n` +
+    `💰 <b>${c.precio.toFixed(2)}€</b>  <s>${c.precio_referencia.toFixed(0)}€</s>  −${c.descuento_pct}%${cod}` +
+    desc + `\n\n` +
+    `🛒 <a href="${c.url_producto}">${c.tienda}</a>\n\n` +
     `🕐 ${desde}  ·  🌐 <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>`
   )
 }
@@ -289,7 +301,7 @@ async function sincronizarYNotificar(
   // Notificar por Telegram los que aún no se han notificado (activos, sin telegram_enviado_at)
   const { data: pendientes } = await supabase
     .from('chollos_notificados')
-    .select('*, palas(imagen_url)')
+    .select('*, palas(imagen_url, forma, balance, juego, material_cara, material_nucleo)')
     .eq('activo', true)
     .is('telegram_enviado_at', null)
     .order('descuento_pct', { ascending: false })
@@ -301,16 +313,17 @@ async function sincronizarYNotificar(
 
   console.log(`\n   📨 Enviando ${pendientes.length} notificaciones Telegram…`)
   for (const p of pendientes) {
-    const palaInfo = Array.isArray(p.palas) ? p.palas[0] : p.palas
+    const palaInfo   = Array.isArray(p.palas) ? p.palas[0] : p.palas
     const imagenUrl: string | null = palaInfo?.imagen_url ?? null
+    const descripcion = generarDescripcion(palaInfo)
 
-    let ok = false
-    if (imagenUrl) {
-      const caption = formatCaption(p)
-      ok = await sendTelegramPhoto(imagenUrl, caption)
-      if (!ok) ok = await sendTelegram(formatMensaje(p)) // fallback texto
-    } else {
-      ok = await sendTelegram(formatMensaje(p))
+    // Siempre: texto completo primero
+    const ok = await sendTelegram(formatMensaje(p, descripcion))
+
+    // Si hay imagen: enviarla sola a continuación (texto arriba, foto abajo = boceto)
+    if (ok && imagenUrl) {
+      await new Promise(r => setTimeout(r, 1000))
+      await sendTelegramPhoto(imagenUrl)
     }
 
     if (ok && !DRY_RUN) {
