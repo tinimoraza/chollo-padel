@@ -317,14 +317,11 @@ async function sincronizarYNotificar(
     const imagenUrl: string | null = palaInfo?.imagen_url ?? null
     const descripcion = generarDescripcion(palaInfo)
 
-    // Siempre: texto completo primero
-    const ok = await sendTelegram(formatMensaje(p, descripcion))
-
-    // Si hay imagen: enviarla sola a continuación (texto arriba, foto abajo = boceto)
-    if (ok && imagenUrl) {
-      await new Promise(r => setTimeout(r, 1000))
-      await sendTelegramPhoto(imagenUrl)
-    }
+    // Un único mensaje: foto con texto como caption (si no hay imagen, mensaje de texto)
+    const texto = formatMensaje(p, descripcion)
+    const ok = imagenUrl
+      ? await sendTelegramPhoto(imagenUrl, texto)
+      : await sendTelegram(texto)
 
     if (ok && !DRY_RUN) {
       await supabase.from('chollos_notificados')
