@@ -249,6 +249,14 @@ function TiendasSection({ pala }: { pala: Pala }) {
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
+function precioEfectivo(row: any): number {
+  const p = Number(row.precio)
+  if (row.codigo_descuento && row.descuento_pct && Number(row.descuento_pct) > 0) {
+    return p * (1 - Number(row.descuento_pct) / 100)
+  }
+  return p
+}
+
 function mediana(nums: number[]): number {
   const s = [...nums].sort((a, b) => a - b)
   const m = Math.floor(s.length / 2)
@@ -268,7 +276,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
     )).toISOString()
     supabase
       .from('price_history_log')
-      .select('scraped_at, precio, url_producto, disponible, price_sources(slug, nombre)')
+      .select('scraped_at, precio, codigo_descuento, descuento_pct, url_producto, disponible, price_sources(slug, nombre)')
       .eq('pala_id', pala.id)
       .eq('disponible', true)
       .gte('scraped_at', since)
@@ -292,24 +300,24 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
     <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
   )
 
-  // ── Mínimo histórico ─────────────────────────────────────────────────────────
-  let minRow: { precio: number; nombre: string; url: string; fecha: string } | null = null
+  // ── Mínimo histórico (precio efectivo con código de descuento si lo hay) ─────
+  let minRow: { precio: number; nombre: string; url: string; fecha: string; codigo: string | null } | null = null
   for (const row of rows) {
-    const p = Number(row.precio)
+    const p = precioEfectivo(row)
     if (!minRow || p < minRow.precio) {
       const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
       const d = new Date(row.scraped_at)
       minRow = { precio: p, nombre: src?.nombre ?? '', url: row.url_producto,
-        fecha: `${d.getDate()} ${MESES[d.getMonth()]}` }
+        fecha: `${d.getDate()} ${MESES[d.getMonth()]}`, codigo: row.codigo_descuento ?? null }
     }
   }
 
-  // ── PVP medio diario (mediana de todas las tiendas por día) ──────────────────
+  // ── PVP medio diario (mediana de precios efectivos por día) ─────────────────
   const byDay = new Map<string, number[]>()
   for (const row of rows) {
     const day = row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(Number(row.precio))
+    byDay.get(day)!.push(precioEfectivo(row))
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -371,6 +379,12 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
         </span>
         <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
           en {minRow!.nombre} · {minRow!.fecha}
+          {minRow!.codigo && (
+            <span style={{ marginLeft: 8, background: 'rgba(200,255,0,0.15)', color: '#C8FF00',
+              fontSize: 10, letterSpacing: 1, padding: '2px 6px', fontWeight: 700 }}>
+              {minRow!.codigo}
+            </span>
+          )}
         </span>
         <span style={{ fontSize: 11, color: 'rgba(200,255,0,0.6)' }}>↗</span>
       </a>
