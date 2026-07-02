@@ -257,7 +257,10 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
   useEffect(() => {
     let active = true
     setLoading(true)
-    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+    const since = new Date(Math.max(
+      Date.now() - 60 * 24 * 60 * 60 * 1000,
+      new Date('2026-07-01').getTime()
+    )).toISOString()
     supabase
       .from('price_history_log')
       .select('scraped_at, precio, url_producto, disponible, price_sources(slug, nombre)')
