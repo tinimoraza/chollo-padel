@@ -118,66 +118,95 @@ async function generarTarjetaImagen(
   codigoDescuento: string | null,
   imagenUrl: string | null
 ): Promise<Buffer> {
-  const W = 600
-  const HAS_COD  = !!codigoDescuento
-  const HAS_DESC = !!descripcion
+  // Layout: cabecera verde oscura / foto izquierda / precio grande derecha / pie verde
+  const W       = 600
+  const HEAD_H  = 72   // cabecera: nombre + subtítulo huntpadel.com
+  const BODY_H  = 310
+  const FOOT_H  = 40
+  const H       = HEAD_H + BODY_H + FOOT_H  // 422
+  const IMG_W   = 370
+  const PRICE_X = IMG_W
+  const PRICE_W = W - IMG_W  // 230
+  const PX      = PRICE_X + PRICE_W / 2
 
-  const Y_NAME    = 48
-  const Y_PRICES  = 96
-  const Y_IMG_TOP = HAS_COD ? 148 : 118
-  const IMG_H     = 260
-  const Y_IMG_BOT = Y_IMG_TOP + IMG_H
-  const Y_DESC    = Y_IMG_BOT + 20
-  const Y_SEP     = Y_IMG_BOT + (HAS_DESC ? 40 : 12)
-  const Y_FOOTER  = Y_SEP + 26
-  const H         = Y_FOOTER + 32
+  const precioStr    = precio    % 1 === 0 ? `${precio.toFixed(0)}€`    : `${precio.toFixed(2)}€`
+  const precioRefStr = precioRef % 1 === 0 ? `${precioRef.toFixed(0)}€` : `${precioRef.toFixed(0)}€`
 
-  const codRow = HAS_COD
-    ? `<rect x="40" y="108" width="520" height="26" rx="6" fill="#fef3c7"/>
-       <text x="300" y="125" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#92400e">Cod. descuento: ${xmlEsc(codigoDescuento!)}</text>`
+  const codRow = codigoDescuento
+    ? `<rect x="${PRICE_X + 8}" y="${HEAD_H + BODY_H - 38}" width="${PRICE_W - 16}" height="24" rx="5" fill="#fef3c7"/>
+       <text x="${PX}" y="${HEAD_H + BODY_H - 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#92400e">Cod: ${xmlEsc(codigoDescuento)}</text>`
     : ''
 
-  const descRow = HAS_DESC
-    ? `<text x="300" y="${Y_DESC}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#6b7280">${xmlEsc(truncStr(descripcion, 85))}</text>`
+  const descFooter = descripcion
+    ? `<text x="10" y="${HEAD_H + BODY_H + 26}" font-family="Arial,sans-serif" font-size="11" fill="#a7f3d0">${xmlEsc(truncStr(descripcion, 52))}</text>`
     : ''
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   <rect width="${W}" height="${H}" fill="white"/>
-  <rect width="${W}" height="6" fill="#10b981"/>
-  <text x="300" y="${Y_NAME}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#111827">${xmlEsc(truncStr(nombre, 48))}</text>
-  <text x="190" y="${Y_PRICES}" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#9ca3af" text-decoration="line-through">${precioRef.toFixed(0)}&#x20AC;</text>
-  <text x="335" y="${Y_PRICES + 8}" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="#dc2626">${precio.toFixed(2)}&#x20AC;</text>
-  <rect x="450" y="${Y_PRICES - 22}" width="82" height="32" rx="16" fill="#dc2626"/>
-  <text x="491" y="${Y_PRICES - 2}" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">-${descuentoPct}%</text>
+
+  <!-- CABECERA -->
+  <rect width="${W}" height="${HEAD_H}" fill="#064e3b"/>
+  <text x="${W / 2}" y="31" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="white"
+  >${xmlEsc(truncStr(nombre, 44))}</text>
+  <text x="${W / 2}" y="54" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="11" fill="#78b490"
+  >huntpadel.com</text>
+
+  <!-- ZONA FOTO (izquierda) -->
+  <rect x="0" y="${HEAD_H}" width="${IMG_W}" height="${BODY_H}" fill="#f8f9fa"/>
+
+  <!-- ZONA PRECIOS (derecha) -->
+  <rect x="${PRICE_X}" y="${HEAD_H}" width="${PRICE_W}" height="${BODY_H}" fill="white"/>
+  <line x1="${PRICE_X}" y1="${HEAD_H}" x2="${PRICE_X}" y2="${HEAD_H + BODY_H}" stroke="#e5e7eb" stroke-width="1"/>
+
+  <!-- Precio anterior (gris, tachado) -->
+  <text x="${PX}" y="${HEAD_H + 62}" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="20" fill="#9ca3af"
+        text-decoration="line-through">${precioRefStr}</text>
+
+  <!-- Caja precio nuevo -->
+  <rect x="${PRICE_X + 12}" y="${HEAD_H + 78}" width="${PRICE_W - 24}" height="96" rx="10" fill="#dc2626"/>
+  <text x="${PX}" y="${HEAD_H + 144}" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="46" font-weight="bold" fill="white"
+  >${precioStr}</text>
+
+  <!-- Pill descuento -->
+  <rect x="${PRICE_X + 38}" y="${HEAD_H + 192}" width="${PRICE_W - 76}" height="34" rx="17" fill="#10b981"/>
+  <text x="${PX}" y="${HEAD_H + 215}" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="white"
+  >-${descuentoPct}%</text>
+
+  <!-- Tienda -->
+  <text x="${PX}" y="${HEAD_H + 252}" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="12" fill="#6b7280"
+  >${xmlEsc(truncStr(tienda, 24))}</text>
+
   ${codRow}
-  <rect x="100" y="${Y_IMG_TOP}" width="400" height="${IMG_H}" rx="8" fill="#f3f4f6"/>
-  ${descRow}
-  <line x1="30" y1="${Y_SEP}" x2="${W - 30}" y2="${Y_SEP}" stroke="#e5e7eb" stroke-width="1"/>
-  <text x="30" y="${Y_FOOTER}" font-family="Arial,sans-serif" font-size="13" fill="#374151">${xmlEsc(tienda)}</text>
-  <text x="${W - 30}" y="${Y_FOOTER}" text-anchor="end" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#10b981">huntpadel.com</text>
+
+  <!-- PIE -->
+  <rect x="0" y="${HEAD_H + BODY_H}" width="${W}" height="${FOOT_H}" fill="#064e3b"/>
+  ${descFooter}
+  <text x="${W - 10}" y="${HEAD_H + BODY_H + 26}" text-anchor="end"
+        font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white"
+  >huntpadel.com</text>
 </svg>`
 
-  // 1. Fondo SVG → PNG
   let card = await sharp(Buffer.from(svg)).png().toBuffer()
-
-  // 2. Componer imagen del producto encima
   if (imagenUrl) {
     const imgBuf = await fetchImageBuffer(imagenUrl)
     if (imgBuf) {
       try {
         const productPng = await sharp(imgBuf)
-          .resize(400, IMG_H, { fit: 'contain', background: { r: 243, g: 244, b: 246, alpha: 1 } })
-          .png()
-          .toBuffer()
+          .resize(IMG_W - 16, BODY_H - 16, { fit: 'contain', background: { r: 248, g: 249, b: 250, alpha: 1 } })
+          .png().toBuffer()
         card = await sharp(card)
-          .composite([{ input: productPng, top: Y_IMG_TOP, left: 100 }])
-          .png()
-          .toBuffer()
+          .composite([{ input: productPng, top: HEAD_H + 8, left: 8 }])
+          .png().toBuffer()
       } catch { /* foto opcional */ }
     }
   }
-
   return card
 }
 
