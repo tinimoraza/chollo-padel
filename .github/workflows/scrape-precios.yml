@@ -142,4 +142,4 @@ jobs:
       - name: Recalcular Top Oportunidades
         run: npx tsx scripts/top-oportunidades.ts
       - name: Notificar chollos nuevos por Telegram
-        run: npx tsx --env-file=.env.local scripts/notify-chollos-telegram.ts || true
+        run: npx tsx scripts/notify-chollos-telegram.ts || true

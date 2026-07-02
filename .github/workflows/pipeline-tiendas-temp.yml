@@ -210,4 +210,4 @@ jobs:
       - name: Instalar dependencias
         run: npm install
       - name: Notificar chollos nuevos por Telegram
-        run: npx tsx --env-file=.env.local scripts/notify-chollos-telegram.ts
+        run: npx tsx scripts/notify-chollos-telegram.ts
