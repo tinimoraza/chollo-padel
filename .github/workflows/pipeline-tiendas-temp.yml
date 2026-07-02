@@ -76,7 +76,7 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts starvie --no-post
 
   scrape-grupo-b:
-    name: "Scrape B: padelzoom, ofertasdepadel, zonadepadel, padelmarket, padelkiwi, padelstyle, misterpadel"
+    name: "Scrape B: padelzoom, ofertasdepadel, zonadepadel, padelmarket, padelkiwi, padelstyle, misterpadel, pelotapadel"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -107,9 +107,11 @@ jobs:
       - name: Scrape outletdepadel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts outletdepadel --no-post
+      - name: Scrape pelotapadel
+        run: npx tsx scripts/pipeline-tiendas.ts pelotapadel --no-post
 
   scrape-grupo-c:
-    name: "Scrape C: originalpadel, streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, padelmania, keepadel"
+    name: "Scrape C: originalpadel, streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, padelmania, keepadel, padelisland"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -143,6 +145,8 @@ jobs:
       - name: Scrape keepadel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts keepadel --no-post
+      - name: Scrape padelisland
+        run: npx tsx scripts/pipeline-tiendas.ts padelisland --no-post
 
   scrape-grupo-playwright:
     name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint"
