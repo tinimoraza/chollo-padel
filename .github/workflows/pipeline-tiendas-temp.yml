@@ -13,6 +13,8 @@ on:
 env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
 # NOTA (fix 2026-06-18): este job era uno solo, secuencial, con las 19+ tiendas
 # scrapeadas una detrás de otra → superaba el timeout-minutes: 60 ("the job has
@@ -190,3 +192,22 @@ jobs:
         run: npm install
       - name: Post-pipeline (match + recalcular precios)
         run: npx tsx scripts/post-pipeline.ts
+
+  notificar-chollos:
+    name: "Notificar chollos nuevos por Telegram"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [post-pipeline]
+    if: always()
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install
+      - name: Notificar chollos nuevos por Telegram
+        run: npx tsx --env-file=.env.local scripts/notify-chollos-telegram.ts
