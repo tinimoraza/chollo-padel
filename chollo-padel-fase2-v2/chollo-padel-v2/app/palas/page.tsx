@@ -247,7 +247,7 @@ function TiendasSection({ pala }: { pala: Pala }) {
 }
 
 
-const CHART_COLORS = ['#C8FF00', '#00B67A', '#FFB800', '#00D2A0', '#A78BFA', '#FF5F1F']
+const CHART_COLORS = ['#4FC3F7', '#81C784', '#FFB74D', '#F06292', '#CE93D8', '#4DD0E1']
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 function PriceHistorySection({ pala }: { pala: Pala }) {
@@ -373,30 +373,31 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       )}
 
       {/* Gráfico SVG */}
-      <div style={{ background: '#090909', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+      <div style={{ background: '#16191e', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 4, overflow: 'hidden' }}>
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
-          <defs>
-            {stores.map((store, i) => (
-              <linearGradient key={store.slug} id={`hgrad-${store.slug}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0.18" />
-                <stop offset="100%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0" />
-              </linearGradient>
-            ))}
-          </defs>
+
+          {/* Fondo del área del gráfico ligeramente más claro */}
+          <rect x={PAD.left} y={PAD.top} width={cW} height={cH}
+            fill="#1c2028" />
+
+          {/* Clip rect */}
+          <clipPath id="chart-clip">
+            <rect x={PAD.left} y={PAD.top} width={cW} height={cH} />
+          </clipPath>
 
           {/* Grid horizontal */}
           {yTicks.map((tick, i) => (
             <line key={i}
               x1={PAD.left} x2={W - PAD.right}
               y1={toY(tick).toFixed(1)} y2={toY(tick).toFixed(1)}
-              stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+              stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
           ))}
 
           {/* Y axis labels */}
           {yTicks.map((tick, i) => (
             <text key={i}
-              x={PAD.left - 6} y={(toY(tick) + 4).toFixed(1)}
-              textAnchor="end" fill="rgba(255,255,255,0.22)"
+              x={PAD.left - 8} y={(toY(tick) + 4).toFixed(1)}
+              textAnchor="end" fill="rgba(255,255,255,0.45)"
               fontSize="10" fontFamily="Barlow Condensed, sans-serif">
               {tick.toFixed(0)}€
             </text>
@@ -411,66 +412,46 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
               <text key={i}
                 x={x.toFixed(1)} y={H - 6}
                 textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                fill="rgba(255,255,255,0.2)"
+                fill="rgba(255,255,255,0.35)"
                 fontSize="9" fontFamily="Barlow Condensed, sans-serif">
                 {lbl}
               </text>
             )
           })}
 
-          {/* Clip rect (no salirse del área del gráfico) */}
-          <clipPath id="chart-clip">
-            <rect x={PAD.left} y={PAD.top} width={cW} height={cH} />
-          </clipPath>
-
-          {/* Áreas rellenas */}
-          {stores.map((store, i) => (
-            <path key={`area-${store.slug}`}
-              d={buildPath(store.points, true)}
-              fill={`url(#hgrad-${store.slug})`}
-              clipPath="url(#chart-clip)" />
-          ))}
-
-          {/* Líneas */}
+          {/* Líneas de precio — sin área rellena */}
           {stores.map((store, i) => (
             <path key={`line-${store.slug}`}
               d={buildPath(store.points, false)}
               fill="none"
               stroke={CHART_COLORS[i % CHART_COLORS.length]}
-              strokeWidth={stores.length === 1 ? 2 : 1.5}
+              strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
-              opacity="0.9"
               clipPath="url(#chart-clip)" />
           ))}
 
-          {/* Línea vertical en el mínimo */}
+          {/* Marcador del mínimo */}
           <line x1={mxX.toFixed(1)} x2={mxX.toFixed(1)}
             y1={PAD.top} y2={PAD.top + cH}
-            stroke="rgba(200,255,0,0.15)" strokeWidth="1" strokeDasharray="3 3"
+            stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeDasharray="4 3"
             clipPath="url(#chart-clip)" />
-
-          {/* Marcador del mínimo */}
-          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="6"
-            fill="#090909" stroke="#C8FF00" strokeWidth="2" />
-          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="3" fill="#C8FF00" />
-          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="12"
-            fill="none" stroke="#C8FF00" strokeWidth="0.5" opacity="0.25" />
+          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="5"
+            fill="#1c2028" stroke="#C8FF00" strokeWidth="2" />
+          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="2.5" fill="#C8FF00" />
         </svg>
       </div>
 
       {/* Leyenda */}
-      {stores.length > 1 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 10 }}>
-          {stores.map((store, i) => (
-            <div key={store.slug} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 18, height: 2, background: CHART_COLORS[i % CHART_COLORS.length], opacity: 0.9, borderRadius: 1 }} />
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11,
-                color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 }}>{store.nombre}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 10 }}>
+        {stores.map((store, i) => (
+          <div key={store.slug} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 22, height: 3, background: CHART_COLORS[i % CHART_COLORS.length], borderRadius: 2 }} />
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
+              color: 'rgba(255,255,255,0.65)', letterSpacing: 0.3 }}>{store.nombre}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
