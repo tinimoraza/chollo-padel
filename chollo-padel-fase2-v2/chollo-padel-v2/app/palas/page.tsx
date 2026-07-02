@@ -247,8 +247,13 @@ function TiendasSection({ pala }: { pala: Pala }) {
 }
 
 
-const CHART_COLORS = ['#4FC3F7', '#81C784', '#FFB74D', '#F06292', '#CE93D8', '#4DD0E1']
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+function mediana(nums: number[]): number {
+  const s = [...nums].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m]
+}
 
 function PriceHistorySection({ pala }: { pala: Pala }) {
   const [rows, setRows] = useState<any[]>([])
@@ -283,105 +288,102 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
     </div>
   )
 
-  // ── Agrupar por tienda ──────────────────────────────────────────────────────
-  type StoreEntry = { nombre: string; slug: string; points: Array<{ ts: number; precio: number; url: string }> }
-  const byStore = new Map<string, StoreEntry>()
-  for (const row of rows) {
-    const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
-    if (!src) continue
-    if (!byStore.has(src.slug)) byStore.set(src.slug, { nombre: src.nombre, slug: src.slug, points: [] })
-    byStore.get(src.slug)!.points.push({ ts: new Date(row.scraped_at).getTime(), precio: Number(row.precio), url: row.url_producto })
-  }
-  const stores = Array.from(byStore.values()).filter(s => s.points.length > 0)
-
-  if (stores.length === 0) return (
+  if (rows.length === 0) return (
     <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
   )
 
-  // ── Rango global ────────────────────────────────────────────────────────────
-  let minPrice = Infinity, maxPrice = -Infinity, minTs = Infinity, maxTs = -Infinity
-  let minRecord: { precio: number; store: string; url: string } | null = null
-
-  for (const store of stores) {
-    for (const pt of store.points) {
-      if (pt.precio < minPrice) { minPrice = pt.precio; minRecord = { precio: pt.precio, store: store.nombre, url: pt.url } }
-      if (pt.precio > maxPrice) maxPrice = pt.precio
-      if (pt.ts < minTs) minTs = pt.ts
-      if (pt.ts > maxTs) maxTs = pt.ts
+  // ── Mínimo histórico ─────────────────────────────────────────────────────────
+  let minRow: { precio: number; nombre: string; url: string; fecha: string } | null = null
+  for (const row of rows) {
+    const p = Number(row.precio)
+    if (!minRow || p < minRow.precio) {
+      const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
+      const d = new Date(row.scraped_at)
+      minRow = { precio: p, nombre: src?.nombre ?? '', url: row.url_producto,
+        fecha: `${d.getDate()} ${MESES[d.getMonth()]}` }
     }
   }
 
-  const priceRange = maxPrice - minPrice || 10
-  const pMin = minPrice - priceRange * 0.05
-  const pMax = maxPrice + priceRange * 0.18
-  const tsRange = maxTs - minTs || 1
+  // ── PVP medio diario (mediana de todas las tiendas por día) ──────────────────
+  const byDay = new Map<string, number[]>()
+  for (const row of rows) {
+    const day = row.scraped_at.slice(0, 10)
+    if (!byDay.has(day)) byDay.set(day, [])
+    byDay.get(day)!.push(Number(row.precio))
+  }
+  const pvpPoints = Array.from(byDay.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, prices]) => ({ ts: new Date(day).getTime(), precio: mediana(prices) }))
+
+  if (pvpPoints.length === 0) return null
 
   // ── Dimensiones SVG ─────────────────────────────────────────────────────────
-  const W = 560, H = 190
-  const PAD = { top: 14, right: 16, bottom: 28, left: 54 }
+  const W = 580, H = 200
+  const PAD = { top: 16, right: 20, bottom: 30, left: 54 }
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
+
+  const allPrices = [...pvpPoints.map(p => p.precio), minRow!.precio]
+  const rawMin = Math.min(...allPrices)
+  const rawMax = Math.max(...allPrices)
+  const pRange = rawMax - rawMin || 10
+  const pMin = rawMin - pRange * 0.12
+  const pMax = rawMax + pRange * 0.20
+
+  const minTs = pvpPoints[0].ts
+  const maxTs = pvpPoints[pvpPoints.length - 1].ts
+  const tsRange = maxTs - minTs || 1
 
   const toX = (ts: number) => PAD.left + ((ts - minTs) / tsRange) * cW
   const toY = (p: number)  => PAD.top  + (1 - (p - pMin) / (pMax - pMin)) * cH
 
-  // ── Puntos para cada tienda (step-chart: L a,b L a,c) ─────────────────────
-  function buildPath(points: StoreEntry['points'], close: boolean) {
-    if (points.length === 0) return ''
-    let d = `M ${toX(points[0].ts).toFixed(1)},${toY(points[0].precio).toFixed(1)}`
-    for (let i = 1; i < points.length; i++) {
-      // Step horizontal→vertical
-      d += ` L ${toX(points[i].ts).toFixed(1)},${toY(points[i - 1].precio).toFixed(1)}`
-      d += ` L ${toX(points[i].ts).toFixed(1)},${toY(points[i].precio).toFixed(1)}`
-    }
-    if (close) {
-      d += ` L ${toX(points[points.length - 1].ts).toFixed(1)},${(PAD.top + cH).toFixed(1)}`
-      d += ` L ${toX(points[0].ts).toFixed(1)},${(PAD.top + cH).toFixed(1)} Z`
-    }
-    return d
-  }
+  // ── Path PVP ────────────────────────────────────────────────────────────────
+  const pvpPath = pvpPoints.map((pt, i) =>
+    `${i === 0 ? 'M' : 'L'} ${toX(pt.ts).toFixed(1)},${toY(pt.precio).toFixed(1)}`
+  ).join(' ')
 
-  // ── Ticks ───────────────────────────────────────────────────────────────────
+  // ── Y ticks ─────────────────────────────────────────────────────────────────
   const yTicks = [0, 1, 2, 3].map(i => pMin + (i / 3) * (pMax - pMin))
-  const numXTicks = Math.min(5, stores[0]?.points.length ?? 1)
-  const xTicks = Array.from({ length: numXTicks }, (_, i) => minTs + (i / (numXTicks - 1 || 1)) * tsRange)
 
-  // ── Marcador de mínimo histórico ────────────────────────────────────────────
-  const allPts = stores.flatMap(s => s.points)
-  const minPt  = allPts.reduce((a, b) => b.precio < a.precio ? b : a, allPts[0])
-  const mxX = toX(minPt.ts)
-  const mxY = toY(minPt.precio)
+  // ── X ticks (hasta 5, distribuidos uniformemente) ───────────────────────────
+  const numXT = Math.min(5, pvpPoints.length)
+  const xTicks = numXT <= 1
+    ? [pvpPoints[0]]
+    : Array.from({ length: numXT }, (_, i) =>
+        pvpPoints[Math.round(i / (numXT - 1) * (pvpPoints.length - 1))])
+
+  // ── Posición Y del mínimo histórico ─────────────────────────────────────────
+  const minY = Math.max(toY(minRow!.precio), PAD.top + 2)
+  // La etiqueta del mínimo: si está muy abajo, ponerla arriba del marcador
+  const lblAbove = minY > PAD.top + cH - 30
 
   return (
     <div>
       {/* Badge mínimo histórico */}
-      {minRecord && (
-        <a href={minRecord.url} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
-            padding: '8px 16px', background: 'rgba(200,255,0,0.05)',
-            border: '1px solid rgba(200,255,0,0.18)', textDecoration: 'none' }}>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2,
-            color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>Mínimo histórico</span>
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#C8FF00', lineHeight: 1 }}>
-            {minRecord.precio.toFixed(2)}€
-          </span>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-            en {minRecord.store}
-          </span>
-          <span style={{ fontSize: 11, color: 'rgba(200,255,0,0.6)' }}>↗</span>
-        </a>
-      )}
+      <a href={minRow!.url} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
+          padding: '8px 16px', background: 'rgba(200,255,0,0.04)',
+          border: '1px solid rgba(200,255,0,0.18)', textDecoration: 'none' }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2,
+          color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>Mínimo histórico</span>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#C8FF00', lineHeight: 1 }}>
+          {minRow!.precio.toFixed(2)}€
+        </span>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+          en {minRow!.nombre} · {minRow!.fecha}
+        </span>
+        <span style={{ fontSize: 11, color: 'rgba(200,255,0,0.6)' }}>↗</span>
+      </a>
 
       {/* Gráfico SVG */}
-      <div style={{ background: '#16191e', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ background: '#16191e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
 
-          {/* Fondo del área del gráfico ligeramente más claro */}
-          <rect x={PAD.left} y={PAD.top} width={cW} height={cH}
-            fill="#1c2028" />
+          {/* Fondo área */}
+          <rect x={PAD.left} y={PAD.top} width={cW} height={cH} fill="#1c2330" />
 
-          {/* Clip rect */}
-          <clipPath id="chart-clip">
+          {/* Clip */}
+          <clipPath id="hchart-clip">
             <rect x={PAD.left} y={PAD.top} width={cW} height={cH} />
           </clipPath>
 
@@ -390,67 +392,83 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
             <line key={i}
               x1={PAD.left} x2={W - PAD.right}
               y1={toY(tick).toFixed(1)} y2={toY(tick).toFixed(1)}
-              stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+              stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
           ))}
 
-          {/* Y axis labels */}
+          {/* Y labels */}
           {yTicks.map((tick, i) => (
             <text key={i}
-              x={PAD.left - 8} y={(toY(tick) + 4).toFixed(1)}
-              textAnchor="end" fill="rgba(255,255,255,0.45)"
+              x={PAD.left - 7} y={(toY(tick) + 4).toFixed(1)}
+              textAnchor="end" fill="rgba(255,255,255,0.4)"
               fontSize="10" fontFamily="Barlow Condensed, sans-serif">
               {tick.toFixed(0)}€
             </text>
           ))}
 
-          {/* X axis labels */}
-          {xTicks.map((ts, i) => {
-            const d = new Date(ts)
+          {/* X labels */}
+          {xTicks.map((pt, i) => {
+            const d = new Date(pt.ts)
             const lbl = `${d.getDate()} ${MESES[d.getMonth()]}`
-            const x = toX(ts)
+            const x = toX(pt.ts)
             return (
               <text key={i}
-                x={x.toFixed(1)} y={H - 6}
+                x={x.toFixed(1)} y={H - 8}
                 textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                fill="rgba(255,255,255,0.35)"
-                fontSize="9" fontFamily="Barlow Condensed, sans-serif">
+                fill="rgba(255,255,255,0.32)" fontSize="9" fontFamily="Barlow Condensed, sans-serif">
                 {lbl}
               </text>
             )
           })}
 
-          {/* Líneas de precio — sin área rellena */}
-          {stores.map((store, i) => (
-            <path key={`line-${store.slug}`}
-              d={buildPath(store.points, false)}
-              fill="none"
-              stroke={CHART_COLORS[i % CHART_COLORS.length]}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              clipPath="url(#chart-clip)" />
+          {/* Línea mínimo histórico (horizontal punteada) */}
+          <line
+            x1={PAD.left} x2={W - PAD.right}
+            y1={minY.toFixed(1)} y2={minY.toFixed(1)}
+            stroke="#C8FF00" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.55"
+            clipPath="url(#hchart-clip)" />
+
+          {/* Etiqueta inline mínimo */}
+          <text
+            x={(PAD.left + 6).toFixed(1)}
+            y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
+            fill="#C8FF00" fontSize="9.5" fontFamily="Barlow Condensed, sans-serif" opacity="0.8">
+            Mínimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minRow!.fecha}
+          </text>
+
+          {/* Línea PVP medio */}
+          {pvpPoints.length >= 2 && (
+            <path d={pvpPath} fill="none" stroke="#60A5FA" strokeWidth="2"
+              strokeLinejoin="round" strokeLinecap="round" clipPath="url(#hchart-clip)" />
+          )}
+
+          {/* Puntos PVP */}
+          {pvpPoints.map((pt, i) => (
+            <circle key={i}
+              cx={toX(pt.ts).toFixed(1)} cy={toY(pt.precio).toFixed(1)}
+              r="3" fill="#60A5FA" clipPath="url(#hchart-clip)" />
           ))}
 
           {/* Marcador del mínimo */}
-          <line x1={mxX.toFixed(1)} x2={mxX.toFixed(1)}
-            y1={PAD.top} y2={PAD.top + cH}
-            stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeDasharray="4 3"
-            clipPath="url(#chart-clip)" />
-          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="5"
-            fill="#1c2028" stroke="#C8FF00" strokeWidth="2" />
-          <circle cx={mxX.toFixed(1)} cy={mxY.toFixed(1)} r="2.5" fill="#C8FF00" />
+          <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+            r="5.5" fill="#1c2330" stroke="#C8FF00" strokeWidth="2" />
+          <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+            r="2.5" fill="#C8FF00" />
+
         </svg>
       </div>
 
       {/* Leyenda */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 10 }}>
-        {stores.map((store, i) => (
-          <div key={store.slug} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 22, height: 3, background: CHART_COLORS[i % CHART_COLORS.length], borderRadius: 2 }} />
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
-              color: 'rgba(255,255,255,0.65)', letterSpacing: 0.3 }}>{store.nombre}</span>
-          </div>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
+            color: 'rgba(255,255,255,0.55)' }}>PVP medio (mediana tiendas)</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#C8FF00" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
+            color: 'rgba(255,255,255,0.55)' }}>Mínimo histórico</span>
+        </div>
       </div>
     </div>
   )
