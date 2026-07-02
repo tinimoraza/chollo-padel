@@ -52,33 +52,42 @@ async function sendTelegram(text: string): Promise<boolean> {
     return false
   }
   if (DRY_RUN) {
-    console.log('   [dry-run] Telegram:', text.slice(0, 120), '…')
+    console.log('   [dry-run] Telegram msg:', text.slice(0, 120), '…')
     return true
   }
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CHAT_ID,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: false,
-      }),
+      body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: 'HTML', disable_web_page_preview: true }),
     })
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('   ❌ Telegram error:', err)
-      return false
-    }
+    if (!res.ok) { console.error('   ❌ Telegram error:', await res.text()); return false }
     return true
   } catch (e) {
-    console.error('   ❌ Telegram excepción:', e)
-    return false
+    console.error('   ❌ Telegram excepción:', e); return false
   }
 }
 
-function formatMensaje(chollo: {
+async function sendTelegramPhoto(imageUrl: string, caption: string): Promise<boolean> {
+  if (!BOT_TOKEN || !CHAT_ID) return false
+  if (DRY_RUN) {
+    console.log('   [dry-run] Telegram photo:', imageUrl.slice(0, 60), '| caption:', caption.slice(0, 80), '…')
+    return true
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, photo: imageUrl, caption, parse_mode: 'HTML' }),
+    })
+    if (!res.ok) { console.error('   ❌ Telegram photo error:', await res.text()); return false }
+    return true
+  } catch (e) {
+    console.error('   ❌ Telegram photo excepción:', e); return false
+  }
+}
+
+type CholloDatos = {
   nombre_pala: string
   marca: string | null
   precio: number
@@ -88,19 +97,34 @@ function formatMensaje(chollo: {
   tienda: string
   primera_vez_at: string
   codigo_descuento?: string | null
-}): string {
-  const emoji = chollo.descuento_pct >= 35 ? '🔥🔥' : '🔥'
-  const desde = new Date(chollo.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
-  const lineaCodigo = chollo.codigo_descuento
-    ? `🏷️ Código: <code>${chollo.codigo_descuento}</code>\n`
-    : ''
+}
+
+/** Mensaje completo (sin imagen) */
+function formatMensaje(c: CholloDatos): string {
+  const emoji = c.descuento_pct >= 40 ? '🔥🔥' : '🔥'
+  const desde = new Date(c.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
+  const cod = c.codigo_descuento ? `\n🏷️ Código: <code>${c.codigo_descuento}</code>` : ''
   return (
-    `${emoji} <b>NUEVO CHOLLO</b> — ${chollo.nombre_pala}\n` +
-    `💰 <b>${chollo.precio.toFixed(2)} €</b>  (ref. ${chollo.precio_referencia.toFixed(0)} €, −${chollo.descuento_pct}%)\n` +
-    lineaCodigo +
-    `🏪 ${chollo.tienda}\n` +
+    `🎾 PÁDEL <b>#CholloPadel</b> 🇪🇸\n\n` +
+    `${emoji} <b>${c.nombre_pala}</b> por <b>${c.precio.toFixed(2)}€</b>\n` +
+    `<s>${c.precio_referencia.toFixed(0)}€</s>  →  −${c.descuento_pct}% sobre precio medio${cod}\n\n` +
+    `🛒 Comprar en <a href="${c.url_producto}">${c.tienda}</a>\n\n` +
     `🕐 Detectado a las ${desde}\n` +
-    `🔗 ${chollo.url_producto}`
+    `🌐 <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>`
+  )
+}
+
+/** Caption corto para sendPhoto (máx ~1024 chars) */
+function formatCaption(c: CholloDatos): string {
+  const emoji = c.descuento_pct >= 40 ? '🔥🔥' : '🔥'
+  const desde = new Date(c.primera_vez_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
+  const cod = c.codigo_descuento ? `\n🏷️ Código: <code>${c.codigo_descuento}</code>` : ''
+  return (
+    `🎾 <b>#CholloPadel</b> 🇪🇸\n\n` +
+    `${emoji} <b>${c.nombre_pala}</b>\n` +
+    `💰 <b>${c.precio.toFixed(2)}€</b>  <s>${c.precio_referencia.toFixed(0)}€</s>  −${c.descuento_pct}%${cod}\n\n` +
+    `🛒 <a href="${c.url_producto}">${c.tienda}</a>\n` +
+    `🕐 ${desde}  ·  🌐 <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>`
   )
 }
 
@@ -265,7 +289,7 @@ async function sincronizarYNotificar(
   // Notificar por Telegram los que aún no se han notificado (activos, sin telegram_enviado_at)
   const { data: pendientes } = await supabase
     .from('chollos_notificados')
-    .select('*')
+    .select('*, palas(imagen_url)')
     .eq('activo', true)
     .is('telegram_enviado_at', null)
     .order('descuento_pct', { ascending: false })
@@ -277,8 +301,18 @@ async function sincronizarYNotificar(
 
   console.log(`\n   📨 Enviando ${pendientes.length} notificaciones Telegram…`)
   for (const p of pendientes) {
-    const msg  = formatMensaje(p)
-    const ok   = await sendTelegram(msg)
+    const palaInfo = Array.isArray(p.palas) ? p.palas[0] : p.palas
+    const imagenUrl: string | null = palaInfo?.imagen_url ?? null
+
+    let ok = false
+    if (imagenUrl) {
+      const caption = formatCaption(p)
+      ok = await sendTelegramPhoto(imagenUrl, caption)
+      if (!ok) ok = await sendTelegram(formatMensaje(p)) // fallback texto
+    } else {
+      ok = await sendTelegram(formatMensaje(p))
+    }
+
     if (ok && !DRY_RUN) {
       await supabase.from('chollos_notificados')
         .update({ telegram_enviado_at: new Date().toISOString() })
