@@ -19,6 +19,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,6 +87,113 @@ async function sendTelegramPhoto(imageUrl: string, caption?: string): Promise<bo
     return true
   } catch (e) {
     console.error('   ❌ Telegram photo excepción:', e); return false
+  }
+}
+
+// ─── Tarjeta-imagen ───────────────────────────────────────────────────────────
+
+async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+    if (!res.ok) return null
+    return Buffer.from(await res.arrayBuffer())
+  } catch { return null }
+}
+
+function xmlEsc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function truncStr(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s
+}
+
+async function generarTarjetaImagen(
+  nombre: string,
+  precio: number,
+  precioRef: number,
+  descuentoPct: number,
+  tienda: string,
+  descripcion: string,
+  codigoDescuento: string | null,
+  imagenUrl: string | null
+): Promise<Buffer> {
+  const W = 600
+  const HAS_COD  = !!codigoDescuento
+  const HAS_DESC = !!descripcion
+
+  const Y_NAME    = 48
+  const Y_PRICES  = 96
+  const Y_IMG_TOP = HAS_COD ? 148 : 118
+  const IMG_H     = 260
+  const Y_IMG_BOT = Y_IMG_TOP + IMG_H
+  const Y_DESC    = Y_IMG_BOT + 20
+  const Y_SEP     = Y_IMG_BOT + (HAS_DESC ? 40 : 12)
+  const Y_FOOTER  = Y_SEP + 26
+  const H         = Y_FOOTER + 32
+
+  const codRow = HAS_COD
+    ? `<rect x="40" y="108" width="520" height="26" rx="6" fill="#fef3c7"/>
+       <text x="300" y="125" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#92400e">Cod. descuento: ${xmlEsc(codigoDescuento!)}</text>`
+    : ''
+
+  const descRow = HAS_DESC
+    ? `<text x="300" y="${Y_DESC}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#6b7280">${xmlEsc(truncStr(descripcion, 85))}</text>`
+    : ''
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${W}" height="${H}" fill="white"/>
+  <rect width="${W}" height="6" fill="#10b981"/>
+  <text x="300" y="${Y_NAME}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#111827">${xmlEsc(truncStr(nombre, 48))}</text>
+  <text x="190" y="${Y_PRICES}" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#9ca3af" text-decoration="line-through">${precioRef.toFixed(0)}&#x20AC;</text>
+  <text x="335" y="${Y_PRICES + 8}" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="#dc2626">${precio.toFixed(2)}&#x20AC;</text>
+  <rect x="450" y="${Y_PRICES - 22}" width="82" height="32" rx="16" fill="#dc2626"/>
+  <text x="491" y="${Y_PRICES - 2}" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">-${descuentoPct}%</text>
+  ${codRow}
+  <rect x="100" y="${Y_IMG_TOP}" width="400" height="${IMG_H}" rx="8" fill="#f3f4f6"/>
+  ${descRow}
+  <line x1="30" y1="${Y_SEP}" x2="${W - 30}" y2="${Y_SEP}" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="30" y="${Y_FOOTER}" font-family="Arial,sans-serif" font-size="13" fill="#374151">${xmlEsc(tienda)}</text>
+  <text x="${W - 30}" y="${Y_FOOTER}" text-anchor="end" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#10b981">huntpadel.com</text>
+</svg>`
+
+  // 1. Fondo SVG → PNG
+  let card = await sharp(Buffer.from(svg)).png().toBuffer()
+
+  // 2. Componer imagen del producto encima
+  if (imagenUrl) {
+    const imgBuf = await fetchImageBuffer(imagenUrl)
+    if (imgBuf) {
+      try {
+        const productPng = await sharp(imgBuf)
+          .resize(400, IMG_H, { fit: 'contain', background: { r: 243, g: 244, b: 246, alpha: 1 } })
+          .png()
+          .toBuffer()
+        card = await sharp(card)
+          .composite([{ input: productPng, top: Y_IMG_TOP, left: 100 }])
+          .png()
+          .toBuffer()
+      } catch { /* foto opcional */ }
+    }
+  }
+
+  return card
+}
+
+async function sendTelegramPhotoBuffer(buf: Buffer, caption?: string): Promise<boolean> {
+  if (!BOT_TOKEN || !CHAT_ID) return false
+  if (DRY_RUN) { console.log('   [dry-run] Tarjeta imagen generada'); return true }
+  try {
+    const form = new FormData()
+    form.append('chat_id', CHAT_ID)
+    form.append('photo', new Blob([buf], { type: 'image/png' }), 'chollo.png')
+    if (caption) { form.append('caption', caption); form.append('parse_mode', 'HTML') }
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form })
+    if (!res.ok) { console.error('   ❌ Telegram photo error:', await res.text()); return false }
+    return true
+  } catch (e) {
+    console.error('   ❌ Telegram excepción:', e); return false
   }
 }
 
@@ -317,11 +425,19 @@ async function sincronizarYNotificar(
     const imagenUrl: string | null = palaInfo?.imagen_url ?? null
     const descripcion = generarDescripcion(palaInfo)
 
-    // Un único mensaje: foto con texto como caption (si no hay imagen, mensaje de texto)
-    const texto = formatMensaje(p, descripcion)
-    const ok = imagenUrl
-      ? await sendTelegramPhoto(imagenUrl, texto)
-      : await sendTelegram(texto)
+    // Generar tarjeta-imagen y enviar como foto única con caption de enlace
+    let ok = false
+    try {
+      const card = await generarTarjetaImagen(
+        p.nombre_pala, p.precio, p.precio_referencia, p.descuento_pct,
+        p.tienda, descripcion, p.codigo_descuento ?? null, imagenUrl
+      )
+      const caption = `🛒 <a href="${p.url_producto}">${xmlEsc(p.tienda)}</a>  ·  🌐 <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>`
+      ok = await sendTelegramPhotoBuffer(card, caption)
+    } catch (err) {
+      console.error('   ⚠️  Error generando tarjeta, fallback texto:', err)
+      ok = await sendTelegram(formatMensaje(p, descripcion))
+    }
 
     if (ok && !DRY_RUN) {
       await supabase.from('chollos_notificados')
