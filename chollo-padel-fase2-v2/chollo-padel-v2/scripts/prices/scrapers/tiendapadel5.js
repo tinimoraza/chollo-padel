@@ -157,15 +157,34 @@ async function scrape() {
     await page.waitForTimeout(DELAY_MS)
   }
 
-  await browser.close()
-
-  // Deduplicar por URL
+  // Deduplicar por URL (antes de browser.close() para poder completar imágenes)
   const seen   = new Set()
   const unique = allProducts.filter(p => {
     if (seen.has(p.url)) return false
     seen.add(p.url)
     return true
   })
+
+  // Para productos sin imagen (Elementor lazy-load sin scroll), extraer og:image de la ficha.
+  const sinImagen = unique.filter(p => !p.image)
+  if (sinImagen.length > 0) {
+    console.log(`[tiendapadel5] Completando imagen de ficha para ${sinImagen.length} productos sin imagen…`)
+    for (const p of sinImagen) {
+      try {
+        await page.goto(p.url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+        const ogImg = await page.evaluate(() => {
+          const meta = document.querySelector('meta[property="og:image"]')
+          return meta ? meta.getAttribute('content') : null
+        })
+        if (ogImg) p.image = ogImg
+      } catch (e) {
+        console.error(`[tiendapadel5] No se pudo obtener imagen de ${p.url}:`, e.message)
+      }
+      await page.waitForTimeout(DELAY_MS)
+    }
+  }
+
+  await browser.close()
 
   console.log(`[tiendapadel5] Total palas únicas: ${unique.length}`)
 

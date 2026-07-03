@@ -144,6 +144,32 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Para productos sin imagen del listing, extraer og:image de la ficha (Shopify, sin cheerio).
+  const sinImagen = allProducts.filter(p => !p.image)
+  if (sinImagen.length > 0) {
+    console.log(`[padelproshop] Completando imagen de ficha para ${sinImagen.length} productos sin imagen\u2026`)
+    for (const p of sinImagen) {
+      try {
+        const res = await fetch(p.url, {
+          headers: {
+            'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept':          'text/html',
+            'Accept-Language': 'es-ES,es;q=0.9',
+          },
+        })
+        if (res.ok) {
+          const html = await res.text()
+          const ogMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/) ||
+                          html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/)
+          if (ogMatch) p.image = ogMatch[1]
+        }
+      } catch (e) {
+        console.error(`[padelproshop] No se pudo obtener imagen de ${p.url}:`, e.message)
+      }
+      await sleep(DELAY_MS)
+    }
+  }
+
   console.log(`[padelproshop] Total palas únicas: ${allProducts.length}`)
 
   const scraped_at = new Date().toISOString()
