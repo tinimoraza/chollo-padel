@@ -70,7 +70,11 @@ async function scrape() {
 
       const imgEl  = $li.find('img').first()
       const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+      let image = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+      // Convertir URL relativa a absoluta
+      if (image && !image.startsWith('http')) image = 'https://www.streetpadel.com' + (image.startsWith('/') ? '' : '/') + image
+      // Descartar placeholder de "próximamente" u otras imágenes genéricas
+      if (image && /proximamente|no[_-]?image|placeholder/i.test(image)) image = null
 
       out.push({
         title,

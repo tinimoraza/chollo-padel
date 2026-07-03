@@ -45,9 +45,11 @@ function parseArticles($, articles) {
     // Imagen — PrestaShop suele usar lazy-load (data-src) sobre img.product-thumbnail-first
     const imgEl  = $a.find('img.product-thumbnail-first, img').first()
     const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-    const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
+    let image = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
       ? null
       : (rawImg.split('?')[0] || null)
+    if (image && !image.startsWith('http')) image = 'https://www.m1padel.com' + (image.startsWith('/') ? '' : '/') + image
+    if (image && /\/cms\/|\/banner|\/slide/i.test(image)) image = null
 
     out.push({
       title,

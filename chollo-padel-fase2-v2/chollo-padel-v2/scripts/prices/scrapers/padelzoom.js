@@ -189,7 +189,8 @@ function parseTemplate(html) {
 
     const $img   = $link.find('img').first();
     const rawImg = $img.attr('data-src') || $img.attr('src') || '';
-    const image  = (!rawImg || rawImg.startsWith('data:')) ? null : rawImg.split('?')[0];
+    let image = (!rawImg || rawImg.startsWith('data:')) ? null : rawImg.split('?')[0]
+    if (image && !image.startsWith('http')) image = 'https://padelzoom.es' + (image.startsWith('/') ? '' : '/') + image
 
     products.push({ title, price, url, image });
   });
