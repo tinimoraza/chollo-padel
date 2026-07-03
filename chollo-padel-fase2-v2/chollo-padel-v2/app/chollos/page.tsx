@@ -37,7 +37,6 @@ const TIENDA_LABEL: Record<string, string> = {
   virtualpadel:    'Virtual Padel',
   padelmania:      'Padelmania',
   pelotapadel:     'PelotaPadel',
-  padelisland:     'Padel Island',
   allforpadel:     'All For Padel',
   tiendapadel5:    'Tienda Padel 5',
   tiendapadelpoint:'Padelpoint',
@@ -69,7 +68,6 @@ const TIENDA_TP: Record<string, number | null> = {
   futurapadelshop: 3,
   padelspain:      3,
   pelotapadel:     4.5,   // 4.7 sobre 5 — 1.279 reseñas
-  padelisland:     4.5,   // 4.8 sobre 5 — 47 reseñas
   // sin datos / sin reseñas suficientes
   outletdepadel:   null,
   padelzoom:       null,

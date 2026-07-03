@@ -408,13 +408,29 @@ async function sincronizarYNotificar(
       insertados++
 
     } else if (!existente.activo) {
-      // Chollo que había desaparecido y vuelve — re-activar y re-notificar
-      console.log(`   🔄 Chollo reaparecido: ${c.nombre_pala} en ${c.tienda}`)
+      // Chollo que había desaparecido y vuelve.
+      // Solo se re-notifica si el precio efectivo bajó al menos un 1% respecto
+      // al precio que se notificó la vez anterior. Si el precio es igual o peor
+      // solo se reactiva (activo=true) sin limpiar telegram_enviado_at.
+      const precioMejoro = c.precio < Number(existente.precio) * 0.99
+      const update: Record<string, unknown> = {
+        activo:            true,
+        precio:            c.precio,
+        precio_referencia: c.precio_referencia,
+        descuento_pct:     c.descuento_pct,
+        codigo_descuento:  c.codigo_descuento,
+      }
+      if (precioMejoro) {
+        update.primera_vez_at      = new Date().toISOString()
+        update.telegram_enviado_at = null
+        console.log(`   🔄 Chollo reaparecido con precio MEJOR: ${c.nombre_pala} en ${c.tienda} — ${c.precio.toFixed(2)}€ (antes ${Number(existente.precio).toFixed(2)}€)`)
+      } else {
+        // Sin cambio de precio → solo reactivar, no volver a notificar
+        console.log(`   🔄 Chollo reaparecido (precio sin cambio): ${c.nombre_pala} en ${c.tienda} — ${c.precio.toFixed(2)}€`)
+      }
       if (!DRY_RUN) {
         await supabase.from('chollos_notificados')
-          .update({ activo: true, precio: c.precio, precio_referencia: c.precio_referencia,
-                    descuento_pct: c.descuento_pct, primera_vez_at: new Date().toISOString(),
-                    telegram_enviado_at: null, codigo_descuento: c.codigo_descuento })
+          .update(update)
           .eq('pala_id', c.pala_id)
           .eq('source_id', c.source_id)
       }

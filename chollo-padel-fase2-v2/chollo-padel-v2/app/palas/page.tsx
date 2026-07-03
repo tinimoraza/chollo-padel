@@ -73,7 +73,6 @@ const TIENDA_TP: Record<string, number | null> = {
   virtualpadel:    4,
   keepadel:        4.5,
   pelotapadel:     4.5,   // 4.7 sobre 5 — 1.279 reseñas
-  padelisland:     4.5,   // 4.8 sobre 5 — 47 reseñas
   stockpadel:      4,
   tennispoint:     3.5,
   allforpadel:     3.5,
