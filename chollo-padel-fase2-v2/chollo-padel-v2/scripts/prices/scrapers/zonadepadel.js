@@ -59,37 +59,49 @@ const TIENE_AÑO_RE = /\b(19|20)\d{2}\b/
 // "Head Speed Pro" → matcheó con la edición 2025 cuando la tienda vendía la 2023).
 // Para evitarlo, si el título no trae año, vamos a la ficha de producto y lo extraemos
 // de ahí (sale en el <title>, en la tabla de características "Año" y en el cuerpo).
-async function extraerAñoDeFicha($) {
+// Las imágenes del listado son placeholder reload.gif (lazy-load JS). La ficha tiene
+// el og:image real en el <head> (HTML estático, sin JS necesario).
+async function extraerDatosDeFicha($) {
+  // --- Año ---
   const titleText = $('title').text()
   const mTitle = titleText.match(/\b(20\d{2})\b/)
-  if (mTitle) return mTitle[1]
+  let año = mTitle ? mTitle[1] : null
 
-  let año = null
-  $('dt').each((_, dt) => {
-    if (año) return
-    const label = $(dt).text().trim().toLowerCase()
-    if (label === 'año' || label === 'ano') {
-      const val = $(dt).next('dd').text().trim()
-      const m = val.match(/(20\d{2})/)
-      if (m) año = m[1]
-    }
-  })
-  if (año) return año
+  if (!año) {
+    $('dt').each((_, dt) => {
+      if (año) return
+      const label = $(dt).text().trim().toLowerCase()
+      if (label === 'año' || label === 'ano') {
+        const val = $(dt).next('dd').text().trim()
+        const m = val.match(/(20\d{2})/)
+        if (m) año = m[1]
+      }
+    })
+  }
+  if (!año) {
+    const bodyText = $('body').text()
+    const mBody = bodyText.match(/a[nñ]o:?\s*(20\d{2})/i)
+    if (mBody) año = mBody[1]
+  }
 
-  const bodyText = $('body').text()
-  const mBody = bodyText.match(/a[nñ]o:?\s*(20\d{2})/i)
-  return mBody ? mBody[1] : null
+  // --- Imagen real desde og:image (PrestaShop la pone en <head>, no necesita JS) ---
+  const imagen = $('meta[property="og:image"]').attr('content') || null
+
+  return { año, imagen }
 }
 
-async function completarAñoSiFalta(load, products) {
+async function completarDatosDeFicha(load, products) {
   for (const p of products) {
-    if (TIENE_AÑO_RE.test(p.title)) continue
+    const needsYear  = !TIENE_AÑO_RE.test(p.title)
+    const needsImage = !p.image || p.image.includes('reload.gif')
+    if (!needsYear && !needsImage) continue
     try {
-      const html = await fetchPage(p.url)
-      const año = await extraerAñoDeFicha(load(html))
-      if (año) p.title = `${p.title} ${año}`
+      const html  = await fetchPage(p.url)
+      const datos = await extraerDatosDeFicha(load(html))
+      if (needsYear  && datos.año)    p.title = `${p.title} ${datos.año}`
+      if (needsImage && datos.imagen) p.image = datos.imagen
     } catch (e) {
-      console.error(`[zonadepadel] No se pudo obtener año de ${p.url}:`, e.message)
+      console.error(`[zonadepadel] No se pudo obtener datos de ${p.url}:`, e.message)
     }
     await sleep(DELAY_MS)
   }
@@ -223,10 +235,12 @@ async function scrape() {
 
   console.log(`[zonadepadel] Total palas únicas: ${allProducts.length}`)
 
-  const sinAño = allProducts.filter(p => !TIENE_AÑO_RE.test(p.title))
-  if (sinAño.length > 0) {
-    console.log(`[zonadepadel] Completando año en ficha para ${sinAño.length} productos sin año en el título…`)
-    await completarAñoSiFalta(load, sinAño)
+  const sinDatos = allProducts.filter(p =>
+    !TIENE_AÑO_RE.test(p.title) || !p.image || p.image.includes('reload.gif')
+  )
+  if (sinDatos.length > 0) {
+    console.log(`[zonadepadel] Completando año/imagen de ficha para ${sinDatos.length} productos…`)
+    await completarDatosDeFicha(load, sinDatos)
   }
 
   const scraped_at = new Date().toISOString()
