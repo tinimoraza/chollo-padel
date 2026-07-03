@@ -277,6 +277,50 @@ export function formatMensaje(c: CholloDatos, descripcion = ''): string {
   )
 }
 
+// ─── Verificación de stock en vivo ────────────────────────────────────────────
+// Señales de sin stock que busca en el HTML del producto (minúsculas)
+const SENALES_SIN_STOCK = [
+  // Español
+  'agotado', 'sin stock', 'sin existencias', 'no disponible',
+  // Inglés / genérico
+  'out of stock', 'sold out', 'outofstock', 'out_of_stock',
+  // Schema.org (JSON-LD)
+  'schema.org/outofstock',
+  // Shopify: producto sin stock en JSON inline
+  '"available":false',
+  // PrestaShop
+  'product-unavailable',
+  // WooCommerce
+  'class="out-of-stock"',
+]
+
+/**
+ * Hace un fetch rápido de la URL del producto y comprueba si hay señales
+ * de sin stock en el HTML. Devuelve true si parece disponible, false si
+ * hay señales claras de sin stock.
+ * En caso de error de red o timeout devuelve true (no bloquear por dudas).
+ */
+async function verificarStockEnVivo(url: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController()
+    const tid = setTimeout(() => ctrl.abort(), 10_000)
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      },
+    })
+    clearTimeout(tid)
+    if (!res.ok) return true  // No podemos acceder → no bloquear
+    const html = (await res.text()).toLowerCase()
+    return !SENALES_SIN_STOCK.some(s => html.includes(s))
+  } catch {
+    return true  // Timeout u otro error de red → no bloquear por dudas
+  }
+}
+
 // ─── Paso 1: Cargar chollos actuales del pipeline ─────────────────────────────
 
 async function cargarChollosActuales() {
@@ -466,6 +510,24 @@ async function sincronizarYNotificar(
 
   console.log(`\n   📨 Enviando ${pendientes.length} notificaciones Telegram…`)
   for (const p of pendientes) {
+    // ── Verificación de stock en vivo ──────────────────────────────────────
+    // Hacemos un fetch real de la página del producto antes de publicar.
+    // Si detectamos señales de sin stock, marcamos en BD y saltamos.
+    const enStock = await verificarStockEnVivo(p.url_producto)
+    if (!enStock) {
+      console.log(`   ⛔ Sin stock en vivo: ${p.nombre_pala} (${p.tienda}) — se omite y se marca indisponible`)
+      if (!DRY_RUN) {
+        await supabase.from('price_snapshots')
+          .update({ disponible: false })
+          .eq('pala_id', p.pala_id)
+          .eq('source_id', p.source_id)
+        await supabase.from('chollos_notificados')
+          .update({ activo: false })
+          .eq('id', p.id)
+      }
+      continue
+    }
+
     const palaInfo   = Array.isArray(p.palas) ? p.palas[0] : p.palas
     const imagenUrl: string | null = palaInfo?.imagen_url ?? null
     const descripcion = generarDescripcion(palaInfo)
