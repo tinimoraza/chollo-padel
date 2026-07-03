@@ -260,6 +260,7 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
       sku:              m.sku ?? null,
       codigo_descuento: m.codigoDescuento ?? null,
       descuento_pct:    m.descuentoPct ?? null,
+      imagen_url:       m.image ?? null,
     }))
 
     let ok = false
