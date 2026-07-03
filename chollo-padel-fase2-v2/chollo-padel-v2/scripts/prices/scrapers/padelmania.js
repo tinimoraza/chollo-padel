@@ -161,6 +161,24 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
+  // Para productos sin imagen del listing (data-src vacío), extraer og:image de la ficha.
+  // PrestaShop siempre pone og:image en el <head> — HTML estático, sin JS necesario.
+  const sinImagen = allProducts.filter(p => !p.image)
+  if (sinImagen.length > 0) {
+    console.log(`[padelmania] Completando imagen de ficha para ${sinImagen.length} productos sin imagen…`)
+    for (const p of sinImagen) {
+      try {
+        const html = await fetchPage(p.url)
+        const $ = cheerio.load(html)
+        const ogImg = $('meta[property="og:image"]').attr('content') || null
+        if (ogImg) p.image = ogImg
+      } catch (e) {
+        console.error(`[padelmania] No se pudo obtener imagen de ${p.url}:`, e.message)
+      }
+      await sleep(DELAY_MS)
+    }
+  }
+
   console.log(`[padelmania] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
   const resultado = allProducts.map(p => ({
