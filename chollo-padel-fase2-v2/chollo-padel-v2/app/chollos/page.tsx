@@ -216,8 +216,8 @@ export default function ChollosPage() {
                   {c.tag === 'CHOLLO' ? 'CHOLLO' : 'OFERTA'}
                 </div>
 
-                {/* Badge NUEVO (chollo detectado en las últimas 48h) */}
-                {c.primera_vez_at && (Date.now() - new Date(c.primera_vez_at).getTime()) < 48 * 60 * 60 * 1000 && (
+                {/* Badge NUEVO (chollo detectado en las últimas 24h) */}
+                {c.primera_vez_at && (Date.now() - new Date(c.primera_vez_at).getTime()) < 24 * 60 * 60 * 1000 && (
                   <div style={{
                     position: 'absolute', top: 8, right: 8,
                     background: '#C8FF00', color: '#000',
