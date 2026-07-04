@@ -232,7 +232,11 @@ export async function GET() {
     // coinciden de forma consistente, menos probable es que sea un error de
     // matching. Fix: tolerancia de spread escalada por fuentes_count en vez
     // de un umbral unico - mas fuentes = mas confianza = mas margen.
-    const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : MAX_SPREAD
+    // Con exactamente 2 fuentes y spread > 1.8x, el precio referencia es poco
+    // fiable (un precio de lista muy alto + uno muy bajo da una mediana inutil).
+    // Casos reales: pala descatalogada en una tienda a precio outlet + precio
+    // de lista en otra. Se descarta hasta que haya >= 3 fuentes reales.
+    const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : (priceRef.fuentes_count === 2 ? 1.8 : MAX_SPREAD)
     if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > spreadMaximo) { _dbg.push(`spread|${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
@@ -297,13 +301,15 @@ export async function GET() {
   return NextResponse.json(
     {
       chollos,
-      total: chollos.length,
-      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
+      total: chollos.length,      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
       ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
       updated_at: updatedAt,
       _dbg,
       _dbgMeta: { snapshots_raw: snapshots.length, after_dedup: byKey.size },
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+  )
+}
+
   )
 }
