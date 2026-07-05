@@ -39,7 +39,7 @@ export interface CholloTienda {
 const UMBRAL_CHOLLO = 0.65
 const UMBRAL_OFERTA = 0.75
 const MIN_REFERENCIA = 50
-const MIN_FUENTES = 2
+const MIN_FUENTES = 3
 const MAX_SPREAD  = 2.5
 const MIN_ANO = 2024
 
@@ -225,18 +225,10 @@ export async function GET() {
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
     // Bug real 2026-06-21: MAX_SPREAD=2.5 fijo descartaba chollos genuinos en
     // productos con muchas tiendas (ej. Bullpadel Vertex 04 25 Women: 8
-    // fuentes, match_confidence=1 en todas, min=74.95 max=269.95 -> spread
-    // 3.6x). El guard se diseno para detectar matches CONTAMINADOS (precios
-    // dispares por error de matching), no para penalizar variacion real de
-    // precio entre muchas tiendas independientes - y cuantas mas fuentes
-    // coinciden de forma consistente, menos probable es que sea un error de
-    // matching. Fix: tolerancia de spread escalada por fuentes_count en vez
-    // de un umbral unico - mas fuentes = mas confianza = mas margen.
-    // Con exactamente 2 fuentes y spread > 1.8x, el precio referencia es poco
-    // fiable (un precio de lista muy alto + uno muy bajo da una mediana inutil).
-    // Casos reales: pala descatalogada en una tienda a precio outlet + precio
-    // de lista en otra. Se descarta hasta que haya >= 3 fuentes reales.
-    const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : (priceRef.fuentes_count === 2 ? 1.8 : MAX_SPREAD)
+    // fuentes, spread 3.6x). Fix: con >= 5 fuentes se amplia tolerancia a 4.0x.
+    // Para 2-4 fuentes se mantiene MAX_SPREAD=2.5; la disponibilidad real la
+    // garantiza el scraper, no este guard.
+    const spreadMaximo = priceRef.fuentes_count >= 5 ? 4.0 : MAX_SPREAD
     if (priceRef.precio_minimo > 0 && priceRef.precio_maximo / priceRef.precio_minimo > spreadMaximo) { _dbg.push(`spread|${pala.modelo}`); continue }
 
     const ref = priceRef.precio_referencia
@@ -308,8 +300,5 @@ export async function GET() {
       _dbgMeta: { snapshots_raw: snapshots.length, after_dedup: byKey.size },
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
-  )
-}
-
   )
 }

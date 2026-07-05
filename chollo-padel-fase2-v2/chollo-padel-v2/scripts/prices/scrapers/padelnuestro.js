@@ -25,7 +25,13 @@ async function extractProducts(page) {
       // usamos src pero descartando cualquier "data:" (placeholder, nunca foto real).
       const rawImg = imgEl ? (imgEl.getAttribute("data-src") || imgEl.getAttribute("src") || "") : "";
       const image = rawImg.startsWith("data:") ? null : (rawImg.split("?")[0] || null);
-      return { title, price, url, image };
+      // En Magento 2 los productos sin stock aparecen en el listado pero
+      // NO tienen boton "Añadir al carrito" — es el indicador mas fiable.
+      // Tambien comprobamos la clase .stock.unavailable que algunos temas usan.
+      const addToCart = card.querySelector('button.tocart, .action.tocart');
+      const outOfStockEl = card.querySelector('.stock.unavailable, .availability.unavailable, .out-of-stock');
+      const disponible = !!addToCart && !outOfStockEl;
+      return { title, price, url, image, disponible };
     }).filter((p) => p.title && p.price && !isNaN(p.price));
   });
 }
@@ -131,6 +137,7 @@ async function scrape() {
     price: p.price,
     url: p.url,
     image: p.image ?? null,
+    disponible: p.disponible !== false,
     scraped_at,
   }));
   resultado.codigoDescuento = codigoDescuento;
