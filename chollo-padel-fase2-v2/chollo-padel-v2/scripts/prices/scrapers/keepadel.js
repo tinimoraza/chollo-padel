@@ -112,11 +112,25 @@ async function scrape() {
       const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
       const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
 
+      // Detectar "Fuera de stock" / "Agotado" en tarjeta de listado PrestaShop.
+      // Las flags de stock suelen estar en .product-flag o .flag-product; tambien
+      // hay temas que ponen clase out-of-stock directamente en el article.
+      const flagsText = $card.find('.product-flag, .flag-product, .product-availability, .availability').text().toLowerCase()
+      const cardClass = ($card.attr('class') || '').toLowerCase()
+      const disponible = !(
+        flagsText.includes('fuera') ||
+        flagsText.includes('agotado') ||
+        flagsText.includes('out-of-stock') ||
+        cardClass.includes('out-of-stock') ||
+        $card.find('[class*="out-of-stock"]').length > 0
+      )
+
       out.push({
         title, price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url: link,
         image,
+        disponible,
       })
     })
     return out
@@ -203,6 +217,7 @@ async function scrape() {
     precio_original: p.precio_original ?? null,
     url:             p.url,
     image:           p.image ?? null,
+    disponible:      p.disponible !== false,
     scraped_at,
   }))
   resultado.codigoDescuento = codigoDescuento
