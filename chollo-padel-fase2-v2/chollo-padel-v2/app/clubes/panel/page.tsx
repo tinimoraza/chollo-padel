@@ -395,4 +395,8 @@ function FilaJugador({
         <button onClick={onEditar} style={{ ...btnGhost, padding: '7px 14px', fontSize: 11.5 }}>EDITAR</button>
         <button onClick={handleBorrar} disabled={borrando} style={{ ...btnGhost, padding: '7px 14px', fontSize: 11.5, color: '#FF5F1F', borderColor: 'rgba(220,38,38,0.3)' }}>
           {borrando ? '...' : 'BORRAR'}
-        </bu
+        </button>
+      </div>
+    </div>
+  )
+}
