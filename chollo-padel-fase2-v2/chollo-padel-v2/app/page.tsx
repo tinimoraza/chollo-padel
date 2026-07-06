@@ -67,7 +67,7 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <nav style={{ background: 'var(--bg2)', borderBottom: '0.5px solid var(--border)', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#000' }}>H</div>
+          <div style={{ width: 26, height: 26, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#fff' }}>H</div>
           <span style={{ fontSize: 15, fontWeight: 600 }}>Hunt<span style={{ color: 'var(--accent-fg)' }}>Padel</span></span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -80,7 +80,7 @@ export default function LandingPage() {
           <Link href="/chollos" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
             🔥 Chollos
           </Link>
-          <Link href="/buscar" style={{ background: 'var(--accent)', color: '#000', padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/buscar" style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
             Empezar →
           </Link>
         </div>
@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       {/* ── HERO ── */}
       <section style={{ textAlign: 'center', padding: '80px 24px 60px', maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'inline-block', background: 'var(--accent)', color: '#000', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, marginBottom: 24, letterSpacing: '0.04em' }}>
+        <div style={{ display: 'inline-block', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, marginBottom: 24, letterSpacing: '0.04em' }}>
           BETA — Wallapop + Vinted
         </div>
         <h1 style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 20 }}>
@@ -99,7 +99,7 @@ export default function LandingPage() {
           Rastreamos Wallapop y Vinted en tiempo real. Tú buscas, nosotros te avisamos cuando aparece lo que buscas al precio que quieres.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/buscar" style={{ background: 'var(--accent)', color: '#000', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+          <Link href="/buscar" style={{ background: 'var(--accent)', color: '#fff', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
             Buscar palas →
           </Link>
           <Link href="/top" style={{ background: 'var(--bg3)', color: 'var(--text)', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 500, textDecoration: 'none', border: '1px solid var(--border)', display: 'inline-block' }}>
@@ -161,7 +161,7 @@ export default function LandingPage() {
         <p style={{ fontSize: 16, color: 'var(--muted)', marginBottom: 28 }}>
           El chollo que buscas ya puede estar ahí fuera.
         </p>
-        <Link href="/buscar" style={{ background: 'var(--accent)', color: '#000', padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+        <Link href="/buscar" style={{ background: 'var(--accent)', color: '#fff', padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
           Empezar a buscar →
         </Link>
       </section>
