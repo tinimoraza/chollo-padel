@@ -313,12 +313,14 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
     }
   }
 
-  // ── PVP medio diario (mediana de precios efectivos por día) ─────────────────
+  // ── PVP medio diario (mediana de precios BASE por día, sin descuentos) ──────
+  // Usamos el precio base para coincidir con precio_referencia de la BD.
+  // Los descuentos puntuales (códigos) se muestran en las cards de tienda.
   const byDay = new Map<string, number[]>()
   for (const row of rows) {
     const day = row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(precioEfectivo(row))
+    byDay.get(day)!.push(Number(row.precio))
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -477,7 +479,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
-            color: 'var(--muted)' }}>PVP medio (mediana tiendas)</span>
+            color: 'var(--muted)' }}>PVP base medio (sin descuentos)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
