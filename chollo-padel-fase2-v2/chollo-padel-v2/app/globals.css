@@ -11,29 +11,41 @@
   --accent-dim:   rgba(80,120,0,0.09);
   --accent-hover: rgba(80,120,0,0.14);
   --accent-fg:    #3D6600;               /* texto donde antes iba el neon */
-  --orange:       #E8581A;
-  --orange-dim:   rgba(232,88,26,0.10);
-  --gold:         #A07000;
 
-  --bg:   #F3F4F7;
+  /* Azul — color principal de UI */
+  --blue:         #2563EB;
+  --blue-dim:     rgba(37,99,235,0.10);
+  --blue-fg:      #1D4ED8;
+  --blue-light:   #DBEAFE;
+
+  /* Fosforito — exclusivo para chollos reales (≥35%) */
+  --chollo:       #CCFF00;
+  --chollo-fg:    #1a3300;
+  --chollo-dim:   rgba(204,255,0,0.18);
+
+  --orange:       #E8581A;               /* mantenido para compatibilidad */
+  --orange-dim:   rgba(232,88,26,0.10);
+  --gold:         #A07000;               /* TOP */
+
+  --bg:   #EFF4FB;                       /* fondo general — azul muy suave */
   --bg2:  #FFFFFF;
-  --bg3:  #EAEBEE;
-  --bg4:  #E0E1E5;
+  --bg3:  #E8EDF5;
+  --bg4:  #DDE4EF;
   --card: #FFFFFF;
 
-  --border:       rgba(0,0,0,0.08);
-  --border-hover: rgba(150,200,0,0.50);
+  --border:       rgba(37,99,235,0.12);
+  --border-hover: rgba(37,99,235,0.45);
 
-  --text:  #111111;
-  --muted: rgba(0,0,0,0.50);
-  --faint: rgba(0,0,0,0.32);
+  --text:  #111827;
+  --muted: rgba(17,24,39,0.50);
+  --faint: rgba(17,24,39,0.32);
 
   --header-h:      52px;
   --sidebar-w:     230px;
   --bottom-nav-h:  60px;
 
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
-  --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  --card-shadow: 0 1px 3px rgba(37,99,235,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --card-shadow-hover: 0 4px 12px rgba(37,99,235,0.14), 0 2px 4px rgba(0,0,0,0.06);
 }
 
 /* ── Base ── */
@@ -90,8 +102,8 @@ body {
 .hp-nav-link.active { color: var(--text); background: rgba(0,0,0,0.06); }
 .hp-nav-link.nav-top { color: var(--gold); }
 .hp-nav-link.nav-top:hover,.hp-nav-link.nav-top.active { background: rgba(160,112,0,0.10); }
-.hp-nav-link.nav-chollos { color: var(--orange); }
-.hp-nav-link.nav-chollos:hover,.hp-nav-link.nav-chollos.active { background: var(--orange-dim); }
+.hp-nav-link.nav-chollos { color: var(--blue-fg); }
+.hp-nav-link.nav-chollos:hover,.hp-nav-link.nav-chollos.active { background: var(--blue-dim); }
 
 .hp-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .btn-primary {
@@ -138,7 +150,7 @@ body {
 .hp-mobile-drawer a:hover { color: var(--text); background: rgba(0,0,0,0.05); }
 .hp-mobile-drawer a.active { color: var(--accent-fg); background: var(--accent-dim); }
 .hp-mobile-drawer a.nav-top { color: var(--gold); }
-.hp-mobile-drawer a.nav-chollos { color: var(--orange); }
+.hp-mobile-drawer a.nav-chollos { color: var(--blue-fg); }
 .hp-mobile-drawer .drawer-cta { margin-top: 12px; }
 
 /* ════════════════════════════════════════
@@ -215,7 +227,7 @@ body {
   transition: border-color 0.15s; outline: none;
 }
 .search-input::placeholder { color: var(--faint); }
-.search-input:focus { border-color: rgba(80,120,0,0.35); background: var(--bg2); }
+.search-input:focus { border-color: var(--blue-dim); background: var(--bg2); }
 .search-chip {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 7px; padding: 7px 12px; font-size: 12px; color: var(--muted);
@@ -316,8 +328,8 @@ body {
 .bottom-nav-item.active .bottom-nav-label { color: var(--accent-fg); }
 .bottom-nav-item.nav-top .bottom-nav-icon { color: var(--gold); }
 .bottom-nav-item.nav-top.active .bottom-nav-label { color: var(--gold); }
-.bottom-nav-item.nav-chollos .bottom-nav-icon { color: var(--orange); }
-.bottom-nav-item.nav-chollos.active .bottom-nav-label { color: var(--orange); }
+.bottom-nav-item.nav-chollos .bottom-nav-icon { color: var(--blue-fg); }
+.bottom-nav-item.nav-chollos.active .bottom-nav-label { color: var(--blue-fg); }
 
 /* ════════════════════════════════════════
    TAGS / UTILS

@@ -148,12 +148,12 @@ export default function ChollosPage() {
               <span style={s.statNum}>{totalStats.total}</span>
               <span style={s.statLbl}>ofertas encontradas</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: 'rgba(232,88,26,0.30)' }}>
-              <span style={{ ...s.statNum, color: 'var(--orange)' }}>{totalStats.chollos}</span>
+            <div style={{ ...s.statBox, borderColor: 'rgba(204,255,0,0.40)', background: 'rgba(204,255,0,0.08)' }}>
+              <span style={{ ...s.statNum, color: 'var(--chollo-fg)' }}>{totalStats.chollos}</span>
               <span style={s.statLbl}>CHOLLOS &gt;=35%</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: 'rgba(255,184,0,0.30)' }}>
-              <span style={{ ...s.statNum, color: 'var(--gold)' }}>{totalStats.ofertas}</span>
+            <div style={{ ...s.statBox, borderColor: 'rgba(37,99,235,0.25)', background: 'var(--blue-dim)' }}>
+              <span style={{ ...s.statNum, color: 'var(--blue-fg)' }}>{totalStats.ofertas}</span>
               <span style={s.statLbl}>OFERTAS &gt;=25%</span>
             </div>
           </div>
@@ -210,10 +210,11 @@ export default function ChollosPage() {
                 {/* Badge tag */}
                 <div style={{
                   ...s.tagBadge,
-                  background: c.tag === 'CHOLLO' ? '#FF5F1F' : '#FFB800',
-                  color: c.tag === 'CHOLLO' ? '#fff' : '#000',
+                  background: c.tag === 'CHOLLO' ? '#CCFF00' : '#2563EB',
+                  color: c.tag === 'CHOLLO' ? '#1a3300' : '#fff',
+                  boxShadow: c.tag === 'CHOLLO' ? '0 0 10px rgba(204,255,0,0.50)' : 'none',
                 }}>
-                  {c.tag === 'CHOLLO' ? 'CHOLLO' : 'OFERTA'}
+                  {c.tag === 'CHOLLO' ? '⚡ CHOLLO' : 'OFERTA'}
                 </div>
 
                 {/* Badge NUEVO (chollo detectado en las últimas 24h) */}
@@ -264,7 +265,11 @@ export default function ChollosPage() {
                   {/* Descuento */}
                   <div style={{
                     ...s.descuento,
-                    color: c.tag === 'CHOLLO' ? '#FF5F1F' : '#FFB800',
+                    background: c.tag === 'CHOLLO' ? 'rgba(204,255,0,0.18)' : 'rgba(37,99,235,0.10)',
+                    color: c.tag === 'CHOLLO' ? '#2d5200' : '#1D4ED8',
+                    borderRadius: 4,
+                    padding: '2px 7px',
+                    width: 'fit-content',
                   }}>
                     -{c.descuento_pct}% vs precio medio tiendas
                   </div>
@@ -313,7 +318,7 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'Bebas Neue, sans-serif',
     fontSize: 48,
     letterSpacing: 4,
-    color: 'var(--orange)',
+    color: 'var(--blue-fg)',
     margin: 0,
   },
   subtitle: {
@@ -373,9 +378,9 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 6,
   },
   filtroBtnActive: {
-    border: '1px solid var(--orange)',
-    color: 'var(--orange)',
-    background: 'var(--orange-dim)',
+    border: '1px solid var(--blue)',
+    color: 'var(--blue-fg)',
+    background: 'var(--blue-dim)',
   },
   estado: {
     display: 'flex',
@@ -389,7 +394,7 @@ const s: Record<string, React.CSSProperties> = {
     width: 28,
     height: 28,
     border: '2px solid var(--border)',
-    borderTop: '2px solid var(--orange)',
+    borderTop: '2px solid var(--blue)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
@@ -507,9 +512,9 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.5,
-    color: '#00875A',
-    background: 'rgba(0,135,90,0.08)',
-    border: '1px solid rgba(0,135,90,0.25)',
+    color: '#1D4ED8',
+    background: 'rgba(37,99,235,0.08)',
+    border: '1px solid rgba(37,99,235,0.25)',
     padding: '3px 8px',
     marginTop: 6,
     width: 'fit-content',
