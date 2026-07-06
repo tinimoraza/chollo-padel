@@ -38,35 +38,35 @@ export default function ClubesLoginPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#080808',
+      minHeight: '100vh', background: 'var(--bg)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{ width: '100%', maxWidth: 380, padding: '0 24px' }}>
         <img src="/huntpadel-logo.svg" alt="HuntPadel" height={36} style={{ marginBottom: 40 }} />
 
         <p style={{
-          fontSize: 11, letterSpacing: 2, color: '#C8FF00',
+          fontSize: 11, letterSpacing: 2, color: 'var(--accent-fg)',
           fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, marginBottom: 10,
         }}>
           CLUBES
         </p>
         <h1 style={{
           fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700,
-          fontSize: 28, color: '#fff', marginBottom: 24,
+          fontSize: 28, color: 'var(--text)', marginBottom: 24,
         }}>
           Accede a tu equipo
         </h1>
 
         {yaLogueado && (
           <div style={{ marginBottom: 20 }}>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'Barlow, sans-serif', marginBottom: 12 }}>
+            <p style={{ color: 'var(--muted)', fontSize: 13, fontFamily: 'Barlow, sans-serif', marginBottom: 12 }}>
               Ya tienes una sesión abierta en este navegador.
             </p>
             <a
               href="/clubes/panel"
               style={{
                 display: 'inline-block', width: '100%', textAlign: 'center', boxSizing: 'border-box',
-                background: '#C8FF00', color: '#000', textDecoration: 'none',
+                background: 'var(--accent)', color: '#000', textDecoration: 'none',
                 padding: '12px', fontFamily: 'Barlow Condensed, sans-serif',
                 fontSize: 14, fontWeight: 700, letterSpacing: 2,
               }}
@@ -77,7 +77,7 @@ export default function ClubesLoginPage() {
         )}
 
         {enviado ? (
-          <p style={{ color: '#C8FF00', fontSize: 14, fontFamily: 'Barlow, sans-serif', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--accent-fg)', fontSize: 14, fontFamily: 'Barlow, sans-serif', lineHeight: 1.6 }}>
             Te hemos enviado un enlace de acceso a <strong>{email}</strong>. Ábrelo desde
             este mismo dispositivo para entrar a tu panel.
           </p>
@@ -85,7 +85,7 @@ export default function ClubesLoginPage() {
           <>
             <div style={{ marginBottom: 12 }}>
               <label style={{
-                fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.4)',
+                fontSize: 11, letterSpacing: 2, color: 'var(--muted)',
                 fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6,
               }}>
                 TU EMAIL
@@ -97,8 +97,8 @@ export default function ClubesLoginPage() {
                 onKeyDown={e => e.key === 'Enter' && handleEnviar()}
                 placeholder="capitan@equipo.com"
                 style={{
-                  width: '100%', background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#fff', padding: '12px 16px', fontSize: 14, outline: 'none',
+                  width: '100%', background: 'var(--card)', border: '1px solid var(--border)',
+                  color: 'var(--text)', padding: '12px 16px', fontSize: 14, outline: 'none',
                   fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box',
                 }}
               />
@@ -112,20 +112,20 @@ export default function ClubesLoginPage() {
               onClick={handleEnviar}
               disabled={loading}
               style={{
-                width: '100%', background: '#C8FF00', color: '#000', border: 'none',
+                width: '100%', background: 'var(--accent)', color: '#000', border: 'none',
                 padding: '12px', fontFamily: 'Barlow Condensed, sans-serif',
                 fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
               }}
             >
               {loading ? 'ENVIANDO...' : 'ENVIARME EL ENLACE →'}
             </button>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11.5, marginTop: 16, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 16, lineHeight: 1.5 }}>
               Sin contraseñas. Te enviamos un enlace de un solo uso a tu email para entrar.
             </p>
           </>
         )}
 
-        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 32, textAlign: 'center', fontFamily: 'Barlow, sans-serif' }}>
+        <p style={{ color: 'var(--faint)', fontSize: 11, marginTop: 32, textAlign: 'center', fontFamily: 'Barlow, sans-serif' }}>
           Beta privada · huntpadel.com
         </p>
       </div>

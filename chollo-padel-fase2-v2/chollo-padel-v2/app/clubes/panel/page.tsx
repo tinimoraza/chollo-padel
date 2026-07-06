@@ -22,26 +22,26 @@ type Jugador = {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-  color: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none',
-  fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box',
+  width: '100%', background: 'var(--card)', border: '1px solid var(--border)',
+  color: 'var(--text)', padding: '10px 14px', fontSize: 14, outline: 'none',
+  fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box', borderRadius: 6,
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)',
+  fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)',
   fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6,
 }
 
 const btnPrimary: React.CSSProperties = {
-  background: '#C8FF00', color: '#000', border: 'none',
+  background: 'var(--accent)', color: '#000', border: 'none',
   padding: '11px 22px', fontFamily: 'Barlow Condensed, sans-serif',
-  fontSize: 13.5, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer',
+  fontSize: 13.5, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', borderRadius: 7,
 }
 
 const btnGhost: React.CSSProperties = {
-  background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)',
+  background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)',
   padding: '10px 18px', fontFamily: 'Barlow Condensed, sans-serif',
-  fontSize: 12.5, fontWeight: 600, letterSpacing: 1, cursor: 'pointer',
+  fontSize: 12.5, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 7,
 }
 
 export default function ClubesPanelPage() {
@@ -104,7 +104,7 @@ export default function ClubesPanelPage() {
   if (cargando) {
     return (
       <div style={pageWrap}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Barlow, sans-serif' }}>Cargando…</p>
+        <p style={{ color: 'var(--muted)', fontFamily: 'Barlow, sans-serif' }}>Cargando…</p>
       </div>
     )
   }
@@ -136,7 +136,7 @@ export default function ClubesPanelPage() {
 }
 
 const pageWrap: React.CSSProperties = {
-  minHeight: '100vh', background: '#080808', color: '#fff',
+  minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)',
   display: 'flex', justifyContent: 'center', padding: '48px 24px',
 }
 
@@ -167,7 +167,7 @@ function CrearEquipo({ userId, onCreado }: { userId: string; onCreado: () => voi
   return (
     <form onSubmit={handleCrear} style={{ maxWidth: 420 }}>
       <p style={{
-        fontSize: 11, letterSpacing: 2, color: '#C8FF00',
+        fontSize: 11, letterSpacing: 2, color: 'var(--accent-fg)',
         fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, marginBottom: 10,
       }}>
         BIENVENIDO
@@ -210,7 +210,7 @@ function PanelEquipo({
               {equipo.nombre_equipo}
             </h1>
             {equipo.division && (
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13.5 }}>{equipo.division}</p>
+              <p style={{ color: 'var(--muted)', fontSize: 13.5 }}>{equipo.division}</p>
             )}
           </div>
           <button onClick={() => setEditandoEquipo(true)} style={btnGhost}>EDITAR EQUIPO</button>
@@ -219,7 +219,7 @@ function PanelEquipo({
         <EditarEquipo equipo={equipo} onDone={() => { setEditandoEquipo(false); onChange() }} />
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderTop: '1px solid var(--border)', paddingTop: 28 }}>
         <h2 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
           PLANTILLA ({jugadores.length})
         </h2>
@@ -240,7 +240,7 @@ function PanelEquipo({
       )}
 
       {jugadores.length === 0 && !mostrarForm && (
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>Todavía no has añadido jugadores.</p>
+        <p style={{ color: 'var(--muted)', fontSize: 14 }}>Todavía no has añadido jugadores.</p>
       )}
 
       <div style={{ display: 'grid', gap: 10 }}>
@@ -333,7 +333,7 @@ function FormJugador({
 
   return (
     <form onSubmit={handleGuardar} style={{
-      background: '#111', border: '1px solid rgba(255,255,255,0.08)', padding: 20, marginBottom: 16,
+      background: 'var(--card)', border: '1px solid var(--border)', padding: 20, marginBottom: 16,
     }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div>
@@ -383,20 +383,16 @@ function FilaJugador({
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      background: '#111', border: '1px solid rgba(255,255,255,0.08)', padding: '14px 18px',
+      background: 'var(--card)', border: '1px solid var(--border)', padding: '14px 18px',
     }}>
       <div>
         <p style={{ fontSize: 15, fontWeight: 600 }}>{jugador.nombre}</p>
-        <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+        <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
           {[jugador.nivel, jugador.telefono, jugador.email].filter(Boolean).join(' · ') || '—'}
         </p>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={onEditar} style={{ ...btnGhost, padding: '7px 14px', fontSize: 11.5 }}>EDITAR</button>
-        <button onClick={handleBorrar} disabled={borrando} style={{ ...btnGhost, padding: '7px 14px', fontSize: 11.5, color: '#FF5F1F', borderColor: 'rgba(255,95,31,0.3)' }}>
+        <button onClick={handleBorrar} disabled={borrando} style={{ ...btnGhost, padding: '7px 14px', fontSize: 11.5, color: '#FF5F1F', borderColor: 'rgba(220,38,38,0.3)' }}>
           {borrando ? '...' : 'BORRAR'}
-        </button>
-      </div>
-    </div>
-  )
-}
+        </bu

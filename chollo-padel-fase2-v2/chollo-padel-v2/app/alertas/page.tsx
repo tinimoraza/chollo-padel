@@ -37,7 +37,6 @@ export default function AlertasPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Recuperar email guardado
   useEffect(() => {
     const saved = localStorage.getItem('huntpadel_email')
     if (saved) {
@@ -94,7 +93,6 @@ export default function AlertasPage() {
         <div style={styles.pageTitle}>MIS ALERTAS</div>
         <p style={styles.pageSubtitle}>Introduce tu email para ver y gestionar tus alertas</p>
 
-        {/* Buscador de email */}
         <div style={styles.emailBar}>
           <input
             type="email"
@@ -110,7 +108,7 @@ export default function AlertasPage() {
         </div>
 
         {loading && (
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 32 }}>Cargando...</p>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 32 }}>Cargando...</p>
         )}
 
         {error && (
@@ -126,13 +124,12 @@ export default function AlertasPage() {
           </div>
         )}
 
-        {/* Alertas de búsqueda */}
         {busquedas.length > 0 && (
           <div style={styles.section}>
             <div style={styles.sectionTitle}>🔔 ALERTAS DE BÚSQUEDA — {busquedas.length}</div>
             <div style={styles.grid}>
               {busquedas.map(alerta => (
-                <div key={alerta.id} style={{ ...styles.card, borderColor: alerta.activa ? 'rgba(200,255,0,0.3)' : 'rgba(255,255,255,0.07)' }}>
+                <div key={alerta.id} style={{ ...styles.card, borderColor: alerta.activa ? 'rgba(61,102,0,0.3)' : 'var(--border)' }}>
                   <div style={styles.cardHeader}>
                     <span style={{ ...styles.badge, ...(alerta.activa ? styles.badgeActiva : styles.badgePausa) }}>
                       {alerta.activa ? 'ACTIVA' : 'PAUSADA'}
@@ -174,13 +171,12 @@ export default function AlertasPage() {
           </div>
         )}
 
-        {/* Favoritos */}
         {favoritos.length > 0 && (
           <div style={styles.section}>
             <div style={styles.sectionTitle}>⭐ FAVORITOS CON ALERTA — {favoritos.length}</div>
             <div style={styles.grid}>
               {favoritos.map(alerta => (
-                <div key={alerta.id} style={{ ...styles.card, borderColor: alerta.activa ? 'rgba(200,255,0,0.3)' : 'rgba(255,255,255,0.07)' }}>
+                <div key={alerta.id} style={{ ...styles.card, borderColor: alerta.activa ? 'rgba(61,102,0,0.3)' : 'var(--border)' }}>
                   <div style={styles.cardHeader}>
                     <span style={{ ...styles.badge, ...(alerta.activa ? styles.badgeActiva : styles.badgePausa) }}>
                       {alerta.activa ? 'ACTIVA' : 'PAUSADA'}
@@ -209,7 +205,7 @@ export default function AlertasPage() {
                     <div>
                       <div style={styles.cardQuery}>{(alerta.item_titulo ?? alerta.query).toUpperCase()}</div>
                       <div style={styles.cardMeta}>
-                        Avisar si baja de <span style={{ color: '#C8FF00', fontWeight: 700 }}>{alerta.max_price}€</span>
+                        Avisar si baja de <span style={{ color: 'var(--accent-fg)', fontWeight: 700 }}>{alerta.max_price}€</span>
                       </div>
                     </div>
                   </div>
@@ -234,36 +230,30 @@ export default function AlertasPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#080808', color: '#fff' },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#0A0A0A' },
-  logo: { display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff', fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, letterSpacing: 3 },
-  logoMark: { fontSize: 20 },
-  nav: { display: 'flex', gap: 24 },
-  navLink: { color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, fontWeight: 600 },
-  navLinkActive: { color: '#C8FF00' },
+  page: { minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' },
   content: { maxWidth: 900, margin: '0 auto', padding: '40px 28px' },
-  pageTitle: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 48, letterSpacing: 4, marginBottom: 8 },
-  pageSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 32 },
+  pageTitle: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 48, letterSpacing: 4, marginBottom: 8, fontWeight: 700 },
+  pageSubtitle: { color: 'var(--muted)', fontSize: 13, marginBottom: 32 },
   emailBar: { display: 'flex', gap: 10, marginBottom: 40 },
-  emailInput: { flex: 1, background: '#111', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px 16px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif' },
-  btnBuscar: { background: '#C8FF00', color: '#000', border: 'none', padding: '12px 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' },
+  emailInput: { flex: 1, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', padding: '12px 16px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif', borderRadius: 8 },
+  btnBuscar: { background: 'var(--accent)', color: '#000', border: 'none', padding: '12px 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 8 },
   emptyState: { textAlign: 'center', padding: '64px 0' },
-  emptyTitle: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 3, marginBottom: 12, color: 'rgba(255,255,255,0.4)' },
-  emptyText: { color: 'rgba(255,255,255,0.3)', fontSize: 13, marginBottom: 24 },
-  btnIrBuscador: { display: 'inline-block', background: '#C8FF00', color: '#000', padding: '12px 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, textDecoration: 'none' },
+  emptyTitle: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 28, letterSpacing: 3, marginBottom: 12, color: 'var(--muted)', fontWeight: 700 },
+  emptyText: { color: 'var(--muted)', fontSize: 13, marginBottom: 24 },
+  btnIrBuscador: { display: 'inline-block', background: 'var(--accent)', color: '#000', padding: '12px 28px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, textDecoration: 'none', borderRadius: 8 },
   section: { marginBottom: 48 },
-  sectionTitle: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: 12, marginBottom: 20 },
+  sectionTitle: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 3, color: 'var(--muted)', borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 20 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 },
-  card: { background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 },
+  card: { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 8, boxShadow: 'var(--card-shadow)' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  badge: { fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px', fontFamily: 'Barlow Condensed, sans-serif' },
-  badgeActiva: { background: '#C8FF00', color: '#000' },
-  badgePausa: { background: '#333', color: 'rgba(255,255,255,0.4)' },
+  badge: { fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px', fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 4 },
+  badgeActiva: { background: 'var(--accent)', color: '#000' },
+  badgePausa: { background: 'var(--bg3)', color: 'var(--muted)' },
   cardActions: { display: 'flex', gap: 4 },
-  iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, padding: 4, opacity: 0.7, color: '#fff' },
-  cardQuery: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1.3 },
-  cardMeta: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'Barlow, sans-serif' },
-  cardLastNotif: { fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: 'Barlow, sans-serif' },
-  btnBuscarAhora: { marginTop: 8, background: 'transparent', border: '1px solid rgba(200,255,0,0.3)', color: '#C8FF00', padding: '8px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', textAlign: 'center' as const },
-  btnVerItem: { marginTop: 8, display: 'block', background: 'transparent', border: '1px solid rgba(200,255,0,0.3)', color: '#C8FF00', padding: '8px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textDecoration: 'none', textAlign: 'center' as const },
+  iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, padding: 4, opacity: 0.7, color: 'var(--text)' },
+  cardQuery: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1.3, color: 'var(--text)' },
+  cardMeta: { fontSize: 11, color: 'var(--muted)', fontFamily: 'Barlow, sans-serif' },
+  cardLastNotif: { fontSize: 10, color: 'var(--faint)', fontFamily: 'Barlow, sans-serif' },
+  btnBuscarAhora: { marginTop: 8, background: 'transparent', border: '1px solid rgba(61,102,0,0.3)', color: 'var(--accent-fg)', padding: '8px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', textAlign: 'center' as const, borderRadius: 6 },
+  btnVerItem: { marginTop: 8, display: 'block', background: 'transparent', border: '1px solid rgba(61,102,0,0.3)', color: 'var(--accent-fg)', padding: '8px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textDecoration: 'none', textAlign: 'center' as const, borderRadius: 6 },
 }

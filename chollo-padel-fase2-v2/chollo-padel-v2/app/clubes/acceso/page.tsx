@@ -27,20 +27,20 @@ export default function ClubesAccesoPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#080808',
+      minHeight: '100vh', background: 'var(--bg)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{ width: '100%', maxWidth: 360, padding: '0 24px' }}>
         <img src="/huntpadel-logo.svg" alt="HuntPadel" height={40} style={{ marginBottom: 48 }} />
         <p style={{
-          fontSize: 12, letterSpacing: 2, color: '#C8FF00',
+          fontSize: 12, letterSpacing: 2, color: 'var(--accent-fg)',
           fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, marginBottom: 24,
         }}>
           CLUBES · ACCESO PRIVADO
         </p>
         <div style={{ marginBottom: 12 }}>
           <label style={{
-            fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.4)',
+            fontSize: 11, letterSpacing: 2, color: 'var(--muted)',
             fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6,
           }}>
             CONTRASEÑA DE ACCESO
@@ -52,8 +52,8 @@ export default function ClubesAccesoPage() {
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••••••"
             style={{
-              width: '100%', background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '12px 16px', fontSize: 14, outline: 'none',
+              width: '100%', background: 'var(--card)', border: '1px solid var(--border)',
+              color: 'var(--text)', padding: '12px 16px', fontSize: 14, outline: 'none',
               fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box',
             }}
           />
@@ -67,14 +67,14 @@ export default function ClubesAccesoPage() {
           onClick={handleLogin}
           disabled={loading}
           style={{
-            width: '100%', background: '#C8FF00', color: '#000', border: 'none',
+            width: '100%', background: 'var(--accent)', color: '#000', border: 'none',
             padding: '12px', fontFamily: 'Barlow Condensed, sans-serif',
             fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
           }}
         >
           {loading ? 'ENTRANDO...' : 'ENTRAR →'}
         </button>
-        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 32, textAlign: 'center', fontFamily: 'Barlow, sans-serif' }}>
+        <p style={{ color: 'var(--faint)', fontSize: 11, marginTop: 32, textAlign: 'center', fontFamily: 'Barlow, sans-serif' }}>
           Beta privada · huntpadel.com/clubes
         </p>
       </div>
