@@ -626,6 +626,37 @@ async function main() {
     snapshotsFallidos = await flushMatches(pendientesMatch, sourceId)
   }
 
+  // Fix 2026-07-06: marcar disponible=false las palas de esta tienda que NO
+  // aparecieron en el scrape actual (stock agotado o producto retirado).
+  // Sin esto, price_snapshots retiene precios obsoletos con disponible=true
+  // que sesgan el precio_referencia calculado en post-pipeline.
+  // Guard: solo si encontramos ≥50% de los snapshots activos previos —
+  // previene borrados masivos si el scraper falla parcialmente o hay timeout.
+  if (!DRY_RUN) {
+    const palaIdsEncontrados = Array.from(new Set(pendientesMatch.map(m => m.palaId)))
+    const { count: snapActivosCount } = await supabase
+      .from('price_snapshots')
+      .select('*', { count: 'exact', head: true })
+      .eq('source_id', sourceId)
+      .eq('disponible', true)
+    const snapActivos = snapActivosCount ?? 0
+
+    if (palaIdsEncontrados.length === 0) {
+      console.log(`  ℹ️  [mark-inactive] sin matches — se omite para no borrar todo`)
+    } else if (snapActivos > 0 && palaIdsEncontrados.length < snapActivos * 0.5) {
+      console.log(`  ⚠️  [mark-inactive] ${palaIdsEncontrados.length} matches vs ${snapActivos} activos previos — posible scrape parcial, se omite`)
+    } else {
+      const { error: errInactive } = await supabase
+        .from('price_snapshots')
+        .update({ disponible: false })
+        .eq('source_id', sourceId)
+        .eq('disponible', true)
+        .not('pala_id', 'in', `(${palaIdsEncontrados.join(',')})`)
+      if (errInactive) console.error(`  ⚠️  [mark-inactive] ${errInactive.message}`)
+      else console.log(`  ✅ [mark-inactive] snapshots obsoletos marcados como no disponibles`)
+    }
+  }
+
   // Limpiar candidatas obsoletas de esta tienda: titulos que ya no saca el scraper
   // (producto desaparecido o titulo cambiado por fix), o excluidos por EXCLUIR_MARCAS.
   if (!DRY_RUN) {
