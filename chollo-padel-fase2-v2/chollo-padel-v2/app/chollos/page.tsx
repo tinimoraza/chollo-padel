@@ -402,8 +402,8 @@ const s: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: 16,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: 20,
     marginBottom: 32,
   },
   card: {
@@ -433,7 +433,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   imgWrap: {
     width: '100%',
-    height: 160,
+    height: 210,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
