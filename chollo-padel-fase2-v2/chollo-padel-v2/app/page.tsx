@@ -68,16 +68,16 @@ export default function LandingPage() {
       <nav style={{ background: 'var(--bg2)', borderBottom: '0.5px solid var(--border)', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 26, height: 26, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#000' }}>H</div>
-          <span style={{ fontSize: 15, fontWeight: 600 }}>Hunt<span style={{ color: 'var(--accent)' }}>Padel</span></span>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>Hunt<span style={{ color: 'var(--accent-fg)' }}>Padel</span></span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/buscar" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
             Buscador
           </Link>
-          <Link href="/top" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: '#FFB800', textDecoration: 'none' }}>
+          <Link href="/top" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
             🏆 Top
           </Link>
-          <Link href="/chollos" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: '#FF7A45', textDecoration: 'none' }}>
+          <Link href="/chollos" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
             🔥 Chollos
           </Link>
           <Link href="/buscar" style={{ background: 'var(--accent)', color: '#000', padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
@@ -88,12 +88,12 @@ export default function LandingPage() {
 
       {/* ── HERO ── */}
       <section style={{ textAlign: 'center', padding: '80px 24px 60px', maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'inline-block', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, marginBottom: 24, letterSpacing: '0.04em' }}>
+        <div style={{ display: 'inline-block', background: 'var(--accent)', color: '#000', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, marginBottom: 24, letterSpacing: '0.04em' }}>
           BETA — Wallapop + Vinted
         </div>
         <h1 style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 20 }}>
           Un chollo de pádel<br />
-          <span style={{ color: 'var(--accent)' }}>no espera.</span>
+          <span style={{ color: 'var(--accent-fg)' }}>no espera.</span>
         </h1>
         <p style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'var(--muted)', lineHeight: 1.6, maxWidth: 520, margin: '0 auto 36px' }}>
           Rastreamos Wallapop y Vinted en tiempo real. Tú buscas, nosotros te avisamos cuando aparece lo que buscas al precio que quieres.
@@ -117,7 +117,7 @@ export default function LandingPage() {
             { value: '+29', label: 'marcas cubiertas' },
           ].map(s => (
             <div key={s.label} style={{ padding: '16px 8px' }}>
-              <div style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, color: 'var(--accent)', letterSpacing: '-0.02em' }}>{s.value}</div>
+              <div style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, color: 'var(--accent-fg)', letterSpacing: '-0.02em' }}>{s.value}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
