@@ -52,7 +52,7 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
 
         {!email ? (
           <p style={{ color: 'var(--faint)', fontSize: 12, lineHeight: 1.6 }}>
-            <a href="/alertas" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Ve a Alertas →</a>{' '}
+            <a href="/alertas" style={{ color: 'var(--accent-fg)', textDecoration: 'none' }}>Ve a Alertas →</a>{' '}
             para ver y gestionar tus alertas.
           </p>
         ) : alertas.length === 0 ? (
@@ -69,8 +69,8 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{
                     display: 'inline-block',
-                    background: alerta.activa ? 'var(--accent-dim)' : 'rgba(255,255,255,0.06)',
-                    color: alerta.activa ? 'var(--accent)' : 'var(--faint)',
+                    background: alerta.activa ? 'var(--accent-dim)' : 'var(--bg3)',
+                    color: alerta.activa ? 'var(--accent-fg)' : 'var(--faint)',
                     fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, marginBottom: 5,
                   }}>
                     {alerta.activa ? 'ACTIVA' : 'PAUSA'}
@@ -83,9 +83,9 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.5, color: '#fff', padding: 2 }}
+                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.5, color: 'var(--text)', padding: 2 }}
                     onClick={() => toggleAlerta(alerta.id, alerta.activa)}>{alerta.activa ? '⏸' : '▶'}</button>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.5, color: '#fff', padding: 2 }}
+                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.5, color: 'var(--text)', padding: 2 }}
                     onClick={() => deleteAlerta(alerta.id)}>🗑</button>
                 </div>
               </div>
@@ -94,14 +94,14 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
         )}
 
         {email && alertas.length > 5 && (
-          <a href="/alertas" style={{ color: 'var(--accent)', fontSize: 11, textDecoration: 'none' }}>
+          <a href="/alertas" style={{ color: 'var(--accent-fg)', fontSize: 11, textDecoration: 'none' }}>
             Ver todas ({alertas.length}) →
           </a>
         )}
 
         <button style={{
-          background: 'transparent', border: '0.5px solid var(--accent)',
-          color: 'var(--accent)', padding: '9px 14px', borderRadius: 7,
+          background: 'transparent', border: '0.5px solid rgba(61,102,0,0.3)',
+          color: 'var(--accent-fg)', padding: '9px 14px', borderRadius: 7,
           fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 6, width: '100%',
           letterSpacing: '0.03em',
         }} onClick={() => onOpenModal('')}>
@@ -118,7 +118,7 @@ export default function Sidebar({ onOpenModal }: { onOpenModal: (q: string) => v
         {topSearches.map(s => (
           <div key={s.query} className="sidebar-item" onClick={() => onOpenModal(s.query)}>
             <span className="sidebar-item-label">{s.query}</span>
-            <span style={{ color: 'var(--accent)', fontSize: 12 }}>→</span>
+            <span style={{ color: 'var(--accent-fg)', fontSize: 12 }}>→</span>
           </div>
         ))}
       </div>

@@ -161,11 +161,11 @@ function FavoritoModal({ item, onClose }: { item: WallapopItem; onClose: () => v
         {saved ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <div style={{ fontSize: 48 }}>⭐</div>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: '#C8FF00' }}>¡FAVORITO GUARDADO!</div>
+            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: 'var(--accent-fg)' }}>¡FAVORITO GUARDADO!</div>
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 20, background: '#1a1a1a', padding: 12 }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20, background: 'var(--bg3)', padding: 12, borderRadius: 6 }}>
               {item.img && (
                 <img
                   src={item.platform === 'wallapop' ? `/api/img?url=${encodeURIComponent(item.img)}` : item.img}
@@ -175,8 +175,8 @@ function FavoritoModal({ item, onClose }: { item: WallapopItem; onClose: () => v
                 />
               )}
               <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>{item.title}</p>
-                <p style={{ margin: '6px 0 0', fontSize: 20, fontFamily: 'Bebas Neue, sans-serif', color: '#C8FF00' }}>{item.price}€</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{item.title}</p>
+                <p style={{ margin: '6px 0 0', fontSize: 20, fontFamily: 'Bebas Neue, sans-serif', color: 'var(--gold)' }}>{item.price}€</p>
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -214,15 +214,15 @@ function FavoritoModal({ item, onClose }: { item: WallapopItem; onClose: () => v
 
 const modalStyles: Record<string, React.CSSProperties> = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#111', border: '1px solid rgba(255,255,255,0.1)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' },
-  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6, color: '#fff' },
-  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 24 },
-  label: { fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block' as const, marginBottom: 6 },
-  input: { width: '100%', background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box' as const },
+  modal: { background: 'var(--card)', border: '1px solid var(--border)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 10, boxShadow: 'var(--card-shadow-hover)' },
+  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6, color: 'var(--text)' },
+  subtitle: { color: 'var(--muted)', fontSize: 13, marginBottom: 24 },
+  label: { fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block' as const, marginBottom: 6 },
+  input: { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box' as const, borderRadius: 6 },
   actions: { display: 'flex', gap: 12, marginTop: 24 },
-  btnCancel: { flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer' },
-  btnSave: { flex: 2, background: '#C8FF00', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' },
-  errorMsg: { background: 'rgba(255,95,31,0.15)', border: '1px solid rgba(255,95,31,0.3)', color: '#FF5F1F', padding: '10px 14px', fontSize: 12, marginTop: 8 },
+  btnCancel: { flex: 1, background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  btnSave: { flex: 2, background: 'var(--accent)', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  errorMsg: { background: 'rgba(255,95,31,0.1)', border: '1px solid rgba(255,95,31,0.3)', color: '#DC2626', padding: '10px 14px', fontSize: 12, marginTop: 8, borderRadius: 4 },
 }
 
 // ─── Card ──────────────────────────────────────────────────────────────────────
@@ -256,7 +256,7 @@ function Card({
         <div style={{ position: 'relative' }}>
           {item.img
             ? <img src={item.platform === 'wallapop' && item.img ? `/api/img?url=${encodeURIComponent(item.img)}` : item.img ?? ''} alt={item.title} style={styles.cardImg} loading="lazy" />
-            : <div style={{ ...styles.cardImg, background: '#1a1a1a' }} />
+            : <div style={{ ...styles.cardImg, background: 'var(--bg3)' }} />
           }
           {/* Badge OPORTUNIDAD */}
           {isOportunidad && (
@@ -276,7 +276,7 @@ function Card({
           <p style={styles.cardTitle}>{item.title}</p>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 }}>
             <div>
-              <span style={{ ...styles.cardPrice, color: isOportunidad ? '#FFB800' : borderColor }}>
+              <span style={{ ...styles.cardPrice, color: isOportunidad ? 'var(--gold)' : (isVinted ? '#09B1BA' : 'var(--accent-fg)') }}>
                 {item.price}€
               </span>
               {/* Precio de referencia (pvp medio) tachado si es oportunidad */}
@@ -578,7 +578,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             <div style={styles.statLabel}>Total</div>
           </div>
           <div style={styles.statBox}>
-            <div style={{ ...styles.statValue, color: '#C8FF00' }}>{wallapopCount}</div>
+            <div style={{ ...styles.statValue, color: 'var(--accent-fg)' }}>{wallapopCount}</div>
             <div style={styles.statLabel}>Wallapop</div>
           </div>
           <div style={styles.statBox}>
@@ -600,7 +600,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
                 ...styles.statBox,
                 cursor: oportunidades.length > 0 ? 'pointer' : 'default',
                 outline: soloOportunidad ? '1px solid #FFB800' : 'none',
-                borderColor: soloOportunidad ? '#FFB800' : 'rgba(255,255,255,0.07)',
+                borderColor: soloOportunidad ? '#FFB800' : 'var(--border)',
               }}
               onClick={() => oportunidades.length > 0 && setSoloOportunidad(v => !v)}
               title={soloOportunidad ? 'Ver todos' : 'Ver solo oportunidades'}
@@ -623,7 +623,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
             ({Math.round(medianaOportunidad.mediana)}€).
             {' '}
             <span
-              style={{ color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ color: 'var(--accent-fg)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
               onClick={() => setSoloOportunidad(v => !v)}
             >
               {soloOportunidad ? 'Ver todos los resultados' : `Ver solo las ${oportunidades.length} oportunidades`}
@@ -662,7 +662,7 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 
       {/* Sin resultados */}
       {searched && results.length === 0 && !loading && (
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', marginTop: 64, fontSize: 14 }}>
+        <p style={{ textAlign: 'center', color: 'var(--faint)', marginTop: 64, fontSize: 14 }}>
           Sin resultados para "{query}"
         </p>
       )}
@@ -688,73 +688,74 @@ export default function SearchPanel({ onOpenModal }: SearchPanelProps) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  main: { flex: 1, padding: '24px 28px', overflowY: 'auto', background: '#080808' },
+  main: { flex: 1, padding: '24px 28px', overflowY: 'auto', background: 'var(--bg)' },
   searchBar: { display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' },
   input: {
-    flex: 1, background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-    color: '#fff', padding: '10px 16px', fontSize: 14, outline: 'none',
-    fontFamily: 'Barlow, sans-serif', minWidth: 0,
+    flex: 1, background: 'var(--card)', border: '1px solid var(--border)',
+    color: 'var(--text)', padding: '10px 16px', fontSize: 14, outline: 'none',
+    fontFamily: 'Barlow, sans-serif', minWidth: 0, borderRadius: 6,
   },
   btnSearch: {
-    background: '#C8FF00', color: '#000', border: 'none',
+    background: 'var(--accent)', color: '#000', border: 'none',
     padding: '10px 28px', fontFamily: 'Barlow Condensed, sans-serif',
-    fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
+    fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6,
   },
   btnAlerta: {
-    background: 'transparent', border: '1px solid #C8FF00', color: '#C8FF00',
+    background: 'transparent', border: '1px solid rgba(61,102,0,0.3)', color: 'var(--accent-fg)',
     padding: '10px 20px', fontFamily: 'Barlow Condensed, sans-serif',
-    fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
+    fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6,
   },
   filtersRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
-  filterLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.35)' },
+  filterLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 2, color: 'var(--muted)' },
   filterBtn: {
-    background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
-    color: 'rgba(255,255,255,0.6)', padding: '5px 14px',
+    background: 'transparent', border: '1px solid var(--border)',
+    color: 'var(--text)', padding: '5px 14px',
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
-    fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer',
+    fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', borderRadius: 4,
   },
-  filterBtnActive: { background: '#C8FF00', border: '1px solid #C8FF00', color: '#000' },
+  filterBtnActive: { background: 'var(--accent)', border: '1px solid var(--accent)', color: '#000' },
   statsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
-  statBox: { background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '14px 24px', minWidth: 90 },
-  statValue: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 2, color: '#C8FF00', lineHeight: 1 },
-  statLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
-  resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', margin: 0 },
+  statBox: { background: 'var(--card)', border: '1px solid var(--border)', padding: '14px 24px', minWidth: 90, borderRadius: 8, boxShadow: 'var(--card-shadow)' },
+  statValue: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 2, color: 'var(--text)', lineHeight: 1 },
+  statLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', marginTop: 4 },
+  resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'var(--muted)', margin: 0 },
   sortSelect: {
-    background: '#111', border: '1px solid rgba(255,255,255,0.12)',
-    color: 'rgba(255,255,255,0.7)', padding: '6px 12px',
+    background: 'var(--card)', border: '1px solid var(--border)',
+    color: 'var(--text)', padding: '6px 12px',
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
-    fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', outline: 'none',
+    fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', outline: 'none', borderRadius: 6,
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
   card: {
-    background: '#111',
+    background: 'var(--card)', border: '1px solid var(--border)',
+    borderRadius: 8, boxShadow: 'var(--card-shadow)',
     display: 'block', overflow: 'hidden',
   },
   cardImg: { width: '100%', height: 160, objectFit: 'cover', display: 'block' },
   cardBody: { padding: '10px 12px' },
   cardTitle: {
     fontSize: 12, fontWeight: 600, fontFamily: 'Barlow, sans-serif',
-    lineHeight: 1.4, color: '#fff',
+    lineHeight: 1.4, color: 'var(--text)',
     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
   },
-  cardPrice: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 1, color: '#C8FF00' },
+  cardPrice: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 1, color: 'var(--accent-fg)' },
   precioRef: {
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
-    color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through',
+    color: 'var(--faint)', textDecoration: 'line-through',
     marginLeft: 6, verticalAlign: 'middle',
   },
-  cardMeta: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
+  cardMeta: { fontSize: 11, color: 'var(--faint)', textAlign: 'right', fontFamily: 'Barlow, sans-serif', lineHeight: 1.5 },
   conditionBadge: {
-    display: 'inline-block', marginTop: 8, background: '#1a1a1a',
-    border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
-    fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px',
+    display: 'inline-block', marginTop: 8, background: 'var(--bg3)',
+    border: '1px solid var(--border)', color: 'var(--muted)',
+    fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px', borderRadius: 3,
   },
   // Hint inline bajo el badge de condición en cards de oportunidad
   oportunidadHint: {
     marginTop: 8,
     fontSize: 10,
     fontFamily: 'Barlow Condensed, sans-serif',
-    color: 'rgba(255,255,255,0.72)',
+    color: 'var(--muted)',
     letterSpacing: 0.5,
     lineHeight: 1.4,
     borderTop: '1px solid rgba(255,184,0,0.25)',
@@ -763,17 +764,17 @@ const styles: Record<string, React.CSSProperties> = {
   badgeOportunidad: {
     position: 'absolute', top: 8, left: 8, background: '#FFB800', color: '#000',
     fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px',
-    fontFamily: 'Barlow Condensed, sans-serif',
+    fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
   },
   badgePlatform: {
     position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)',
     fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px',
-    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid',
+    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid', borderRadius: 3,
   },
   btnFavorito: {
     width: '100%', background: 'transparent', border: 'none',
-    borderTop: '1px solid rgba(255,255,255,0.07)',
-    color: 'rgba(255,255,255,0.35)', padding: '8px',
+    borderTop: '1px solid var(--border)',
+    color: 'var(--muted)', padding: '8px',
     fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10,
     letterSpacing: 1.5, cursor: 'pointer',
   },
@@ -782,10 +783,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 10,
-    background: 'rgba(255,184,0,0.08)',
-    border: '1px solid rgba(255,184,0,0.35)',
+    background: 'rgba(255,184,0,0.06)',
+    border: '1px solid rgba(255,184,0,0.25)',
     padding: '12px 16px',
     marginBottom: 20,
+    borderRadius: 8,
   },
   oportunidadBannerIcon: {
     fontSize: 16,
@@ -795,17 +797,18 @@ const styles: Record<string, React.CSSProperties> = {
   oportunidadBannerText: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
+    color: 'var(--text)',
     letterSpacing: 0.3,
     lineHeight: 1.5,
   },
   suggestions: {
     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-    background: '#181818', border: '1px solid rgba(255,255,255,0.1)', borderTop: 'none',
+    background: 'var(--card)', border: '1px solid var(--border)', borderTop: 'none',
+    borderRadius: '0 0 6px 6px', boxShadow: 'var(--card-shadow)',
   },
   suggestionItem: {
     padding: '10px 16px', fontSize: 13, fontFamily: 'Barlow, sans-serif',
-    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    color: 'var(--text)', cursor: 'pointer',
+    borderBottom: '1px solid var(--border)',
   },
 }

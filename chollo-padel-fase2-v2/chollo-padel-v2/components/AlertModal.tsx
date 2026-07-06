@@ -61,7 +61,7 @@ export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: st
         {saved ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <div style={{ fontSize: 48 }}>✅</div>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: '#C8FF00' }}>¡ALERTA GUARDADA!</div>
+            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: 'var(--accent-fg)' }}>¡ALERTA GUARDADA!</div>
           </div>
         ) : (
           <>
@@ -110,7 +110,7 @@ export default function AlertModal({ prefillQuery, onClose }: { prefillQuery: st
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6 }}>{label}</label>
+      <label style={{ fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   )
@@ -118,12 +118,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const styles: Record<string, React.CSSProperties> = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#111', border: '1px solid rgba(255,255,255,0.1)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' },
-  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6 },
-  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 24 },
-  input: { width: '100%', background: '#181818', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif' },
+  modal: { background: 'var(--card)', border: '1px solid var(--border)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 10, boxShadow: 'var(--card-shadow-hover)' },
+  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6, color: 'var(--text)' },
+  subtitle: { color: 'var(--muted)', fontSize: 13, marginBottom: 24 },
+  input: { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif', borderRadius: 6, boxSizing: 'border-box' as const },
   actions: { display: 'flex', gap: 12, marginTop: 24 },
-  btnCancel: { flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer' },
-  btnSave: { flex: 2, background: '#C8FF00', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' },
-  errorMsg: { background: 'rgba(255,95,31,0.15)', border: '1px solid rgba(255,95,31,0.3)', color: '#FF5F1F', padding: '10px 14px', fontSize: 12, marginTop: 8 },
+  btnCancel: { flex: 1, background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  btnSave: { flex: 2, background: 'var(--accent)', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  errorMsg: { background: 'rgba(255,95,31,0.1)', border: '1px solid rgba(255,95,31,0.3)', color: '#DC2626', padding: '10px 14px', fontSize: 12, marginTop: 8, borderRadius: 4 },
 }
