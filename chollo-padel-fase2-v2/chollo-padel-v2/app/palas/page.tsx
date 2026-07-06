@@ -104,7 +104,7 @@ function TpBadge({ slug }: { slug?: string }) {
         <span style={{ opacity: 0.2 }}>{'★'.repeat(empty)}</span>
       </span>
       <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
-      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase' }}>Trustpilot</span>
+      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Trustpilot</span>
     </div>
   )
 }
@@ -114,10 +114,10 @@ function StatBar({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: 11, color: '#C8FF00', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
+        <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
       </div>
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }}>
+      <div style={{ height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2 }}>
         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #C8FF00, #8FCC00)', borderRadius: 2, transition: 'width 0.6s ease' }} />
       </div>
     </div>
@@ -130,8 +130,8 @@ function Tag({ children, accent }: { children: React.ReactNode; accent?: boolean
       fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11,
       letterSpacing: 1.5, textTransform: 'uppercase',
       padding: '3px 10px',
-      border: accent ? '1px solid rgba(200,255,0,0.35)' : '1px solid rgba(255,255,255,0.12)',
-      color: accent ? '#C8FF00' : 'rgba(255,255,255,0.55)',
+      border: accent ? '1px solid rgba(80,120,0,0.35)' : '1px solid var(--border)',
+      color: accent ? 'var(--accent-fg)' : 'var(--muted)',
     }}>{children}</span>
   )
 }
@@ -139,8 +139,8 @@ function Tag({ children, accent }: { children: React.ReactNode; accent?: boolean
 function TechRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: "'Barlow', sans-serif", minWidth: 64 }}>{label}:</span>
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: "'Barlow', sans-serif" }}>{value}</span>
+      <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", minWidth: 64 }}>{label}:</span>
+      <span style={{ fontSize: 12, color: 'var(--text)', fontFamily: "'Barlow', sans-serif" }}>{value}</span>
     </div>
   )
 }
@@ -176,10 +176,10 @@ function TiendasSection({ pala }: { pala: Pala }) {
   }, [pala.id])
 
   if (loading) {
-    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Buscando mejores precios...</div>
+    return <div style={{ color: 'var(--muted)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Buscando mejores precios...</div>
   }
   if (items.length === 0) {
-    return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin datos de tienda disponibles ahora mismo.</div>
+    return <div style={{ color: 'var(--muted)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin datos de tienda disponibles ahora mismo.</div>
   }
 
   // Precio efectivo aplicando código de descuento si existe
@@ -215,29 +215,29 @@ function TiendasSection({ pala }: { pala: Pala }) {
         const saving = disponible && pala.precio_referencia > 0 ? Math.round(((pala.precio_referencia - pEfectivo) / pala.precio_referencia) * 100) : 0
         return (
           <a key={`${fuente?.slug ?? 'tienda'}-${i}`} href={item.url_producto} target="_blank" rel="noopener noreferrer"
-            style={{ background: '#161616', border: `1px solid ${disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)'}`, padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s', opacity: disponible ? 1 : 0.55 }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(200,255,0,0.25)')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = disponible ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)')}
+            style={{ background: 'var(--card)', border: `1px solid ${disponible ? 'var(--border)' : 'rgba(0,0,0,0.04)'}`, borderRadius: 8, padding: '12px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'border-color 0.2s, box-shadow 0.2s', opacity: disponible ? 1 : 0.55, boxShadow: 'var(--card-shadow)' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(80,120,0,0.3)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = disponible ? 'var(--border)' : 'rgba(0,0,0,0.04)'; e.currentTarget.style.boxShadow = 'var(--card-shadow)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? '#C8FF00' : 'rgba(255,255,255,0.35)' }}>{pEfectivo.toFixed(2)} €</span>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? 'var(--accent-fg)' : 'var(--faint)' }}>{pEfectivo.toFixed(2)} €</span>
               {!disponible
-                ? <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
+                ? <span style={{ color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
                 : saving > 0
-                  ? <span style={{ background: 'rgba(200,255,0,0.15)', color: '#C8FF00', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px' }}>-{saving}%</span>
+                  ? <span style={{ background: 'var(--accent-dim)', color: 'var(--accent-fg)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px', borderRadius: 4 }}>-{saving}%</span>
                   : null
               }
             </div>
             {tieneDescuento && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>{precioBase.toFixed(2)} €</span>
+                <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--faint)', textDecoration: 'line-through' }}>{precioBase.toFixed(2)} €</span>
                 {item.codigo_descuento && (
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: '#C8FF00', background: 'rgba(200,255,0,0.1)', padding: '1px 5px', border: '1px solid rgba(200,255,0,0.2)' }}>{item.codigo_descuento}</span>
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', background: 'var(--accent-dim)', padding: '1px 5px', border: '1px solid rgba(80,120,0,0.2)', borderRadius: 3 }}>{item.codigo_descuento}</span>
                 )}
               </div>
             )}
             <div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fuente?.nombre ?? '?'}</div>
               <TpBadge slug={fuente?.slug} />
             </div>
           </a>
@@ -292,13 +292,13 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
   }, [pala.id])
 
   if (loading) return (
-    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif", padding: '16px 0' }}>
+    <div style={{ color: 'var(--muted)', fontSize: 13, fontFamily: "'Barlow', sans-serif", padding: '16px 0' }}>
       Cargando historial...
     </div>
   )
 
   if (rows.length === 0) return (
-    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
+    <div style={{ color: 'var(--muted)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
   )
 
   // ── Mínimo histórico (precio efectivo con código de descuento si lo hay) ─────
@@ -371,31 +371,31 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       {/* Badge mínimo histórico */}
       <a href={minRow!.url} target="_blank" rel="noopener noreferrer"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
-          padding: '8px 16px', background: 'rgba(200,255,0,0.04)',
-          border: '1px solid rgba(200,255,0,0.18)', textDecoration: 'none' }}>
+          padding: '8px 16px', background: 'var(--accent-dim)',
+          border: '1px solid rgba(80,120,0,0.2)', textDecoration: 'none', borderRadius: 8 }}>
         <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2,
-          color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>Mínimo histórico</span>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#C8FF00', lineHeight: 1 }}>
+          color: 'var(--muted)', textTransform: 'uppercase' }}>Mínimo histórico</span>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: 'var(--accent-fg)', lineHeight: 1 }}>
           {minRow!.precio.toFixed(2)}€
         </span>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
           en {minRow!.nombre} · {minRow!.fecha}
           {minRow!.codigo && (
-            <span style={{ marginLeft: 8, background: 'rgba(200,255,0,0.15)', color: '#C8FF00',
-              fontSize: 10, letterSpacing: 1, padding: '2px 6px', fontWeight: 700 }}>
+            <span style={{ marginLeft: 8, background: 'rgba(80,120,0,0.12)', color: 'var(--accent-fg)',
+              fontSize: 10, letterSpacing: 1, padding: '2px 6px', fontWeight: 700, borderRadius: 3 }}>
               {minRow!.codigo}
             </span>
           )}
         </span>
-        <span style={{ fontSize: 11, color: 'rgba(200,255,0,0.6)' }}>↗</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-fg)' }}>↗</span>
       </a>
 
       {/* Gráfico SVG */}
-      <div style={{ background: '#16191e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
 
           {/* Fondo área */}
-          <rect x={PAD.left} y={PAD.top} width={cW} height={cH} fill="#1c2330" />
+          <rect x={PAD.left} y={PAD.top} width={cW} height={cH} fill="rgba(0,0,0,0.025)" />
 
           {/* Clip */}
           <clipPath id="hchart-clip">
@@ -407,14 +407,14 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
             <line key={i}
               x1={PAD.left} x2={W - PAD.right}
               y1={toY(tick).toFixed(1)} y2={toY(tick).toFixed(1)}
-              stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+              stroke="rgba(0,0,0,0.07)" strokeWidth="1" />
           ))}
 
           {/* Y labels */}
           {yTicks.map((tick, i) => (
             <text key={i}
               x={PAD.left - 7} y={(toY(tick) + 4).toFixed(1)}
-              textAnchor="end" fill="rgba(255,255,255,0.4)"
+              textAnchor="end" fill="rgba(0,0,0,0.42)"
               fontSize="10" fontFamily="Barlow Condensed, sans-serif">
               {tick.toFixed(0)}€
             </text>
@@ -429,7 +429,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
               <text key={i}
                 x={x.toFixed(1)} y={H - 8}
                 textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                fill="rgba(255,255,255,0.32)" fontSize="9" fontFamily="Barlow Condensed, sans-serif">
+                fill="rgba(0,0,0,0.35)" fontSize="9" fontFamily="Barlow Condensed, sans-serif">
                 {lbl}
               </text>
             )
@@ -439,14 +439,14 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
           <line
             x1={PAD.left} x2={W - PAD.right}
             y1={minY.toFixed(1)} y2={minY.toFixed(1)}
-            stroke="#C8FF00" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.55"
+            stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.65"
             clipPath="url(#hchart-clip)" />
 
           {/* Etiqueta inline mínimo */}
           <text
             x={(PAD.left + 6).toFixed(1)}
             y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
-            fill="#C8FF00" fontSize="9.5" fontFamily="Barlow Condensed, sans-serif" opacity="0.8">
+            fill="#4E7400" fontSize="9.5" fontFamily="Barlow Condensed, sans-serif" opacity="0.85">
             Mínimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minRow!.fecha}
           </text>
 
@@ -465,9 +465,9 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
 
           {/* Marcador del mínimo */}
           <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
-            r="5.5" fill="#1c2330" stroke="#C8FF00" strokeWidth="2" />
+            r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
           <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
-            r="2.5" fill="#C8FF00" />
+            r="2.5" fill="#4E7400" />
 
         </svg>
       </div>
@@ -477,12 +477,12 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
-            color: 'rgba(255,255,255,0.55)' }}>PVP medio (mediana tiendas)</span>
+            color: 'var(--muted)' }}>PVP medio (mediana tiendas)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#C8FF00" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
+          <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12,
-            color: 'rgba(255,255,255,0.55)' }}>Mínimo histórico</span>
+            color: 'var(--muted)' }}>Mínimo histórico</span>
         </div>
       </div>
     </div>
@@ -497,12 +497,12 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
   }, [onClose])
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#111', border: '1px solid rgba(200,255,0,0.15)', width: '100%', maxWidth: 760, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', width: 32, height: 32, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>✕</button>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', borderRadius: 12, width: '100%', maxWidth: 760, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', width: 32, height: 32, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', borderRadius: 6 }}>✕</button>
 
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 0 }}>
-          <div style={{ background: '#cfcfcd', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ background: '#E8E9EC', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', borderRight: '1px solid var(--border)', borderRadius: '12px 0 0 0' }}>
             {pala.imagen_url
               ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxWidth: '100%', maxHeight: 280, objectFit: 'contain', mixBlendMode: 'multiply' }} />
               : <div style={{ fontSize: 64 }}>🏓</div>
@@ -510,18 +510,18 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
           </div>
 
           <div style={{ padding: '2rem' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: '#C8FF00', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
             {pala.precio_referencia > 0 ? (
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#C8FF00', marginBottom: 16 }}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
                 {pala.precio_referencia.toFixed(2)} €
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>precio medio tiendas</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>precio medio tiendas</span>
               </div>
             ) : pala.precio_pvp > 0 ? (
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#C8FF00', marginBottom: 16 }}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
                 {pala.precio_pvp.toFixed(2)} €
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>PVP</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>PVP</span>
               </div>
             ) : null}
 
@@ -532,8 +532,8 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
               {pala.genero && pala.genero !== 'Unisex' && <Tag>{pala.genero}</Tag>}
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {pala.material_nucleo && <TechRow label="Núcleo" value={pala.material_nucleo} />}
                 {pala.material_cara && <TechRow label="Cara" value={pala.material_cara} />}
@@ -546,8 +546,8 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
             </div>
 
             {(pala.rating_potencia > 0 || pala.rating_control > 0 || pala.rating_manejabilidad > 0 || pala.rating_punto_dulce > 0) && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.35)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
                 {pala.rating_potencia > 0 && <StatBar label="Potencia" value={pala.rating_potencia} />}
                 {pala.rating_control > 0 && <StatBar label="Control" value={pala.rating_control} />}
                 {pala.rating_manejabilidad > 0 && <StatBar label="Manejabilidad" value={pala.rating_manejabilidad} />}
@@ -558,13 +558,13 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1.5rem 2rem', background: '#0D0D0D' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
+        <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg3)' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
           <TiendasSection pala={pala} />
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1.5rem 2rem', background: '#080808' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
+        <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg4)', borderRadius: '0 0 12px 12px' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
           <PriceHistorySection pala={pala} />
         </div>
       </div>
@@ -577,9 +577,9 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
 
   return (
     <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ background: hovered ? '#161616' : '#111', border: `1px solid ${hovered ? 'rgba(200,255,0,0.2)' : 'rgba(255,255,255,0.07)'}`, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }}
+      style={{ background: 'var(--card)', border: `1px solid ${hovered ? 'rgba(80,120,0,0.28)' : 'var(--border)'}`, boxShadow: hovered ? 'var(--card-shadow-hover)' : 'var(--card-shadow)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', borderRadius: 10, overflow: 'hidden' }}
     >
-      <div style={{ background: '#cfcfcd', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', padding: '1rem' }}>
+      <div style={{ background: '#E8E9EC', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)', overflow: 'hidden', padding: '1rem' }}>
         {pala.imagen_url
           ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transition: 'transform 0.3s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <span style={{ fontSize: 48 }}>🏓</span>
@@ -587,15 +587,15 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
       </div>
 
       <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2, color: '#C8FF00', marginBottom: 4, textTransform: 'uppercase' }}>{pala.marca}</div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2, color: 'var(--accent-fg)', marginBottom: 4, textTransform: 'uppercase' }}>{pala.marca}</div>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 17, letterSpacing: 1, lineHeight: 1.2, marginBottom: 10, flex: 1 }}>{pala.nombre}</div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
           {pala.forma && (
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }}>{pala.forma}</span>
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.forma}</span>
           )}
           {pala.balance && (
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }}>{pala.balance}</span>
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.balance}</span>
           )}
         </div>
 
@@ -605,10 +605,10 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
           ) : pala.precio_pvp > 0 ? (
             <span>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{pala.precio_pvp.toFixed(0)} €</span>
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>PVP</span>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: 'var(--faint)', marginLeft: 4 }}>PVP</span>
             </span>
           ) : null}
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
         </div>
       </div>
     </div>
@@ -618,7 +618,7 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2.5, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2.5, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>{label}</div>
       {children}
     </div>
   )
@@ -629,9 +629,9 @@ function Pills({ options, value, onChange }: { options: string[]; value: string;
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
       {options.map(opt => (
         <button key={opt} onClick={() => onChange(value === opt ? '' : opt)} style={{
-          background: value === opt ? 'rgba(200,255,0,0.12)' : 'none',
-          border: `1px solid ${value === opt ? 'rgba(200,255,0,0.4)' : 'rgba(255,255,255,0.12)'}`,
-          color: value === opt ? '#C8FF00' : 'rgba(255,255,255,0.5)',
+          background: value === opt ? 'var(--accent-dim)' : 'none',
+          border: `1px solid ${value === opt ? 'rgba(80,120,0,0.4)' : 'var(--border)'}`,
+          color: value === opt ? 'var(--accent-fg)' : 'var(--muted)',
           fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11,
           letterSpacing: 1.5, textTransform: 'uppercase', padding: '5px 10px',
           cursor: 'pointer', transition: 'all 0.15s',
@@ -642,9 +642,9 @@ function Pills({ options, value, onChange }: { options: string[]; value: string;
 }
 
 const selectStyle: React.CSSProperties = {
-  width: '100%', background: '#161616', border: '1px solid rgba(255,255,255,0.1)',
-  color: '#fff', fontFamily: "'Barlow', sans-serif", fontSize: 13,
-  padding: '8px 10px', cursor: 'pointer', outline: 'none',
+  width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)',
+  color: 'var(--text)', fontFamily: "'Barlow', sans-serif", fontSize: 13,
+  padding: '8px 10px', cursor: 'pointer', outline: 'none', borderRadius: 6,
 }
 
 function FilterSidebar({ filters, setFilters, marcas, total }: {
@@ -658,27 +658,27 @@ function FilterSidebar({ filters, setFilters, marcas, total }: {
   }
 
   return (
-    <aside style={{ background: '#0F0F0F', borderRight: '1px solid rgba(255,255,255,0.07)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: 54, height: 'calc(100vh - 54px)', overflowY: 'auto' }}>
+    <aside style={{ background: 'var(--bg2)', borderRight: '1px solid var(--border)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: 54, height: 'calc(100vh - 54px)', overflowY: 'auto' }}>
       <div>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: 3, marginBottom: 4 }}>FILTROS</div>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.35)', letterSpacing: 1 }}>{total} palas</div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'var(--muted)', letterSpacing: 1 }}>{total} palas</div>
       </div>
 
       <button
         onClick={() => setFilters({ marca: '', forma: '', balance: '', juego: '', onlyChollos: false })}
-        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, padding: '8px', cursor: 'pointer', textTransform: 'uppercase' }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,255,0,0.3)'; e.currentTarget.style.color = '#C8FF00' }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+        style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, padding: '8px', cursor: 'pointer', textTransform: 'uppercase', borderRadius: 6 }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(80,120,0,0.3)'; e.currentTarget.style.color = 'var(--accent-fg)' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
       >Limpiar filtros</button>
 
       <div
-        style={{ padding: '12px 14px', background: filters.onlyChollos ? 'rgba(200,255,0,0.08)' : '#161616', border: `1px solid ${filters.onlyChollos ? 'rgba(200,255,0,0.3)' : 'rgba(255,255,255,0.07)'}`, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10 }}
+        style={{ padding: '12px 14px', background: filters.onlyChollos ? 'var(--accent-dim)' : 'var(--bg3)', border: `1px solid ${filters.onlyChollos ? 'rgba(80,120,0,0.3)' : 'var(--border)'}`, borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10 }}
         onClick={() => update('onlyChollos', !filters.onlyChollos)}
       >
-        <div style={{ width: 32, height: 18, background: filters.onlyChollos ? '#C8FF00' : 'rgba(255,255,255,0.1)', borderRadius: 9, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', top: 2, left: filters.onlyChollos ? 16 : 2, width: 14, height: 14, background: filters.onlyChollos ? '#000' : 'rgba(255,255,255,0.4)', borderRadius: '50%', transition: 'left 0.2s' }} />
+        <div style={{ width: 32, height: 18, background: filters.onlyChollos ? 'var(--accent)' : 'rgba(0,0,0,0.1)', borderRadius: 9, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', top: 2, left: filters.onlyChollos ? 16 : 2, width: 14, height: 14, background: filters.onlyChollos ? '#000' : 'rgba(0,0,0,0.35)', borderRadius: '50%', transition: 'left 0.2s' }} />
         </div>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: filters.onlyChollos ? '#C8FF00' : 'rgba(255,255,255,0.5)' }}>Solo con chollos</span>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: filters.onlyChollos ? 'var(--accent-fg)' : 'var(--muted)' }}>Solo con chollos</span>
       </div>
 
       <FilterGroup label="Marca">
@@ -776,30 +776,30 @@ export default function PalasPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, letterSpacing: 4, marginBottom: 2 }}>CATÁLOGO DE PALAS</h1>
-              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: 'var(--muted)', letterSpacing: 1 }}>
                 {filtered.length} palas · haz clic para ver chollos activos
               </p>
             </div>
             <input
               type="text" placeholder="Buscar marca o modelo..."
               value={search} onChange={e => setSearch(e.target.value)}
-              style={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontFamily: "'Barlow', sans-serif", fontSize: 14, padding: '10px 16px', outline: 'none', width: 280 }}
-              onFocus={e => (e.target.style.borderColor = 'rgba(200,255,0,0.3)')}
-              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+              style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "'Barlow', sans-serif", fontSize: 14, padding: '10px 16px', outline: 'none', width: 280, borderRadius: 8 }}
+              onFocus={e => (e.target.style.borderColor = 'rgba(80,120,0,0.3)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
           </div>
 
           {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'rgba(255,255,255,0.3)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, letterSpacing: 3 }}>CARGANDO PALAS...</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, letterSpacing: 3 }}>CARGANDO PALAS...</div>
           ) : filtered.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
               <div style={{ fontSize: 48 }}>🔍</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, letterSpacing: 2, color: 'rgba(255,255,255,0.4)' }}>SIN RESULTADOS</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, letterSpacing: 2, color: 'var(--muted)' }}>SIN RESULTADOS</div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
               {filtered.map(pala => (
-                <div key={pala.id} style={{ background: '#080808' }}>
+                <div key={pala.id}>
                   <PalaCard pala={pala} onClick={() => setSelected(pala)} />
                 </div>
               ))}

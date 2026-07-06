@@ -102,7 +102,7 @@ export default function LandingPage() {
           <Link href="/buscar" style={{ background: 'var(--accent)', color: '#000', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
             Buscar palas →
           </Link>
-          <Link href="/top" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text)', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 500, textDecoration: 'none', border: '0.5px solid var(--border)', display: 'inline-block' }}>
+          <Link href="/top" style={{ background: 'var(--bg3)', color: 'var(--text)', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 500, textDecoration: 'none', border: '1px solid var(--border)', display: 'inline-block' }}>
             Ver Top oportunidades
           </Link>
         </div>

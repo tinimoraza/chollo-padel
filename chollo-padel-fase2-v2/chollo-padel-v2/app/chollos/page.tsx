@@ -148,12 +148,12 @@ export default function ChollosPage() {
               <span style={s.statNum}>{totalStats.total}</span>
               <span style={s.statLbl}>ofertas encontradas</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: '#FF5F1F44' }}>
-              <span style={{ ...s.statNum, color: '#FF5F1F' }}>{totalStats.chollos}</span>
+            <div style={{ ...s.statBox, borderColor: 'rgba(232,88,26,0.30)' }}>
+              <span style={{ ...s.statNum, color: 'var(--orange)' }}>{totalStats.chollos}</span>
               <span style={s.statLbl}>CHOLLOS &gt;=35%</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: '#FFB80044' }}>
-              <span style={{ ...s.statNum, color: '#FFB800' }}>{totalStats.ofertas}</span>
+            <div style={{ ...s.statBox, borderColor: 'rgba(255,184,0,0.30)' }}>
+              <span style={{ ...s.statNum, color: 'var(--gold)' }}>{totalStats.ofertas}</span>
               <span style={s.statLbl}>OFERTAS &gt;=25%</span>
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function ChollosPage() {
         {!loading && !error && totalStats.total === 0 && (
           <div style={s.estado}>
             <p style={s.estadoTxt}>No hay bajadas de precio significativas ahora mismo.</p>
-            <p style={{ ...s.estadoTxt, fontSize: 12, marginTop: 8, color: 'rgba(255,255,255,0.2)' }}>
+            <p style={{ ...s.estadoTxt, fontSize: 12, marginTop: 8, color: 'var(--faint)' }}>
               Los precios se actualizan automaticamente 4 veces al dia.
             </p>
           </div>
@@ -304,7 +304,7 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: '24px 28px',
     overflowY: 'auto',
-    background: '#080808',
+    background: 'var(--bg)',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -313,14 +313,14 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'Bebas Neue, sans-serif',
     fontSize: 48,
     letterSpacing: 4,
-    color: '#FF5F1F',
+    color: 'var(--orange)',
     margin: 0,
   },
   subtitle: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 12,
     letterSpacing: 1.5,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'var(--muted)',
     marginTop: 6,
   },
   statsRow: {
@@ -334,22 +334,24 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     padding: '14px 24px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: '#111',
+    border: '1px solid var(--border)',
+    background: 'var(--card)',
+    boxShadow: 'var(--card-shadow)',
+    borderRadius: 8,
     minWidth: 100,
   },
   statNum: {
     fontFamily: 'Bebas Neue, sans-serif',
     fontSize: 32,
     letterSpacing: 2,
-    color: '#fff',
+    color: 'var(--text)',
     lineHeight: 1,
   },
   statLbl: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 11,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'var(--muted)',
     marginTop: 4,
   },
   filtros: {
@@ -364,15 +366,16 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: 1.5,
     padding: '7px 16px',
-    border: '1px solid rgba(255,255,255,0.15)',
-    background: 'transparent',
-    color: 'rgba(255,255,255,0.4)',
+    border: '1px solid var(--border)',
+    background: 'var(--card)',
+    color: 'var(--muted)',
     cursor: 'pointer',
+    borderRadius: 6,
   },
   filtroBtnActive: {
-    border: '1px solid #FF5F1F',
-    color: '#FF5F1F',
-    background: 'rgba(255,95,31,0.06)',
+    border: '1px solid var(--orange)',
+    color: 'var(--orange)',
+    background: 'var(--orange-dim)',
   },
   estado: {
     display: 'flex',
@@ -385,8 +388,8 @@ const s: Record<string, React.CSSProperties> = {
   spinner: {
     width: 28,
     height: 28,
-    border: '2px solid rgba(255,255,255,0.1)',
-    borderTop: '2px solid #FF5F1F',
+    border: '2px solid var(--border)',
+    borderTop: '2px solid var(--orange)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
@@ -394,7 +397,7 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 14,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'var(--muted)',
     margin: 0,
   },
   grid: {
@@ -406,12 +409,15 @@ const s: Record<string, React.CSSProperties> = {
   card: {
     display: 'flex',
     flexDirection: 'column',
-    background: '#111',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'var(--card)',
+    border: '1px solid var(--border)',
+    boxShadow: 'var(--card-shadow)',
     textDecoration: 'none',
     position: 'relative',
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
     cursor: 'pointer',
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   tagBadge: {
     position: 'absolute',
@@ -423,6 +429,7 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: 1.5,
     padding: '3px 8px',
     zIndex: 1,
+    borderRadius: 4,
   },
   imgWrap: {
     width: '100%',
@@ -430,7 +437,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#cfcfcd',
+    background: '#E8E9EC',
     overflow: 'hidden',
   },
   img: {
@@ -455,7 +462,7 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 11,
     letterSpacing: 2,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'var(--muted)',
     margin: 0,
     textTransform: 'uppercase',
   },
@@ -464,7 +471,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 700,
     letterSpacing: 0.5,
-    color: '#fff',
+    color: 'var(--text)',
     margin: 0,
     lineHeight: 1.2,
   },
@@ -478,13 +485,13 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'Bebas Neue, sans-serif',
     fontSize: 26,
     letterSpacing: 1,
-    color: '#fff',
+    color: 'var(--text)',
     lineHeight: 1,
   },
   precioRef: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'var(--faint)',
   },
   precioRefTachado: {
     textDecoration: 'line-through',
@@ -492,7 +499,7 @@ const s: Record<string, React.CSSProperties> = {
   precioSinCodigo: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'var(--faint)',
     textDecoration: 'line-through',
   },
   codigoBanner: {
@@ -500,12 +507,13 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.5,
-    color: '#00D2A0',
-    background: 'rgba(0,210,160,0.1)',
-    border: '1px solid rgba(0,210,160,0.3)',
+    color: '#00875A',
+    background: 'rgba(0,135,90,0.08)',
+    border: '1px solid rgba(0,135,90,0.25)',
     padding: '3px 8px',
     marginTop: 6,
     width: 'fit-content',
+    borderRadius: 4,
   },
   descuento: {
     fontFamily: 'Barlow Condensed, sans-serif',
@@ -520,13 +528,13 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     marginTop: 10,
     paddingTop: 10,
-    borderTop: '1px solid rgba(255,255,255,0.06)',
+    borderTop: '1px solid var(--border)',
   },
   tienda: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 11,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.25)',
+    color: 'var(--faint)',
     textTransform: 'uppercase',
   },
   tpStars: {
@@ -538,13 +546,13 @@ const s: Record<string, React.CSSProperties> = {
   tiempo: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.18)',
+    color: 'var(--faint)',
   },
   nota: {
     fontFamily: 'Barlow Condensed, sans-serif',
     fontSize: 11,
     letterSpacing: 0.5,
-    color: 'rgba(255,255,255,0.18)',
+    color: 'var(--faint)',
     textAlign: 'center',
     marginTop: 8,
   },
