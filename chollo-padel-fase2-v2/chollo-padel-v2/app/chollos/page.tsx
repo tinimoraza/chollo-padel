@@ -243,7 +243,7 @@ export default function ChollosPage() {
                   <div style={{
                     position: 'absolute', top: 8, right: 8,
                     background: '#C8FF00', color: '#000',
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
                     padding: '2px 7px', textTransform: 'uppercase',
                     boxShadow: '0 0 8px rgba(200,255,0,0.5)',
@@ -355,7 +355,7 @@ const s: Record<string, React.CSSProperties> = {
     margin: 0,
   },
   subtitle: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12,
     letterSpacing: 1.5,
     color: 'var(--muted)',
@@ -386,7 +386,7 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1,
   },
   statLbl: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     letterSpacing: 1,
     color: 'var(--muted)',
@@ -399,7 +399,7 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   filtroBtn: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12,
     fontWeight: 700,
     letterSpacing: 1.5,
@@ -432,7 +432,7 @@ const s: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   estadoTxt: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 14,
     letterSpacing: 1,
     color: 'var(--muted)',
@@ -461,7 +461,7 @@ const s: Record<string, React.CSSProperties> = {
     position: 'absolute',
     top: 10,
     left: 10,
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 1.5,
@@ -497,7 +497,7 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1,
   },
   marca: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     letterSpacing: 2,
     color: 'var(--muted)',
@@ -505,7 +505,7 @@ const s: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
   },
   modelo: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 15,
     fontWeight: 700,
     letterSpacing: 0.5,
@@ -527,7 +527,7 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1,
   },
   precioRef: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12,
     color: 'var(--faint)',
   },
@@ -535,13 +535,13 @@ const s: Record<string, React.CSSProperties> = {
     textDecoration: 'line-through',
   },
   precioSinCodigo: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 13,
     color: 'var(--faint)',
     textDecoration: 'line-through',
   },
   codigoBanner: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.5,
@@ -554,7 +554,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 4,
   },
   descuento: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12,
     fontWeight: 700,
     letterSpacing: 0.5,
@@ -569,25 +569,25 @@ const s: Record<string, React.CSSProperties> = {
     borderTop: '1px solid var(--border)',
   },
   tienda: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     letterSpacing: 1,
     color: 'var(--faint)',
     textTransform: 'uppercase',
   },
   tpStars: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.5,
   },
   tiempo: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     color: 'var(--faint)',
   },
   nota: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
     letterSpacing: 0.5,
     color: 'var(--faint)',

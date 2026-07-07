@@ -46,12 +46,12 @@ export default function ClubesLoginPage() {
 
         <p style={{
           fontSize: 11, letterSpacing: 2, color: 'var(--accent-fg)',
-          fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: 10,
+          fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, marginBottom: 10,
         }}>
           CLUBES
         </p>
         <h1 style={{
-          fontFamily: 'Inter, sans-serif', fontWeight: 700,
+          fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700,
           fontSize: 28, color: 'var(--text)', marginBottom: 24,
         }}>
           Accede a tu equipo
@@ -67,7 +67,7 @@ export default function ClubesLoginPage() {
               style={{
                 display: 'inline-block', width: '100%', textAlign: 'center', boxSizing: 'border-box',
                 background: 'var(--accent)', color: '#000', textDecoration: 'none',
-                padding: '12px', fontFamily: 'Inter, sans-serif',
+                padding: '12px', fontFamily: 'Space Grotesk, sans-serif',
                 fontSize: 14, fontWeight: 700, letterSpacing: 2,
               }}
             >
@@ -86,7 +86,7 @@ export default function ClubesLoginPage() {
             <div style={{ marginBottom: 12 }}>
               <label style={{
                 fontSize: 11, letterSpacing: 2, color: 'var(--muted)',
-                fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 6,
+                fontFamily: 'Space Grotesk, sans-serif', display: 'block', marginBottom: 6,
               }}>
                 TU EMAIL
               </label>
@@ -113,7 +113,7 @@ export default function ClubesLoginPage() {
               disabled={loading}
               style={{
                 width: '100%', background: 'var(--accent)', color: '#000', border: 'none',
-                padding: '12px', fontFamily: 'Inter, sans-serif',
+                padding: '12px', fontFamily: 'Space Grotesk, sans-serif',
                 fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
               }}
             >

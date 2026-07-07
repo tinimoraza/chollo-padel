@@ -34,14 +34,14 @@ export default function ClubesAccesoPage() {
         <img src="/huntpadel-logo.svg" alt="HuntPadel" height={40} style={{ marginBottom: 48 }} />
         <p style={{
           fontSize: 12, letterSpacing: 2, color: 'var(--accent-fg)',
-          fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: 24,
+          fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, marginBottom: 24,
         }}>
           CLUBES · ACCESO PRIVADO
         </p>
         <div style={{ marginBottom: 12 }}>
           <label style={{
             fontSize: 11, letterSpacing: 2, color: 'var(--muted)',
-            fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 6,
+            fontFamily: 'Space Grotesk, sans-serif', display: 'block', marginBottom: 6,
           }}>
             CONTRASEÑA DE ACCESO
           </label>
@@ -68,7 +68,7 @@ export default function ClubesAccesoPage() {
           disabled={loading}
           style={{
             width: '100%', background: 'var(--accent)', color: '#fff', border: 'none',
-            padding: '12px', fontFamily: 'Inter, sans-serif',
+            padding: '12px', fontFamily: 'Space Grotesk, sans-serif',
             fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
           }}
         >

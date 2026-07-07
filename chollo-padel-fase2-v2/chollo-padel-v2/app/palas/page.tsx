@@ -103,8 +103,8 @@ function TpBadge({ slug }: { slug?: string }) {
         {half && <span style={{ opacity: 0.5 }}>★</span>}
         <span style={{ opacity: 0.2 }}>{'★'.repeat(empty)}</span>
       </span>
-      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
-      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 9, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Trustpilot</span>
+      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
+      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Trustpilot</span>
     </div>
   )
 }
@@ -114,8 +114,8 @@ function StatBar({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
+        <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
       </div>
       <div style={{ height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2 }}>
         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #C8FF00, #8FCC00)', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -127,7 +127,7 @@ function StatBar({ label, value }: { label: string; value: number }) {
 function Tag({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      fontFamily: "'Inter', sans-serif", fontSize: 11,
+      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
       letterSpacing: 1.5, textTransform: 'uppercase',
       padding: '3px 10px',
       border: accent ? '1px solid rgba(80,120,0,0.35)' : '1px solid var(--border)',
@@ -222,9 +222,9 @@ function TiendasSection({ pala }: { pala: Pala }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? 'var(--accent-fg)' : 'var(--faint)' }}>{pEfectivo.toFixed(2)} €</span>
               {!disponible
-                ? <span style={{ color: 'var(--muted)', fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
+                ? <span style={{ color: 'var(--muted)', fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
                 : saving > 0
-                  ? <span style={{ background: 'var(--accent-dim)', color: 'var(--accent-fg)', fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px', borderRadius: 4 }}>-{saving}%</span>
+                  ? <span style={{ background: 'var(--accent-dim)', color: 'var(--accent-fg)', fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px', borderRadius: 4 }}>-{saving}%</span>
                   : null
               }
             </div>
@@ -232,7 +232,7 @@ function TiendasSection({ pala }: { pala: Pala }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--faint)', textDecoration: 'line-through' }}>{precioBase.toFixed(2)} €</span>
                 {item.codigo_descuento && (
-                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', background: 'var(--accent-dim)', padding: '1px 5px', border: '1px solid rgba(80,120,0,0.2)', borderRadius: 3 }}>{item.codigo_descuento}</span>
+                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', background: 'var(--accent-dim)', padding: '1px 5px', border: '1px solid rgba(80,120,0,0.2)', borderRadius: 3 }}>{item.codigo_descuento}</span>
                 )}
               </div>
             )}
@@ -375,12 +375,12 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
         style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
           padding: '8px 16px', background: 'var(--accent-dim)',
           border: '1px solid rgba(80,120,0,0.2)', textDecoration: 'none', borderRadius: 8 }}>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 2,
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 2,
           color: 'var(--muted)', textTransform: 'uppercase' }}>Mínimo histórico</span>
         <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: 'var(--accent-fg)', lineHeight: 1 }}>
           {minRow!.precio.toFixed(2)}€
         </span>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
           en {minRow!.nombre} · {minRow!.fecha}
           {minRow!.codigo && (
             <span style={{ marginLeft: 8, background: 'rgba(80,120,0,0.12)', color: 'var(--accent-fg)',
@@ -417,7 +417,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
             <text key={i}
               x={PAD.left - 7} y={(toY(tick) + 4).toFixed(1)}
               textAnchor="end" fill="rgba(0,0,0,0.42)"
-              fontSize="10" fontFamily="Inter, sans-serif">
+              fontSize="10" fontFamily="Space Grotesk, sans-serif">
               {tick.toFixed(0)}€
             </text>
           ))}
@@ -431,7 +431,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
               <text key={i}
                 x={x.toFixed(1)} y={H - 8}
                 textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                fill="rgba(0,0,0,0.35)" fontSize="9" fontFamily="Inter, sans-serif">
+                fill="rgba(0,0,0,0.35)" fontSize="9" fontFamily="Space Grotesk, sans-serif">
                 {lbl}
               </text>
             )
@@ -448,7 +448,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
           <text
             x={(PAD.left + 6).toFixed(1)}
             y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
-            fill="#4E7400" fontSize="9.5" fontFamily="Inter, sans-serif" opacity="0.85">
+            fill="#4E7400" fontSize="9.5" fontFamily="Space Grotesk, sans-serif" opacity="0.85">
             Mínimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minRow!.fecha}
           </text>
 
@@ -478,12 +478,12 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12,
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
             color: 'var(--muted)' }}>PVP base medio (sin descuentos)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12,
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
             color: 'var(--muted)' }}>Mínimo histórico</span>
         </div>
       </div>
@@ -512,7 +512,7 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
           </div>
 
           <div style={{ padding: '2rem' }}>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
             {pala.precio_referencia > 0 ? (
@@ -535,7 +535,7 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
             </div>
 
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {pala.material_nucleo && <TechRow label="Núcleo" value={pala.material_nucleo} />}
                 {pala.material_cara && <TechRow label="Cara" value={pala.material_cara} />}
@@ -549,7 +549,7 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
 
             {(pala.rating_potencia > 0 || pala.rating_control > 0 || pala.rating_manejabilidad > 0 || pala.rating_punto_dulce > 0) && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
                 {pala.rating_potencia > 0 && <StatBar label="Potencia" value={pala.rating_potencia} />}
                 {pala.rating_control > 0 && <StatBar label="Control" value={pala.rating_control} />}
                 {pala.rating_manejabilidad > 0 && <StatBar label="Manejabilidad" value={pala.rating_manejabilidad} />}
@@ -561,12 +561,12 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg3)' }}>
-          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
           <TiendasSection pala={pala} />
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg4)', borderRadius: '0 0 12px 12px' }}>
-          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
           <PriceHistorySection pala={pala} />
         </div>
       </div>
@@ -589,15 +589,15 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
       </div>
 
       <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 2, color: 'var(--accent-fg)', marginBottom: 4, textTransform: 'uppercase' }}>{pala.marca}</div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 2, color: 'var(--accent-fg)', marginBottom: 4, textTransform: 'uppercase' }}>{pala.marca}</div>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 17, letterSpacing: 1, lineHeight: 1.2, marginBottom: 10, flex: 1 }}>{pala.nombre}</div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
           {pala.forma && (
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.forma}</span>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.forma}</span>
           )}
           {pala.balance && (
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.balance}</span>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '2px 7px', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4 }}>{pala.balance}</span>
           )}
         </div>
 
@@ -607,10 +607,10 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
           ) : pala.precio_pvp > 0 ? (
             <span>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20 }}>{pala.precio_pvp.toFixed(0)} €</span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: 'var(--faint)', marginLeft: 4 }}>PVP</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: 'var(--faint)', marginLeft: 4 }}>PVP</span>
             </span>
           ) : null}
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
         </div>
       </div>
     </div>
@@ -620,7 +620,7 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2.5, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 2.5, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>{label}</div>
       {children}
     </div>
   )
@@ -634,7 +634,7 @@ function Pills({ options, value, onChange }: { options: string[]; value: string;
           background: value === opt ? 'var(--accent-dim)' : 'none',
           border: `1px solid ${value === opt ? 'rgba(80,120,0,0.4)' : 'var(--border)'}`,
           color: value === opt ? 'var(--accent-fg)' : 'var(--muted)',
-          fontFamily: "'Inter', sans-serif", fontSize: 11,
+          fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
           letterSpacing: 1.5, textTransform: 'uppercase', padding: '5px 10px',
           cursor: 'pointer', transition: 'all 0.15s',
         }}>{opt}</button>
@@ -663,12 +663,12 @@ function FilterSidebar({ filters, setFilters, marcas, total }: {
     <aside style={{ background: 'var(--bg2)', borderRight: '1px solid var(--border)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: 54, height: 'calc(100vh - 54px)', overflowY: 'auto' }}>
       <div>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: 3, marginBottom: 4 }}>FILTROS</div>
-        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: 'var(--muted)', letterSpacing: 1 }}>{total} palas</div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)', letterSpacing: 1 }}>{total} palas</div>
       </div>
 
       <button
         onClick={() => setFilters({ marca: '', forma: '', balance: '', juego: '', onlyChollos: false })}
-        style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2, padding: '8px', cursor: 'pointer', textTransform: 'uppercase', borderRadius: 6 }}
+        style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 2, padding: '8px', cursor: 'pointer', textTransform: 'uppercase', borderRadius: 6 }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(80,120,0,0.3)'; e.currentTarget.style.color = 'var(--accent-fg)' }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
       >Limpiar filtros</button>
@@ -680,7 +680,7 @@ function FilterSidebar({ filters, setFilters, marcas, total }: {
         <div style={{ width: 32, height: 18, background: filters.onlyChollos ? 'var(--accent)' : 'rgba(0,0,0,0.1)', borderRadius: 9, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: 2, left: filters.onlyChollos ? 16 : 2, width: 14, height: 14, background: filters.onlyChollos ? '#000' : 'rgba(0,0,0,0.35)', borderRadius: '50%', transition: 'left 0.2s' }} />
         </div>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: filters.onlyChollos ? 'var(--accent-fg)' : 'var(--muted)' }}>Solo con chollos</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: filters.onlyChollos ? 'var(--accent-fg)' : 'var(--muted)' }}>Solo con chollos</span>
       </div>
 
       <FilterGroup label="Marca">
@@ -778,7 +778,7 @@ export default function PalasPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, letterSpacing: 4, marginBottom: 2 }}>CATÁLOGO DE PALAS</h1>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: 'var(--muted)', letterSpacing: 1 }}>
+              <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: 'var(--muted)', letterSpacing: 1 }}>
                 {filtered.length} palas · haz clic para ver chollos activos
               </p>
             </div>
@@ -792,11 +792,11 @@ export default function PalasPage() {
           </div>
 
           {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--muted)', fontFamily: "'Inter', sans-serif", fontSize: 16, letterSpacing: 3 }}>CARGANDO PALAS...</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--muted)', fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, letterSpacing: 3 }}>CARGANDO PALAS...</div>
           ) : filtered.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
               <div style={{ fontSize: 48 }}>🔍</div>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, letterSpacing: 2, color: 'var(--muted)' }}>SIN RESULTADOS</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, letterSpacing: 2, color: 'var(--muted)' }}>SIN RESULTADOS</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>

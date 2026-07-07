@@ -66,7 +66,7 @@ function TendenciaBadge({ tendencia, puestosMovidos }: {
       <div style={{ width: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
         <span style={{ fontSize: 11, lineHeight: 1 }}>🆕</span>
         <span style={{
-          fontSize: 8, fontFamily: 'Inter, sans-serif', letterSpacing: 0.5,
+          fontSize: 8, fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 0.5,
           color: 'var(--accent-fg)', fontWeight: 700, lineHeight: 1, textAlign: 'center',
         }}>NEW</span>
       </div>
@@ -111,17 +111,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 40, letterSpacing: 4, color: 'var(--gold)', lineHeight: 1, margin: 0,
   },
   subtitle: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 13, letterSpacing: 2, color: 'var(--muted)', marginTop: 8,
   },
   updatedAt: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12, letterSpacing: 1, color: 'var(--faint)', marginTop: 4,
   },
   emptyState: {
     textAlign: 'center' as const,
     color: 'var(--faint)',
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 16, letterSpacing: 2, marginTop: 80,
   },
   list: { display: 'flex', flexDirection: 'column' as const, gap: 12 },
@@ -151,21 +151,21 @@ const styles: Record<string, React.CSSProperties> = {
   },
   info: { flex: 1, minWidth: 0 },
   itemTitle: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 16, fontWeight: 600, letterSpacing: 0.5, color: 'var(--text)',
     whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4,
   },
   meta: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const },
   condBadge: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11, letterSpacing: 1, padding: '1px 7px', borderRadius: 3,
   },
   platformBadge: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11, letterSpacing: 1, color: 'var(--accent-fg)', opacity: 0.8,
   },
   cityText: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11, color: 'var(--faint)', letterSpacing: 0.5,
   },
   priceBlock: { textAlign: 'right' as const, flexShrink: 0 },
@@ -174,7 +174,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 26, fontWeight: 700, color: 'var(--gold)', lineHeight: 1,
   },
   precioMedio: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 13, color: 'var(--muted)', textDecoration: 'line-through', marginTop: 2,
   },
   discountBadge: {
@@ -226,7 +226,7 @@ export default function TopPage() {
           </p>
           {!loading && items.length > 0 && (nuevas > 0 || suben > 0 || bajan > 0) && (
             <p style={{
-              fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 1,
+              fontFamily: 'Space Grotesk, sans-serif', fontSize: 12, letterSpacing: 1,
               color: 'var(--faint)', marginTop: 6, display: 'flex', gap: 12,
             }}>
               {nuevas > 0 && <span style={{ color: 'var(--accent-fg)' }}>🆕 {nuevas} nueva{nuevas > 1 ? 's' : ''}</span>}
@@ -339,7 +339,7 @@ export default function TopPage() {
 
         <p style={{
           marginTop: 32, fontSize: 12, color: 'var(--faint)',
-          fontFamily: 'Inter, sans-serif', letterSpacing: 1,
+          fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 1,
         }}>
           El % de descuento se calcula sobre el precio medio de anuncios nuevo/sin abrir en Wallapop y Vinted.
           Solo se incluyen artículos en estado nuevo, sin abrir o como nuevo con precio superior a 55€.
