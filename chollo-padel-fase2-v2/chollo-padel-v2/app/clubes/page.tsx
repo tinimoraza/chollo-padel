@@ -46,7 +46,7 @@ export default function ClubesLandingPage() {
         <Link
           href="/clubes/login"
           style={{
-            display: 'inline-block', background: 'var(--accent)', color: '#000', textDecoration: 'none',
+            display: 'inline-block', background: 'var(--accent)', color: '#fff', textDecoration: 'none',
             padding: '14px 28px', fontFamily: 'Barlow Condensed, sans-serif',
             fontSize: 15, fontWeight: 700, letterSpacing: 1.5, borderRadius: 8,
           }}

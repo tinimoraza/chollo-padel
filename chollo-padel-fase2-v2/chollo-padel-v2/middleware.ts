@@ -6,12 +6,15 @@ export function middleware(request: NextRequest) {
   const isClubesPath = request.nextUrl.pathname.startsWith('/clubes')
   const isClubesAccesoPage = request.nextUrl.pathname === '/clubes/acceso'
   const clubesToken = request.cookies.get('clubes_access')?.value
+  const clubesPwd = process.env.CLUBES_PASSWORD
 
-  if (isClubesPath && !isClubesAccesoPage && clubesToken !== process.env.CLUBES_PASSWORD) {
+  // Redirigir a acceso si: no hay contraseña configurada, o el token no coincide
+  if (isClubesPath && !isClubesAccesoPage && (!clubesPwd || clubesToken !== clubesPwd)) {
     return NextResponse.redirect(new URL('/clubes/acceso', request.url))
   }
 
-  if (isClubesAccesoPage && clubesToken === process.env.CLUBES_PASSWORD) {
+  // Redirigir desde acceso a /clubes si ya está autenticado
+  if (isClubesAccesoPage && clubesPwd && clubesToken === clubesPwd) {
     return NextResponse.redirect(new URL('/clubes', request.url))
   }
 
