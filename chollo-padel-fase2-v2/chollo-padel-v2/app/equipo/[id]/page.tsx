@@ -248,5 +248,3 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
     </div>
   )
 }
-  )
-}
