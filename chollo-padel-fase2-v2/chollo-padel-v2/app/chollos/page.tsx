@@ -1,9 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import type { CholloTienda } from '@/app/api/chollos/route'
 import Header from '@/components/Header'
 import BottomNav from '@/components/BottomNav'
+import { PalaModal } from '@/components/PalaModal'
+import type { Pala } from '@/components/PalaModal'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+)
 
 type Filtro = 'todos' | 'CHOLLO' | 'OFERTA'
 
@@ -107,6 +115,19 @@ export default function ChollosPage() {
   const [error, setError]         = useState<string | null>(null)
   const [filtro, setFiltro]       = useState<Filtro>('todos')
   const [totalStats, setTotalStats] = useState({ total: 0, chollos: 0, ofertas: 0, updated_at: null as string | null })
+  const [selectedPala, setSelectedPala] = useState<Pala | null>(null)
+  const [palaLoading, setPalaLoading]   = useState(false)
+
+  async function handleCholloClick(c: CholloTienda) {
+    setPalaLoading(true)
+    const { data, error } = await supabase
+      .from('palas')
+      .select('*')
+      .eq('id', c.pala_id)
+      .single()
+    setPalaLoading(false)
+    if (!error && data) setSelectedPala(data as Pala)
+  }
 
   useEffect(() => {
     fetch('/api/chollos')
@@ -206,7 +227,7 @@ export default function ChollosPage() {
         {!loading && !error && visible.length > 0 && (
           <div style={s.grid}>
             {visible.map((c, i) => (
-              <a key={`${c.pala_id}-${c.tienda_slug}`} href={c.url_producto} target="_blank" rel="noopener noreferrer" style={s.card}>
+              <div key={`${c.pala_id}-${c.tienda_slug}`} onClick={() => handleCholloClick(c)} style={s.card}>
                 {/* Badge tag */}
                 <div style={{
                   ...s.tagBadge,
@@ -287,7 +308,7 @@ export default function ChollosPage() {
                     <span style={s.tiempo}>{timeAgo(c.scraped_at)}</span>
                   </div>
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         )}
@@ -300,6 +321,18 @@ export default function ChollosPage() {
           </p>
         )}
       </main>
+
+      {/* Loading overlay mientras se carga la pala */}
+      {palaLoading && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      )}
+
+      {/* Modal pala */}
+      {selectedPala && (
+        <PalaModal pala={selectedPala} onClose={() => setSelectedPala(null)} />
+      )}
     </div>
   )
 }
