@@ -174,6 +174,7 @@ export default function LandingPage() {
           <Link href="/top" style={{ fontSize: 12, color: 'var(--faint)', textDecoration: 'none' }}>Top</Link>
           <Link href="/chollos" style={{ fontSize: 12, color: 'var(--faint)', textDecoration: 'none' }}>Chollos</Link>
           <Link href="/alertas" style={{ fontSize: 12, color: 'var(--faint)', textDecoration: 'none' }}>Alertas</Link>
+          <Link href="/legal" style={{ fontSize: 12, color: 'var(--faint)', textDecoration: 'none' }}>Aviso legal</Link>
         </div>
       </footer>
     </div>
