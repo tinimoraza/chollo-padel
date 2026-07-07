@@ -13,13 +13,13 @@ export default function ClubesLandingPage() {
 
         <p style={{
           fontSize: 12, letterSpacing: 2, color: 'var(--accent-fg)',
-          fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, marginBottom: 12,
+          fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: 12,
         }}>
           NUEVO · PARA CAPITANES DE EQUIPO
         </p>
 
         <h1 style={{
-          fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700,
+          fontFamily: 'Inter, sans-serif', fontWeight: 700,
           fontSize: 'clamp(32px, 6vw, 56px)', lineHeight: 1.05, marginBottom: 20,
         }}>
           Gestiona tu equipo de liga de pádel
@@ -47,7 +47,7 @@ export default function ClubesLandingPage() {
           href="/clubes/login"
           style={{
             display: 'inline-block', background: 'var(--accent)', color: '#fff', textDecoration: 'none',
-            padding: '14px 28px', fontFamily: 'Barlow Condensed, sans-serif',
+            padding: '14px 28px', fontFamily: 'Inter, sans-serif',
             fontSize: 15, fontWeight: 700, letterSpacing: 1.5, borderRadius: 8,
           }}
         >

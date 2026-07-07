@@ -35,7 +35,7 @@ export default function LoginPage() {
         <div style={{ marginBottom: 12 }}>
           <label style={{
             fontSize: 11, letterSpacing: 2, color: 'var(--muted)',
-            fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6,
+            fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 6,
           }}>
             CONTRASEÑA DE ACCESO
           </label>
@@ -62,7 +62,7 @@ export default function LoginPage() {
           disabled={loading}
           style={{
             width: '100%', background: 'var(--accent)', color: '#000', border: 'none',
-            padding: '12px', fontFamily: 'Barlow Condensed, sans-serif',
+            padding: '12px', fontFamily: 'Inter, sans-serif',
             fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
           }}
         >

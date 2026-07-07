@@ -88,8 +88,8 @@ export function TpBadge({ slug }: { slug?: string }) {
         {half && <span style={{ opacity: 0.5 }}>★</span>}
         <span style={{ opacity: 0.2 }}>{'★'.repeat(empty)}</span>
       </span>
-      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
-      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Trustpilot</span>
+      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 0.5, color, fontWeight: 700 }}>{stars}</span>
+      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 9, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Trustpilot</span>
     </div>
   )
 }
@@ -101,8 +101,8 @@ function StatBar({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
+        <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
       </div>
       <div style={{ height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2 }}>
         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #2563EB, #1D4ED8)', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -114,7 +114,7 @@ function StatBar({ label, value }: { label: string; value: number }) {
 function Tag({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11,
+      fontFamily: "'Inter', sans-serif", fontSize: 11,
       letterSpacing: 1.5, textTransform: 'uppercase',
       padding: '3px 10px',
       border: accent ? '1px solid rgba(37,99,235,0.35)' : '1px solid var(--border)',
@@ -205,9 +205,9 @@ function TiendasSection({ pala }: { pala: Pala }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: disponible ? 'var(--accent-fg)' : 'var(--faint)' }}>{pEfectivo.toFixed(2)} €</span>
               {!disponible
-                ? <span style={{ color: 'var(--muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
+                ? <span style={{ color: 'var(--muted)', fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1 }}>SIN STOCK</span>
                 : saving > 0
-                  ? <span style={{ background: 'var(--accent-dim)', color: 'var(--accent-fg)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px', borderRadius: 4 }}>-{saving}%</span>
+                  ? <span style={{ background: 'var(--accent-dim)', color: 'var(--accent-fg)', fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 1, padding: '2px 6px', borderRadius: 4 }}>-{saving}%</span>
                   : null
               }
             </div>
@@ -215,7 +215,7 @@ function TiendasSection({ pala }: { pala: Pala }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--faint)', textDecoration: 'line-through' }}>{precioBase.toFixed(2)} €</span>
                 {item.codigo_descuento && (
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', background: 'var(--accent-dim)', padding: '1px 5px', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 3 }}>{item.codigo_descuento}</span>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', background: 'var(--accent-dim)', padding: '1px 5px', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 3 }}>{item.codigo_descuento}</span>
                 )}
               </div>
             )}
@@ -345,12 +345,12 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
         style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
           padding: '8px 16px', background: 'var(--accent-dim)',
           border: '1px solid rgba(37,99,235,0.2)', textDecoration: 'none', borderRadius: 8 }}>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2,
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, letterSpacing: 2,
           color: 'var(--muted)', textTransform: 'uppercase' }}>Mínimo histórico</span>
         <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: 'var(--accent-fg)', lineHeight: 1 }}>
           {minRow!.precio.toFixed(2)}€
         </span>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
           en {minRow!.nombre} · {minRow!.fecha}
           {minRow!.codigo && (
             <span style={{ marginLeft: 8, background: 'rgba(37,99,235,0.12)', color: 'var(--accent-fg)',
@@ -375,7 +375,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
           ))}
           {yTicks.map((tick, i) => (
             <text key={i} x={PAD.left - 7} y={(toY(tick) + 4).toFixed(1)}
-              textAnchor="end" fill="rgba(0,0,0,0.42)" fontSize="10" fontFamily="Barlow Condensed, sans-serif">
+              textAnchor="end" fill="rgba(0,0,0,0.42)" fontSize="10" fontFamily="Inter, sans-serif">
               {tick.toFixed(0)}€
             </text>
           ))}
@@ -386,7 +386,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
             return (
               <text key={i} x={x.toFixed(1)} y={H - 8}
                 textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                fill="rgba(0,0,0,0.35)" fontSize="9" fontFamily="Barlow Condensed, sans-serif">
+                fill="rgba(0,0,0,0.35)" fontSize="9" fontFamily="Inter, sans-serif">
                 {lbl}
               </text>
             )
@@ -397,7 +397,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
             clipPath="url(#hchart-clip)" />
           <text x={(PAD.left + 6).toFixed(1)}
             y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
-            fill="#1D4ED8" fontSize="9.5" fontFamily="Barlow Condensed, sans-serif" opacity="0.85">
+            fill="#1D4ED8" fontSize="9.5" fontFamily="Inter, sans-serif" opacity="0.85">
             Mínimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minRow!.fecha}
           </text>
           {pvpPoints.length >= 2 && (
@@ -418,11 +418,11 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'var(--muted)' }}>PVP base medio (sin descuentos)</span>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: 'var(--muted)' }}>PVP base medio (sin descuentos)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#1D4ED8" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Mínimo histórico</span>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Mínimo histórico</span>
         </div>
       </div>
     </div>
@@ -452,7 +452,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
           </div>
 
           <div style={{ padding: '2rem' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
             {pala.precio_referencia > 0 ? (
@@ -475,7 +475,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
             </div>
 
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' }}>Características técnicas</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {pala.material_nucleo && <TechRow label="Núcleo" value={pala.material_nucleo} />}
                 {pala.material_cara && <TechRow label="Cara" value={pala.material_cara} />}
@@ -489,7 +489,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
 
             {(pala.rating_potencia > 0 || pala.rating_control > 0 || pala.rating_manejabilidad > 0 || pala.rating_punto_dulce > 0) && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 2, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Rendimiento</div>
                 {pala.rating_potencia > 0 && <StatBar label="Potencia" value={pala.rating_potencia} />}
                 {pala.rating_control > 0 && <StatBar label="Control" value={pala.rating_control} />}
                 {pala.rating_manejabilidad > 0 && <StatBar label="Manejabilidad" value={pala.rating_manejabilidad} />}
@@ -501,12 +501,12 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg3)' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
           <TiendasSection pala={pala} />
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg4)', borderRadius: '0 0 12px 12px' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Histórico de precios · últimos 60 días</div>
           <PriceHistorySection pala={pala} />
         </div>
       </div>

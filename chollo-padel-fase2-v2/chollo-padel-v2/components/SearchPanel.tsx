@@ -161,7 +161,7 @@ function FavoritoModal({ item, onClose }: { item: WallapopItem; onClose: () => v
         {saved ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <div style={{ fontSize: 48 }}>⭐</div>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 2, marginTop: 12, color: 'var(--accent-fg)' }}>¡FAVORITO GUARDADO!</div>
+            <div style={{ fontFamily: 'Inter, sans-serif', letterSpacing: 2, marginTop: 12, color: 'var(--accent-fg)' }}>¡FAVORITO GUARDADO!</div>
           </div>
         ) : (
           <>
@@ -217,11 +217,11 @@ const modalStyles: Record<string, React.CSSProperties> = {
   modal: { background: 'var(--card)', border: '1px solid var(--border)', padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 10, boxShadow: 'var(--card-shadow-hover)' },
   title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 4, marginBottom: 6, color: 'var(--text)' },
   subtitle: { color: 'var(--muted)', fontSize: 13, marginBottom: 24 },
-  label: { fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', fontFamily: 'Barlow Condensed, sans-serif', display: 'block' as const, marginBottom: 6 },
+  label: { fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', fontFamily: 'Inter, sans-serif', display: 'block' as const, marginBottom: 6 },
   input: { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', fontSize: 14, outline: 'none', fontFamily: 'Barlow, sans-serif', boxSizing: 'border-box' as const, borderRadius: 6 },
   actions: { display: 'flex', gap: 12, marginTop: 24 },
-  btnCancel: { flex: 1, background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
-  btnSave: { flex: 2, background: 'var(--accent)', color: '#000', border: 'none', padding: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  btnCancel: { flex: 1, background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', padding: 12, fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
+  btnSave: { flex: 2, background: 'var(--accent)', color: '#000', border: 'none', padding: 12, fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6 },
   errorMsg: { background: 'rgba(255,95,31,0.1)', border: '1px solid rgba(255,95,31,0.3)', color: '#DC2626', padding: '10px 14px', fontSize: 12, marginTop: 8, borderRadius: 4 },
 }
 
@@ -697,32 +697,32 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnSearch: {
     background: 'var(--accent)', color: '#000', border: 'none',
-    padding: '10px 28px', fontFamily: 'Barlow Condensed, sans-serif',
+    padding: '10px 28px', fontFamily: 'Inter, sans-serif',
     fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6,
   },
   btnAlerta: {
     background: 'transparent', border: '1px solid rgba(61,102,0,0.3)', color: 'var(--accent-fg)',
-    padding: '10px 20px', fontFamily: 'Barlow Condensed, sans-serif',
+    padding: '10px 20px', fontFamily: 'Inter, sans-serif',
     fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer', borderRadius: 6,
   },
   filtersRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
-  filterLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 2, color: 'var(--muted)' },
+  filterLabel: { fontFamily: 'Inter, sans-serif', fontSize: 11, letterSpacing: 2, color: 'var(--muted)' },
   filterBtn: {
     background: 'transparent', border: '1px solid var(--border)',
     color: 'var(--text)', padding: '5px 14px',
-    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
+    fontFamily: 'Inter, sans-serif', fontSize: 12,
     fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', borderRadius: 4,
   },
   filterBtnActive: { background: 'var(--accent)', border: '1px solid var(--accent)', color: '#000' },
   statsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
   statBox: { background: 'var(--card)', border: '1px solid var(--border)', padding: '14px 24px', minWidth: 90, borderRadius: 8, boxShadow: 'var(--card-shadow)' },
   statValue: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, letterSpacing: 2, color: 'var(--text)', lineHeight: 1 },
-  statLabel: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', marginTop: 4 },
-  resultCount: { fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'var(--muted)', margin: 0 },
+  statLabel: { fontFamily: 'Inter, sans-serif', fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)', marginTop: 4 },
+  resultCount: { fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 1.5, color: 'var(--muted)', margin: 0 },
   sortSelect: {
     background: 'var(--card)', border: '1px solid var(--border)',
     color: 'var(--text)', padding: '6px 12px',
-    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
+    fontFamily: 'Inter, sans-serif', fontSize: 12,
     fontWeight: 600, letterSpacing: 1.5, cursor: 'pointer', outline: 'none', borderRadius: 6,
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
@@ -740,7 +740,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardPrice: { fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 1, color: 'var(--accent-fg)' },
   precioRef: {
-    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12,
+    fontFamily: 'Inter, sans-serif', fontSize: 12,
     color: 'var(--faint)', textDecoration: 'line-through',
     marginLeft: 6, verticalAlign: 'middle',
   },
@@ -748,13 +748,13 @@ const styles: Record<string, React.CSSProperties> = {
   conditionBadge: {
     display: 'inline-block', marginTop: 8, background: 'var(--bg3)',
     border: '1px solid var(--border)', color: 'var(--muted)',
-    fontSize: 10, fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: 1, padding: '2px 8px', borderRadius: 3,
+    fontSize: 10, fontFamily: 'Inter, sans-serif', letterSpacing: 1, padding: '2px 8px', borderRadius: 3,
   },
   // Hint inline bajo el badge de condición en cards de oportunidad
   oportunidadHint: {
     marginTop: 8,
     fontSize: 10,
-    fontFamily: 'Barlow Condensed, sans-serif',
+    fontFamily: 'Inter, sans-serif',
     color: 'var(--muted)',
     letterSpacing: 0.5,
     lineHeight: 1.4,
@@ -764,18 +764,18 @@ const styles: Record<string, React.CSSProperties> = {
   badgeOportunidad: {
     position: 'absolute', top: 8, left: 8, background: '#FFB800', color: '#000',
     fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 8px',
-    fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
+    fontFamily: 'Inter, sans-serif', borderRadius: 3,
   },
   badgePlatform: {
     position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.75)',
     fontSize: 9, fontWeight: 600, letterSpacing: 1, padding: '3px 8px',
-    fontFamily: 'Barlow Condensed, sans-serif', border: '1px solid', borderRadius: 3,
+    fontFamily: 'Inter, sans-serif', border: '1px solid', borderRadius: 3,
   },
   btnFavorito: {
     width: '100%', background: 'transparent', border: 'none',
     borderTop: '1px solid var(--border)',
     color: 'var(--muted)', padding: '8px',
-    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10,
+    fontFamily: 'Inter, sans-serif', fontSize: 10,
     letterSpacing: 1.5, cursor: 'pointer',
   },
   // Banner explicativo de oportunidades (Opción B)
@@ -795,7 +795,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 1,
   },
   oportunidadBannerText: {
-    fontFamily: 'Barlow Condensed, sans-serif',
+    fontFamily: 'Inter, sans-serif',
     fontSize: 13,
     color: 'var(--text)',
     letterSpacing: 0.3,

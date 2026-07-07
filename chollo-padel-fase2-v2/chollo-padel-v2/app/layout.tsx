@@ -4,27 +4,27 @@ import AnalyticsWrapper from '@/components/AnalyticsWrapper'
 
 export const metadata: Metadata = {
   title: {
-    default: 'HuntPadel — Encuentra tu pala al mejor precio',
+    default: 'HuntPadel - Encuentra tu pala al mejor precio',
     template: '%s | HuntPadel',
   },
-  description: 'Buscador de palas de pádel de segunda mano. Rastreamos Wallapop y Vinted en tiempo real para que no te pierdas ningún chollo.',
-  keywords: 'palas pádel segunda mano, chollos pádel, wallapop pádel, vinted pádel, buscador pádel, bullpadel, adidas padel, nox padel',
+  description: 'Buscador de palas de padel. Rastreamos tiendas en tiempo real para que no te pierdas ningun chollo.',
+  keywords: 'palas padel, chollos padel, ofertas palas padel, buscador padel, bullpadel, adidas padel, nox padel',
   authors: [{ name: 'HuntPadel' }],
   creator: 'HuntPadel',
   metadataBase: new URL('https://huntpadel.com'),
   openGraph: {
-    title: 'HuntPadel — Encuentra tu pala al mejor precio',
-    description: 'Buscador de palas de pádel de segunda mano en Wallapop y Vinted. Más de 18.000 anuncios rastreados en tiempo real.',
+    title: 'HuntPadel - Encuentra tu pala al mejor precio',
+    description: 'Buscador de palas de padel. Rastreamos tiendas en tiempo real.',
     url: 'https://huntpadel.com',
     siteName: 'HuntPadel',
     type: 'website',
     locale: 'es_ES',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'HuntPadel — Buscador de palas de pádel' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'HuntPadel - Buscador de palas de padel' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HuntPadel — Encuentra tu pala al mejor precio',
-    description: 'Wallapop + Vinted en un solo buscador. No te pierdas ningún chollo.',
+    title: 'HuntPadel - Encuentra tu pala al mejor precio',
+    description: 'Chollos de palas de padel en tiendas en tiempo real.',
     images: ['/og-image.png'],
   },
   robots: {

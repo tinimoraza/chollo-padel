@@ -29,18 +29,18 @@ const inputStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   fontSize: 11, letterSpacing: 1.5, color: 'var(--muted)',
-  fontFamily: 'Barlow Condensed, sans-serif', display: 'block', marginBottom: 6,
+  fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 6,
 }
 
 const btnPrimary: React.CSSProperties = {
   background: 'var(--accent)', color: '#000', border: 'none',
-  padding: '11px 22px', fontFamily: 'Barlow Condensed, sans-serif',
+  padding: '11px 22px', fontFamily: 'Inter, sans-serif',
   fontSize: 13.5, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', borderRadius: 7,
 }
 
 const btnGhost: React.CSSProperties = {
   background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)',
-  padding: '10px 18px', fontFamily: 'Barlow Condensed, sans-serif',
+  padding: '10px 18px', fontFamily: 'Inter, sans-serif',
   fontSize: 12.5, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 7,
 }
 
@@ -168,11 +168,11 @@ function CrearEquipo({ userId, onCreado }: { userId: string; onCreado: () => voi
     <form onSubmit={handleCrear} style={{ maxWidth: 420 }}>
       <p style={{
         fontSize: 11, letterSpacing: 2, color: 'var(--accent-fg)',
-        fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, marginBottom: 10,
+        fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: 10,
       }}>
         BIENVENIDO
       </p>
-      <h1 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 26, marginBottom: 20 }}>
+      <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 26, marginBottom: 20 }}>
         Crea tu equipo
       </h1>
 
@@ -206,7 +206,7 @@ function PanelEquipo({
       {!editandoEquipo ? (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 28, marginBottom: 4 }}>
+            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 28, marginBottom: 4 }}>
               {equipo.nombre_equipo}
             </h1>
             {equipo.division && (
@@ -220,7 +220,7 @@ function PanelEquipo({
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderTop: '1px solid var(--border)', paddingTop: 28 }}>
-        <h2 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
+        <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
           PLANTILLA ({jugadores.length})
         </h2>
         {!mostrarForm && (
