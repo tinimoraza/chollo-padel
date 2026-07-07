@@ -3,10 +3,6 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 
-const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const sb = createClient(supabaseUrl, supabaseKey)
-
 type Equipo  = { id: string; nombre_equipo: string; division: string | null }
 type Jugador = { id: string; nombre: string; lado: string | null; talla: string | null; activo: boolean; [k: string]: unknown }
 type Jornada = { id: string; numero: number; fecha: string | null; rival: string; sede: string; partidos_ganados: number; partidos_perdidos: number }
@@ -23,6 +19,12 @@ const TH: React.CSSProperties = { ...F, fontSize:11, fontWeight:600, letterSpaci
 const TD: React.CSSProperties = { ...F, fontSize:13, color:'var(--text)', padding:'10px 12px', borderBottom:'1px solid var(--border)', verticalAlign:'middle' }
 
 export default async function EquipoPublicoPage({ params }: { params: { id: string } }) {
+  // Client creado dentro de la funcion para evitar evaluacion en build-time
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
   const { data: eq } = await sb.from('clubes_equipos').select('id,nombre_equipo,division').eq('id', params.id).single()
   if (!eq) notFound()
   const equipo = eq as Equipo
@@ -57,46 +59,43 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
   const empates   = jornadas.filter(j => j.partidos_ganados === j.partidos_perdidos && j.partidos_ganados > 0).length
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)' }}>
-      <main style={{ maxWidth:860, margin:'0 auto', padding:'40px 24px 80px' }}>
+    <div style={{ minHeight:"100vh", background:"var(--bg)", color:"var(--text)" }}>
+      <main style={{ maxWidth:860, margin:"0 auto", padding:"40px 24px 80px" }}>
 
-        {/* Cabecera */}
         <div style={{ marginBottom:32 }}>
-          <h1 style={{ ...F, fontWeight:700, fontSize:28, margin:'0 0 4px', color:'var(--text)' }}>
+          <h1 style={{ ...F, fontWeight:700, fontSize:28, margin:"0 0 4px", color:"var(--text)" }}>
             {equipo.nombre_equipo}
           </h1>
           {equipo.division && (
-            <p style={{ ...F, fontSize:13, color:'var(--muted)', margin:0 }}>{equipo.division}</p>
+            <p style={{ ...F, fontSize:13, color:"var(--muted)", margin:0 }}>{equipo.division}</p>
           )}
         </div>
 
-        {/* Resumen */}
         {jornadas.length > 0 && (
-          <div style={{ display:'flex', gap:10, marginBottom:32, flexWrap:'wrap' }}>
+          <div style={{ display:"flex", gap:10, marginBottom:32, flexWrap:"wrap" }}>
             {[
-              { v: victorias, l: 'Victorias',       c: victorias > derrotas ? '#22c55e' : 'var(--text)' },
-              { v: derrotas,  l: 'Derrotas',         c: derrotas > victorias ? '#ef4444' : 'var(--text)' },
-              { v: empates,   l: 'Empates',          c: 'var(--text)' },
-              { v: partidos.filter(p => p.ganado).length, l: 'Partidos ganados', c: 'var(--text)' },
+              { v: victorias, l: "Victorias",       c: victorias > derrotas ? "#22c55e" : "var(--text)" },
+              { v: derrotas,  l: "Derrotas",         c: derrotas > victorias ? "#ef4444" : "var(--text)" },
+              { v: empates,   l: "Empates",          c: "var(--text)" },
+              { v: partidos.filter(p => p.ganado).length, l: "Partidos ganados", c: "var(--text)" },
             ].map(({ v, l, c }) => (
-              <div key={l} style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 20px', minWidth:110 }}>
+              <div key={l} style={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:10, padding:"14px 20px", minWidth:110 }}>
                 <div style={{ ...F, fontWeight:700, fontSize:26, color: c, lineHeight:1 }}>{v}</div>
-                <div style={{ ...F, fontSize:11, color:'var(--muted)', marginTop:4 }}>{l}</div>
+                <div style={{ ...F, fontSize:11, color:"var(--muted)", marginTop:4 }}>{l}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Plantilla */}
         <section style={{ marginBottom:40 }}>
-          <h2 style={{ ...F, fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:14 }}>
+          <h2 style={{ ...F, fontWeight:700, fontSize:18, color:"var(--text)", marginBottom:14 }}>
             Plantilla ({jugadores.filter(j => j.activo).length})
           </h2>
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead>
                 <tr>
-                  {['Jugador','Lado','Talla'].map(h => <th key={h} style={TH}>{h}</th>)}
+                  {["Jugador","Lado","Talla"].map(h => <th key={h} style={TH}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -107,12 +106,12 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
                       <td style={{ ...TD, fontWeight:600 }}>{j.nombre}</td>
                       <td style={TD}>
                         {j.lado && (
-                          <span style={{ ...F, display:'inline-block', padding:'2px 8px', borderRadius:4, fontSize:11, fontWeight:700, background: lc.bg, color: lc.color }}>
+                          <span style={{ ...F, display:"inline-block", padding:"2px 8px", borderRadius:4, fontSize:11, fontWeight:700, background: lc.bg, color: lc.color }}>
                             {j.lado}
                           </span>
                         )}
                       </td>
-                      <td style={{ ...TD, color:'var(--muted)' }}>{j.talla || '-'}</td>
+                      <td style={{ ...TD, color:"var(--muted)" }}>{j.talla || "-"}</td>
                     </tr>
                   )
                 })}
@@ -121,40 +120,39 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
           </div>
         </section>
 
-        {/* Jornadas */}
         {jornadas.length > 0 && (
           <section style={{ marginBottom:40 }}>
-            <h2 style={{ ...F, fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:14 }}>Jornadas</h2>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <h2 style={{ ...F, fontWeight:700, fontSize:18, color:"var(--text)", marginBottom:14 }}>Jornadas</h2>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
               {jornadas.map(j => {
-                const res = j.partidos_ganados > j.partidos_perdidos ? 'victoria'
-                  : j.partidos_ganados < j.partidos_perdidos ? 'derrota' : 'empate'
+                const res = j.partidos_ganados > j.partidos_perdidos ? "victoria"
+                  : j.partidos_ganados < j.partidos_perdidos ? "derrota" : "empate"
                 const pars = partidos.filter(p => p.jornada_id === j.id)
                 return (
                   <div key={j.id} style={{
-                    background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'16px 20px',
-                    display:'flex', justifyContent:'space-between', alignItems:'center',
-                    borderLeft: `3px solid ${res === 'victoria' ? '#22c55e' : res === 'derrota' ? '#ef4444' : 'var(--border)'}`,
+                    background:"var(--card)", border:"1px solid var(--border)", borderRadius:10, padding:"16px 20px",
+                    display:"flex", justifyContent:"space-between", alignItems:"center",
+                    borderLeft: "3px solid " + (res === "victoria" ? "#22c55e" : res === "derrota" ? "#ef4444" : "var(--border)"),
                   }}>
                     <div>
-                      <p style={{ ...F, fontWeight:700, fontSize:14, color:'var(--text)', margin:'0 0 2px' }}>
-                        J{j.numero} &mdash; {j.rival}
+                      <p style={{ ...F, fontWeight:700, fontSize:14, color:"var(--text)", margin:"0 0 2px" }}>
+                        {"J" + j.numero + " — " + j.rival}
                       </p>
-                      <p style={{ ...F, fontSize:11, color:'var(--muted)', margin:0 }}>
-                        {j.sede === 'local' ? 'Local' : 'Visitante'}
-                        {j.fecha && ` - ${new Date(j.fecha).toLocaleDateString('es-ES', { day:'numeric', month:'short' })}`}
-                        {` - ${pars.length} partidos`}
+                      <p style={{ ...F, fontSize:11, color:"var(--muted)", margin:0 }}>
+                        {j.sede === "local" ? "Local" : "Visitante"}
+                        {j.fecha ? " - " + new Date(j.fecha).toLocaleDateString("es-ES", { day:"numeric", month:"short" }) : ""}
+                        {" - " + pars.length + " partidos"}
                       </p>
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                      <span style={{ ...F, fontWeight:700, fontSize:18, color:'var(--text)' }}>
-                        {j.partidos_ganados} &ndash; {j.partidos_perdidos}
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                      <span style={{ ...F, fontWeight:700, fontSize:18, color:"var(--text)" }}>
+                        {j.partidos_ganados + " – " + j.partidos_perdidos}
                       </span>
                       {(j.partidos_ganados + j.partidos_perdidos) > 0 && (
                         <span style={{
-                          ...F, fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:4,
-                          background: res === 'victoria' ? 'rgba(34,197,94,0.12)' : res === 'derrota' ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.06)',
-                          color: res === 'victoria' ? '#15803d' : res === 'derrota' ? '#b91c1c' : 'var(--muted)',
+                          ...F, fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:4,
+                          background: res === "victoria" ? "rgba(34,197,94,0.12)" : res === "derrota" ? "rgba(239,68,68,0.12)" : "rgba(0,0,0,0.06)",
+                          color: res === "victoria" ? "#15803d" : res === "derrota" ? "#b91c1c" : "var(--muted)",
                         }}>
                           {res.toUpperCase()}
                         </span>
@@ -169,27 +167,27 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
               const pars = partidos.filter(p => p.jornada_id === j.id)
               if (pars.length === 0) return null
               return (
-                <details key={j.id} style={{ marginTop:8 }}>
-                  <summary style={{ ...F, fontSize:13, color:'var(--muted)', cursor:'pointer', padding:'6px 0', userSelect:'none' }}>
-                    J{j.numero} - Partidos individuales
+                <details key={j.id} style={{ marginBottom:6 }}>
+                  <summary style={{ ...F, fontSize:13, color:"var(--muted)", cursor:"pointer", padding:"6px 0", userSelect:"none" }}>
+                    {"J" + j.numero + " - Partidos individuales"}
                   </summary>
-                  <div style={{ paddingLeft:12, marginTop:6, display:'flex', flexDirection:'column', gap:6 }}>
+                  <div style={{ paddingLeft:12, marginTop:6, display:"flex", flexDirection:"column", gap:6 }}>
                     {pars.map(p => {
-                      const n1 = jPorId[p.jugador1_id || ''] || '?'
-                      const n2 = jPorId[p.jugador2_id || ''] || '?'
+                      const n1 = jPorId[p.jugador1_id || ""] || "?"
+                      const n2 = jPorId[p.jugador2_id || ""] || "?"
                       return (
                         <div key={p.id} style={{
-                          background:'var(--card)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px',
-                          display:'flex', justifyContent:'space-between', alignItems:'center',
-                          borderLeft: `2px solid ${p.ganado ? '#22c55e' : '#ef4444'}`,
+                          background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, padding:"10px 14px",
+                          display:"flex", justifyContent:"space-between", alignItems:"center",
+                          borderLeft: "2px solid " + (p.ganado ? "#22c55e" : "#ef4444"),
                         }}>
-                          <span style={{ ...F, fontSize:13, color:'var(--text)' }}>
-                            {n1} / {n2}
-                            <span style={{ color:'var(--muted)', marginLeft:8 }}>vs {p.rival1 || '?'} / {p.rival2 || '?'}</span>
-                            {p.resultado && <span style={{ color:'var(--faint)', marginLeft:8 }}>{p.resultado}</span>}
+                          <span style={{ ...F, fontSize:13, color:"var(--text)" }}>
+                            {n1 + " / " + n2}
+                            <span style={{ color:"var(--muted)", marginLeft:8 }}>{"vs " + (p.rival1 || "?") + " / " + (p.rival2 || "?")}</span>
+                            {p.resultado && <span style={{ color:"var(--faint)", marginLeft:8 }}>{p.resultado}</span>}
                           </span>
-                          <span style={{ ...F, fontSize:12, fontWeight:700, color: p.ganado ? '#22c55e' : '#ef4444' }}>
-                            {p.ganado ? 'GANADO' : 'PERDIDO'}
+                          <span style={{ ...F, fontSize:12, fontWeight:700, color: p.ganado ? "#22c55e" : "#ef4444" }}>
+                            {p.ganado ? "GANADO" : "PERDIDO"}
                           </span>
                         </div>
                       )
@@ -201,15 +199,14 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
           </section>
         )}
 
-        {/* Estadisticas */}
         {statsJug.length > 0 && (
           <section>
-            <h2 style={{ ...F, fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:14 }}>Estadisticas</h2>
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <h2 style={{ ...F, fontWeight:700, fontSize:18, color:"var(--text)", marginBottom:14 }}>Estadisticas</h2>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse" }}>
                 <thead>
                   <tr>
-                    {['#','Jugador','Lado','Jugados','Ganados','Perdidos','%'].map(h => <th key={h} style={TH}>{h}</th>)}
+                    {["#","Jugador","Lado","Jugados","Ganados","Perdidos","%"].map(h => <th key={h} style={TH}>{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -218,24 +215,24 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
                     const pct = Math.round(st.ganados / st.jugados * 100)
                     return (
                       <tr key={st.jugador.id}>
-                        <td style={{ ...TD, color:'var(--faint)', width:40 }}>{i + 1}</td>
+                        <td style={{ ...TD, color:"var(--faint)", width:40 }}>{i + 1}</td>
                         <td style={{ ...TD, fontWeight:600 }}>{st.jugador.nombre}</td>
                         <td style={TD}>
                           {st.jugador.lado && (
-                            <span style={{ ...F, display:'inline-block', padding:'2px 8px', borderRadius:4, fontSize:11, fontWeight:700, background: lc.bg, color: lc.color }}>
+                            <span style={{ ...F, display:"inline-block", padding:"2px 8px", borderRadius:4, fontSize:11, fontWeight:700, background: lc.bg, color: lc.color }}>
                               {st.jugador.lado}
                             </span>
                           )}
                         </td>
                         <td style={TD}>{st.jugados}</td>
-                        <td style={{ ...TD, color:'#22c55e', fontWeight:700 }}>{st.ganados}</td>
-                        <td style={{ ...TD, color:'#ef4444', fontWeight:700 }}>{st.perdidos}</td>
+                        <td style={{ ...TD, color:"#22c55e", fontWeight:700 }}>{st.ganados}</td>
+                        <td style={{ ...TD, color:"#ef4444", fontWeight:700 }}>{st.perdidos}</td>
                         <td style={TD}>
-                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                            <div style={{ width:50, height:5, background:'var(--border)', borderRadius:3 }}>
-                              <div style={{ height:5, borderRadius:3, width:`${pct}%`, background: pct >= 50 ? '#22c55e' : '#ef4444' }} />
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <div style={{ width:50, height:5, background:"var(--border)", borderRadius:3 }}>
+                              <div style={{ height:5, borderRadius:3, width: pct + "%", background: pct >= 50 ? "#22c55e" : "#ef4444" }} />
                             </div>
-                            <span style={{ ...F, fontSize:12, fontWeight:700, color:'var(--text)' }}>{pct}%</span>
+                            <span style={{ ...F, fontSize:12, fontWeight:700, color:"var(--text)" }}>{pct}%</span>
                           </div>
                         </td>
                       </tr>
