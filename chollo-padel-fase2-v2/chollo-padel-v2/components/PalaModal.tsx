@@ -136,7 +136,7 @@ function TechRow({ label, value }: { label: string; value: string }) {
 
 // ─── Sección mejores precios en tienda ────────────────────────────────────────
 
-function TiendasSection({ pala }: { pala: Pala }) {
+function TiendasSection({ pala, onPrecioLive }: { pala: Pala; onPrecioLive?: (precio: number) => void }) {
   const [items, setItems]     = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -186,6 +186,19 @@ function TiendasSection({ pala }: { pala: Pala }) {
     .sort((a, b) => precioEfectivo(a) - precioEfectivo(b))
     .slice(0, 3)
 
+  // Calcular mediana en vivo de precios en stock para el header del modal
+  const preciosEnStock = Array.from(porTienda.values())
+    .filter(i => i.disponible)
+    .map(i => precioEfectivo(i))
+    .sort((a, b) => a - b)
+  if (preciosEnStock.length > 0 && onPrecioLive) {
+    const mid = Math.floor(preciosEnStock.length / 2)
+    const mediana = preciosEnStock.length % 2 === 0
+      ? (preciosEnStock[mid - 1] + preciosEnStock[mid]) / 2
+      : preciosEnStock[mid]
+    onPrecioLive(mediana)
+  }
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
       {deduped.map((item: any, i: number) => {
@@ -194,8 +207,11 @@ function TiendasSection({ pala }: { pala: Pala }) {
         const pEfectivo   = precioEfectivo(item)
         const tieneDesc   = pEfectivo < precioBase
         const disponible  = item.disponible
-        const saving      = disponible && Number(pala.precio_referencia) > 0
-          ? Math.round(((Number(pala.precio_referencia) - pEfectivo) / Number(pala.precio_referencia)) * 100) : 0
+        const refPrecio   = preciosEnStock.length > 0
+          ? (() => { const mid = Math.floor(preciosEnStock.length / 2); return preciosEnStock.length % 2 === 0 ? (preciosEnStock[mid-1]+preciosEnStock[mid])/2 : preciosEnStock[mid] })()
+          : Number(pala.precio_referencia)
+        const saving      = disponible && refPrecio > 0
+          ? Math.round(((refPrecio - pEfectivo) / refPrecio) * 100) : 0
         return (
           <a key={`${fuente?.slug ?? 'tienda'}-${i}`}
             href={item.url_producto} target="_blank" rel="noopener noreferrer"
@@ -433,11 +449,22 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
 // ─── Modal principal ───────────────────────────────────────────────────────────
 
 export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
+  const [precioLive, setPrecioLive] = useState<number | null>(null)
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
+
+  const precioDisplay = precioLive != null
+    ? precioLive
+    : Number(pala.precio_referencia) > 0
+      ? Number(pala.precio_referencia)
+      : Number(pala.precio_pvp) > 0 ? Number(pala.precio_pvp) : null
+  const precioLabel = precioLive != null
+    ? 'precio medio tiendas'
+    : Number(pala.precio_referencia) > 0 ? 'precio de referencia' : 'PVP'
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
@@ -456,17 +483,12 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
-            {Number(pala.precio_referencia) > 0 ? (
+            {precioDisplay != null && (
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
-                {Number(pala.precio_referencia).toFixed(2)} €
-                <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>precio medio tiendas</span>
+                {precioDisplay.toFixed(2)} €
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>{precioLabel}</span>
               </div>
-            ) : Number(pala.precio_pvp) > 0 ? (
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
-                {Number(pala.precio_pvp).toFixed(2)} €
-                <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>PVP</span>
-              </div>
-            ) : null}
+            )}
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
               {pala.forma && <Tag>{pala.forma}</Tag>}
@@ -503,7 +525,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg3)' }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
-          <TiendasSection pala={pala} />
+          <TiendasSection pala={pala} onPrecioLive={setPrecioLive} />
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg4)', borderRadius: '0 0 12px 12px' }}>
