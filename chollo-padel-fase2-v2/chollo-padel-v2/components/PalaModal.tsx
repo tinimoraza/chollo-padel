@@ -97,12 +97,13 @@ export function TpBadge({ slug }: { slug?: string }) {
 // ─── Helpers visuales ─────────────────────────────────────────────────────────
 
 function StatBar({ label, value }: { label: string; value: number }) {
-  const pct = Math.min(Math.max((value / 10) * 100, 0), 100)
+  const v = Number(value) || 0   // Supabase numeric -> string en JSON; forzar a number
+  const pct = Math.min(Math.max((v / 10) * 100, 0), 100)
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, letterSpacing: 1, color: 'var(--muted)', fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>{value?.toFixed(1)}/10</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-fg)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>{v.toFixed(1)}/10</span>
       </div>
       <div style={{ height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2 }}>
         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #2563EB, #1D4ED8)', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -193,8 +194,8 @@ function TiendasSection({ pala }: { pala: Pala }) {
         const pEfectivo   = precioEfectivo(item)
         const tieneDesc   = pEfectivo < precioBase
         const disponible  = item.disponible
-        const saving      = disponible && pala.precio_referencia > 0
-          ? Math.round(((pala.precio_referencia - pEfectivo) / pala.precio_referencia) * 100) : 0
+        const saving      = disponible && Number(pala.precio_referencia) > 0
+          ? Math.round(((Number(pala.precio_referencia) - pEfectivo) / Number(pala.precio_referencia)) * 100) : 0
         return (
           <a key={`${fuente?.slug ?? 'tienda'}-${i}`}
             href={item.url_producto} target="_blank" rel="noopener noreferrer"
@@ -455,14 +456,14 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--accent-fg)', marginBottom: 6, textTransform: 'uppercase' }}>{pala.marca}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 12, lineHeight: 1.1 }}>{pala.nombre}</h2>
 
-            {pala.precio_referencia > 0 ? (
+            {Number(pala.precio_referencia) > 0 ? (
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
-                {pala.precio_referencia.toFixed(2)} €
+                {Number(pala.precio_referencia).toFixed(2)} €
                 <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>precio medio tiendas</span>
               </div>
-            ) : pala.precio_pvp > 0 ? (
+            ) : Number(pala.precio_pvp) > 0 ? (
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--accent-fg)', marginBottom: 16 }}>
-                {pala.precio_pvp.toFixed(2)} €
+                {Number(pala.precio_pvp).toFixed(2)} €
                 <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'Barlow', sans-serif", marginLeft: 6 }}>PVP</span>
               </div>
             ) : null}

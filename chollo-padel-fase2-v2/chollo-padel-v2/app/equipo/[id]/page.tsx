@@ -22,7 +22,7 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
   // Client creado dentro de la funcion para evitar evaluacion en build-time
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   )
 
   const { data: eq } = await sb.from('clubes_equipos').select('id,nombre_equipo,division').eq('id', params.id).single()
@@ -246,5 +246,7 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
 
       </main>
     </div>
+  )
+}
   )
 }
