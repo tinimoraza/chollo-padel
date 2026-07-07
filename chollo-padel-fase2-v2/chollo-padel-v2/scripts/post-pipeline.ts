@@ -277,7 +277,13 @@ async function autoPromover(): Promise<number> {
 
 // ─── PASO 3: Recalcular precios de referencia ────────────────────────────────
 
-// Fuentes excluidas del precio_referencia (precio medio):
+function mediana(arr: number[]): number {
+  const sorted = [...arr].sort((a, b) => a - b)
+  const mid    = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+// Fuentes excluidas del precio_referencia (precio mediano):
 //   2 = PadelZoom (agregador, no tienda directa — no refleja precio real de venta)
 const FUENTES_EXCLUIR_REFERENCIA = new Set([2])
 
@@ -312,9 +318,7 @@ async function recalcularPrecios(): Promise<number> {
     const snapsFuente = snapsRef.length > 0 ? snapsRef : snaps
 
     const preciosRef = snapsFuente.map((s: any) => Number(s.precio))
-    const precio_referencia = parseFloat(
-      (preciosRef.reduce((a: number, b: number) => a + b, 0) / preciosRef.length).toFixed(2)
-    )
+    const precio_referencia = parseFloat(mediana(preciosRef).toFixed(2))
     const precio_minimo = Math.min(...snaps.map((s: any) => Number(s.precio)))
     const fuentes_count = new Set(snaps.map((s: any) => s.source_id)).size
 
