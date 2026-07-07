@@ -156,10 +156,16 @@ export default function ChollosPage() {
       <main style={s.main}>
         {/* Cabecera */}
         <div style={s.pageHeader}>
-          <h1 style={s.title}>CHOLLOS</h1>
-          <p style={s.subtitle}>
-            BAJADAS DE PRECIO EN TIENDAS - ACTUALIZADO {totalStats.updated_at ? timeAgo(totalStats.updated_at).toUpperCase() : 'HOY'}
-          </p>
+          <div style={s.titleRow}>
+            <h1 style={s.title}>Chollos</h1>
+            {totalStats.updated_at && (
+              <div style={s.livePill}>
+                <span style={s.liveDot} />
+                {timeAgo(totalStats.updated_at)}
+              </div>
+            )}
+          </div>
+          <p style={s.subtitle}>Bajadas de precio detectadas en tiendas de pádel</p>
         </div>
 
         {/* Stats rapidos */}
@@ -167,15 +173,18 @@ export default function ChollosPage() {
           <div style={s.statsRow}>
             <div style={s.statBox}>
               <span style={s.statNum}>{totalStats.total}</span>
-              <span style={s.statLbl}>ofertas encontradas</span>
+              <span style={s.statLbl}>ofertas activas</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: 'rgba(204,255,0,0.40)', background: 'rgba(204,255,0,0.08)' }}>
-              <span style={{ ...s.statNum, color: 'var(--chollo-fg)' }}>{totalStats.chollos}</span>
-              <span style={s.statLbl}>CHOLLOS &gt;=35%</span>
+            <div style={{ ...s.statBox, borderColor: 'rgba(204,255,0,0.35)', background: 'rgba(204,255,0,0.07)' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ ...s.statNum, color: 'var(--chollo-fg)' }}>{totalStats.chollos}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#5a9000', letterSpacing: 0.5 }}>⚡</span>
+              </div>
+              <span style={s.statLbl}>chollos &gt; 35% dto.</span>
             </div>
-            <div style={{ ...s.statBox, borderColor: 'rgba(37,99,235,0.25)', background: 'var(--blue-dim)' }}>
+            <div style={{ ...s.statBox, borderColor: 'rgba(37,99,235,0.20)', background: 'var(--blue-dim)' }}>
               <span style={{ ...s.statNum, color: 'var(--blue-fg)' }}>{totalStats.ofertas}</span>
-              <span style={s.statLbl}>OFERTAS &gt;=25%</span>
+              <span style={s.statLbl}>ofertas &gt; 25% dto.</span>
             </div>
           </div>
         )}
@@ -187,14 +196,11 @@ export default function ChollosPage() {
               <button
                 key={f}
                 onClick={() => setFiltro(f)}
-                style={{
-                  ...s.filtroBtn,
-                  ...(filtro === f ? s.filtroBtnActive : {}),
-                }}
+                style={{ ...s.filtroBtn, ...(filtro === f ? s.filtroBtnActive : {}) }}
               >
-                {f === 'todos' ? `TODOS (${totalStats.total})`
-                  : f === 'CHOLLO' ? `CHOLLO (${totalStats.chollos})`
-                  : `OFERTA (${totalStats.ofertas})`}
+                {f === 'todos' ? `Todos (${totalStats.total})`
+                  : f === 'CHOLLO' ? `⚡ Chollos (${totalStats.chollos})`
+                  : `Ofertas (${totalStats.ofertas})`}
               </button>
             ))}
           </div>
@@ -346,74 +352,110 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
   },
-  pageHeader: { marginBottom: 28 },
+  pageHeader: { marginBottom: 32 },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 6,
+  },
   title: {
-    fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 48,
-    letterSpacing: 4,
-    color: 'var(--blue-fg)',
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 36,
+    fontWeight: 700,
+    letterSpacing: -0.5,
+    color: 'var(--text)',
     margin: 0,
+  },
+  livePill: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 10px',
+    borderRadius: 20,
+    background: 'rgba(34,197,94,0.1)',
+    border: '1px solid rgba(34,197,94,0.25)',
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 11,
+    fontWeight: 500,
+    color: 'rgba(34,197,94,0.85)',
+    whiteSpace: 'nowrap' as const,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: '#22c55e',
+    boxShadow: '0 0 6px rgba(34,197,94,0.7)',
+    animation: 'pulse 2s ease-in-out infinite',
+    display: 'inline-block',
   },
   subtitle: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 12,
-    letterSpacing: 1.5,
+    fontSize: 13,
+    fontWeight: 400,
     color: 'var(--muted)',
-    marginTop: 6,
+    margin: 0,
+    letterSpacing: 0,
   },
   statsRow: {
     display: 'flex',
     gap: 12,
-    marginBottom: 24,
-    flexWrap: 'wrap',
+    marginBottom: 28,
+    flexWrap: 'wrap' as const,
   },
   statBox: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '14px 24px',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
+    padding: '16px 20px',
     border: '1px solid var(--border)',
     background: 'var(--card)',
     boxShadow: 'var(--card-shadow)',
-    borderRadius: 8,
-    minWidth: 100,
+    borderRadius: 10,
+    minWidth: 110,
+    gap: 2,
   },
   statNum: {
-    fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 32,
-    letterSpacing: 2,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 36,
+    fontWeight: 700,
+    letterSpacing: -1,
     color: 'var(--text)',
     lineHeight: 1,
   },
   statLbl: {
     fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 11,
-    letterSpacing: 1,
+    fontWeight: 500,
     color: 'var(--muted)',
     marginTop: 4,
+    letterSpacing: 0,
   },
   filtros: {
     display: 'flex',
-    gap: 8,
+    gap: 6,
     marginBottom: 24,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   filtroBtn: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: 1.5,
-    padding: '7px 16px',
+    fontSize: 13,
+    fontWeight: 500,
+    letterSpacing: 0,
+    padding: '7px 18px',
     border: '1px solid var(--border)',
-    background: 'var(--card)',
+    background: 'transparent',
     color: 'var(--muted)',
     cursor: 'pointer',
-    borderRadius: 6,
+    borderRadius: 20,
+    transition: 'all 0.15s',
   },
   filtroBtnActive: {
     border: '1px solid var(--blue)',
     color: 'var(--blue-fg)',
     background: 'var(--blue-dim)',
+    fontWeight: 600,
   },
   estado: {
     display: 'flex',
