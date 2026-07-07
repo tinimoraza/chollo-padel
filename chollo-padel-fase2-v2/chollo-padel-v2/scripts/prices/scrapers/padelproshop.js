@@ -6,7 +6,7 @@ const BASE_URL   = 'https://padelproshop.com/collections/palas-padel'
 const SECTION_ID = 'template--26596133339441__main'
 const DELAY_MS   = 600
 
-const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
+const { detectarCodigoDescuento, filtrarUrlsRebajas, detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -89,8 +89,20 @@ async function scrape() {
       if (codigoDescuento) {
         console.log(`[padelproshop] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
+      // La Section API devuelve solo el grid de productos (sin nav) — los hrefs del HTML
+      // parcial nunca incluyen el enlace a /rebajas-de-verano u otras colecciones de nav.
+      // Hacemos una petición adicional a la página completa para detectar esos enlaces.
       const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
       rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
+      const { codigoDescuento: cdFull, rebajasUrls: ruFull } =
+        await detectarRebajasYCodigoViaHtml(BASE_URL, BASE_URL)
+      if (!codigoDescuento && cdFull) {
+        codigoDescuento = cdFull
+        console.log(`[padelproshop] codigo detectado (full page): ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      }
+      for (const u of ruFull) {
+        if (!rebajasUrls.includes(u)) rebajasUrls.push(u)
+      }
       if (rebajasUrls.length > 0) {
         console.log(`[padelproshop] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
       }
