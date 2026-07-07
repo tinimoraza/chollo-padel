@@ -67,7 +67,7 @@ export default function ClubesAccesoPage() {
           onClick={handleLogin}
           disabled={loading}
           style={{
-            width: '100%', background: 'var(--accent)', color: '#000', border: 'none',
+            width: '100%', background: 'var(--accent)', color: '#fff', border: 'none',
             padding: '12px', fontFamily: 'Barlow Condensed, sans-serif',
             fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
           }}

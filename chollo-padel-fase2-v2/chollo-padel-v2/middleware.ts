@@ -2,22 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('beta_access')?.value
-  const isLoginPage = request.nextUrl.pathname === '/login'
-
-  if (!token && !isLoginPage) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (token === process.env.BETA_PASSWORD && isLoginPage) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  if (token !== process.env.BETA_PASSWORD && !isLoginPage) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Segunda contraseña específica para la sección /clubes
+  // El sitio es público — solo /clubes requiere contraseña propia
   const isClubesPath = request.nextUrl.pathname.startsWith('/clubes')
   const isClubesAccesoPage = request.nextUrl.pathname === '/clubes/acceso'
   const clubesToken = request.cookies.get('clubes_access')?.value
