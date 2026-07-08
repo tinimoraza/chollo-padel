@@ -1,41 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120">
+  <!-- Círculo icono azul -->
+  <circle cx="60" cy="60" r="55" fill="#1673FE"/>
 
-  <!-- Icono: pala minimalista -->
-  <g transform="translate(0, 2)">
-    <!-- Cuerpo pala -->
-    <rect x="8" y="2" width="30" height="36" rx="15" fill="#2563EB"/>
-    <!-- Agujeros en cuadrícula -->
-    <circle cx="17" cy="13" r="2.8" fill="#ffffff"/>
-    <circle cx="28" cy="13" r="2.8" fill="#ffffff"/>
-    <circle cx="17" cy="23" r="2.8" fill="#ffffff"/>
-    <circle cx="28" cy="23" r="2.8" fill="#ffffff"/>
-    <!-- Mango -->
-    <rect x="19" y="37" width="8" height="16" rx="2.5" fill="#1D4ED8" opacity="0.9"/>
-    <!-- Separador mango/pala -->
-    <rect x="10" y="35" width="26" height="3" rx="1" fill="#1D4ED8" opacity="0.3"/>
-  </g>
+  <!-- Pala de padel (cuerpo) -->
+  <ellipse cx="55" cy="44" rx="22" ry="28" fill="white" opacity="0.95"/>
+  <!-- Agujeros pala -->
+  <circle cx="47" cy="36" r="3.5" fill="#1673FE"/>
+  <circle cx="57" cy="36" r="3.5" fill="#1673FE"/>
+  <circle cx="67" cy="36" r="3.5" fill="#1673FE"/>
+  <circle cx="47" cy="46" r="3.5" fill="#1673FE"/>
+  <circle cx="57" cy="46" r="3.5" fill="#1673FE"/>
+  <circle cx="67" cy="46" r="3.5" fill="#1673FE"/>
+  <circle cx="47" cy="56" r="3.5" fill="#1673FE"/>
+  <circle cx="57" cy="56" r="3.5" fill="#1673FE"/>
+  <circle cx="67" cy="56" r="3.5" fill="#1673FE"/>
+  <!-- Mango -->
+  <rect x="51" y="70" width="9" height="20" rx="4" fill="white" opacity="0.9"/>
+  <!-- Grip stripes -->
+  <rect x="51" y="74" width="9" height="2" rx="1" fill="#1673FE" opacity="0.4"/>
+  <rect x="51" y="79" width="9" height="2" rx="1" fill="#1673FE" opacity="0.4"/>
+  <rect x="51" y="84" width="9" height="2" rx="1" fill="#1673FE" opacity="0.4"/>
 
-  <!-- Texto HUNT -->
+  <!-- Etiqueta precio (tag) -->
+  <rect x="68" y="62" width="22" height="22" rx="4" fill="white" transform="rotate(-15 79 73)"/>
+  <circle cx="71" cy="66" r="2" fill="#1673FE" transform="rotate(-15 79 73)"/>
+  <!-- % símbolo en la etiqueta -->
+  <text x="72" y="79" font-family="Arial, sans-serif" font-size="11" font-weight="800" fill="#1673FE" transform="rotate(-15 79 73)">%</text>
+
+  <!-- Texto "Hunt" en navy oscuro -->
   <text
-    x="52"
-    y="46"
-    font-family="'Bebas Neue', 'Arial Narrow', sans-serif"
-    font-size="46"
-    fill="#111827"
-    letter-spacing="2"
-  >HUNT</text>
+    x="130"
+    y="76"
+    font-family="'Nunito', 'Varela Round', 'Arial Rounded MT Bold', Arial, sans-serif"
+    font-size="62"
+    font-weight="900"
+    fill="#0B1854"
+    letter-spacing="-1"
+  >Hunt</text>
 
-  <!-- Punto separador -->
-  <circle cx="159" cy="38" r="3.5" fill="#2563EB"/>
-
-  <!-- Texto PADEL -->
+  <!-- Texto "padel" en azul -->
   <text
-    x="168"
-    y="46"
-    font-family="'Bebas Neue', 'Arial Narrow', sans-serif"
-    font-size="46"
-    fill="#2563EB"
-    letter-spacing="2"
-  >PADEL</text>
+    x="296"
+    y="76"
+    font-family="'Nunito', 'Varela Round', 'Arial Rounded MT Bold', Arial, sans-serif"
+    font-size="62"
+    font-weight="900"
+    fill="#1673FE"
+    letter-spacing="-1"
+  >padel</text>
 
+  <!-- Tagline -->
+  <text
+    x="130"
+    y="100"
+    font-family="Arial, sans-serif"
+    font-size="13"
+    font-weight="600"
+    fill="#0B1854"
+    letter-spacing="3.5"
+  >UN CHOLLO DE PÁDEL NO ESPERA</text>
 </svg>

@@ -17,8 +17,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
     <>
       <header className="hp-header">
         <a href="/" className="hp-logo">
-          <div className="hp-logo-badge">H</div>
-          <span className="hp-logo-name">Hunt<span>Padel</span></span>
+          <img src="/huntpadel-logo-header.svg" alt="HuntPadel" height={40} style={{ display: 'block' }} />
         </a>
 
         <nav className="hp-nav">
@@ -52,8 +51,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
         <div className="hp-mobile-drawer">
           <div className="hp-mobile-drawer-header">
             <div className="hp-logo">
-              <div className="hp-logo-badge">H</div>
-              <span className="hp-logo-name">Hunt<span>Padel</span></span>
+              <img src="/huntpadel-logo-header.svg" alt="HuntPadel" height={34} style={{ display: 'block' }} />
             </div>
             <button className="hp-drawer-close" onClick={() => setMenuOpen(false)}>✕</button>
           </div>

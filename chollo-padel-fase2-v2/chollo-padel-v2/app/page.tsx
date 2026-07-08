@@ -66,10 +66,9 @@ export default function LandingPage() {
 
       {/* ── NAV ── */}
       <nav style={{ background: 'var(--bg2)', borderBottom: '0.5px solid var(--border)', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#fff' }}>H</div>
-          <span style={{ fontSize: 15, fontWeight: 600 }}>Hunt<span style={{ color: 'var(--accent-fg)' }}>Padel</span></span>
-        </div>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <img src="/huntpadel-logo-header.svg" alt="HuntPadel" height={36} style={{ display: 'block' }} />
+        </a>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/buscar" style={{ padding: '6px 14px', borderRadius: 7, fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
             Buscador
