@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import type { CholloTienda } from '@/app/api/chollos/route'
 import Header from '@/components/Header'
@@ -232,90 +233,99 @@ export default function ChollosPage() {
         {/* Grid de chollos */}
         {!loading && !error && visible.length > 0 && (
           <div style={s.grid}>
-            {visible.map((c, i) => (
-              <div key={`${c.pala_id}-${c.tienda_slug}`} onClick={() => handleCholloClick(c)} style={s.card}>
-                {/* Badge tag */}
-                <div style={{
-                  ...s.tagBadge,
-                  background: c.tag === 'CHOLLO' ? '#CCFF00' : '#2563EB',
-                  color: c.tag === 'CHOLLO' ? '#1a3300' : '#fff',
-                  boxShadow: c.tag === 'CHOLLO' ? '0 0 10px rgba(204,255,0,0.50)' : 'none',
-                }}>
-                  {c.tag === 'CHOLLO' ? '⚡ CHOLLO' : 'OFERTA'}
-                </div>
-
-                {/* Badge NUEVO (chollo detectado en las últimas 24h) */}
-                {c.primera_vez_at && (Date.now() - new Date(c.primera_vez_at).getTime()) < 24 * 60 * 60 * 1000 && (
+            {visible.map((c, i) => {
+              const inner = (
+                <>
+                  {/* Badge tag */}
                   <div style={{
-                    position: 'absolute', top: 8, right: 8,
-                    background: '#C8FF00', color: '#000',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-                    padding: '2px 7px', textTransform: 'uppercase',
-                    boxShadow: '0 0 8px rgba(200,255,0,0.5)',
+                    ...s.tagBadge,
+                    background: c.tag === 'CHOLLO' ? '#CCFF00' : '#2563EB',
+                    color: c.tag === 'CHOLLO' ? '#1a3300' : '#fff',
+                    boxShadow: c.tag === 'CHOLLO' ? '0 0 10px rgba(204,255,0,0.50)' : 'none',
                   }}>
-                    NUEVO
+                    {c.tag === 'CHOLLO' ? '⚡ CHOLLO' : 'OFERTA'}
                   </div>
-                )}
 
-                {/* Imagen */}
-                <div style={s.imgWrap}>
-                  {c.imagen_url
-                    ? <img src={c.imagen_url} alt={c.nombre} style={s.img} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    : <div style={s.imgPlaceholder}>PADEL</div>
-                  }
-                </div>
-
-                {/* Info pala */}
-                <div style={s.info}>
-                  <p style={s.marca}>{c.marca}</p>
-                  <p style={s.modelo}>{formatModelo(c.nombre, c.marca)}</p>
-
-                  {/* Banner codigo de descuento (tarea #175) */}
-                  {c.codigo_descuento && (
-                    <div style={s.codigoBanner}>
-                      CODIGO {c.codigo_descuento} -{c.descuento_codigo_pct}% EXTRA
+                  {/* Badge NUEVO (chollo detectado en las últimas 24h) */}
+                  {c.primera_vez_at && (Date.now() - new Date(c.primera_vez_at).getTime()) < 24 * 60 * 60 * 1000 && (
+                    <div style={{
+                      position: 'absolute', top: 8, right: 8,
+                      background: '#C8FF00', color: '#000',
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                      padding: '2px 7px', textTransform: 'uppercase',
+                      boxShadow: '0 0 8px rgba(200,255,0,0.5)',
+                    }}>
+                      NUEVO
                     </div>
                   )}
 
-                  {/* Precios */}
-                  <div style={s.precios}>
-                    <span style={s.precioActual}>{c.precio_actual.toFixed(2)}€</span>
-                    {c.precio_sin_codigo && (
-                      <span style={s.precioSinCodigo}>{c.precio_sin_codigo.toFixed(2)}€</span>
+                  {/* Imagen */}
+                  <div style={s.imgWrap}>
+                    {c.imagen_url
+                      ? <img src={c.imagen_url} alt={c.nombre} style={s.img} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      : <div style={s.imgPlaceholder}>PADEL</div>
+                    }
+                  </div>
+
+                  {/* Info pala */}
+                  <div style={s.info}>
+                    <p style={s.marca}>{c.marca}</p>
+                    <p style={s.modelo}>{formatModelo(c.nombre, c.marca)}</p>
+
+                    {/* Banner codigo de descuento (tarea #175) */}
+                    {c.codigo_descuento && (
+                      <div style={s.codigoBanner}>
+                        CODIGO {c.codigo_descuento} -{c.descuento_codigo_pct}% EXTRA
+                      </div>
                     )}
-                    <span style={s.precioRef}>
-                      <span style={s.precioRefTachado}>ref {c.precio_referencia.toFixed(0)}€</span>
-                    </span>
-                  </div>
 
-                  {/* Descuento */}
-                  <div style={{
-                    ...s.descuento,
-                    background: c.tag === 'CHOLLO' ? 'rgba(204,255,0,0.18)' : 'rgba(37,99,235,0.10)',
-                    color: c.tag === 'CHOLLO' ? '#2d5200' : '#1D4ED8',
-                    borderRadius: 4,
-                    padding: '2px 7px',
-                    width: 'fit-content',
-                  }}>
-                    -{c.descuento_pct}% vs precio medio tiendas
-                  </div>
-
-                  {/* Tienda, rating Trustpilot y tiempo */}
-                  <div style={s.footer}>
-                    <span style={s.tienda}>
-                      {TIENDA_LABEL[c.tienda_slug] ?? c.tienda}
-                      {TIENDA_TP[c.tienda_slug] != null && (
-                        <span style={{ ...s.tpStars, color: tpColor(TIENDA_TP[c.tienda_slug]!) }}>
-                          {' '}★{TIENDA_TP[c.tienda_slug]}
-                        </span>
+                    {/* Precios */}
+                    <div style={s.precios}>
+                      <span style={s.precioActual}>{c.precio_actual.toFixed(2)}€</span>
+                      {c.precio_sin_codigo && (
+                        <span style={s.precioSinCodigo}>{c.precio_sin_codigo.toFixed(2)}€</span>
                       )}
-                    </span>
-                    <span style={s.tiempo}>{timeAgo(c.scraped_at)}</span>
+                      <span style={s.precioRef}>
+                        <span style={s.precioRefTachado}>ref {c.precio_referencia.toFixed(0)}€</span>
+                      </span>
+                    </div>
+
+                    {/* Descuento */}
+                    <div style={{
+                      ...s.descuento,
+                      background: c.tag === 'CHOLLO' ? 'rgba(204,255,0,0.18)' : 'rgba(37,99,235,0.10)',
+                      color: c.tag === 'CHOLLO' ? '#2d5200' : '#1D4ED8',
+                      borderRadius: 4,
+                      padding: '2px 7px',
+                      width: 'fit-content',
+                    }}>
+                      -{c.descuento_pct}% vs precio medio tiendas
+                    </div>
+
+                    {/* Tienda, rating Trustpilot y tiempo */}
+                    <div style={s.footer}>
+                      <span style={s.tienda}>
+                        {TIENDA_LABEL[c.tienda_slug] ?? c.tienda}
+                        {TIENDA_TP[c.tienda_slug] != null && (
+                          <span style={{ ...s.tpStars, color: tpColor(TIENDA_TP[c.tienda_slug]!) }}>
+                            {' '}★{TIENDA_TP[c.tienda_slug]}
+                          </span>
+                        )}
+                      </span>
+                      <span style={s.tiempo}>{timeAgo(c.scraped_at)}</span>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </>
+              )
+              return c.slug
+                ? <Link key={`${c.pala_id}-${c.tienda_slug}`} href={`/palas/${c.slug}`} style={{ ...s.card, textDecoration: 'none', color: 'inherit' }}>
+                    {inner}
+                  </Link>
+                : <div key={`${c.pala_id}-${c.tienda_slug}`} onClick={() => handleCholloClick(c)} style={s.card}>
+                    {inner}
+                  </div>
+            })}
           </div>
         )}
 
