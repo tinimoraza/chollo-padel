@@ -575,17 +575,17 @@ function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
   )
 }
 
-function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
+function PalaCard({ pala }: { pala: Pala }) {
   const [hovered, setHovered] = useState(false)
 
   return (
-    <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ background: 'var(--card)', border: `1px solid ${hovered ? 'rgba(80,120,0,0.28)' : 'var(--border)'}`, boxShadow: hovered ? 'var(--card-shadow-hover)' : 'var(--card-shadow)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', borderRadius: 10, overflow: 'hidden' }}
+    <a href={`/palas/${pala.slug}`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{ background: 'var(--card)', border: `1px solid ${hovered ? 'rgba(80,120,0,0.28)' : 'var(--border)'}`, boxShadow: hovered ? 'var(--card-shadow-hover)' : 'var(--card-shadow)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', borderRadius: 10, overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}
     >
       <div style={{ background: '#E8E9EC', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)', overflow: 'hidden', padding: '1rem' }}>
         {pala.imagen_url
           ? <img src={pala.imagen_url} alt={pala.nombre} style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transition: 'transform 0.3s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-          : <span style={{ fontSize: 48 }}>🏓</span>
+          : <span style={{ fontSize: 48 }}>&#127955;</span>
         }
       </div>
 
@@ -611,10 +611,10 @@ function PalaCard({ pala, onClick }: { pala: Pala; onClick: () => void }) {
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: 'var(--faint)', marginLeft: 4 }}>PVP</span>
             </span>
           ) : null}
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Ver mejores precios →</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: 1, color: 'var(--faint)', textTransform: 'uppercase' }}>Ver precios &#8594;</span>
         </div>
       </div>
-    </div>
+    </a>
   )
 }
 
@@ -711,7 +711,6 @@ export default function PalasPage() {
   const [loading, setLoading] = useState(true)
   const [marcas, setMarcas] = useState<string[]>([])
   const [filters, setFilters] = useState<Filters>({ marca: '', forma: '', balance: '', juego: '', onlyChollos: false })
-  const [selected, setSelected] = useState<Pala | null>(null)
   const [search, setSearch] = useState('')
   // tarea (2026-06-30): el toggle "Solo con chollos" no filtraba nada — para
   // que filtre de verdad reutilizamos la MISMA logica de deteccion de chollos
@@ -780,7 +779,7 @@ export default function PalasPage() {
             <div>
               <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, letterSpacing: 4, marginBottom: 2 }}>CATÁLOGO DE PALAS</h1>
               <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: 'var(--muted)', letterSpacing: 1 }}>
-                {filtered.length} palas · haz clic para ver chollos activos
+                {filtered.length} palas · haz clic para comparar precios
               </p>
             </div>
             <input
@@ -803,7 +802,7 @@ export default function PalasPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
               {filtered.map(pala => (
                 <div key={pala.id}>
-                  <PalaCard pala={pala} onClick={() => setSelected(pala)} />
+                  <PalaCard pala={pala} />
                 </div>
               ))}
             </div>
@@ -811,7 +810,6 @@ export default function PalasPage() {
         </main>
       </div>
 
-      {selected && <PalaModal pala={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }
