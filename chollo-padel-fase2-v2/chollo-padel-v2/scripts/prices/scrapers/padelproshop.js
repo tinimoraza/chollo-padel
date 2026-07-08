@@ -55,7 +55,7 @@ function extractFromHtml(html) {
 }
 
 async function scrape() {
-  console.log('[padelproshop] Iniciando scraper (Section API v10)…')
+  console.log('[padelproshop] Iniciando scraper (Section API v10)...')
 
   const allProducts = []
   const seen        = new Set()
@@ -109,7 +109,7 @@ async function scrape() {
     }
 
     const products = extractFromHtml(html)
-    console.log(`[padelproshop]  → ${products.length} productos`)
+    console.log(`[padelproshop]  -> ${products.length} productos`)
 
     if (products.length === 0) break
 
@@ -152,33 +152,38 @@ async function scrape() {
       allProducts.push(p)
       added++
     }
-    console.log(`[padelproshop] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    console.log(`[padelproshop] sección rebajas ${rebajasUrl} -> ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 
-  // Para productos sin imagen del listing, extraer og:image de la ficha (Shopify, sin cheerio).
+  // Para productos sin imagen del listing, extraer imagen vía Shopify Product JSON.
+  // Limitado a MAX_IMG_FALLBACK por ejecución para no superar el timeout de 5 min del workflow.
+  const MAX_IMG_FALLBACK = 50
+  const DELAY_IMG_MS     = 300
   const sinImagen = allProducts.filter(p => !p.image)
   if (sinImagen.length > 0) {
-    console.log(`[padelproshop] Completando imagen de ficha para ${sinImagen.length} productos sin imagen\u2026`)
-    for (const p of sinImagen) {
+    const lote = [...sinImagen].sort(() => Math.random() - 0.5).slice(0, MAX_IMG_FALLBACK)
+    console.log(`[padelproshop] Completando imagen de ficha para ${lote.length}/${sinImagen.length} productos sin imagen...`)
+    for (const p of lote) {
       try {
-        const res = await fetch(p.url, {
+        // Usar la API JSON de Shopify: /products/<handle>.json incluye imágenes
+        const handle = p.url.replace(/.*\/products\//, '').replace(/[?#].*/, '')
+        const res = await fetch(`https://padelproshop.com/products/${handle}.json`, {
           headers: {
             'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept':          'text/html',
+            'Accept':          'application/json',
             'Accept-Language': 'es-ES,es;q=0.9',
           },
         })
         if (res.ok) {
-          const html = await res.text()
-          const ogMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/) ||
-                          html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/)
-          if (ogMatch) p.image = ogMatch[1]
+          const data = await res.json()
+          const img = data?.product?.images?.[0]?.src
+          if (img) p.image = img
         }
       } catch (e) {
         console.error(`[padelproshop] No se pudo obtener imagen de ${p.url}:`, e.message)
       }
-      await sleep(DELAY_MS)
+      await sleep(DELAY_IMG_MS)
     }
   }
 
