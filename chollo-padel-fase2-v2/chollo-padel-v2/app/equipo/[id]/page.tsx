@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
 type Equipo  = { id: string; nombre_equipo: string; division: string | null }
 type Jugador = { id: string; nombre: string; lado: string | null; talla: string | null; activo: boolean; [k: string]: unknown }
@@ -19,7 +20,6 @@ const TH: React.CSSProperties = { ...F, fontSize:11, fontWeight:600, letterSpaci
 const TD: React.CSSProperties = { ...F, fontSize:13, color:'var(--text)', padding:'10px 12px', borderBottom:'1px solid var(--border)', verticalAlign:'middle' }
 
 export default async function EquipoPublicoPage({ params }: { params: { id: string } }) {
-  // Client creado dentro de la funcion para evitar evaluacion en build-time
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
@@ -60,6 +60,27 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
 
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg)", color:"var(--text)" }}>
+
+      {/* Mini header con branding */}
+      <header style={{
+        borderBottom: "1px solid var(--border)",
+        background: "var(--card)",
+        padding: "0 24px",
+        height: 52,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <Link href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:22, letterSpacing:2, color:"var(--text)" }}>
+            HUNT<span style={{ color:"var(--accent-fg)" }}>PADEL</span>
+          </span>
+        </Link>
+        <Link href="/chollos" style={{ ...F, fontSize:12, color:"var(--muted)", textDecoration:"none", letterSpacing:1 }}>
+          Ver chollos &rsaquo;
+        </Link>
+      </header>
+
       <main style={{ maxWidth:860, margin:"0 auto", padding:"40px 24px 80px" }}>
 
         <div style={{ marginBottom:32 }}>
@@ -247,4 +268,19 @@ export default async function EquipoPublicoPage({ params }: { params: { id: stri
       </main>
     </div>
   )
+}
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  )
+  const { data } = await sb.from('clubes_equipos').select('nombre_equipo,division').eq('id', params.id).single()
+  if (!data) return { title: 'Equipo | HuntPadel' }
+  return {
+    title: `${(data as any).nombre_equipo} | HuntPadel`,
+    description: (data as any).division
+      ? `${(data as any).nombre_equipo} — ${(data as any).division}`
+      : (data as any).nombre_equipo,
+  }
 }
