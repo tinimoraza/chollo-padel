@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
   alternates: { canonical: 'https://huntpadel.com' },
-  verification: { google: 'O-258An4ZFV489QVlNgDGwIHjeU7fFeSMHH7jYc70iM' },
+  verification: { google: ['O-258An4ZFV489QVlNgDGwIHjeU7fFeSMHH7jYc70iM', '5TbDSRMDfGYvam9TB_ZY09EwigfNYfBZDBe4rk4efoA'] },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
