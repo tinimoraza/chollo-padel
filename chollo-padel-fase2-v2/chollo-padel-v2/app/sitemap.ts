@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('slug, updated_at')
       .not('slug', 'is', null)
       .order('updated_at', { ascending: false })
-      .limit(2000)
+      .limit(5000)
 
     const pala_urls: MetadataRoute.Sitemap = (data ?? []).map((p: any) => ({
       url: `${base}/palas/${p.slug}`,
