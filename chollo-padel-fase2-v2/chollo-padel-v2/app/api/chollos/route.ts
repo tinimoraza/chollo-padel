@@ -223,6 +223,16 @@ export async function GET() {
     }
 
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
+
+    // Guard: el precio_referencia debe haberse calculado DESPUÉS del scraped_at
+    // del snapshot. Si el post-pipeline aún no ha corrido tras el último scrape,
+    // el ratio sería contra un precio antiguo → chollos falsos.
+    const refUpdatedAt = pala.precios_updated_at ? new Date(pala.precios_updated_at).getTime() : 0
+    const snapAt       = new Date(snap.scraped_at).getTime()
+    if (snapAt > refUpdatedAt) {
+      _dbg.push(`ref-stale|ref_at=${pala.precios_updated_at ?? 'null'}|snap_at=${snap.scraped_at}|${pala.modelo}`)
+      continue
+    }
     // Bug real 2026-06-21: MAX_SPREAD=2.5 fijo descartaba chollos genuinos en
     // productos con muchas tiendas (ej. Bullpadel Vertex 04 25 Women: 8
     // fuentes, spread 3.6x). Fix: con >= 5 fuentes se amplia tolerancia a 4.0x.
@@ -293,7 +303,7 @@ export async function GET() {
   return NextResponse.json(
     {
       chollos,
-      total: chollos.length,      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
+      total: chollos.length,      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
       ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
       updated_at: updatedAt,
       _dbg,
