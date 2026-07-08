@@ -136,7 +136,7 @@ function TechRow({ label, value }: { label: string; value: string }) {
 
 // ─── Sección mejores precios en tienda ────────────────────────────────────────
 
-function TiendasSection({ pala, onPrecioLive }: { pala: Pala; onPrecioLive?: (precio: number) => void }) {
+function TiendasSection({ pala }: { pala: Pala }) {
   const [items, setItems]     = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -174,6 +174,9 @@ function TiendasSection({ pala, onPrecioLive }: { pala: Pala; onPrecioLive?: (pr
     return base
   }
 
+  // precio_referencia calculado por el pipeline = mediana de precios raw en tiendas
+  const refPrecio = Number(pala.precio_referencia) > 0 ? Number(pala.precio_referencia) : 0
+
   const porTienda = new Map<string, any>()
   for (const item of items) {
     const fuente = Array.isArray(item.price_sources) ? item.price_sources[0] : item.price_sources
@@ -186,19 +189,6 @@ function TiendasSection({ pala, onPrecioLive }: { pala: Pala; onPrecioLive?: (pr
     .sort((a, b) => precioEfectivo(a) - precioEfectivo(b))
     .slice(0, 3)
 
-  // Calcular mediana en vivo de precios en stock para el header del modal
-  const preciosEnStock = Array.from(porTienda.values())
-    .filter(i => i.disponible)
-    .map(i => precioEfectivo(i))
-    .sort((a, b) => a - b)
-  if (preciosEnStock.length > 0 && onPrecioLive) {
-    const mid = Math.floor(preciosEnStock.length / 2)
-    const mediana = preciosEnStock.length % 2 === 0
-      ? (preciosEnStock[mid - 1] + preciosEnStock[mid]) / 2
-      : preciosEnStock[mid]
-    onPrecioLive(mediana)
-  }
-
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
       {deduped.map((item: any, i: number) => {
@@ -207,9 +197,6 @@ function TiendasSection({ pala, onPrecioLive }: { pala: Pala; onPrecioLive?: (pr
         const pEfectivo   = precioEfectivo(item)
         const tieneDesc   = pEfectivo < precioBase
         const disponible  = item.disponible
-        const refPrecio   = preciosEnStock.length > 0
-          ? (() => { const mid = Math.floor(preciosEnStock.length / 2); return preciosEnStock.length % 2 === 0 ? (preciosEnStock[mid-1]+preciosEnStock[mid])/2 : preciosEnStock[mid] })()
-          : Number(pala.precio_referencia)
         const saving      = disponible && refPrecio > 0
           ? Math.round(((refPrecio - pEfectivo) / refPrecio) * 100) : 0
         return (
@@ -435,7 +422,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>PVP base medio (sin descuentos)</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio tiendas (sin descuentos)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#1D4ED8" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
@@ -449,22 +436,17 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
 // ─── Modal principal ───────────────────────────────────────────────────────────
 
 export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }) {
-  const [precioLive, setPrecioLive] = useState<number | null>(null)
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const precioDisplay = precioLive != null
-    ? precioLive
-    : Number(pala.precio_referencia) > 0
-      ? Number(pala.precio_referencia)
-      : Number(pala.precio_pvp) > 0 ? Number(pala.precio_pvp) : null
-  const precioLabel = precioLive != null
-    ? 'precio medio tiendas'
-    : Number(pala.precio_referencia) > 0 ? 'precio de referencia' : 'PVP'
+  // precio_referencia = mediana de precios en tiendas, calculado por el pipeline
+  const precioDisplay = Number(pala.precio_referencia) > 0
+    ? Number(pala.precio_referencia)
+    : Number(pala.precio_pvp) > 0 ? Number(pala.precio_pvp) : null
+  const precioLabel = Number(pala.precio_referencia) > 0 ? 'precio medio tiendas' : 'PVP'
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
@@ -525,7 +507,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg3)' }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Mejores precios en tienda</div>
-          <TiendasSection pala={pala} onPrecioLive={setPrecioLive} />
+          <TiendasSection pala={pala} />
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem 2rem', background: 'var(--bg4)', borderRadius: '0 0 12px 12px' }}>
