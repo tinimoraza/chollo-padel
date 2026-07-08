@@ -19,9 +19,9 @@ async function extractProducts(page) {
     ))
 
     articles.forEach(article => {
-      // Título y URL
+      // Titulo y URL
       // .product-title a tiene el texto y la URL del producto
-      // a.thumbnail es el enlace de imagen (texto vacío) → NO sirve para título
+      // a.thumbnail es el enlace de imagen (texto vacio) -> NO sirve para titulo
       const titleLinkEl = article.querySelector('.product-title a, h2 a, h3 a')
       const imgLinkEl   = article.querySelector('a.thumbnail.product-thumbnail')
       const title = titleLinkEl?.textContent?.trim()
@@ -70,7 +70,7 @@ async function extractProducts(page) {
 }
 
 async function scrape() {
-  console.log('[allforpadel] Iniciando scraper (PrestaShop — Adidas oficial)…')
+  console.log('[allforpadel] Iniciando scraper (PrestaShop — Adidas oficial)...')
 
   let chromium
   try {
@@ -80,13 +80,26 @@ async function scrape() {
     return []
   }
 
-  const browser = await chromium.launch({ headless: true })
-  const page    = await browser.newPage()
-
-  await page.setExtraHTTPHeaders({
-    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept-Language': 'es-ES,es;q=0.9',
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-web-security',
+    ],
   })
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    locale: 'es-ES',
+    extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9' },
+  })
+  // Ocultar senales de automatizacion
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+    window.chrome = { runtime: {} }
+  })
+  const page = await context.newPage()
 
   const allProducts = []
   let pageNum = 1
@@ -96,10 +109,10 @@ async function scrape() {
   try {
     while (true) {
       const url = pageNum === 1 ? BASE_URL : `${BASE_URL}?p=${pageNum}`
-      console.log(`[allforpadel] Página ${pageNum}: ${url}`)
+      console.log(`[allforpadel] Pagina ${pageNum}: ${url}`)
 
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40000 })
-      await page.waitForTimeout(2000)
+      await page.goto(url, { waitUntil: 'load', timeout: 45000 })
+      await page.waitForTimeout(3000)
 
       // Cerrar cookies/popup
       if (pageNum === 1) {
@@ -117,10 +130,16 @@ async function scrape() {
       try {
         await page.waitForSelector(
           'article.product-miniature, .product-miniature, li.ajax_block_product',
-          { timeout: 20000 }
+          { timeout: 30000 }
         )
       } catch {
-        console.log(`[allforpadel] Sin productos en página ${pageNum} — fin`)
+        // Debug: loguear la URL real y clase del body para diagnosticar bloqueo
+        const debugInfo = await page.evaluate(() => ({
+          url: window.location.href,
+          bodyClass: document.body.className.substring(0, 150),
+          title: document.title.substring(0, 100),
+        })).catch(() => ({}))
+        console.log(`[allforpadel] Sin productos en pagina ${pageNum} — fin`, debugInfo)
         break
       }
 
@@ -133,17 +152,17 @@ async function scrape() {
         const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
         rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
         if (rebajasUrls.length > 0) {
-          console.log(`[allforpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+          console.log(`[allforpadel] seccion(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
         }
       }
 
       const products = await extractProducts(page)
-      console.log(`[allforpadel]  → ${products.length} palas`)
+      console.log(`[allforpadel]  -> ${products.length} palas`)
 
       if (products.length === 0) break
       allProducts.push(...products)
 
-      // ¿Hay página siguiente? PrestaShop usa ?p=N o rel="next"
+      // Hay pagina siguiente? PrestaShop usa ?p=N o rel="next"
       const hasNext = await page.evaluate((cur) => {
         return !!(
           document.querySelector(`a[href*="?p=${cur + 1}"]`) ||
@@ -152,7 +171,7 @@ async function scrape() {
       }, pageNum)
 
       if (!hasNext) {
-        console.log(`[allforpadel] Última página (${pageNum}). Total: ${allProducts.length}`)
+        console.log(`[allforpadel] Ultima pagina (${pageNum}). Total: ${allProducts.length}`)
         break
       }
 
@@ -165,18 +184,19 @@ async function scrape() {
 
   for (const rebajasUrl of rebajasUrls) {
     try {
-      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 40000 })
+      await page.goto(rebajasUrl, { waitUntil: 'load', timeout: 45000 })
       await page.waitForTimeout(2000)
       await page.waitForSelector('article.product-miniature, .product-miniature, li.ajax_block_product', { timeout: 15000 })
       const products = await extractProducts(page)
-      console.log(`[allforpadel] sección rebajas ${rebajasUrl} → ${products.length} productos`)
+      console.log(`[allforpadel] seccion rebajas ${rebajasUrl} -> ${products.length} productos`)
       allProducts.push(...products)
     } catch (e) {
-      console.error(`[allforpadel] Error sección rebajas ${rebajasUrl}:`, e.message)
+      console.error(`[allforpadel] Error seccion rebajas ${rebajasUrl}:`, e.message)
     }
     await page.waitForTimeout(DELAY_MS)
   }
 
+  await context.close()
   await browser.close()
 
   // Deduplicar por URL
@@ -187,7 +207,7 @@ async function scrape() {
     return true
   })
 
-  console.log(`[allforpadel] Total palas únicas: ${unique.length}`)
+  console.log(`[allforpadel] Total palas unicas: ${unique.length}`)
 
   const scraped_at = new Date().toISOString()
   const resultado = unique.map(p => ({
