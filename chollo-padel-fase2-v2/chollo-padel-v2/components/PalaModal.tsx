@@ -422,7 +422,7 @@ function PriceHistorySection({ pala }: { pala: Pala }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio tiendas (sin descuentos)</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio medio diario tiendas</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#1D4ED8" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7"/></svg>
@@ -446,7 +446,7 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
   const precioDisplay = Number(pala.precio_referencia) > 0
     ? Number(pala.precio_referencia)
     : Number(pala.precio_pvp) > 0 ? Number(pala.precio_pvp) : null
-  const precioLabel = Number(pala.precio_referencia) > 0 ? 'precio medio tiendas' : 'PVP'
+  const precioLabel = Number(pala.precio_referencia) > 0 ? 'precio medio diario tiendas' : 'PVP'
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
@@ -516,5 +516,4 @@ export function PalaModal({ pala, onClose }: { pala: Pala; onClose: () => void }
         </div>
       </div>
     </div>
-  )
-}
+  )}
