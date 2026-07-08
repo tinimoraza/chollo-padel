@@ -277,13 +277,15 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
     }
     if (!ok) { fallidos += chunkBruto.length; continue }
 
-    // Histórico insert-only (2026-06-24): price_snapshots se sobrescribe
-    // (upsert por pala_id,source_id) y solo guarda el último precio visto.
-    // price_history_log acumula CADA scrape como fila nueva, para poder
-    // analizar más adelante a qué horas/días baja de precio cada tienda.
-    // Fallo aquí NO debe tirar el pipeline ni descartar el snapshot ya
-    // guardado: solo se loggea.
-    const { error: errHist } = await supabase.from('price_history_log').insert(payloadSnaps)
+    // Histórico (2026-06-24): price_snapshots se sobrescribe con el último precio.
+    // price_history_log guarda 1 fila por (pala, tienda, día) para analizar
+    // tendencias. El índice unique price_history_log_daily_uniq (pala_id,
+    // source_id, dia_scraped) garantiza que ejecuciones repetidas del mismo
+    // día no dupliquen filas — se usa ignoreDuplicates en vez de insert puro.
+    // Fallo aquí NO debe tirar el pipeline: solo se loggea.
+    const { error: errHist } = await supabase
+      .from('price_history_log')
+      .upsert(payloadSnaps, { onConflict: 'pala_id,source_id,dia_scraped', ignoreDuplicates: true })
     if (errHist) console.error(`  ⚠️  [history batch ${i}-${i + chunk.length}] ${errHist.message}`)
 
     const aliasesNuevos = chunk.filter(m => m.crearAlias).map(m => ({
