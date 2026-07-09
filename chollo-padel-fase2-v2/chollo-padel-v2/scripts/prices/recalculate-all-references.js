@@ -10,41 +10,15 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
-const FUENTES_EXCLUIR = new Set([2, 9]); // padelzoom, romasport
+const FUENTES_EXCLUIR = new Set([2]); // solo padelzoom (agregador con precios no comparables)
 const IN_BATCH   = 200;  // max IDs por .in() query
 const UPS_BATCH  = 500;  // filas por upsert bulk
 const PAR_BATCH  = 50;   // palas actualizadas en paralelo
 
-function mediana(arr) {
-  const s = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
-
-// Fix 2026-06-23: la media aritmetica simple es sensible a outliers - un solo
-// precio suelto (PVP sin descuento en una tienda, o un precio desactualizado)
-// inflaba/deflactaba precio_referencia y generaba "chollos" falsos. Verificado
-// con datos reales: usar la mediana en su lugar NO es mejor de forma fiable
-// (empate casi exacto frente a la media en cobertura de tiendas: 166 vs 146
-// de 783 productos). La solucion validada es una MEDIA RECORTADA: se detectan
-// los precios anomalos de cada producto con MAD (desviacion absoluta mediana,
-// metodo estadistico estandar para outliers) y se promedian solo los precios
-// "normales" - el mismo metodo de siempre (sumar y dividir), pero sin dejar
-// que un precio suelto lo distorsione. Si no hay outliers (la mayoria de
-// productos), el resultado es identico a la media de siempre.
+// Media aritmética simple: suma de PVPs / número de tiendas (sin PadelZoom)
 function calcularReferencia(precios) {
   if (!precios.length) return null;
-  if (precios.length < 3) {
-    return parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2));
-  }
-  const med = mediana(precios);
-  const desviaciones = precios.map(p => Math.abs(p - med));
-  const mad = mediana(desviaciones);
-  const normales = mad > 0
-    ? precios.filter(p => Math.abs(p - med) <= 3.0 * mad)
-    : precios;
-  const usados = normales.length > 0 ? normales : precios;
-  return parseFloat((usados.reduce((a, b) => a + b, 0) / usados.length).toFixed(2));
+  return parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2));
 }
 
 async function fetchAll(table, select, filters = []) {
@@ -114,7 +88,7 @@ async function run() {
     const snaps = snapsByPala.get(palaId) || [];
     if (!snaps.length) continue;
 
-    const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR.has(s.source_id));
+    const snapsParaRef = snaps.filter(s => !FUENTES_EXCLUIR.has(Number(s.source_id))); // Number() fix: Supabase devuelve source_id como string
     const snapsFuente  = snapsParaRef.length > 0 ? snapsParaRef : snaps;
 
     const byUrl = new Map();
@@ -166,6 +140,7 @@ async function run() {
   }
 
   console.log(`\nCompletado: ${actualizadas} actualizadas, ${sin_cambio} sin cambio.`);
+
 }
 
 run().catch(err => { console.error(err); process.exit(1); });
