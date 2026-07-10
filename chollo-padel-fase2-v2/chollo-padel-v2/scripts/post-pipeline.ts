@@ -329,12 +329,27 @@ async function recalcularPrecios(): Promise<number> {
     // Media aritmética — igual que el gráfico: suma / n
     const precio_referencia = parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2))
     const precio_minimo = Math.min(...precios)
+    const precio_maximo = Math.max(...precios)
+    const fuentes_count = precios.length
 
+    const now = new Date().toISOString()
+
+    // Actualizar palas (para ISR de la card de detalle)
     await supabase.from('palas').update({
       precio_referencia,
       precio_minimo_tiendas: precio_minimo,
-      precios_updated_at:    new Date().toISOString(),
+      precios_updated_at:    now,
     }).eq('id', palaId)
+
+    // Actualizar price_reference (para /api/chollos)
+    await supabase.from('price_reference').upsert({
+      pala_id:           palaId,
+      precio_referencia,
+      precio_minimo,
+      precio_maximo,
+      fuentes_count,
+      updated_at:        now,
+    }, { onConflict: 'pala_id' })
 
     actualizadas++
   }
