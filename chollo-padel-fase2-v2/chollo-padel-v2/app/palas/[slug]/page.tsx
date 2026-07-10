@@ -33,13 +33,24 @@ interface Pala {
   rating_punto_dulce: number
   precio_pvp: number
   precio_referencia: number
+  precio_minimo_tiendas: number
   imagen_url: string
+}
+
+async function getOfferCount(palaId: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('price_snapshots')
+    .select('*', { count: 'exact', head: true })
+    .eq('pala_id', palaId)
+    .eq('disponible', true)
+    .neq('source_id', 2)
+  return count ?? 1
 }
 
 async function getPala(slug: string): Promise<Pala | null> {
   const { data, error } = await supabaseAdmin
     .from('palas')
-    .select('id,slug,nombre,marca,modelo,año,forma,balance,tacto,juego,genero,peso_min,peso_max,material_cara,material_nucleo,material_marco,rating_potencia,rating_control,rating_rebote,rating_manejabilidad,rating_punto_dulce,precio_pvp,precio_referencia,imagen_url')
+    .select('id,slug,nombre,marca,modelo,año,forma,balance,tacto,juego,genero,peso_min,peso_max,material_cara,material_nucleo,material_marco,rating_potencia,rating_control,rating_rebote,rating_manejabilidad,rating_punto_dulce,precio_pvp,precio_referencia,precio_minimo_tiendas,imagen_url')
     .eq('slug', slug)
     .maybeSingle()
   if (error) console.error('[palas/slug] getPala error:', error.message)
@@ -88,10 +99,13 @@ export async function generateMetadata(
 }
 
 // Schema.org: Product + BreadcrumbList
-function JsonLd({ pala }: { pala: Pala }) {
-  const precio = Number(pala.precio_referencia) > 0
-    ? Number(pala.precio_referencia)
+function JsonLd({ pala, offerCount }: { pala: Pala; offerCount: number }) {
+  const lowPrice = Number(pala.precio_minimo_tiendas) > 0
+    ? Number(pala.precio_minimo_tiendas)
     : Number(pala.precio_pvp)
+  const highPrice = Number(pala.precio_referencia) > 0
+    ? Number(pala.precio_referencia)
+    : lowPrice
 
   const descParts = [
     pala.forma && `Pala ${pala.forma.toLowerCase()}`,
@@ -107,12 +121,13 @@ function JsonLd({ pala }: { pala: Pala }) {
     brand: { '@type': 'Brand', name: pala.marca },
     ...(pala.imagen_url ? { image: pala.imagen_url } : {}),
     ...(descParts.length > 0 ? { description: descParts.join(', ') } : {}),
-    ...(precio > 0 ? {
+    ...(lowPrice > 0 ? {
       offers: {
         '@type': 'AggregateOffer',
         priceCurrency: 'EUR',
-        lowPrice: precio.toFixed(2),
-        offerCount: 1,
+        lowPrice: lowPrice.toFixed(2),
+        highPrice: highPrice.toFixed(2),
+        offerCount,
         availability: 'https://schema.org/InStock',
       },
     } : {}),
@@ -181,6 +196,7 @@ function TechRow({ label, value }: { label: string; value: string }) {
 export default async function PalaPage({ params }: { params: { slug: string } }) {
   const pala = await getPala(params.slug)
   if (!pala) notFound()
+  const offerCount = await getOfferCount(pala.id)
 
   const precio = Number(pala.precio_referencia) > 0
     ? Number(pala.precio_referencia)
@@ -195,7 +211,7 @@ export default async function PalaPage({ params }: { params: { slug: string } })
 
   return (
     <div className="app-shell">
-      <JsonLd pala={pala} />
+      <JsonLd pala={pala} offerCount={offerCount} />
 
       <style>{`
         .pala-hero { display: grid; grid-template-columns: 260px 1fr; gap: 2rem; }
