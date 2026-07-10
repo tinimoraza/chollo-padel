@@ -114,7 +114,7 @@ function precioEfectivo(snap: { precio: number; codigo_descuento?: string | null
 }
 
 export async function GET() {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
   // Cargar mapa de primera_vez_at desde chollos_notificados
   const { data: notificados } = await supabaseAdmin
@@ -229,7 +229,8 @@ export async function GET() {
     // el ratio sería contra un precio antiguo → chollos falsos.
     const refUpdatedAt = pala.precios_updated_at ? new Date(pala.precios_updated_at).getTime() : 0
     const snapAt       = new Date(snap.scraped_at).getTime()
-    if (snapAt > refUpdatedAt) {
+    const GRACIA_MS    = 3 * 60 * 60 * 1000 // 3h para que el post-pipeline termine
+    if (snapAt > refUpdatedAt + GRACIA_MS) {
       _dbg.push(`ref-stale|ref_at=${pala.precios_updated_at ?? 'null'}|snap_at=${snap.scraped_at}|${pala.modelo}`)
       continue
     }
