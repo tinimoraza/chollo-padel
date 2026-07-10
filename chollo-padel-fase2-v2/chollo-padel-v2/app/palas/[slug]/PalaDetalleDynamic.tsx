@@ -224,7 +224,9 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   for (const row of rows) {
     const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(precioEfectivo(row))
+    // Usar precio PVP bruto (sin aplicar código de descuento) para que la media
+    // del gráfico coincida con precio_referencia de la card (misma fórmula)
+    byDay.get(day)!.push(Number(row.precio))
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
