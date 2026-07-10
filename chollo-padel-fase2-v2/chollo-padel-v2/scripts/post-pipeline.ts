@@ -276,27 +276,23 @@ async function autoPromover(): Promise<number> {
 }
 
 // ─── PASO 3: Recalcular precios de referencia ────────────────────────────────
-
-function mediana(arr: number[]): number {
-  const sorted = [...arr].sort((a, b) => a - b)
-  const mid    = Math.floor(sorted.length / 2)
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-}
-
-// Fuentes excluidas del precio_referencia (precio mediano):
-//   2 = PadelZoom (agregador, no tienda directa — no refleja precio real de venta)
-const FUENTES_EXCLUIR_REFERENCIA = new Set([2])
+//
+// precio_referencia = MEDIA ARITMÉTICA de los precios del DÍA MÁS RECIENTE
+// con datos en price_history_log para cada pala, excluyendo PadelZoom (source_id=2).
+// Misma fuente y misma fórmula que el gráfico histórico de la web → siempre coinciden.
 
 async function recalcularPrecios(): Promise<number> {
   if (DRY_RUN) return 0
 
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
+  // Palas con actividad reciente en price_history_log
   const { data: rows } = await supabase
-    .from('price_snapshots')
+    .from('price_history_log')
     .select('pala_id')
+    .neq('source_id', 2)
     .eq('disponible', true)
-    .gte('scraped_at', since)
+    .gte('dia_scraped', since)
 
   const palaIds = [...new Set((rows ?? []).map((r: any) => r.pala_id))]
   if (!palaIds.length) return 0
@@ -304,32 +300,35 @@ async function recalcularPrecios(): Promise<number> {
   let actualizadas = 0
 
   for (const palaId of palaIds) {
-    const { data: snaps } = await supabase
-      .from('price_snapshots')
-      .select('precio, source_id, url_producto')
+    // Día más reciente con datos disponibles para esta pala (sin PadelZoom)
+    const { data: diaRow } = await supabase
+      .from('price_history_log')
+      .select('dia_scraped')
       .eq('pala_id', palaId)
+      .neq('source_id', 2)
       .eq('disponible', true)
-      .gte('scraped_at', since)
+      .order('dia_scraped', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (!snaps?.length) continue
+    if (!diaRow) continue
+    const ultimoDia = diaRow.dia_scraped
 
-    // Para precio_referencia: excluir fuentes que distorsionan; si quedan 0, usar todas
-    const snapsRef = snaps.filter((s: any) => !FUENTES_EXCLUIR_REFERENCIA.has(s.source_id))
-    const snapsFuente = snapsRef.length > 0 ? snapsRef : snaps
+    // Todos los precios de ese día (mismos datos que el último punto del gráfico)
+    const { data: logRows } = await supabase
+      .from('price_history_log')
+      .select('precio, source_id')
+      .eq('pala_id', palaId)
+      .eq('dia_scraped', ultimoDia)
+      .neq('source_id', 2)
+      .eq('disponible', true)
 
-    const preciosRef = snapsFuente.map((s: any) => Number(s.precio))
-    const precio_referencia = parseFloat(mediana(preciosRef).toFixed(2))
-    const precio_minimo = Math.min(...snaps.map((s: any) => Number(s.precio)))
-    const fuentes_count = new Set(snaps.map((s: any) => s.source_id)).size
+    if (!logRows?.length) continue
 
-    await supabase.from('price_reference').upsert({
-      pala_id:          palaId,
-      precio_referencia,
-      precio_minimo,
-      precio_maximo:    Math.max(...snaps.map((s: any) => Number(s.precio))),
-      fuentes_count,
-      updated_at:       new Date().toISOString(),
-    }, { onConflict: 'pala_id' })
+    const precios = logRows.map((r: any) => Number(r.precio))
+    // Media aritmética — igual que el gráfico: suma / n
+    const precio_referencia = parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2))
+    const precio_minimo = Math.min(...precios)
 
     await supabase.from('palas').update({
       precio_referencia,

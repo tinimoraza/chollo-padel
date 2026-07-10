@@ -185,7 +185,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     )).toISOString()
     supabase
       .from('price_history_log')
-      .select('scraped_at, precio, codigo_descuento, descuento_pct, url_producto, disponible, source_id, price_sources(slug, nombre)')
+      .select('scraped_at, dia_scraped, precio, codigo_descuento, descuento_pct, url_producto, disponible, source_id, price_sources(slug, nombre)')
       .eq('pala_id', palaId)
       .eq('disponible', true)
       .neq('source_id', 2)
@@ -222,7 +222,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
 
   const byDay = new Map<string, number[]>()
   for (const row of rows) {
-    const day = row.scraped_at.slice(0, 10)
+    const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
     byDay.get(day)!.push(precioEfectivo(row))
   }
