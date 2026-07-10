@@ -182,14 +182,18 @@ async function main() {
   }
   console.log(`  ${posicionesAnteriores.size} entradas en el top actual\n`)
 
-  // ── 1. Leer price_reference — precios oficiales de tiendas ───────────────
-  console.log('💰 Cargando precios de referencia de tiendas...')
+  // ── 1. Leer palas.precio_referencia — mismo precio que usan las cards de chollos ──
+  // Se usa palas.precio_referencia (siempre actualizado por post-pipeline.ts en cada scrape)
+  // en lugar de price_reference.precio_referencia (tabla caché que puede estar desactualizada).
+  // fuentes_count se obtiene de price_reference vía join para el filtro de fiabilidad.
+  console.log('💰 Cargando precios de referencia de tiendas (palas.precio_referencia)...')
   const { data: precios, error: preciosErr } = await supabase
-    .from('price_reference')
-    .select('pala_id, precio_referencia, fuentes_count')
+    .from('palas')
+    .select('id, precio_referencia, price_reference(fuentes_count)')
+    .not('precio_referencia', 'is', null)
 
   if (preciosErr || !precios) {
-    console.error('❌ Error cargando price_reference:', preciosErr)
+    console.error('❌ Error cargando palas/precio_referencia:', preciosErr)
     process.exit(1)
   }
 
@@ -199,14 +203,15 @@ async function main() {
   const FUENTES_MINIMAS = 2
   const preciosPorPalaId = new Map<string, number>()
   let sinSuficientesFuentes = 0
-  for (const p of precios) {
-    if (p.pala_id && p.precio_referencia) {
-      if ((p.fuentes_count ?? 1) < FUENTES_MINIMAS) {
-        sinSuficientesFuentes++
-        continue
-      }
-      preciosPorPalaId.set(p.pala_id, p.precio_referencia)
+  for (const p of (precios as any[])) {
+    if (!p.id || !p.precio_referencia) continue
+    const prRef = Array.isArray(p.price_reference) ? p.price_reference[0] : p.price_reference
+    const fuentes = prRef?.fuentes_count ?? 1
+    if (fuentes < FUENTES_MINIMAS) {
+      sinSuficientesFuentes++
+      continue
     }
+    preciosPorPalaId.set(p.id, Number(p.precio_referencia))
   }
   console.log(`  ${preciosPorPalaId.size} palas con precio de tienda (≥${FUENTES_MINIMAS} fuentes)`)
   console.log(`  ${sinSuficientesFuentes} palas descartadas por tener <${FUENTES_MINIMAS} fuentes (precio poco fiable)\n`)
