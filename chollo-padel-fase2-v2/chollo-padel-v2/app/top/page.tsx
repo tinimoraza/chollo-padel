@@ -341,8 +341,8 @@ export default function TopPage() {
           marginTop: 32, fontSize: 12, color: 'var(--faint)',
           fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 1,
         }}>
-          El % de descuento se calcula sobre el precio medio de anuncios nuevo/sin abrir en Wallapop y Vinted.
-          Solo se incluyen artículos en estado nuevo, sin abrir o como nuevo con precio superior a 55€.
+          El % de descuento se calcula sobre el precio medio en tiendas (media scrapeada de PVP en tiendas de pádel).
+          Solo se incluyen artículos en estado nuevo, sin abrir o como nuevo con precio superior a 55€ y descuento ≥ 25%.
           ▲▼ indican movimiento respecto al ranking de la hora anterior.
         </p>
       </main>
