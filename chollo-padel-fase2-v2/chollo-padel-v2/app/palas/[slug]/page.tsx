@@ -6,8 +6,8 @@ import Header from '@/components/Header'
 import BottomNav from '@/components/BottomNav'
 import PalaDetalleDynamic from './PalaDetalleDynamic'
 
-// ISR: revalidar cada hora (precios se actualizan con el pipeline diario)
-export const revalidate = 3600
+// ISR: revalidar cada 5 minutos
+export const revalidate = 300
 
 interface Pala {
   id: string
