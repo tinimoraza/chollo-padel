@@ -16,21 +16,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   try {
-    const { data } = await supabaseAdmin
-      .from('palas')
-      .select('slug, precios_updated_at')
-      .not('slug', 'is', null)
-      .neq('slug', '')
-      .limit(10000)
+    const [palasRes, marcasRes] = await Promise.all([
+      supabaseAdmin
+        .from('palas')
+        .select('slug, precios_updated_at')
+        .not('slug', 'is', null)
+        .neq('slug', '')
+        .limit(10000),
+      supabaseAdmin
+        .from('palas')
+        .select('brand_slug')
+        .not('brand_slug', 'is', null)
+        .neq('brand_slug', '')
+        .limit(10000),
+    ])
 
-    const palaUrls: MetadataRoute.Sitemap = (data ?? []).map((p: any) => ({
-      url: `${base}/palas/${p.slug}`,
-      lastModified: p.precios_updated_at ? new Date(p.precios_updated_at) : now,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    }))
+    const palaUrls: MetadataRoute.Sitemap = (palasRes.data ?? []).map((p: any) => {
+      return {
+        url: `${base}/palas/${p.slug}`,
+        lastModified: p.precios_updated_at ? new Date(p.precios_updated_at) : now,
+        changeFrequency: 'daily' as const,
+        priority: 0.8,
+      }
+    })
 
-    return [...staticUrls, ...palaUrls]
+    const brandSlugs = Array.from(new Set((marcasRes.data ?? []).map((p: any) => p.brand_slug as string)))
+    const marcaUrls: MetadataRoute.Sitemap = brandSlugs.map((s) => {
+      return {
+        url: `${base}/marcas/${s}`,
+        lastModified: now,
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }
+    })
+
+    return [...staticUrls, ...marcaUrls, ...palaUrls]
   } catch {
     return staticUrls
   }
