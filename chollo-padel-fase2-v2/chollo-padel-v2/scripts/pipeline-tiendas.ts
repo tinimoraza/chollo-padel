@@ -537,8 +537,9 @@ async function main() {
       if (DRY_RUN) console.log(`  🚫 [excluido] ${p.title}`)
       continue
     }
-    if (/ kit(\b|$)/.test(tituloLow) || / pack(\b|$)/.test(tituloLow) || /\btest\b/.test(tituloLow)) {
-      if (DRY_RUN) console.log(`  🚫 [excluido kit/pack/test] ${p.title}`)
+    if (/ kit(\b|$)/.test(tituloLow) || / pack(\b|$)/.test(tituloLow) || /\btest\b/.test(tituloLow) ||
+        /m[aá]s\s+raquetera/.test(tituloLow) || /\+\s*raquetera/.test(tituloLow)) {
+      if (DRY_RUN) console.log(`  🚫 [excluido kit/pack/bundle] ${p.title}`)
       continue
     }
     if (tituloLow.includes('pickleball')) {
