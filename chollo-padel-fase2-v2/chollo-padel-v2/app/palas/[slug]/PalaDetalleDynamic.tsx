@@ -185,9 +185,10 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     )).toISOString()
     supabase
       .from('price_history_log')
-      .select('scraped_at, precio, codigo_descuento, descuento_pct, url_producto, disponible, price_sources(slug, nombre)')
+      .select('scraped_at, precio, codigo_descuento, descuento_pct, url_producto, disponible, source_id, price_sources(slug, nombre)')
       .eq('pala_id', palaId)
       .eq('disponible', true)
+      .neq('source_id', 2)
       .gte('scraped_at', since)
       .order('scraped_at', { ascending: true })
       .limit(800)
@@ -223,11 +224,14 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   for (const row of rows) {
     const day = row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(Number(row.precio))
+    byDay.get(day)!.push(precioEfectivo(row))
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([day, prices]) => ({ ts: new Date(day).getTime(), precio: mediana(prices) }))
+    .map(([day, prices]) => ({
+      ts: new Date(day).getTime(),
+      precio: prices.reduce((a, b) => a + b, 0) / prices.length
+    }))
 
   if (pvpPoints.length === 0) return null
 
