@@ -80,12 +80,12 @@ const MODELOS: Modelo[] = [
   { nombre: 'Head Speed One X 2025',              phrase: 'speed one x 2025' },
   { nombre: 'Head Coello Pro 2025',               phrase: 'coello pro 2025' },
   { nombre: 'Head Coello Pro 2026',               phrase: 'coello pro 2026' },
-  { nombre: 'Head Coello Motion',                 phrase: 'coello motion' },
+  { nombre: 'Head Coello Motion 2025',             phrase: 'coello motion 2025' },
+  { nombre: 'Head Coello Motion 2026',             phrase: 'coello motion 2026' },
   { nombre: 'Head Extreme Motion 2025',           phrase: 'extreme motion 2025' },
   { nombre: 'Head Extreme Pro 2025',              phrase: 'extreme pro 2025' },
   { nombre: 'Head Extreme Pro 2026',              phrase: 'extreme pro 2026' },
   { nombre: 'Head Gravity Team 2025',             phrase: 'gravity team 2025' },
-  { nombre: 'Head Zephyr Pro',                    phrase: 'zephyr pro' },
 
   // ── Babolat ───────────────────────────────────────────────────────────────
   { nombre: 'Babolat Technical Viper 3.0',              phrase: 'technical viper 3.0',          excludeKeywords: ['soft'] },
@@ -114,7 +114,6 @@ const MODELOS: Modelo[] = [
   { nombre: 'Nox AT10 Genius Attack 18K',         phrase: 'at10 genius attack 18k' },
   { nombre: 'Nox AT10 Genius Attack 12K',         phrase: 'at10 genius attack 12k' },
   { nombre: 'Nox AT10 Pro Cup Soft 2026',         phrase: 'at10 pro cup soft 2026' },
-  { nombre: 'Nox ML10 Pro Cup',                   phrase: 'ml10 pro cup' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 ventus control 3k' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 3k 2026' },
   { nombre: 'Nox EA10 Ventus Attack 2026',        phrase: 'ea10 ventus attack 2026' },
@@ -125,7 +124,7 @@ const MODELOS: Modelo[] = [
 
   // ── Black Crown ───────────────────────────────────────────────────────────
   { nombre: 'Black Crown Piton 14 2026',          phrase: 'piton 14 2026' },
-  { nombre: 'Black Crown Piton White 2026',       phrase: 'piton white' },
+  { nombre: 'Black Crown Piton White 2026',       phrase: 'piton white 2026' },
   { nombre: 'Black Crown Piton Blue 2026',        phrase: 'piton blue 2026' },
   { nombre: 'Black Crown Hurricane Pro',          phrase: 'hurricane pro' },
   { nombre: 'Black Crown Coyote Yellow',          phrase: 'coyote yellow' },
