@@ -63,11 +63,10 @@ interface Modelo {
 }
 
 const MODELOS: Modelo[] = [
-  // ── Bullpadel Vertex ──────────────────────────────────────────────────────
+  // ── Bullpadel ─────────────────────────────────────────────────────────────
+  // Vertex y Hack tienen versión en el nombre → frase exacta sin ambigüedad
   { nombre: 'Bullpadel Vertex 04', phrase: 'vertex 04' },
   { nombre: 'Bullpadel Vertex 05', phrase: 'vertex 05' },
-
-  // ── Bullpadel Hack ────────────────────────────────────────────────────────
   { nombre: 'Bullpadel Hack 04',   phrase: 'hack 04' },
 
   // ── Joma ─────────────────────────────────────────────────────────────────
@@ -75,58 +74,80 @@ const MODELOS: Modelo[] = [
   { nombre: 'Joma Blast Pro',         phrase: 'joma blast pro' },
   { nombre: 'Joma Hyper Pro',         phrase: 'joma hyper pro' },
 
-  // ── Adidas Metalbone — versión específica por número (cada una su mediana) ─
-  { nombre: 'Adidas Metalbone 3.3',
-    phrase: 'metalbone 3.3',
+  // ── Adidas Metalbone puro ─────────────────────────────────────────────────
+  // Solo entran anuncios con versión explícita (3.3/3.4/3.5/09)
+  { nombre: 'Adidas Metalbone 3.3', phrase: 'metalbone 3.3',
     excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
-  { nombre: 'Adidas Metalbone 3.4',
-    phrase: 'metalbone 3.4',
+  { nombre: 'Adidas Metalbone 3.4', phrase: 'metalbone 3.4',
     excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
-  { nombre: 'Adidas Metalbone 3.5',
-    phrase: 'metalbone 3.5',
+  { nombre: 'Adidas Metalbone 3.5', phrase: 'metalbone 3.5',
     excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
-  { nombre: 'Adidas Metalbone 09',
-    phrase: 'metalbone 09' },
-  { nombre: 'Adidas Metalbone HRD+',
-    phrase: 'metalbone hrd' },
-  { nombre: 'Adidas Metalbone CTRL',
-    phrase: 'metalbone ctrl',
-    excludeKeywords: ['carbon'] },
-  { nombre: 'Adidas Metalbone Carbon',
-    phrase: 'metalbone carbon' },
-  { nombre: 'Adidas Metalbone Team',
-    phrase: 'metalbone team',
-    excludeKeywords: ['light', 'lite'] },
-  { nombre: 'Adidas Metalbone Team Light',
-    phrase: 'metalbone team light' },
+  { nombre: 'Adidas Metalbone 09',  phrase: 'metalbone 09' },
 
-  // ── Adidas Cross It — versión específica por número ───────────────────────
-  { nombre: 'Adidas Cross It 3.4',
-    phrase: 'cross it 3.4',
-    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
-  { nombre: 'Adidas Cross It 3.5',
-    phrase: 'cross it 3.5',
-    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
-  { nombre: 'Adidas Cross It CTRL',
-    phrase: 'cross it ctrl',
+  // ── Adidas Metalbone HRD+ ─────────────────────────────────────────────────
+  // Los vendedores escriben "HRD 3.4" y "3.4 HRD" — dos phrases por versión
+  { nombre: 'Adidas Metalbone HRD+ 3.3', phrase: 'metalbone hrd 3.3' },
+  { nombre: 'Adidas Metalbone HRD+ 3.3', phrase: 'metalbone 3.3 hrd' },
+  { nombre: 'Adidas Metalbone HRD+ 3.4', phrase: 'metalbone hrd 3.4' },
+  { nombre: 'Adidas Metalbone HRD+ 3.4', phrase: 'metalbone 3.4 hrd' },
+  { nombre: 'Adidas Metalbone HRD+ 3.5', phrase: 'metalbone hrd 3.5' },
+  { nombre: 'Adidas Metalbone HRD+ 3.5', phrase: 'metalbone 3.5 hrd' },
+
+  // ── Adidas Metalbone CTRL ─────────────────────────────────────────────────
+  { nombre: 'Adidas Metalbone CTRL 3.3', phrase: 'metalbone ctrl 3.3',
     excludeKeywords: ['carbon'] },
-  { nombre: 'Adidas Cross It Carbon',
-    phrase: 'cross it carbon' },
-  { nombre: 'Adidas Cross It Light',
-    phrase: 'cross it light',
-    excludeKeywords: ['team'] },
-  { nombre: 'Adidas Cross It Team Light',
-    phrase: 'cross it team light' },
+  { nombre: 'Adidas Metalbone CTRL 3.3', phrase: 'metalbone 3.3 ctrl',
+    excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Metalbone CTRL 3.4', phrase: 'metalbone ctrl 3.4',
+    excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Metalbone CTRL 3.4', phrase: 'metalbone 3.4 ctrl',
+    excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Metalbone CTRL 3.5', phrase: 'metalbone ctrl 3.5',
+    excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Metalbone CTRL 3.5', phrase: 'metalbone 3.5 ctrl',
+    excludeKeywords: ['carbon'] },
+
+  // ── Adidas Metalbone Carbon CTRL ──────────────────────────────────────────
+  { nombre: 'Adidas Metalbone Carbon CTRL 3.3', phrase: 'metalbone carbon ctrl 3.3' },
+  { nombre: 'Adidas Metalbone Carbon CTRL 3.4', phrase: 'metalbone carbon ctrl 3.4' },
+  { nombre: 'Adidas Metalbone Carbon CTRL 3.5', phrase: 'metalbone carbon ctrl 3.5' },
+
+  // ── Adidas Metalbone Team ─────────────────────────────────────────────────
+  { nombre: 'Adidas Metalbone Team 3.3', phrase: 'metalbone team 3.3',
+    excludeKeywords: ['light', 'lite'] },
+  { nombre: 'Adidas Metalbone Team 3.4', phrase: 'metalbone team 3.4',
+    excludeKeywords: ['light', 'lite'] },
+  { nombre: 'Adidas Metalbone Team 3.5', phrase: 'metalbone team 3.5',
+    excludeKeywords: ['light', 'lite'] },
+
+  // ── Adidas Metalbone Team Light ───────────────────────────────────────────
+  { nombre: 'Adidas Metalbone Team Light 3.3', phrase: 'metalbone team light 3.3' },
+  { nombre: 'Adidas Metalbone Team Light 3.4', phrase: 'metalbone team light 3.4' },
+  { nombre: 'Adidas Metalbone Team Light 3.5', phrase: 'metalbone team light 3.5' },
+
+  // ── Adidas Cross It puro ─────────────────────────────────────────────────
+  { nombre: 'Adidas Cross It 3.4', phrase: 'cross it 3.4',
+    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
+  { nombre: 'Adidas Cross It 3.5', phrase: 'cross it 3.5',
+    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
+
+  // ── Adidas Cross It Light ─────────────────────────────────────────────────
+  // Los vendedores siempre incluyen versión ("Cross It Light 3.3/3.4/3.5")
+  { nombre: 'Adidas Cross It Light 3.3', phrase: 'cross it light 3.3' },
+  { nombre: 'Adidas Cross It Light 3.4', phrase: 'cross it light 3.4' },
+  { nombre: 'Adidas Cross It Light 3.5', phrase: 'cross it light 3.5' },
 
   // ── Adidas Arrow Hit ─────────────────────────────────────────────────────
-  { nombre: 'Adidas Arrow Hit',
-    phrase: 'arrow hit',
-    excludeKeywords: ['ctrl', 'carbon', 'edt', 'attk', 'hexagon'] },
-  { nombre: 'Adidas Arrow Hit CTRL',
-    phrase: 'arrow hit ctrl',
+  { nombre: 'Adidas Arrow Hit 3.3', phrase: 'arrow hit 3.3',
+    excludeKeywords: ['ctrl', 'carbon'] },
+  { nombre: 'Adidas Arrow Hit 3.4', phrase: 'arrow hit 3.4',
+    excludeKeywords: ['ctrl', 'carbon'] },
+  { nombre: 'Adidas Arrow Hit CTRL 3.3', phrase: 'arrow hit ctrl 3.3',
     excludeKeywords: ['carbon'] },
-  { nombre: 'Adidas Arrow Hit Carbon',
-    phrase: 'arrow hit carbon' },
+  { nombre: 'Adidas Arrow Hit CTRL 3.3', phrase: 'arrow hit 3.3 ctrl',
+    excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Arrow Hit Carbon 3.3', phrase: 'arrow hit carbon 3.3' },
+  { nombre: 'Adidas Arrow Hit Carbon 3.4', phrase: 'arrow hit carbon 3.4' },
 ]
 
 function calcMediana(precios: number[]): number | null {
@@ -142,7 +163,7 @@ function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
 }
 
-async function isWallapopActive(externalId: string): Promise<boolean> {
+async function isWallapopActive(externalId: string, phrase?: string): Promise<boolean> {
   try {
     const res = await fetch(`https://api.wallapop.com/api/v3/items/${externalId}`, {
       headers: {
@@ -159,6 +180,23 @@ async function isWallapopActive(externalId: string): Promise<boolean> {
       if (data?.reserved?.flag === true) return false
       if (data?.sold?.flag === true) return false
       if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false
+
+      // Validar que el título actual sigue conteniendo la frase buscada.
+      // Evita que anuncios cuyo título cambió (el vendedor puso otra pala)
+      // sigan apareciendo en el top asociados a un modelo incorrecto.
+      if (phrase) {
+        const currentTitle = (
+          data?.item?.title ??
+          data?.content?.title ??
+          data?.title ??
+          ''
+        ).toLowerCase()
+        if (currentTitle.length > 0 && !currentTitle.includes(phrase.toLowerCase())) {
+          console.log(`  🔄 Título cambió — ya no contiene "${phrase}" — descartado y limpiado`)
+          return false
+        }
+      }
+
       return true
     }
 
@@ -240,6 +278,7 @@ async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: M
       url:          item.url,
       city:         item.city ?? null,
       keyword:      modelo.nombre,
+      phrase:       modelo.phrase,
       pala_id:      item.pala_id ?? null,
     })
   }
@@ -320,7 +359,7 @@ async function main() {
       `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
       ` (-${candidato.descuento_pct}% vs ${Math.round(candidato.precio_medio)}€, [${candidato.keyword}])... `
     )
-    const activo = await isWallapopActive(candidato.external_id)
+    const activo = await isWallapopActive(candidato.external_id, candidato.phrase)
 
     if (activo) {
       console.log('✅ activo')
