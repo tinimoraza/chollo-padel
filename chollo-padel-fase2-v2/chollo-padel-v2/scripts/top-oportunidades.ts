@@ -115,8 +115,10 @@ const MODELOS: Modelo[] = [
   { nombre: 'Nox AT10 Genius 18K 2026',           phrase: 'at10 genius 18k 2026',     excludeKeywords: ['attack'] },
   { nombre: 'Nox AT10 Genius 12K 2025',           phrase: 'at10 genius 12k 2025',     excludeKeywords: ['attack'] },
   { nombre: 'Nox AT10 Genius 12K 2026',           phrase: 'at10 genius 12k 2026',     excludeKeywords: ['attack'] },
-  { nombre: 'Nox AT10 Genius Attack 18K',         phrase: 'at10 genius attack 18k' },
-  { nombre: 'Nox AT10 Genius Attack 12K',         phrase: 'at10 genius attack 12k' },
+  { nombre: 'Nox AT10 Genius Attack 18K 2025',    phrase: 'at10 genius attack 18k 2025' },
+  { nombre: 'Nox AT10 Genius Attack 18K 2026',    phrase: 'at10 genius attack 18k 2026' },
+  { nombre: 'Nox AT10 Genius Attack 12K 2025',    phrase: 'at10 genius attack 12k 2025' },
+  { nombre: 'Nox AT10 Genius Attack 12K 2026',    phrase: 'at10 genius attack 12k 2026' },
   { nombre: 'Nox AT10 Pro Cup Soft 2026',         phrase: 'at10 pro cup soft 2026' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 ventus control 3k' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 3k 2026' },
@@ -542,14 +544,4 @@ async function main() {
     .upsert(topConTendencia, { onConflict: 'external_id' })
 
   if (upsertErr) {
-    console.error('Error guardando:', upsertErr)
-    process.exit(1)
-  }
-
-  console.log(`Top ${topConTendencia.length} guardado correctamente.`)
-}
-
-main().catch(err => {
-  console.error('Error fatal:', err)
-  process.exit(1)
-})
+    console.error('Error guardando:'
