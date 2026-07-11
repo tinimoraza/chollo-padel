@@ -38,6 +38,7 @@ const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bcrack\b/i,
   /\bgolpe\b/i,
   /\bno funciona\b/i,
+  /\btenis\b/i,
 ]
 
 interface Modelo {
@@ -544,4 +545,4 @@ async function main() {
     .upsert(topConTendencia, { onConflict: 'external_id' })
 
   if (upsertErr) {
-    console.error('Error guardando:'
+    console.error('E
