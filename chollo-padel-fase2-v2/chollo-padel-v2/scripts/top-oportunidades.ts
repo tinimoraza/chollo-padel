@@ -90,6 +90,45 @@ const MODELOS: Modelo[] = [
   // Team Light — la versión ligera de la gama media
   { nombre: 'Adidas Metalbone Team Light',
     keywords: ['metalbone', 'team', 'light'] },
+
+  // ── Adidas Cross It — misma lógica de submodelos que Metalbone ────────────
+  // Cross It "puro" (sin variante especial)
+  { nombre: 'Adidas Cross It',
+    keywords: ['adidas', 'cross', 'it'],
+    excludeKeywords: ['team', 'ctrl', 'carbon', 'light', 'lite', 'edt', 'reserve'] },
+
+  // CTRL (sin Carbon)
+  { nombre: 'Adidas Cross It CTRL',
+    keywords: ['cross', 'it', 'ctrl'],
+    excludeKeywords: ['carbon'] },
+
+  // Carbon (CTRL Carbon + 3.x Carbon)
+  { nombre: 'Adidas Cross It Carbon',
+    keywords: ['cross', 'it', 'carbon'] },
+
+  // Light (sin Team Light, que tiene su propio slot)
+  { nombre: 'Adidas Cross It Light',
+    keywords: ['cross', 'it', 'light'],
+    excludeKeywords: ['team'] },
+
+  // Team Light
+  { nombre: 'Adidas Cross It Team Light',
+    keywords: ['cross', 'it', 'team', 'light'] },
+
+  // ── Adidas Arrow Hit (gama alta 2026) ─────────────────────────────────────
+  // Arrow Hit "puro"
+  { nombre: 'Adidas Arrow Hit',
+    keywords: ['adidas', 'arrow', 'hit'],
+    excludeKeywords: ['ctrl', 'carbon', 'edt', 'attk', 'hexagon'] },
+
+  // Arrow Hit CTRL (sin Carbon)
+  { nombre: 'Adidas Arrow Hit CTRL',
+    keywords: ['arrow', 'hit', 'ctrl'],
+    excludeKeywords: ['carbon'] },
+
+  // Arrow Hit Carbon
+  { nombre: 'Adidas Arrow Hit Carbon',
+    keywords: ['arrow', 'hit', 'carbon'] },
 ]
 
 function calcMediana(precios: number[]): number | null {
