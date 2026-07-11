@@ -2,7 +2,7 @@
  * scripts/top-oportunidades.ts
  * ==============================
  * Genera el Top 10 global de oportunidades de segunda mano.
- * LÓGICA v3: frase exacta + exclusiones con regex word-boundary.
+ * LOGICA v3: frase exacta + exclusiones con regex word-boundary.
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/top-oportunidades.ts
@@ -25,15 +25,15 @@ const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bjunior\b/i,
   /\bj\.?r\.?\b/i,
   /\binfantil\b/i,
-  /\bni[ñn][oa]\b/i,
+  /\bni[\xf1n][oa]\b/i,
   /\byouth\b/i,
   /\bkids?\b/i,
   /\breparar\b/i,
-  /\breparaci[oó]n\b/i,
+  /\breparaci[o\xf3]n\b/i,
   /\breparad[ao]\b/i,
   /\bpara piezas\b/i,
   /\brot[ao]\b/i,
-  /\bda[ñn]ad[ao]\b/i,
+  /\bda[\xf1n]ad[ao]\b/i,
   /\bfisura\b/i,
   /\bcrack\b/i,
   /\bgolpe\b/i,
@@ -48,7 +48,7 @@ interface Modelo {
 }
 
 const MODELOS: Modelo[] = [
-  // ── Bullpadel ─────────────────────────────────────────────────────────────
+  // Bullpadel
   { nombre: 'Bullpadel Vertex 04',                phrase: 'vertex 04' },
   { nombre: 'Bullpadel Vertex 05',                phrase: 'vertex 05',                excludeKeywords: ['comfort'] },
   { nombre: 'Bullpadel Vertex 05 Comfort 2026',   phrase: 'vertex 05 comfort' },
@@ -67,7 +67,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Bullpadel Ionic Power 2025',         phrase: 'ionic power 2025' },
   { nombre: 'Bullpadel Ionic Power 2026',         phrase: 'ionic power 2026' },
 
-  // ── Head ──────────────────────────────────────────────────────────────────
+  // Head
   { nombre: 'Head Radical Pro 2024',              phrase: 'radical pro 2024' },
   { nombre: 'Head Radical Motion 2024',           phrase: 'radical motion 2024' },
   { nombre: 'Head Radical Elite 2024',            phrase: 'radical elite 2024' },
@@ -81,14 +81,14 @@ const MODELOS: Modelo[] = [
   { nombre: 'Head Speed One X 2025',              phrase: 'speed one x 2025' },
   { nombre: 'Head Coello Pro 2025',               phrase: 'coello pro 2025' },
   { nombre: 'Head Coello Pro 2026',               phrase: 'coello pro 2026' },
-  { nombre: 'Head Coello Motion 2025',             phrase: 'coello motion 2025' },
-  { nombre: 'Head Coello Motion 2026',             phrase: 'coello motion 2026' },
+  { nombre: 'Head Coello Motion 2025',            phrase: 'coello motion 2025' },
+  { nombre: 'Head Coello Motion 2026',            phrase: 'coello motion 2026' },
   { nombre: 'Head Extreme Motion 2025',           phrase: 'extreme motion 2025' },
   { nombre: 'Head Extreme Pro 2025',              phrase: 'extreme pro 2025' },
   { nombre: 'Head Extreme Pro 2026',              phrase: 'extreme pro 2026' },
   { nombre: 'Head Gravity Team 2025',             phrase: 'gravity team 2025' },
 
-  // ── Babolat ───────────────────────────────────────────────────────────────
+  // Babolat
   { nombre: 'Babolat Technical Viper 3.0',              phrase: 'technical viper 3.0',          excludeKeywords: ['soft'] },
   { nombre: 'Babolat Technical Viper Soft 3.0',         phrase: 'technical viper soft 3.0' },
   { nombre: 'Babolat Technical Viper 2025',             phrase: 'technical viper 2025',         excludeKeywords: ['soft','lebron'] },
@@ -104,7 +104,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Babolat Viper Juan Lebron 2025',           phrase: 'viper juan lebron 2025' },
   { nombre: 'Babolat Viper Juan Lebron 2026',           phrase: 'viper juan lebron 2026' },
 
-  // ── Nox ───────────────────────────────────────────────────────────────────
+  // Nox
   { nombre: 'Nox AT10 18K 2025',                  phrase: 'at10 18k 2025',            excludeKeywords: ['genius','attack'] },
   { nombre: 'Nox AT10 18K 2026',                  phrase: 'at10 18k 2026',            excludeKeywords: ['genius','attack'] },
   { nombre: 'Nox AT10 12K 2025',                  phrase: 'at10 12k 2025',            excludeKeywords: ['genius','attack','lite'] },
@@ -129,14 +129,14 @@ const MODELOS: Modelo[] = [
   { nombre: 'Nox EA10 Ventus Hybrid 12K 2026',    phrase: 'ea10 hybrid 2026' },
   { nombre: 'Nox Quantum 12K',                    phrase: 'nox quantum 12k' },
 
-  // ── Black Crown ───────────────────────────────────────────────────────────
+  // Black Crown
   { nombre: 'Black Crown Piton 14 2026',          phrase: 'piton 14 2026' },
   { nombre: 'Black Crown Piton White 2026',       phrase: 'piton white 2026' },
   { nombre: 'Black Crown Piton Blue 2026',        phrase: 'piton blue 2026' },
   { nombre: 'Black Crown Hurricane Pro',          phrase: 'hurricane pro' },
   { nombre: 'Black Crown Coyote Yellow',          phrase: 'coyote yellow' },
 
-  // ── Joma ──────────────────────────────────────────────────────────────────
+  // Joma
   { nombre: 'Joma Tournament Pro Iconic',         phrase: 'tournament pro iconic' },
   { nombre: 'Joma Tournament Iconic',             phrase: 'tournament iconic' },
   { nombre: 'Joma Blast Pro',                     phrase: 'joma blast pro',           excludeKeywords: ['hrd','sft','soft'] },
@@ -148,12 +148,12 @@ const MODELOS: Modelo[] = [
   { nombre: 'Joma Hyper Pro Soft',                phrase: 'hyper pro sft' },
   { nombre: 'Joma Hyper 3.0',                     phrase: 'joma hyper 3.0' },
   { nombre: 'Joma Gold Pro 2.0',                  phrase: 'joma gold pro 2.0' },
-  { nombre: 'Joma Gold Pro',                      phrase: 'joma gold pro',             excludeKeywords: ['2.0'] },
+  { nombre: 'Joma Gold Pro',                      phrase: 'joma gold pro',            excludeKeywords: ['2.0'] },
   { nombre: 'Joma Valkiria Pro HRD',              phrase: 'valkiria pro hrd' },
   { nombre: 'Joma Tournament Soft 2.0',           phrase: 'tournament soft 2.0' },
   { nombre: 'Joma Tournament Flex 2.0',           phrase: 'tournament flex 2.0' },
 
-  // ── Siux ──────────────────────────────────────────────────────────────────
+  // Siux
   { nombre: 'Siux Trilogy Elite 2026',            phrase: 'trilogy elite 2026' },
   { nombre: 'Siux Trilogy Pro 5 2025',            phrase: 'trilogy pro 5 2025' },
   { nombre: 'Siux Trilogy Pro 2026',              phrase: 'trilogy pro 2026',         excludeKeywords: ['elite','5'] },
@@ -167,7 +167,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Siux Astra Hybrid 2026',             phrase: 'astra hybrid 2026' },
   { nombre: 'Siux Tsunami 5.0',                   phrase: 'siux tsunami 5.0' },
 
-  // ── Wilson ────────────────────────────────────────────────────────────────
+  // Wilson
   { nombre: 'Wilson Defy Pro V1 2025',             phrase: 'defy pro v1 2025' },
   { nombre: 'Wilson Defy Pro V1 2026',             phrase: 'defy pro v1 2026' },
   { nombre: 'Wilson Defy V1 Special Edition 2026', phrase: 'defy v1 special edition 2026' },
@@ -180,7 +180,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Wilson Bela Pro V3',                  phrase: 'bela pro v3' },
   { nombre: 'Wilson Bela V3',                      phrase: 'bela v3',                  excludeKeywords: ['pro','team','lt'] },
 
-  // ── Adidas Metalbone puro ─────────────────────────────────────────────────
+  // Adidas Metalbone puro
   { nombre: 'Adidas Metalbone 3.3', phrase: 'metalbone 3.3',
     excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
   { nombre: 'Adidas Metalbone 3.4', phrase: 'metalbone 3.4',
@@ -190,7 +190,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Metalbone 09',  phrase: 'metalbone 09' },
   { nombre: 'Adidas Metalbone Pro EDT 2026', phrase: 'metalbone pro edt 2026' },
 
-  // ── Adidas Metalbone HRD+ ─────────────────────────────────────────────────
+  // Adidas Metalbone HRD+
   { nombre: 'Adidas Metalbone HRD+ 3.3', phrase: 'metalbone hrd 3.3' },
   { nombre: 'Adidas Metalbone HRD+ 3.3', phrase: 'metalbone 3.3 hrd' },
   { nombre: 'Adidas Metalbone HRD+ 3.4', phrase: 'metalbone hrd 3.4' },
@@ -198,7 +198,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Metalbone HRD+ 3.5', phrase: 'metalbone hrd 3.5' },
   { nombre: 'Adidas Metalbone HRD+ 3.5', phrase: 'metalbone 3.5 hrd' },
 
-  // ── Adidas Metalbone CTRL ─────────────────────────────────────────────────
+  // Adidas Metalbone CTRL
   { nombre: 'Adidas Metalbone CTRL 3.3', phrase: 'metalbone ctrl 3.3', excludeKeywords: ['carbon'] },
   { nombre: 'Adidas Metalbone CTRL 3.3', phrase: 'metalbone 3.3 ctrl', excludeKeywords: ['carbon'] },
   { nombre: 'Adidas Metalbone CTRL 3.4', phrase: 'metalbone ctrl 3.4', excludeKeywords: ['carbon'] },
@@ -206,28 +206,28 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Metalbone CTRL 3.5', phrase: 'metalbone ctrl 3.5', excludeKeywords: ['carbon'] },
   { nombre: 'Adidas Metalbone CTRL 3.5', phrase: 'metalbone 3.5 ctrl', excludeKeywords: ['carbon'] },
 
-  // ── Adidas Metalbone Carbon CTRL ──────────────────────────────────────────
+  // Adidas Metalbone Carbon CTRL
   { nombre: 'Adidas Metalbone Carbon CTRL 3.3', phrase: 'metalbone carbon ctrl 3.3' },
   { nombre: 'Adidas Metalbone Carbon CTRL 3.4', phrase: 'metalbone carbon ctrl 3.4' },
   { nombre: 'Adidas Metalbone Carbon CTRL 3.5', phrase: 'metalbone carbon ctrl 3.5' },
 
-  // ── Adidas Metalbone Team ─────────────────────────────────────────────────
+  // Adidas Metalbone Team
   { nombre: 'Adidas Metalbone Team 3.3', phrase: 'metalbone team 3.3', excludeKeywords: ['light', 'lite'] },
   { nombre: 'Adidas Metalbone Team 3.4', phrase: 'metalbone team 3.4', excludeKeywords: ['light', 'lite'] },
   { nombre: 'Adidas Metalbone Team 3.5', phrase: 'metalbone team 3.5', excludeKeywords: ['light', 'lite'] },
 
-  // ── Adidas Metalbone Team Light ───────────────────────────────────────────
+  // Adidas Metalbone Team Light
   { nombre: 'Adidas Metalbone Team Light 3.3', phrase: 'metalbone team light 3.3' },
   { nombre: 'Adidas Metalbone Team Light 3.4', phrase: 'metalbone team light 3.4' },
   { nombre: 'Adidas Metalbone Team Light 3.5', phrase: 'metalbone team light 3.5' },
 
-  // ── Adidas Cross It puro ──────────────────────────────────────────────────
+  // Adidas Cross It puro
   { nombre: 'Adidas Cross It 3.4', phrase: 'cross it 3.4',
     excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
   { nombre: 'Adidas Cross It 3.5', phrase: 'cross it 3.5',
     excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
 
-  // ── Adidas Cross It Light ─────────────────────────────────────────────────
+  // Adidas Cross It Light
   { nombre: 'Adidas Cross It Light 3.3', phrase: 'cross it light 3.3', excludeKeywords: ['pro edt','team'] },
   { nombre: 'Adidas Cross It Light 3.4', phrase: 'cross it light 3.4', excludeKeywords: ['pro edt','team'] },
   { nombre: 'Adidas Cross It Light 3.5', phrase: 'cross it light 3.5', excludeKeywords: ['pro edt','team'] },
@@ -235,11 +235,11 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Cross It Light 2026', phrase: 'cross it light 2026', excludeKeywords: ['pro edt','team'] },
   { nombre: 'Adidas Cross It Light Pro EDT 2026', phrase: 'cross it light pro edt 2026' },
 
-  // ── Adidas Cross It Carbon / Team CTRL ───────────────────────────────────
+  // Adidas Cross It Carbon / Team CTRL
   { nombre: 'Adidas Cross It Carbon 3.5',     phrase: 'cross it carbon 3.5' },
   { nombre: 'Adidas Cross It Team CTRL 2026', phrase: 'cross it team ctrl 2026' },
 
-  // ── Adidas Arrow Hit ──────────────────────────────────────────────────────
+  // Adidas Arrow Hit
   { nombre: 'Adidas Arrow Hit 3.3', phrase: 'arrow hit 3.3',
     excludeKeywords: ['ctrl', 'carbon'] },
   { nombre: 'Adidas Arrow Hit 3.4', phrase: 'arrow hit 3.4',
@@ -251,34 +251,34 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Arrow Hit Carbon 3.3', phrase: 'arrow hit carbon 3.3' },
   { nombre: 'Adidas Arrow Hit Carbon 3.4', phrase: 'arrow hit carbon 3.4' },
 
-  // ── Adidas Adipower / Reserve ─────────────────────────────────────────────
+  // Adidas Adipower / Reserve
   { nombre: 'Adidas Adipower CTRL',    phrase: 'adidas adipower ctrl' },
   { nombre: 'Adidas Reserve 2026',     phrase: 'adidas reserve 2026' },
 
-  // ── StarVie ───────────────────────────────────────────────────────────────
+  // StarVie
   { nombre: 'StarVie Triton Pro 2024',          phrase: 'triton pro 2024' },
   { nombre: 'StarVie Triton Power 2026',        phrase: 'triton power' },
   { nombre: 'StarVie Triton Balance 2026',      phrase: 'triton balance' },
   { nombre: 'StarVie Basalto Osiris',           phrase: 'basalto osiris' },
 
-  // ── Vairo ─────────────────────────────────────────────────────────────────
+  // Vairo
   { nombre: 'Vairo 6.1',                        phrase: 'vairo 6.1' },
   { nombre: 'Vairo 8.1',                        phrase: 'vairo 8.1' },
 
-  // ── Vibor-A ───────────────────────────────────────────────────────────────
+  // Vibor-A
   { nombre: 'Vibor-A Yarara Radical 12K',       phrase: 'yarara radical 12k' },
   { nombre: 'Vibor-A Yarara Xtreme 3K',         phrase: 'yarara xtreme 3k' },
 
-  // ── Oxdog ─────────────────────────────────────────────────────────────────
+  // Oxdog
   { nombre: 'Oxdog Ultimate Pro 2026',          phrase: 'oxdog ultimate pro 2026' },
   { nombre: 'Oxdog Hyper Pro 2.0',              phrase: 'oxdog hyper pro 2.0' },
 
-  // ── Drop Shot ─────────────────────────────────────────────────────────────
+  // Drop Shot
   { nombre: 'Drop Shot Explorer Pro Attack 2.0', phrase: 'explorer pro attack 2.0' },
   { nombre: 'Drop Shot Axion Attack 2.0',        phrase: 'axion attack 2.0' },
   { nombre: 'Drop Shot Blitz Attack 2025',       phrase: 'blitz attack 2025' },
 
-  // ── Kuikma ────────────────────────────────────────────────────────────────
+  // Kuikma
   { nombre: 'Kuikma PR Hybrid Carbon',          phrase: 'kuikma pr hybrid carbon' },
   { nombre: 'Kuikma Hybrid Pro',                phrase: 'kuikma hybrid pro' },
   { nombre: 'Kuikma Hybrid Metal',              phrase: 'kuikma hybrid metal' },
@@ -375,7 +375,7 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
   })
 
   if (items.length < antes) {
-    console.log(`  ${antes - items.length} descartados (jr/reparar/variante)`)
+    console.log(`  ${antes - items.length} descartados (jr/reparar/variante/tenis)`)
   }
   console.log(`  ${items.length} anuncios validos`)
 
@@ -532,17 +532,27 @@ async function main() {
 
   console.log(`\nGuardando top ${topConTendencia.length}...`)
 
-  const idsNuevos = topConTendencia.map((op: any) => op.external_id)
+  // Borrar TODAS las entradas anteriores — el not-in de PostgREST no limpia entradas obsoletas
   const { error: deleteErr } = await supabase
     .from('top_oportunidades')
     .delete()
-    .not('external_id', 'in', `(${idsNuevos.map((id: string) => `"${id}"`).join(',')})`)
+    .gte('posicion', 1)
 
   if (deleteErr) console.error('  Error borrando entradas antiguas:', deleteErr)
 
-  const { error: upsertErr } = await supabase
+  const { error: insertErr } = await supabase
     .from('top_oportunidades')
-    .upsert(topConTendencia, { onConflict: 'external_id' })
+    .insert(topConTendencia)
 
-  if (upsertErr) {
-    console.error('E
+  if (insertErr) {
+    console.error('Error guardando:', insertErr)
+    process.exit(1)
+  }
+
+  console.log(`Top ${topConTendencia.length} guardado correctamente.`)
+}
+
+main().catch(err => {
+  console.error('Error fatal:', err)
+  process.exit(1)
+})
