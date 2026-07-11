@@ -2,16 +2,17 @@
  * scripts/top-oportunidades.ts
  * ==============================
  * Genera el Top 10 global de oportunidades de segunda mano.
- * LÓGICA v2: modelos curados + mediana de segunda mano (sin matching de catálogo).
+ * LÓGICA v3: frase exacta + exclusiones con regex word-boundary.
  *
  * Pipeline:
- *  1. Para cada modelo curado: buscar en wallapop_cache por keywords (ilike AND)
- *  2. Filtrar: condición new/un_opened/as_good_as_new, precio >= MIN_PRICE
- *  3. Calcular mediana de todos los resultados (>= MIN_ITEMS_FOR_MEDIANA para fiabilidad)
- *  4. Oportunidad = precio < mediana × THRESHOLD_OPORTUNIDAD (≥25% de descuento)
- *  5. Deduplicar por external_id, ordenar por % descuento
- *  6. Verificar activos contra API Wallapop (vendidos → descartar y limpiar caché)
- *  7. Guardar TOP_N en top_oportunidades
+ *  1. Para cada modelo curado: buscar en wallapop_cache con ILIKE '%phrase%' (frase exacta)
+ *  2. Filtrar: EXCLUIR_SIEMPRE_RE (regex \b) + excludeKeywords del modelo
+ *  3. Filtrar: condición new/un_opened/as_good_as_new, precio >= MIN_PRICE
+ *  4. Calcular mediana (>= MIN_ITEMS_FOR_MEDIANA para fiabilidad)
+ *  5. Oportunidad = precio < mediana × THRESHOLD_OPORTUNIDAD (≥25% de descuento)
+ *  6. Deduplicar por external_id, ordenar por % descuento
+ *  7. Verificar activos contra API Wallapop (vendidos → descartar y limpiar caché)
+ *  8. Guardar TOP_N en top_oportunidades
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/top-oportunidades.ts
@@ -31,104 +32,101 @@ const VERIFY_THROTTLE       = 250   // ms entre llamadas a la API de Wallapop
 // Condiciones que entran al top
 const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 
-// Palabras que se excluyen SIEMPRE en todos los modelos (ruido / no pala adulta)
-// Se aplican en buscarModelo() antes de las excludeKeywords específicas del modelo.
-const EXCLUIR_SIEMPRE = [
-  // Junior / infantil
-  'junior', ' jr ', ' jr.', '-jr', 'infantil', 'niño', 'niña', 'youth', 'kids',
-  // Para reparar / dañada
-  'reparar', 'reparación', 'reparada', 'reparado', 'para piezas',
-  'rota', 'roto', 'dañada', 'dañado', 'fisura', 'crack', 'golpe',
+// Exclusiones globales con word-boundary (\b) para no fallar en "Hack 04 Jr" al final de string
+// Se aplican a TODOS los modelos antes de las excludeKeywords específicas.
+const EXCLUIR_SIEMPRE_RE: RegExp[] = [
+  /\bjunior\b/i,
+  /\bj\.?r\.?\b/i,       // jr, j.r., J.R al final de string también
+  /\binfantil\b/i,
+  /\bni[ñn][oa]\b/i,     // niño, niña, nino, nina
+  /\byouth\b/i,
+  /\bkids?\b/i,
+  /\breparar\b/i,
+  /\breparaci[oó]n\b/i,
+  /\breparad[ao]\b/i,
+  /\bpara piezas\b/i,
+  /\brot[ao]\b/i,
+  /\bda[ñn]ad[ao]\b/i,
+  /\bfisura\b/i,
+  /\bcrack\b/i,
+  /\bgolpe\b/i,
+  /\bno funciona\b/i,
 ]
 
-// Modelos curados — lista de modelos a buscar con sus keywords.
-// Cada keyword debe aparecer en el título (búsqueda AND, case-insensitive).
-// excludeKeywords: excluir anuncios cuyo título contenga alguna de estas palabras.
-// Las EXCLUIR_SIEMPRE se aplican a todos además de estas.
+// Modelos curados — búsqueda por FRASE EXACTA (no palabras sueltas en AND).
+// phrase: el título debe contener esta frase completa (ILIKE '%phrase%').
+// excludeKeywords: palabras adicionales que descalifican el anuncio (string.includes).
 interface Modelo {
   nombre: string
-  keywords: string[]
+  phrase: string
   excludeKeywords?: string[]
 }
 
 const MODELOS: Modelo[] = [
-  // ── Bullpadel ──────────────────────────────────────────────────────────────
-  { nombre: 'Bullpadel Vertex 04', keywords: ['vertex', '04'] },
-  { nombre: 'Bullpadel Vertex 05', keywords: ['vertex', '05'] },
-  { nombre: 'Bullpadel Hack 04',   keywords: ['hack', '04'] },
+  // ── Bullpadel Vertex ──────────────────────────────────────────────────────
+  { nombre: 'Bullpadel Vertex 04', phrase: 'vertex 04' },
+  { nombre: 'Bullpadel Vertex 05', phrase: 'vertex 05' },
 
-  // ── Joma ───────────────────────────────────────────────────────────────────
-  { nombre: 'Joma Tournament Iconic Pro', keywords: ['joma', 'tournament', 'iconic'] },
-  { nombre: 'Joma Blast Pro',             keywords: ['joma', 'blast', 'pro'] },
-  { nombre: 'Joma Hyper Pro',             keywords: ['joma', 'hyper', 'pro'] },
+  // ── Bullpadel Hack ────────────────────────────────────────────────────────
+  { nombre: 'Bullpadel Hack 04',   phrase: 'hack 04' },
 
-  // ── Adidas Metalbone — un slot por submodelo, cada uno con su propia mediana ──
-  // Metalbone "puro" (3.3 / 3.4 / 3.5 / 09 sin variante especial)
-  { nombre: 'Adidas Metalbone',
-    keywords: ['adidas', 'metalbone'],
-    excludeKeywords: ['hrd', 'team', 'ctrl', 'carbon', 'light', 'lite',
-                      'reserve', 'green', 'edt', 'master', 'super'] },
+  // ── Joma ─────────────────────────────────────────────────────────────────
+  { nombre: 'Joma Tournament Iconic', phrase: 'tournament iconic' },
+  { nombre: 'Joma Blast Pro',         phrase: 'joma blast pro' },
+  { nombre: 'Joma Hyper Pro',         phrase: 'joma hyper pro' },
 
-  // HRD+ — variante de ataque premium
+  // ── Adidas Metalbone — versión específica por número (cada una su mediana) ─
+  { nombre: 'Adidas Metalbone 3.3',
+    phrase: 'metalbone 3.3',
+    excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
+  { nombre: 'Adidas Metalbone 3.4',
+    phrase: 'metalbone 3.4',
+    excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
+  { nombre: 'Adidas Metalbone 3.5',
+    phrase: 'metalbone 3.5',
+    excludeKeywords: ['hrd', 'ctrl', 'carbon', 'team', 'light', 'lite'] },
+  { nombre: 'Adidas Metalbone 09',
+    phrase: 'metalbone 09' },
   { nombre: 'Adidas Metalbone HRD+',
-    keywords: ['metalbone', 'hrd'] },
-
-  // CTRL — variante de control (sin Carbon, que es otro submodelo)
+    phrase: 'metalbone hrd' },
   { nombre: 'Adidas Metalbone CTRL',
-    keywords: ['metalbone', 'ctrl'],
+    phrase: 'metalbone ctrl',
     excludeKeywords: ['carbon'] },
-
-  // Carbon — variante estructural (CTRL Carbon / 3.x Carbon)
   { nombre: 'Adidas Metalbone Carbon',
-    keywords: ['metalbone', 'carbon'] },
-
-  // Team — gama media (sin Light, que tiene su propio slot)
+    phrase: 'metalbone carbon' },
   { nombre: 'Adidas Metalbone Team',
-    keywords: ['metalbone', 'team'],
+    phrase: 'metalbone team',
     excludeKeywords: ['light', 'lite'] },
-
-  // Team Light — la versión ligera de la gama media
   { nombre: 'Adidas Metalbone Team Light',
-    keywords: ['metalbone', 'team', 'light'] },
+    phrase: 'metalbone team light' },
 
-  // ── Adidas Cross It — misma lógica de submodelos que Metalbone ────────────
-  // Cross It "puro" (sin variante especial)
-  { nombre: 'Adidas Cross It',
-    keywords: ['adidas', 'cross', 'it'],
-    excludeKeywords: ['team', 'ctrl', 'carbon', 'light', 'lite', 'edt', 'reserve'] },
-
-  // CTRL (sin Carbon)
+  // ── Adidas Cross It — versión específica por número ───────────────────────
+  { nombre: 'Adidas Cross It 3.4',
+    phrase: 'cross it 3.4',
+    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
+  { nombre: 'Adidas Cross It 3.5',
+    phrase: 'cross it 3.5',
+    excludeKeywords: ['ctrl', 'carbon', 'light', 'team'] },
   { nombre: 'Adidas Cross It CTRL',
-    keywords: ['cross', 'it', 'ctrl'],
+    phrase: 'cross it ctrl',
     excludeKeywords: ['carbon'] },
-
-  // Carbon (CTRL Carbon + 3.x Carbon)
   { nombre: 'Adidas Cross It Carbon',
-    keywords: ['cross', 'it', 'carbon'] },
-
-  // Light (sin Team Light, que tiene su propio slot)
+    phrase: 'cross it carbon' },
   { nombre: 'Adidas Cross It Light',
-    keywords: ['cross', 'it', 'light'],
+    phrase: 'cross it light',
     excludeKeywords: ['team'] },
-
-  // Team Light
   { nombre: 'Adidas Cross It Team Light',
-    keywords: ['cross', 'it', 'team', 'light'] },
+    phrase: 'cross it team light' },
 
-  // ── Adidas Arrow Hit (gama alta 2026) ─────────────────────────────────────
-  // Arrow Hit "puro"
+  // ── Adidas Arrow Hit ─────────────────────────────────────────────────────
   { nombre: 'Adidas Arrow Hit',
-    keywords: ['adidas', 'arrow', 'hit'],
+    phrase: 'arrow hit',
     excludeKeywords: ['ctrl', 'carbon', 'edt', 'attk', 'hexagon'] },
-
-  // Arrow Hit CTRL (sin Carbon)
   { nombre: 'Adidas Arrow Hit CTRL',
-    keywords: ['arrow', 'hit', 'ctrl'],
+    phrase: 'arrow hit ctrl',
     excludeKeywords: ['carbon'] },
-
-  // Arrow Hit Carbon
   { nombre: 'Adidas Arrow Hit Carbon',
-    keywords: ['arrow', 'hit', 'carbon'] },
+    phrase: 'arrow hit carbon' },
 ]
 
 function calcMediana(precios: number[]): number | null {
@@ -172,23 +170,18 @@ async function isWallapopActive(externalId: string): Promise<boolean> {
 }
 
 async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: Modelo): Promise<any[]> {
-  console.log(`\n🔍 Buscando: "${modelo.nombre}" [${modelo.keywords.join(' + ')}]...`)
+  console.log(`\n🔍 "${modelo.nombre}" — frase: "${modelo.phrase}"`)
 
-  let sb = supabase
+  const { data, error } = await supabase
     .from('wallapop_cache')
     .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
+    .ilike('title', `%${modelo.phrase}%`)
     .limit(500)
 
-  for (const word of modelo.keywords) {
-    sb = (sb as any).ilike('title', `%${word}%`)
-  }
-
-  const { data, error } = await (sb as any)
-
   if (error) {
-    console.error(`  ❌ Error buscando "${modelo.nombre}":`, error)
+    console.error(`  ❌ Error:`, error)
     return []
   }
 
@@ -197,42 +190,43 @@ async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: M
     return []
   }
 
-  // Aplicar filtros de exclusión en cliente (EXCLUIR_SIEMPRE + excludeKeywords del modelo)
-  let items: any[] = data
-  const todosExcluidos = [...EXCLUIR_SIEMPRE, ...(modelo.excludeKeywords ?? [])]
-  {
-    const antes = items.length
-    items = items.filter(item => {
-      const titleLower = item.title.toLowerCase()
-      return !todosExcluidos.some(excl => titleLower.includes(excl.toLowerCase()))
-    })
-    if (items.length < antes) {
-      console.log(`  🚫 Excluidos ${antes - items.length} anuncios (ruido/junior/reparar + exclusiones del modelo)`)
+  // 1. Exclusiones globales con regex word-boundary (junior, jr, reparar, etc.)
+  // 2. Exclusiones específicas del modelo (string.includes)
+  const antes = data.length
+  const items: any[] = data.filter(item => {
+    // Regex word-boundary
+    if (EXCLUIR_SIEMPRE_RE.some(re => re.test(item.title))) return false
+    // Exclusiones del modelo
+    if (modelo.excludeKeywords) {
+      const t = item.title.toLowerCase()
+      if (modelo.excludeKeywords.some(excl => t.includes(excl.toLowerCase()))) return false
     }
+    return true
+  })
+
+  if (items.length < antes) {
+    console.log(`  🚫 ${antes - items.length} descartados (jr/reparar/variante)`)
   }
+  console.log(`  📦 ${items.length} anuncios válidos`)
 
-  console.log(`  📦 ${items.length} anuncios en condición top`)
-
-  // Calcular mediana de todos los precios encontrados
+  // Mediana de precios
   const precios = items.map(item => item.price as number)
   const mediana = calcMediana(precios)
 
   if (mediana === null) {
-    console.log(`  ⚠️  Solo ${items.length} items (mínimo ${MIN_ITEMS_FOR_MEDIANA} para calcular mediana) — modelo ignorado`)
+    console.log(`  ⚠️  Solo ${items.length} items (mín ${MIN_ITEMS_FOR_MEDIANA}) — sin mediana`)
     return []
   }
 
-  console.log(`  📊 Mediana: ${Math.round(mediana)}€ sobre ${items.length} anuncios`)
+  console.log(`  📊 Mediana: ${Math.round(mediana)}€ (${items.length} anuncios)`)
 
-  // Filtrar oportunidades: precio < mediana × THRESHOLD
+  // Oportunidades: precio < mediana × threshold
   const umbral = mediana * THRESHOLD_OPORTUNIDAD
   const oportunidades: any[] = []
 
   for (const item of items) {
     if (item.price >= umbral) continue
-
     const descuento_pct = Math.round(((mediana - item.price) / mediana) * 100)
-
     oportunidades.push({
       external_id:  item.external_id,
       title:        item.title,
@@ -250,18 +244,18 @@ async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: M
     })
   }
 
-  console.log(`  💎 ${oportunidades.length} oportunidades (precio < ${Math.round(umbral)}€)`)
+  console.log(`  💎 ${oportunidades.length} oportunidades (< ${Math.round(umbral)}€)`)
   return oportunidades
 }
 
 async function main() {
-  console.log('🏆 HUNTPADEL — Top Oportunidades (v2: modelos curados + mediana de segunda mano)')
+  console.log('🏆 HUNTPADEL — Top Oportunidades (v3: frase exacta + regex exclusiones)')
   console.log(`📅 ${new Date().toISOString()}\n`)
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
   // ── 0. Guardar posiciones actuales ────────────────────────────────────────
-  console.log('📌 Leyendo posiciones actuales del top...')
+  console.log('📌 Leyendo posiciones actuales...')
   const { data: topActual } = await supabase
     .from('top_oportunidades')
     .select('external_id, posicion')
@@ -277,7 +271,7 @@ async function main() {
   }
   console.log(`  ${posicionesAnteriores.size} entradas en el top actual`)
 
-  // ── 1. Buscar oportunidades por cada modelo curado ────────────────────────
+  // ── 1. Buscar oportunidades por cada modelo ───────────────────────────────
   console.log(`\n🎯 Procesando ${MODELOS.length} modelos curados...`)
 
   const todasOportunidades: any[] = []
@@ -286,14 +280,14 @@ async function main() {
     todasOportunidades.push(...ops)
   }
 
-  console.log(`\n✅ ${todasOportunidades.length} oportunidades totales encontradas`)
+  console.log(`\n✅ ${todasOportunidades.length} oportunidades totales`)
 
   if (todasOportunidades.length === 0) {
     console.log('⚠️  Sin oportunidades — no se actualiza la tabla.')
     return
   }
 
-  // ── 2. Deduplicar por external_id (mayor descuento gana si aparece en varios modelos) ──
+  // ── 2. Deduplicar por external_id (mayor descuento gana) ─────────────────
   const deduplicado = new Map<string, any>()
   for (const op of todasOportunidades) {
     const existing = deduplicado.get(op.external_id)
@@ -305,11 +299,11 @@ async function main() {
   const candidatos = Array.from(deduplicado.values())
     .sort((a, b) => b.descuento_pct - a.descuento_pct)
 
-  console.log(`📋 ${candidatos.length} candidatos únicos, ordenados por % descuento`)
+  console.log(`📋 ${candidatos.length} candidatos únicos`)
 
   // ── 3. Verificar activos contra la API Wallapop ───────────────────────────
   const maxVerificar = Math.min(candidatos.length, TOP_N * 3)
-  console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos contra la API de Wallapop...\n`)
+  console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos...\n`)
 
   const top: any[] = []
   const vendidosABorrar: string[] = []
@@ -324,8 +318,7 @@ async function main() {
 
     process.stdout.write(
       `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
-      ` (${candidato.descuento_pct}% dto vs mediana ${Math.round(candidato.precio_medio)}€,` +
-      ` ${candidato.condition}, [${candidato.keyword}])... `
+      ` (-${candidato.descuento_pct}% vs ${Math.round(candidato.precio_medio)}€, [${candidato.keyword}])... `
     )
     const activo = await isWallapopActive(candidato.external_id)
 
@@ -333,71 +326,41 @@ async function main() {
       console.log('✅ activo')
       top.push(candidato)
     } else {
-      console.log('❌ vendido/retirado — descartado')
+      console.log('❌ vendido — descartado')
       vendidosABorrar.push(candidato.external_id)
     }
 
     await sleep(VERIFY_THROTTLE)
   }
 
-  // ── 4. Calcular tendencias tipo ranking musical ───────────────────────────
+  // ── 4. Calcular tendencias ────────────────────────────────────────────────
   const ahora = new Date().toISOString()
-
-  console.log(`\n🏆 Top ${top.length} final con tendencias:`)
+  console.log(`\n🏆 Top ${top.length} final:`)
 
   const topConTendencia = top.map((op, idx) => {
     const posicionNueva    = idx + 1
     const posicionAnterior = posicionesAnteriores.get(op.external_id) ?? null
 
     let tendencia: 'nueva_entrada' | 'sube' | 'baja' | 'igual'
-    if (posicionAnterior === null) {
-      tendencia = 'nueva_entrada'
-    } else if (posicionNueva < posicionAnterior) {
-      tendencia = 'sube'
-    } else if (posicionNueva > posicionAnterior) {
-      tendencia = 'baja'
-    } else {
-      tendencia = 'igual'
-    }
+    if (posicionAnterior === null)           tendencia = 'nueva_entrada'
+    else if (posicionNueva < posicionAnterior) tendencia = 'sube'
+    else if (posicionNueva > posicionAnterior) tendencia = 'baja'
+    else                                     tendencia = 'igual'
 
-    const puestosMovidos = posicionAnterior !== null
-      ? posicionAnterior - posicionNueva
-      : null
+    const puestosMovidos = posicionAnterior !== null ? posicionAnterior - posicionNueva : null
 
-    const tendenciaLabel = {
-      nueva_entrada: '🆕',
-      sube:          `⬆️  +${puestosMovidos}`,
-      baja:          `⬇️  ${puestosMovidos}`,
-      igual:         '➡️',
-    }[tendencia]
+    const label = { nueva_entrada: '🆕', sube: `⬆️ +${puestosMovidos}`, baja: `⬇️ ${puestosMovidos}`, igual: '➡️' }[tendencia]
+    console.log(`  ${posicionNueva}. ${label} ${op.title} — ${op.price}€ (mediana: ${Math.round(op.precio_medio)}€, -${op.descuento_pct}%, [${op.keyword}])`)
 
-    console.log(
-      `  ${posicionNueva}. ${tendenciaLabel} ${op.title} — ${op.price}€` +
-      ` (mediana: ${Math.round(op.precio_medio)}€, -${op.descuento_pct}%, [${op.keyword}])`
-    )
-
-    return {
-      ...op,
-      posicion:          posicionNueva,
-      posicion_anterior: posicionAnterior,
-      puestos_movidos:   puestosMovidos,
-      tendencia,
-      updated_at:        ahora,
-    }
+    return { ...op, posicion: posicionNueva, posicion_anterior: posicionAnterior, puestos_movidos: puestosMovidos, tendencia, updated_at: ahora }
   })
 
   // ── 5. Limpiar vendidos de wallapop_cache ─────────────────────────────────
   if (vendidosABorrar.length > 0) {
     console.log(`\n🗑️  Eliminando ${vendidosABorrar.length} anuncios vendidos de wallapop_cache...`)
-    const { error: delErr } = await supabase
-      .from('wallapop_cache')
-      .delete()
-      .in('external_id', vendidosABorrar)
-    if (delErr) {
-      console.error('  ⚠️  Error al borrar de wallapop_cache:', delErr)
-    } else {
-      console.log('  ✅ Limpieza completada')
-    }
+    const { error: delErr } = await supabase.from('wallapop_cache').delete().in('external_id', vendidosABorrar)
+    if (delErr) console.error('  ⚠️  Error al borrar:', delErr)
+    else        console.log('  ✅ Limpieza OK')
   }
 
   // ── 6. Guardar el Top en la BD ────────────────────────────────────────────
@@ -406,26 +369,22 @@ async function main() {
     return
   }
 
-  console.log(`\n💾 Guardando top ${topConTendencia.length} en top_oportunidades...`)
+  console.log(`\n💾 Guardando top ${topConTendencia.length}...`)
 
-  // Borrar entradas anteriores que ya no están en el nuevo top
   const idsNuevos = topConTendencia.map((op: any) => op.external_id)
   const { error: deleteErr } = await supabase
     .from('top_oportunidades')
     .delete()
     .not('external_id', 'in', `(${idsNuevos.map((id: string) => `"${id}"`).join(',')})`)
 
-  if (deleteErr) {
-    console.error('  ⚠️  Error borrando entradas antiguas:', deleteErr)
-  }
+  if (deleteErr) console.error('  ⚠️  Error borrando entradas antiguas:', deleteErr)
 
-  // Upsert del nuevo top
   const { error: upsertErr } = await supabase
     .from('top_oportunidades')
     .upsert(topConTendencia, { onConflict: 'external_id' })
 
   if (upsertErr) {
-    console.error('❌ Error guardando top_oportunidades:', upsertErr)
+    console.error('❌ Error guardando:', upsertErr)
     process.exit(1)
   }
 
