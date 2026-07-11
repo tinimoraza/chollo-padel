@@ -1,23 +1,17 @@
 /**
  * scripts/top-oportunidades.ts
- * ===========================================
+ * ==============================
  * Genera el Top 10 global de oportunidades de segunda mano.
- * Lo ejecuta GitHub Actions cada hora.
+ * LÓGICA v2: modelos curados + mediana de segunda mano (sin matching de catálogo).
  *
- * Lógica:
- *  1. Lee wallapop_cache filtrando por CONDICIONES_TOP (new, un_opened, as_good_as_new)
- *     SOLO anuncios con pala_id asignado (match confirmado con catálogo)
- *  2. Carga price_reference para esos pala_id (precio oficial de tiendas scrapeadas)
- *     Anuncios cuyo pala_id no tiene precio en price_reference → excluidos
- *  3. Descuento calculado contra precio_referencia de tienda (NO mediana de segunda mano)
- *     Esto da descuentos reales respecto al precio de mercado nuevo
- *  4. Ordena por SCORE COMPUESTO:
- *       descuento × peso_condición × bonus_año × bonus_recencia × bonus_ahorro
- *     - Sin año en título → penalización 0.85
- *     - Año viejo (≤2022) → penalización fuerte 0.65
- *  5. Guarda posición anterior y calcula tendencia (nueva_entrada/sube/baja/igual)
- *  6. Verifica finalistas contra API Wallapop (vendidos → borrar y rellenar)
- *  7. Reemplaza COMPLETAMENTE top_oportunidades con el nuevo ranking (TOP_N = 10)
+ * Pipeline:
+ *  1. Para cada modelo curado: buscar en wallapop_cache por keywords (ilike AND)
+ *  2. Filtrar: condición new/un_opened/as_good_as_new, precio >= MIN_PRICE
+ *  3. Calcular mediana de todos los resultados (>= MIN_ITEMS_FOR_MEDIANA para fiabilidad)
+ *  4. Oportunidad = precio < mediana × THRESHOLD_OPORTUNIDAD (≥25% de descuento)
+ *  5. Deduplicar por external_id, ordenar por % descuento
+ *  6. Verificar activos contra API Wallapop (vendidos → descartar y limpiar caché)
+ *  7. Guardar TOP_N en top_oportunidades
  *
  * Ejecutar manualmente:
  *   npx tsx --env-file=.env.local scripts/top-oportunidades.ts
@@ -28,108 +22,46 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
-const MIN_PRICE         = 55    // mínimo 55€ para filtrar ruido
-const DESCUENTO_MIN     = 25   // % mínimo de descuento respecto al precio de tienda
-const TOP_N             = 10   // tamaño del ranking
-const MAX_POR_PALA_ID   = 1    // máximo 1 anuncio por modelo en el top (mejor score)
-const VERIFY_THROTTLE   = 250  // ms entre llamadas a la API de Wallapop
+const MIN_PRICE             = 30    // mínimo 30€ para filtrar ruido
+const MIN_ITEMS_FOR_MEDIANA = 5     // mínimo de anuncios para calcular mediana fiable
+const THRESHOLD_OPORTUNIDAD = 0.75  // precio < mediana × 0.75 → ≥25% de descuento
+const TOP_N                 = 10    // tamaño del ranking
+const VERIFY_THROTTLE       = 250   // ms entre llamadas a la API de Wallapop
 
 // Condiciones que entran al top
 const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 
-// Pesos por condición
-const PESO_CONDICION: Record<string, number> = {
-  new:            1.00,
-  un_opened:      1.00,
-  as_good_as_new: 0.60,
+// Modelos curados — lista de modelos a buscar con sus keywords.
+// Cada keyword debe aparecer en el título del anuncio (búsqueda AND, case-insensitive).
+// excludeKeywords (opcional): excluir anuncios cuyos títulos contengan alguna de estas palabras.
+interface Modelo {
+  nombre: string
+  keywords: string[]
+  excludeKeywords?: string[]
 }
 
-// Extrae el año del título si existe (2018-2029)
-function extraerAnio(title: string): number | null {
-  const match = title.match(/20(1[89]|2[0-9])/)
-  return match ? parseInt(match[0]) : null
-}
-
-function scoreAnio(title: string): number {
-  const anio = extraerAnio(title)
-  // Solo llegan aquí items con año >= 2024 (filtro duro previo)
-  if (anio === null) return 1.00  // no debería ocurrir, fallback neutro
-  if (anio >= 2025)  return 1.15
-  return 1.00  // 2024
-}
-
-
-function scoreRecencia(scrapedAt: string | null): number {
-  if (!scrapedAt) return 0.85
-  const dias = (Date.now() - new Date(scrapedAt).getTime()) / (1000 * 60 * 60 * 24)
-  if (dias <= 2) return 1.00
-  if (dias <= 7) return 0.85
-  return 0.60
-}
-
-function calcularScore(
-  descuentoPct: number,
-  condition: string,
-  title: string,
-  scrapedAt: string | null,
-  precioReferencia: number,
-  price: number,
-): number {
-  const pesoCondicion = PESO_CONDICION[condition] ?? 0.5
-  const pesoAnio      = scoreAnio(title)
-  const pesoRecencia  = scoreRecencia(scrapedAt)
-  const ahorroAbs     = precioReferencia - price
-  const bonusAhorro   = Math.log10(Math.max(ahorroAbs, 1) + 1)
-
-  return descuentoPct * pesoCondicion * pesoAnio * pesoRecencia * bonusAhorro
-}
-
-const EXCLUIR_PALABRAS = [
-  'junior', 'infantil', 'niño', 'niña', 'youth',  // palas infantiles/junior
-  'reparada', 'reparado', 'dañada', 'dañado',
-  'rota', 'roto', 'golpe', 'paletero', 'mochila', 'bolsa', 'zapatilla', 'zapatillas',
-  'funda', 'grip', 'bolas', 'pelota', 'pelotas', 'ropa',
-  'camiseta', 'muñequera', 'overgrip', 'protector', 'antivibrador', 'lote',
-  // Líneas/modelos de tenis de marcas que también hacen pádel
-  'flexpoint',         // Head Flexpoint (línea de tenis)
-  'titanium graphite', // Wilson Titanium Graphite (tenis)
-  'graphite ultra',    // Wilson (tenis)
-  'zapatilla',         // calzado deportivo
-  // Calzado en inglés (Vinted)
-  'shoe', 'shoes', 'footwear', 'sneaker', 'sneakers',
-  // Tenis en francés (Vinted)
-  'raquette de tennis', 'raquette tennis',
-  // Modelos tenis específicos
-  'ultra 99', 'ultra 100', 'ultra tour', 'bela tour',
-  'head prestige', 'padel shoes', 'padel shoe',
-  // Modelos de zapatilla de marcas de pádel (Bullpadel flow, etc.)
-  'hybrid fly', 'flow hybrid', 'flow speed', 'flow control', 'flow fast',
+const MODELOS: Modelo[] = [
+  { nombre: 'Bullpadel Vertex 04',      keywords: ['vertex', '04'] },
+  { nombre: 'Bullpadel Vertex 05',      keywords: ['vertex', '05'] },
+  { nombre: 'Bullpadel Hack 04',        keywords: ['hack', '04'] },
+  { nombre: 'Joma Tournament Iconic Pro', keywords: ['joma', 'tournament', 'iconic'] },
+  { nombre: 'Joma Blast Pro',           keywords: ['joma', 'blast', 'pro'] },
+  { nombre: 'Joma Hyper Pro',           keywords: ['joma', 'hyper', 'pro'] },
+  { nombre: 'Adidas Metalbone',         keywords: ['adidas', 'metalbone'], excludeKeywords: ['hrd'] },
+  { nombre: 'Adidas Metalbone HRD+',    keywords: ['metalbone', 'hrd'] },
 ]
 
-// Regex para detectar tallas de calzado: número entre 35 y 48 (con o sin ,5/.5)
-// Ej: "37,5" "38" "44.5" → zapatilla. "3.3" "2.0" → versión de pala (false negativo → no coincide)
-const TALLA_CALZADO_RE = /(?<![0-9])(3[5-9]|4[0-8])[,.]5?(?![0-9])/
-
-// Marcas que fabrican TANTO tenis como pádel.
-// Si el título contiene "raqueta" pero NO "padel"/"pala" → probable raqueta de tenis.
-const MARCAS_MULTIDEPORTE = new Set(['head', 'wilson', 'babolat', 'adidas', 'dunlop'])
+function calcMediana(precios: number[]): number | null {
+  if (precios.length < MIN_ITEMS_FOR_MEDIANA) return null
+  const sorted = [...precios].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2
+}
 
 function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
-}
-
-interface CacheItem {
-  external_id: string
-  title:       string
-  price:       number
-  condition:   string
-  platform:    string
-  img:         string | null
-  url:         string
-  city:        string | null
-  pala_id:     string
-  marca:       string | null
-  scraped_at:  string | null
 }
 
 async function isWallapopActive(externalId: string): Promise<boolean> {
@@ -159,8 +91,90 @@ async function isWallapopActive(externalId: string): Promise<boolean> {
   }
 }
 
+async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: Modelo): Promise<any[]> {
+  console.log(`\n🔍 Buscando: "${modelo.nombre}" [${modelo.keywords.join(' + ')}]...`)
+
+  let sb = supabase
+    .from('wallapop_cache')
+    .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at')
+    .in('condition', CONDICIONES_TOP)
+    .gte('price', MIN_PRICE)
+    .limit(500)
+
+  for (const word of modelo.keywords) {
+    sb = (sb as any).ilike('title', `%${word}%`)
+  }
+
+  const { data, error } = await (sb as any)
+
+  if (error) {
+    console.error(`  ❌ Error buscando "${modelo.nombre}":`, error)
+    return []
+  }
+
+  if (!data || data.length === 0) {
+    console.log(`  ⚪ Sin resultados`)
+    return []
+  }
+
+  // Aplicar excludeKeywords en cliente (filtro de exclusión post-query)
+  let items: any[] = data
+  if (modelo.excludeKeywords && modelo.excludeKeywords.length > 0) {
+    const antes = items.length
+    items = items.filter(item => {
+      const titleLower = item.title.toLowerCase()
+      return !modelo.excludeKeywords!.some(excl => titleLower.includes(excl.toLowerCase()))
+    })
+    if (items.length < antes) {
+      console.log(`  🚫 Excluidos ${antes - items.length} anuncios (keywords excluidas: ${modelo.excludeKeywords.join(', ')})`)
+    }
+  }
+
+  console.log(`  📦 ${items.length} anuncios en condición top`)
+
+  // Calcular mediana de todos los precios encontrados
+  const precios = items.map(item => item.price as number)
+  const mediana = calcMediana(precios)
+
+  if (mediana === null) {
+    console.log(`  ⚠️  Solo ${items.length} items (mínimo ${MIN_ITEMS_FOR_MEDIANA} para calcular mediana) — modelo ignorado`)
+    return []
+  }
+
+  console.log(`  📊 Mediana: ${Math.round(mediana)}€ sobre ${items.length} anuncios`)
+
+  // Filtrar oportunidades: precio < mediana × THRESHOLD
+  const umbral = mediana * THRESHOLD_OPORTUNIDAD
+  const oportunidades: any[] = []
+
+  for (const item of items) {
+    if (item.price >= umbral) continue
+
+    const descuento_pct = Math.round(((mediana - item.price) / mediana) * 100)
+
+    oportunidades.push({
+      external_id:  item.external_id,
+      title:        item.title,
+      price:        item.price,
+      precio_medio: Math.round(mediana * 100) / 100,
+      descuento_pct,
+      score:        descuento_pct,
+      condition:    item.condition,
+      platform:     item.platform,
+      img:          item.img ?? null,
+      url:          item.url,
+      city:         item.city ?? null,
+      keyword:      modelo.nombre,
+      pala_id:      item.pala_id ?? null,
+    })
+  }
+
+  console.log(`  💎 ${oportunidades.length} oportunidades (precio < ${Math.round(umbral)}€)`)
+  return oportunidades
+}
+
 async function main() {
-  console.log('🏆 HUNTPADEL — Top Oportunidades')
+  console.log('🏆 HUNTPADEL — Top Oportunidades (v2: modelos curados + mediana de segunda mano)')
   console.log(`📅 ${new Date().toISOString()}\n`)
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
@@ -174,174 +188,53 @@ async function main() {
 
   const posicionesAnteriores = new Map<string, number>()
   if (topActual) {
-    for (const row of topActual) {
+    for (const row of topActual as any[]) {
       if (row.external_id && row.posicion) {
         posicionesAnteriores.set(row.external_id, row.posicion)
       }
     }
   }
-  console.log(`  ${posicionesAnteriores.size} entradas en el top actual\n`)
+  console.log(`  ${posicionesAnteriores.size} entradas en el top actual`)
 
-  // ── 1. Leer palas.precio_referencia — mismo precio que usan las cards de chollos ──
-  // Se usa palas.precio_referencia (siempre actualizado por post-pipeline.ts en cada scrape)
-  // en lugar de price_reference.precio_referencia (tabla caché que puede estar desactualizada).
-  // fuentes_count se obtiene de price_reference vía join para el filtro de fiabilidad.
-  console.log('💰 Cargando precios de referencia de tiendas (palas.precio_referencia)...')
-  const { data: precios, error: preciosErr } = await supabase
-    .from('palas')
-    .select('id, precio_referencia, price_reference(fuentes_count)')
-    .not('precio_referencia', 'is', null)
-
-  if (preciosErr || !precios) {
-    console.error('❌ Error cargando palas/precio_referencia:', preciosErr)
-    process.exit(1)
-  }
-
-  // Mapa pala_id → precio_referencia (precio de tienda oficial)
-  // Requisito mínimo: al menos 2 fuentes distintas para que la referencia sea fiable.
-  // Con 1 sola fuente (ej. Roma Sport o Padel Coronado), el precio puede estar inflado.
-  const FUENTES_MINIMAS = 2
-  const preciosPorPalaId = new Map<string, number>()
-  let sinSuficientesFuentes = 0
-  for (const p of (precios as any[])) {
-    if (!p.id || !p.precio_referencia) continue
-    const prRef = Array.isArray(p.price_reference) ? p.price_reference[0] : p.price_reference
-    const fuentes = prRef?.fuentes_count ?? 1
-    if (fuentes < FUENTES_MINIMAS) {
-      sinSuficientesFuentes++
-      continue
-    }
-    preciosPorPalaId.set(p.id, Number(p.precio_referencia))
-  }
-  console.log(`  ${preciosPorPalaId.size} palas con precio de tienda (≥${FUENTES_MINIMAS} fuentes)`)
-  console.log(`  ${sinSuficientesFuentes} palas descartadas por tener <${FUENTES_MINIMAS} fuentes (precio poco fiable)\n`)
-
-  // ── 2. Leer candidatos de wallapop_cache — SOLO con pala_id ──────────────
-  console.log('📦 Leyendo wallapop_cache (solo anuncios con pala_id)...')
-  const { data: items, error } = await supabase
-    .from('wallapop_cache')
-    .select('external_id, title, price, condition, platform, img, url, city, pala_id, marca, scraped_at, match_confidence')
-    .in('condition', CONDICIONES_TOP)
-    .gte('price', MIN_PRICE)
-    .not('pala_id', 'is', null)
-    // Solo matches específicos: fuzzy_auto (Wallapop) y fuzzy_auto/fuzzy_match (Vinted)
-    // Excluir fuzzy_year_ambiguous (genéricos sin año → asignados al modelo más reciente, poco fiable)
-    .or('match_method.eq.fuzzy_auto,match_method.eq.manual_fix,match_method.is.null')
-
-  if (error || !items) {
-    console.error('❌ Error leyendo wallapop_cache:', error)
-    process.exit(1)
-  }
-
-  console.log(`📊 ${items.length} anuncios con pala_id en condición top con precio ≥ ${MIN_PRICE}€\n`)
-
-  // ── 3. Calcular oportunidades contra precio de tienda ────────────────────
-  console.log('🔍 Calculando oportunidades contra precio de referencia de tienda...\n')
+  // ── 1. Buscar oportunidades por cada modelo curado ────────────────────────
+  console.log(`\n🎯 Procesando ${MODELOS.length} modelos curados...`)
 
   const todasOportunidades: any[] = []
-  let sinPrecioTienda = 0
-
-  for (const item of items as CacheItem[]) {
-    const titleLower = item.title.toLowerCase()
-    if (EXCLUIR_PALABRAS.some(p => titleLower.includes(p))) continue
-
-    // Guard: tallas de calzado (35–48) → zapatilla
-    if (TALLA_CALZADO_RE.test(item.title)) continue
-
-    // Guard: marcas multideporte (Head, Wilson, Babolat, Adidas, Dunlop).
-    // Si el título dice "raqueta" pero NO "padel"/"pala" → es raqueta de tenis, descartar.
-    const marcaNorm = (item.marca ?? '').toLowerCase().trim()
-    if (
-      marcaNorm && MARCAS_MULTIDEPORTE.has(marcaNorm) &&
-      titleLower.includes('raqueta') &&
-      !titleLower.includes('padel') &&
-      !titleLower.includes('pala')
-    ) continue
-
-    // Filtro duro: el título DEBE incluir año 2024+ (sin año = excluido)
-    const anioAnuncio = extraerAnio(item.title)
-    if (anioAnuncio === null || anioAnuncio < 2024) continue
-
-    // Precio oficial de tienda para esta pala
-    const precioTienda = preciosPorPalaId.get(item.pala_id)
-    if (!precioTienda) {
-      sinPrecioTienda++
-      continue  // sin precio de tienda → no podemos calcular descuento real
-    }
-
-    // Descuento respecto al precio de tienda
-    if (item.price >= precioTienda * (1 - DESCUENTO_MIN / 100)) continue
-
-    const descuentoPct = Math.round(((precioTienda - item.price) / precioTienda) * 100)
-    const score = calcularScore(
-      descuentoPct,
-      item.condition,
-      item.title,
-      item.scraped_at,
-      precioTienda,
-      item.price,
-    )
-
-    const anio = extraerAnio(item.title)
-    todasOportunidades.push({
-      external_id:   item.external_id,
-      title:         item.title,
-      price:         item.price,
-      precio_medio:  precioTienda,   // precio de referencia de tienda (precio "nuevo")
-      descuento_pct: descuentoPct,
-      score:         Math.round(score * 100) / 100,
-      condition:     item.condition,
-      platform:      item.platform,
-      img:           item.img,
-      url:           item.url,
-      city:          item.city,
-      keyword:       anio
-        ? `${item.marca ?? ''} ${anio}`.trim()
-        : (item.marca ?? item.title.substring(0, 30)),
-      pala_id:       item.pala_id,
-    })
+  for (const modelo of MODELOS) {
+    const ops = await buscarModelo(supabase, modelo)
+    todasOportunidades.push(...ops)
   }
 
-  console.log(`  💎 ${todasOportunidades.length} oportunidades encontradas`)
-  console.log(`  ⚠️  ${sinPrecioTienda} anuncios sin precio de tienda (excluidos)`)
+  console.log(`\n✅ ${todasOportunidades.length} oportunidades totales encontradas`)
 
-  // ── 4. Deduplicar y ordenar por score ────────────────────────────────────
+  if (todasOportunidades.length === 0) {
+    console.log('⚠️  Sin oportunidades — no se actualiza la tabla.')
+    return
+  }
+
+  // ── 2. Deduplicar por external_id (mayor descuento gana si aparece en varios modelos) ──
   const deduplicado = new Map<string, any>()
   for (const op of todasOportunidades) {
     const existing = deduplicado.get(op.external_id)
-    if (!existing || op.score > existing.score) {
+    if (!existing || op.descuento_pct > existing.descuento_pct) {
       deduplicado.set(op.external_id, op)
     }
   }
 
   const candidatos = Array.from(deduplicado.values())
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.descuento_pct - a.descuento_pct)
 
-  // Diversidad: máximo MAX_POR_PALA_ID anuncios del mismo modelo en los candidatos a verificar
-  const conteoPorPalaId = new Map<string, number>()
-  const candidatosDiversos = candidatos.filter(op => {
-    const count = conteoPorPalaId.get(op.pala_id) ?? 0
-    if (count >= MAX_POR_PALA_ID) return false
-    conteoPorPalaId.set(op.pala_id, count + 1)
-    return true
-  })
+  console.log(`📋 ${candidatos.length} candidatos únicos, ordenados por % descuento`)
 
-  console.log(`\n📋 ${candidatos.length} candidatos únicos → ${candidatosDiversos.length} tras deduplicar por modelo (1 por pala_id, mejor score)`)
-
-  if (candidatosDiversos.length === 0) {
-    console.log('⚠️  Sin candidatos — no se actualiza la tabla.')
-    return
-  }
-
-  // ── 5. Verificar activos contra la API ───────────────────────────────────
-  const maxVerificar = Math.min(candidatosDiversos.length, TOP_N * 3)
+  // ── 3. Verificar activos contra la API Wallapop ───────────────────────────
+  const maxVerificar = Math.min(candidatos.length, TOP_N * 3)
   console.log(`\n🔍 Verificando hasta ${maxVerificar} candidatos contra la API de Wallapop...\n`)
 
   const top: any[] = []
   const vendidosABorrar: string[] = []
 
   for (let i = 0; i < maxVerificar && top.length < TOP_N; i++) {
-    const candidato = candidatosDiversos[i]
+    const candidato = candidatos[i]
 
     if (candidato.platform !== 'wallapop') {
       top.push(candidato)
@@ -350,7 +243,8 @@ async function main() {
 
     process.stdout.write(
       `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
-      ` (score: ${candidato.score}, ${candidato.descuento_pct}% dto vs tienda, ${candidato.condition})... `
+      ` (${candidato.descuento_pct}% dto vs mediana ${Math.round(candidato.precio_medio)}€,` +
+      ` ${candidato.condition}, [${candidato.keyword}])... `
     )
     const activo = await isWallapopActive(candidato.external_id)
 
@@ -365,7 +259,7 @@ async function main() {
     await sleep(VERIFY_THROTTLE)
   }
 
-  // ── 6. Calcular tendencia tipo ranking musical ────────────────────────────
+  // ── 4. Calcular tendencias tipo ranking musical ───────────────────────────
   const ahora = new Date().toISOString()
 
   console.log(`\n🏆 Top ${top.length} final con tendencias:`)
@@ -397,8 +291,8 @@ async function main() {
     }[tendencia]
 
     console.log(
-      `  ${posicionNueva}. ${tendenciaLabel} [score: ${op.score}] ` +
-      `${op.title} — ${op.price}€ (precio tienda: ${op.precio_medio}€, ${op.descuento_pct}% dto, ${op.condition})`
+      `  ${posicionNueva}. ${tendenciaLabel} ${op.title} — ${op.price}€` +
+      ` (mediana: ${Math.round(op.precio_medio)}€, -${op.descuento_pct}%, [${op.keyword}])`
     )
 
     return {
@@ -411,7 +305,7 @@ async function main() {
     }
   })
 
-  // ── 7. Limpiar vendidos de wallapop_cache ─────────────────────────────────
+  // ── 5. Limpiar vendidos de wallapop_cache ─────────────────────────────────
   if (vendidosABorrar.length > 0) {
     console.log(`\n🗑️  Eliminando ${vendidosABorrar.length} anuncios vendidos de wallapop_cache...`)
     const { error: delErr } = await supabase
@@ -425,7 +319,7 @@ async function main() {
     }
   }
 
-  // ── 8. Guardar el Top en la BD ────────────────────────────────────────────
+  // ── 6. Guardar el Top en la BD ────────────────────────────────────────────
   if (topConTendencia.length === 0) {
     console.log('\n⚠️  Top vacío — no se actualiza la tabla.')
     return
@@ -433,12 +327,12 @@ async function main() {
 
   console.log(`\n💾 Guardando top ${topConTendencia.length} en top_oportunidades...`)
 
-  // Borrar entradas anteriores que ya no están en el top
-  const idsNuevos = topConTendencia.map(op => op.external_id)
+  // Borrar entradas anteriores que ya no están en el nuevo top
+  const idsNuevos = topConTendencia.map((op: any) => op.external_id)
   const { error: deleteErr } = await supabase
     .from('top_oportunidades')
     .delete()
-    .not('external_id', 'in', `(${idsNuevos.map(id => `"${id}"`).join(',')})`)
+    .not('external_id', 'in', `(${idsNuevos.map((id: string) => `"${id}"`).join(',')})`)
 
   if (deleteErr) {
     console.error('  ⚠️  Error borrando entradas antiguas:', deleteErr)
