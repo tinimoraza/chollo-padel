@@ -31,9 +31,20 @@ const VERIFY_THROTTLE       = 250   // ms entre llamadas a la API de Wallapop
 // Condiciones que entran al top
 const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 
+// Palabras que se excluyen SIEMPRE en todos los modelos (ruido / no pala adulta)
+// Se aplican en buscarModelo() antes de las excludeKeywords específicas del modelo.
+const EXCLUIR_SIEMPRE = [
+  // Junior / infantil
+  'junior', ' jr ', ' jr.', '-jr', 'infantil', 'niño', 'niña', 'youth', 'kids',
+  // Para reparar / dañada
+  'reparar', 'reparación', 'reparada', 'reparado', 'para piezas',
+  'rota', 'roto', 'dañada', 'dañado', 'fisura', 'crack', 'golpe',
+]
+
 // Modelos curados — lista de modelos a buscar con sus keywords.
-// Cada keyword debe aparecer en el título del anuncio (búsqueda AND, case-insensitive).
-// excludeKeywords (opcional): excluir anuncios cuyos títulos contengan alguna de estas palabras.
+// Cada keyword debe aparecer en el título (búsqueda AND, case-insensitive).
+// excludeKeywords: excluir anuncios cuyo título contenga alguna de estas palabras.
+// Las EXCLUIR_SIEMPRE se aplican a todos además de estas.
 interface Modelo {
   nombre: string
   keywords: string[]
@@ -41,14 +52,44 @@ interface Modelo {
 }
 
 const MODELOS: Modelo[] = [
-  { nombre: 'Bullpadel Vertex 04',      keywords: ['vertex', '04'] },
-  { nombre: 'Bullpadel Vertex 05',      keywords: ['vertex', '05'] },
-  { nombre: 'Bullpadel Hack 04',        keywords: ['hack', '04'] },
+  // ── Bullpadel ──────────────────────────────────────────────────────────────
+  { nombre: 'Bullpadel Vertex 04', keywords: ['vertex', '04'] },
+  { nombre: 'Bullpadel Vertex 05', keywords: ['vertex', '05'] },
+  { nombre: 'Bullpadel Hack 04',   keywords: ['hack', '04'] },
+
+  // ── Joma ───────────────────────────────────────────────────────────────────
   { nombre: 'Joma Tournament Iconic Pro', keywords: ['joma', 'tournament', 'iconic'] },
-  { nombre: 'Joma Blast Pro',           keywords: ['joma', 'blast', 'pro'] },
-  { nombre: 'Joma Hyper Pro',           keywords: ['joma', 'hyper', 'pro'] },
-  { nombre: 'Adidas Metalbone',         keywords: ['adidas', 'metalbone'], excludeKeywords: ['hrd'] },
-  { nombre: 'Adidas Metalbone HRD+',    keywords: ['metalbone', 'hrd'] },
+  { nombre: 'Joma Blast Pro',             keywords: ['joma', 'blast', 'pro'] },
+  { nombre: 'Joma Hyper Pro',             keywords: ['joma', 'hyper', 'pro'] },
+
+  // ── Adidas Metalbone — un slot por submodelo, cada uno con su propia mediana ──
+  // Metalbone "puro" (3.3 / 3.4 / 3.5 / 09 sin variante especial)
+  { nombre: 'Adidas Metalbone',
+    keywords: ['adidas', 'metalbone'],
+    excludeKeywords: ['hrd', 'team', 'ctrl', 'carbon', 'light', 'lite',
+                      'reserve', 'green', 'edt', 'master', 'super'] },
+
+  // HRD+ — variante de ataque premium
+  { nombre: 'Adidas Metalbone HRD+',
+    keywords: ['metalbone', 'hrd'] },
+
+  // CTRL — variante de control (sin Carbon, que es otro submodelo)
+  { nombre: 'Adidas Metalbone CTRL',
+    keywords: ['metalbone', 'ctrl'],
+    excludeKeywords: ['carbon'] },
+
+  // Carbon — variante estructural (CTRL Carbon / 3.x Carbon)
+  { nombre: 'Adidas Metalbone Carbon',
+    keywords: ['metalbone', 'carbon'] },
+
+  // Team — gama media (sin Light, que tiene su propio slot)
+  { nombre: 'Adidas Metalbone Team',
+    keywords: ['metalbone', 'team'],
+    excludeKeywords: ['light', 'lite'] },
+
+  // Team Light — la versión ligera de la gama media
+  { nombre: 'Adidas Metalbone Team Light',
+    keywords: ['metalbone', 'team', 'light'] },
 ]
 
 function calcMediana(precios: number[]): number | null {
@@ -117,16 +158,17 @@ async function buscarModelo(supabase: ReturnType<typeof createClient>, modelo: M
     return []
   }
 
-  // Aplicar excludeKeywords en cliente (filtro de exclusión post-query)
+  // Aplicar filtros de exclusión en cliente (EXCLUIR_SIEMPRE + excludeKeywords del modelo)
   let items: any[] = data
-  if (modelo.excludeKeywords && modelo.excludeKeywords.length > 0) {
+  const todosExcluidos = [...EXCLUIR_SIEMPRE, ...(modelo.excludeKeywords ?? [])]
+  {
     const antes = items.length
     items = items.filter(item => {
       const titleLower = item.title.toLowerCase()
-      return !modelo.excludeKeywords!.some(excl => titleLower.includes(excl.toLowerCase()))
+      return !todosExcluidos.some(excl => titleLower.includes(excl.toLowerCase()))
     })
     if (items.length < antes) {
-      console.log(`  🚫 Excluidos ${antes - items.length} anuncios (keywords excluidas: ${modelo.excludeKeywords.join(', ')})`)
+      console.log(`  🚫 Excluidos ${antes - items.length} anuncios (ruido/junior/reparar + exclusiones del modelo)`)
     }
   }
 
