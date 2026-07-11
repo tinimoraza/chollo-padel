@@ -83,7 +83,8 @@ const MODELOS: Modelo[] = [
   { nombre: 'Babolat Air Viper 2025',                  phrase: 'air viper 2025' },
   { nombre: 'Babolat Air Viper 2026',                  phrase: 'air viper 2026' },
   { nombre: 'Babolat Air Vertuo 2026',                 phrase: 'air vertuo 2026' },
-  { nombre: 'Babolat Viper Juan Lebron',               phrase: 'viper juan lebr',              excludeKeywords: ['2026'] },
+  { nombre: 'Babolat Viper Juan Lebron 3.0',  phrase: 'viper juan lebron 3.0' },
+  { nombre: 'Babolat Viper Juan Lebron 2025', phrase: 'viper juan lebron 2025' },
   { nombre: 'Babolat Viper Juan Lebron 2026',          phrase: 'viper juan lebron 2026' },
 
   // ── Nox ───────────────────────────────────────────────────────────────────
