@@ -209,14 +209,26 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     <div style={{ color: 'var(--muted)', fontSize: 13, fontFamily: "'Barlow', sans-serif" }}>Sin historial disponible.</div>
   )
 
-  let minRow: { precio: number; nombre: string; url: string; fecha: string; codigo: string | null } | null = null
+  let minRow: { precio: number; nombre: string; url: string; codigo: string | null } | null = null
+  let minLastFecha = ''
+  let minLastDay   = ''
+
   for (const row of rows) {
-    const p = precioEfectivo(row)
+    const p   = precioEfectivo(row)
+    const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
+    const d   = new Date(row.scraped_at)
+    const fecha = `${d.getDate()} ${MESES[d.getMonth()]}`
+    const day   = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
+
     if (!minRow || p < minRow.precio) {
-      const src = Array.isArray(row.price_sources) ? row.price_sources[0] : row.price_sources
-      const d = new Date(row.scraped_at)
       minRow = { precio: p, nombre: src?.nombre ?? '', url: row.url_producto,
-        fecha: `${d.getDate()} ${MESES[d.getMonth()]}`, codigo: row.codigo_descuento ?? null }
+        codigo: row.codigo_descuento ?? null }
+      minLastFecha = fecha
+      minLastDay   = day
+    } else if (p === minRow.precio) {
+      // misma cifra mínima en fecha posterior → actualizar "ltima vez a ese precio"
+      minLastFecha = fecha
+      minLastDay   = day
     }
   }
 
@@ -224,8 +236,6 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   for (const row of rows) {
     const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    // Usar precio PVP bruto (sin aplicar código de descuento) para que la media
-    // del gráfico coincida con precio_referencia de la card (misma fórmula)
     byDay.get(day)!.push(Number(row.precio))
   }
   const pvpPoints = Array.from(byDay.entries())
@@ -267,7 +277,8 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     : Array.from({ length: numXT }, (_, i) =>
         pvpPoints[Math.round(i / (numXT - 1) * (pvpPoints.length - 1))])
 
-  const minY = Math.max(toY(minRow!.precio), PAD.top + 2)
+  const minY    = Math.max(toY(minRow!.precio), PAD.top + 2)
+  const minDotX = Math.min(toX(new Date(minLastDay).getTime()), W - PAD.right)
   const lblAbove = minY > PAD.top + cH - 30
 
   return (
@@ -282,7 +293,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
           {minRow!.precio.toFixed(2)}€
         </span>
         <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>
-          en {minRow!.nombre} · {minRow!.fecha}
+          en {minRow!.nombre} · {minLastFecha}
           {minRow!.codigo && (
             <span style={{ marginLeft: 8, background: 'rgba(80,120,0,0.12)', color: 'var(--accent-fg)',
               fontSize: 10, letterSpacing: 1, padding: '2px 6px', fontWeight: 700, borderRadius: 3 }}>
@@ -327,7 +338,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             )
           })}
           <line
-            x1={PAD.left} x2={W - PAD.right}
+            x1={PAD.left} x2={minDotX.toFixed(1)}
             y1={minY.toFixed(1)} y2={minY.toFixed(1)}
             stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.65"
             clipPath="url(#hchart-clip-det)" />
@@ -335,7 +346,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             x={(PAD.left + 6).toFixed(1)}
             y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
             fill="#4E7400" fontSize="9.5" fontFamily="Space Grotesk, sans-serif" opacity="0.85">
-            Minimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minRow!.fecha}
+            Minimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minLastFecha}
           </text>
           {pvpPoints.length >= 2 && (
             <path d={pvpPath} fill="none" stroke="#60A5FA" strokeWidth="2"
@@ -346,9 +357,9 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
               cx={toX(pt.ts).toFixed(1)} cy={toY(pt.precio).toFixed(1)}
               r="3" fill="#60A5FA" clipPath="url(#hchart-clip-det)" />
           ))}
-          <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+          <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
             r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
-          <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+          <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
             r="2.5" fill="#4E7400" />
         </svg>
       </div>
