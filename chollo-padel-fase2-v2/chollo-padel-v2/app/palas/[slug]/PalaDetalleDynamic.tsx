@@ -191,7 +191,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
       .neq('source_id', 2)
       .gte('scraped_at', since)
       .order('scraped_at', { ascending: true })
-      .limit(800)
+      .limit(3000)
       .then(({ data, error }) => {
         if (!active) return
         if (!error) setRows(data ?? [])
