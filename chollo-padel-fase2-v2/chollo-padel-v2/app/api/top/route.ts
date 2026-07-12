@@ -1,6 +1,6 @@
 /**
  * app/api/top/route.ts
- * GET /api/top — Devuelve el Top 10 de oportunidades actual
+ * GET /api/top — Devuelve el Top 40 de oportunidades actual
  */
 
 import { NextResponse } from 'next/server'
@@ -14,7 +14,7 @@ export async function GET() {
     .from('top_oportunidades')
     .select('*')
     .order('posicion', { ascending: true })
-    .limit(10)
+    .limit(40)
 
   if (error) {
     return NextResponse.json({ error: 'Error leyendo top oportunidades' }, { status: 500 })

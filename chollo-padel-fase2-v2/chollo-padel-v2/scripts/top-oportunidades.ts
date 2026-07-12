@@ -16,7 +16,7 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 const MIN_PRICE             = 30
 const MIN_ITEMS_FOR_MEDIANA = 5
 const THRESHOLD_OPORTUNIDAD = 0.75
-const TOP_N                 = 10
+const TOP_N                 = 40
 const VERIFY_THROTTLE       = 250
 
 const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']

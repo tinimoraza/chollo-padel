@@ -33,7 +33,6 @@ const CONDITION_LABEL: Record<string, string> = {
   has_given_it_all: 'Para piezas',
 }
 
-// Color del badge de condición — new/sin abrir en acento, resto en muted
 const CONDITION_COLOR: Record<string, string> = {
   new:            'var(--accent-fg)',
   un_opened:      'var(--accent-fg)',
@@ -55,18 +54,18 @@ function TendenciaBadge({ tendencia, puestosMovidos }: {
 }) {
   if (!tendencia || tendencia === 'igual') {
     return (
-      <div style={{ width: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        <span style={{ fontSize: 14, color: 'var(--faint)', lineHeight: 1 }}>—</span>
+      <div style={{ width: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <span style={{ fontSize: 12, color: 'var(--faint)', lineHeight: 1 }}>—</span>
       </div>
     )
   }
 
   if (tendencia === 'nueva_entrada') {
     return (
-      <div style={{ width: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <span style={{ fontSize: 11, lineHeight: 1 }}>🆕</span>
+      <div style={{ width: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <span style={{ fontSize: 10, lineHeight: 1 }}>🆕</span>
         <span style={{
-          fontSize: 8, fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 0.5,
+          fontSize: 7, fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 0.5,
           color: 'var(--accent-fg)', fontWeight: 700, lineHeight: 1, textAlign: 'center',
         }}>NEW</span>
       </div>
@@ -75,22 +74,21 @@ function TendenciaBadge({ tendencia, puestosMovidos }: {
 
   if (tendencia === 'sube') {
     return (
-      <div style={{ width: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        <span style={{ fontSize: 16, lineHeight: 1, color: '#15803D' }}>▲</span>
+      <div style={{ width: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <span style={{ fontSize: 13, lineHeight: 1, color: '#15803D' }}>▲</span>
         <span style={{
-          fontSize: 11, fontFamily: 'Bebas Neue, sans-serif',
+          fontSize: 10, fontFamily: 'Bebas Neue, sans-serif',
           color: '#15803D', lineHeight: 1,
         }}>+{puestosMovidos}</span>
       </div>
     )
   }
 
-  // baja
   return (
-    <div style={{ width: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-      <span style={{ fontSize: 16, lineHeight: 1, color: '#DC2626' }}>▼</span>
+    <div style={{ width: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+      <span style={{ fontSize: 13, lineHeight: 1, color: '#DC2626' }}>▼</span>
       <span style={{
-        fontSize: 11, fontFamily: 'Bebas Neue, sans-serif',
+        fontSize: 10, fontFamily: 'Bebas Neue, sans-serif',
         color: '#DC2626', lineHeight: 1,
       }}>{puestosMovidos}</span>
     </div>
@@ -101,22 +99,22 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     minHeight: '100vh',
     background: 'var(--bg)',
-    padding: '32px 24px',
-    maxWidth: 900,
+    padding: '28px 20px',
+    maxWidth: 1080,
     margin: '0 auto',
   },
-  header: { marginBottom: 32 },
+  header: { marginBottom: 24 },
   title: {
     fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 40, letterSpacing: 4, color: 'var(--gold)', lineHeight: 1, margin: 0,
+    fontSize: 38, letterSpacing: 4, color: 'var(--gold)', lineHeight: 1, margin: 0,
   },
   subtitle: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 13, letterSpacing: 2, color: 'var(--muted)', marginTop: 8,
+    fontSize: 12, letterSpacing: 2, color: 'var(--muted)', marginTop: 6,
   },
   updatedAt: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 12, letterSpacing: 1, color: 'var(--faint)', marginTop: 4,
+    fontSize: 11, letterSpacing: 1, color: 'var(--faint)', marginTop: 4,
   },
   emptyState: {
     textAlign: 'center' as const,
@@ -124,12 +122,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 16, letterSpacing: 2, marginTop: 80,
   },
-  list: { display: 'flex', flexDirection: 'column' as const, gap: 12 },
+  list: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))',
+    gap: 8,
+  },
   card: {
     background: 'var(--card)',
     border: '1px solid var(--border)',
-    borderRadius: 10,
-    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+    borderRadius: 8,
+    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
     textDecoration: 'none', color: 'inherit',
     transition: 'box-shadow 0.2s, border-color 0.2s',
     position: 'relative' as const, overflow: 'hidden',
@@ -137,59 +139,59 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rank: {
     fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 28, color: 'var(--faint)',
-    minWidth: 32, textAlign: 'center' as const, lineHeight: 1,
+    fontSize: 22, color: 'var(--faint)',
+    minWidth: 28, textAlign: 'center' as const, lineHeight: 1,
   },
-  tendenciaCol: { minWidth: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  tendenciaCol: { minWidth: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   img: {
-    width: 72, height: 72, objectFit: 'cover' as const,
-    borderRadius: 6, background: 'var(--bg3)', flexShrink: 0,
+    width: 56, height: 56, objectFit: 'cover' as const,
+    borderRadius: 5, background: 'var(--bg3)', flexShrink: 0,
   },
   imgPlaceholder: {
-    width: 72, height: 72, borderRadius: 6, background: 'var(--bg3)',
-    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+    width: 56, height: 56, borderRadius: 5, background: 'var(--bg3)',
+    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
   },
   info: { flex: 1, minWidth: 0 },
   itemTitle: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 16, fontWeight: 600, letterSpacing: 0.5, color: 'var(--text)',
-    whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4,
+    fontSize: 13, fontWeight: 600, letterSpacing: 0.3, color: 'var(--text)',
+    whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 3,
   },
-  meta: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const },
+  meta: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
   condBadge: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 11, letterSpacing: 1, padding: '1px 7px', borderRadius: 3,
+    fontSize: 10, letterSpacing: 1, padding: '1px 6px', borderRadius: 3,
   },
   platformBadge: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 11, letterSpacing: 1, color: 'var(--accent-fg)', opacity: 0.8,
+    fontSize: 10, letterSpacing: 1, color: 'var(--accent-fg)', opacity: 0.8,
   },
   cityText: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 11, color: 'var(--faint)', letterSpacing: 0.5,
+    fontSize: 10, color: 'var(--faint)', letterSpacing: 0.5,
   },
   priceBlock: { textAlign: 'right' as const, flexShrink: 0 },
   price: {
     fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 26, fontWeight: 700, color: 'var(--gold)', lineHeight: 1,
+    fontSize: 22, fontWeight: 700, color: 'var(--gold)', lineHeight: 1,
   },
   precioMedio: {
     fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: 13, color: 'var(--muted)', textDecoration: 'line-through', marginTop: 2,
+    fontSize: 11, color: 'var(--muted)', textDecoration: 'line-through', marginTop: 1,
   },
   discountBadge: {
     fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: 13, letterSpacing: 1, color: '#000',
-    background: '#FFB800', padding: '2px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block',
+    fontSize: 12, letterSpacing: 1, color: '#000',
+    background: '#FFB800', padding: '1px 7px', borderRadius: 3, marginTop: 3, display: 'inline-block',
   },
   accentBar: {
     position: 'absolute' as const, left: 0, top: 0, bottom: 0,
-    width: 3, background: '#FFB800', borderRadius: '10px 0 0 10px',
+    width: 3, background: '#FFB800', borderRadius: '8px 0 0 8px',
   },
   skeleton: {
     background: 'linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%)',
     backgroundSize: '200% 100%',
-    borderRadius: 10, height: 102,
+    borderRadius: 8, height: 78,
   },
 }
 
@@ -222,12 +224,12 @@ export default function TopPage() {
         <div style={styles.header}>
           <h1 style={styles.title}>🏆 TOP OPORTUNIDADES</h1>
           <p style={styles.subtitle}>
-            LOS {items.length || 10} MEJORES CHOLLOS DE SEGUNDA MANO · ACTUALIZADO CADA HORA
+            LOS {items.length || 40} MEJORES CHOLLOS DE SEGUNDA MANO · ACTUALIZADO CADA HORA
           </p>
           {!loading && items.length > 0 && (nuevas > 0 || suben > 0 || bajan > 0) && (
             <p style={{
-              fontFamily: 'Space Grotesk, sans-serif', fontSize: 12, letterSpacing: 1,
-              color: 'var(--faint)', marginTop: 6, display: 'flex', gap: 12,
+              fontFamily: 'Space Grotesk, sans-serif', fontSize: 11, letterSpacing: 1,
+              color: 'var(--faint)', marginTop: 5, display: 'flex', gap: 12,
             }}>
               {nuevas > 0 && <span style={{ color: 'var(--accent-fg)' }}>🆕 {nuevas} nueva{nuevas > 1 ? 's' : ''}</span>}
               {suben > 0  && <span style={{ color: '#15803D' }}>▲ {suben} sube{suben > 1 ? 'n' : ''}</span>}
@@ -241,7 +243,7 @@ export default function TopPage() {
 
         {loading ? (
           <div style={styles.list}>
-            {[...Array(5)].map((_, i) => (
+            {[...Array(10)].map((_, i) => (
               <div key={i} style={styles.skeleton} />
             ))}
           </div>
@@ -338,7 +340,7 @@ export default function TopPage() {
         )}
 
         <p style={{
-          marginTop: 32, fontSize: 12, color: 'var(--faint)',
+          marginTop: 28, fontSize: 11, color: 'var(--faint)',
           fontFamily: 'Space Grotesk, sans-serif', letterSpacing: 1,
         }}>
           El % de descuento se calcula sobre la mediana de precios de segunda mano del mismo modelo en Wallapop.
