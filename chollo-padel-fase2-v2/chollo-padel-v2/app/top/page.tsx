@@ -243,7 +243,7 @@ export default function TopPage() {
 
         {loading ? (
           <div style={styles.list}>
-            {[...Array(10)].map((_, i) => (
+            {[...Array(20)].map((_, i) => (
               <div key={i} style={styles.skeleton} />
             ))}
           </div>
