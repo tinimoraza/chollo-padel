@@ -201,7 +201,7 @@ export default async function PalaPage({ params }: { params: { slug: string } })
   const precio = Number(pala.precio_referencia) > 0
     ? Number(pala.precio_referencia)
     : Number(pala.precio_pvp)
-  const precioLabel = Number(pala.precio_referencia) > 0 ? 'precio medio tiendas' : 'PVP'
+  const precioLabel = Number(pala.precio_referencia) > 0 ? 'precio medio diario tiendas' : 'PVP'
   const año = (pala as any)['año'] ?? (pala as any).ano ?? 0
   const tieneRatings =
     pala.rating_potencia > 0 ||
