@@ -21,6 +21,9 @@ const VERIFY_THROTTLE       = 250
 
 const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 
+// Bonus de score para anuncios NUEVOS (sube posiciones en el TOP respecto a casi-nuevos)
+const BONUS_NEW = 8
+
 const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bjunior\b/i,
   /\bj\.?r\.?\b/i,
@@ -415,7 +418,7 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
       price:        item.price,
       precio_medio: Math.round(mediana * 100) / 100,
       descuento_pct,
-      score:        descuento_pct,
+      score:        descuento_pct + (item.condition === 'new' ? BONUS_NEW : 0),
       condition:    item.condition,
       platform:     item.platform,
       img:          item.img ?? null,
@@ -562,7 +565,6 @@ async function main() {
     console.error('Error guardando:', insertErr)
     process.exit(1)
   }
-
   console.log(`Top ${topConTendencia.length} guardado correctamente.`)
 }
 
