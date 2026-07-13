@@ -338,7 +338,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             )
           })}
           <line
-            x1={PAD.left} x2={minDotX.toFixed(1)}
+            x1={PAD.left} x2={W - PAD.right}
             y1={minY.toFixed(1)} y2={minY.toFixed(1)}
             stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.65"
             clipPath="url(#hchart-clip-det)" />
