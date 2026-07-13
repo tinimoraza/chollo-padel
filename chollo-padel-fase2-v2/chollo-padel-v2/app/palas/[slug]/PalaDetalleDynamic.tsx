@@ -253,7 +253,15 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
 
-  const allPrices = [...pvpPoints.map(p => p.precio), minRow!.precio]
+  // Mínimo diario: precio más barato disponible cada día
+  const minDayPoints = Array.from(byDay.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, prices]) => ({
+      ts: new Date(day).getTime(),
+      precio: Math.min(...prices),
+    }))
+
+  const allPrices = [...pvpPoints.map(p => p.precio), ...minDayPoints.map(p => p.precio)]
   const rawMin = Math.min(...allPrices)
   const rawMax = Math.max(...allPrices)
   const pRange = rawMax - rawMin || 10
@@ -278,9 +286,11 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     : Array.from({ length: numXT }, (_, i) =>
         pvpPoints[Math.round(i / (numXT - 1) * (pvpPoints.length - 1))])
 
-  const minY    = Math.max(toY(minRow!.precio), PAD.top + 2)
-  const minDotX = Math.min(toX(new Date(minLastDay).getTime()), W - PAD.right)
-  const lblAbove = minY > PAD.top + cH - 30
+  // Path de la línea verde (mínimo diario)
+  const minPath = minDayPoints.map((pt, i) =>
+    `${i === 0 ? 'M' : 'L'} ${toX(pt.ts).toFixed(1)},${toY(pt.precio).toFixed(1)}`
+  ).join(' ')
+  const lastMinPt = minDayPoints[minDayPoints.length - 1]
 
   const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -351,17 +361,11 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
               </text>
             )
           })}
-          <line
-            x1={PAD.left} x2={W - PAD.right}
-            y1={minY.toFixed(1)} y2={minY.toFixed(1)}
-            stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.65"
-            clipPath="url(#hchart-clip-det)" />
-          <text
-            x={(PAD.left + 6).toFixed(1)}
-            y={lblAbove ? (minY - 5).toFixed(1) : (minY + 13).toFixed(1)}
-            fill="#4E7400" fontSize="9.5" fontFamily="Space Grotesk, sans-serif" opacity="0.85">
-            Minimo · {minRow!.precio.toFixed(2)}€ · {minRow!.nombre} · {minLastFecha}
-          </text>
+          {minDayPoints.length >= 2 && (
+            <path d={minPath} fill="none" stroke="#4E7400" strokeWidth="1.5"
+              strokeDasharray="5 4" opacity="0.8" strokeLinejoin="round" strokeLinecap="round"
+              clipPath="url(#hchart-clip-det)" />
+          )}
           {pvpPoints.length >= 2 && (
             <path d={pvpPath} fill="none" stroke="#60A5FA" strokeWidth="2"
               strokeLinejoin="round" strokeLinecap="round" clipPath="url(#hchart-clip-det)" />
@@ -371,18 +375,18 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
               cx={toX(pt.ts).toFixed(1)} cy={toY(pt.precio).toFixed(1)}
               r="3" fill="#60A5FA" clipPath="url(#hchart-clip-det)" />
           ))}
-          <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
-            r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
-          <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
-            r="2.5" fill="#4E7400" />
-          {Math.abs(minDotX - (W - PAD.right)) > 10 && (
-            <>
-              <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
-                r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
-              <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
-                r="2.5" fill="#4E7400" />
-            </>
-          )}
+          {lastMinPt && (() => {
+            const lx = toX(lastMinPt.ts)
+            const ly = toY(lastMinPt.precio)
+            return (
+              <>
+                <circle cx={lx.toFixed(1)} cy={ly.toFixed(1)}
+                  r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
+                <circle cx={lx.toFixed(1)} cy={ly.toFixed(1)}
+                  r="2.5" fill="#4E7400" />
+              </>
+            )
+          })()}
           {hoverIdx !== null && (() => {
             const pt = pvpPoints[hoverIdx]
             const cx = toX(pt.ts)
@@ -390,7 +394,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             const d = new Date(pt.ts)
             const fecha = `${d.getDate()} ${MESES[d.getMonth()]}`
             const line1 = `${fecha}  ${pt.precio.toFixed(2)}€`
-            const line2 = `Min · ${minRow!.precio.toFixed(2)}€ · ${minRow!.nombre}`
+            const line2 = `Min hoy · ${minDayPoints[hoverIdx].precio.toFixed(2)}€`
             const TW = Math.max(line1.length, line2.length) * 6.1 + 18
             const TH = 40
             const tx = Math.max(PAD.left + 2, Math.min(cx - TW / 2, W - PAD.right - TW - 2))
