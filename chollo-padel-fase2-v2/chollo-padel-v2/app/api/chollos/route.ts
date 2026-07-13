@@ -181,8 +181,22 @@ export async function GET() {
     return NextResponse.json({ chollos: [], updated_at: null }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
+  // Filtrar ref-stale ANTES de deduplicar: si el snapshot más reciente de una
+  // tienda es más nuevo que precios_updated_at+3h (el post-pipeline aún no corrió),
+  // lo descartamos aquí para que el dedup pueda caer al snapshot anterior válido.
+  // De lo contrario, el dedup elige el más reciente, el guard posterior lo descarta,
+  // y no hay fallback → 0 chollos durante el pipeline.
+  const GRACIA_MS = 3 * 60 * 60 * 1000
+  const snapsFiltrados = snapshots.filter(snap => {
+    const pala = snap.palas as any
+    if (!pala) return false
+    const refUpdatedAt = pala.precios_updated_at ? new Date(pala.precios_updated_at).getTime() : 0
+    const snapAt = new Date(snap.scraped_at).getTime()
+    return snapAt <= refUpdatedAt + GRACIA_MS
+  })
+
   const byTienda = new Map<string, typeof snapshots[0]>()
-  for (const snap of snapshots) {
+  for (const snap of snapsFiltrados) {
     const key = `${snap.pala_id}__${snap.source_id}`
     const existing = byTienda.get(key)
     if (!existing || snap.scraped_at > existing.scraped_at) byTienda.set(key, snap)
@@ -224,16 +238,6 @@ export async function GET() {
 
     if (priceRef.fuentes_count < MIN_FUENTES) { _dbg.push(`fuentes=${priceRef.fuentes_count}|${pala.modelo}`); continue }
 
-    // Guard: el precio_referencia debe haberse calculado DESPUÉS del scraped_at
-    // del snapshot. Si el post-pipeline aún no ha corrido tras el último scrape,
-    // el ratio sería contra un precio antiguo → chollos falsos.
-    const refUpdatedAt = pala.precios_updated_at ? new Date(pala.precios_updated_at).getTime() : 0
-    const snapAt       = new Date(snap.scraped_at).getTime()
-    const GRACIA_MS    = 3 * 60 * 60 * 1000 // 3h para que el post-pipeline termine
-    if (snapAt > refUpdatedAt + GRACIA_MS) {
-      _dbg.push(`ref-stale|ref_at=${pala.precios_updated_at ?? 'null'}|snap_at=${snap.scraped_at}|${pala.modelo}`)
-      continue
-    }
     // Bug real 2026-06-21: MAX_SPREAD=2.5 fijo descartaba chollos genuinos en
     // productos con muchas tiendas (ej. Bullpadel Vertex 04 25 Women: 8
     // fuentes, spread 3.6x). Fix: con >= 5 fuentes se amplia tolerancia a 4.0x.
