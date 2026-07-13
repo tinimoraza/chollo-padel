@@ -175,6 +175,7 @@ function mediana(nums: number[]): number {
 function PriceHistorySection({ palaId }: { palaId: string }) {
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -236,13 +237,13 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   for (const row of rows) {
     const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(Number(row.precio))
+    byDay.get(day)!.push(precioEfectivo(row))  // precio con descuento aplicado
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([day, prices]) => ({
       ts: new Date(day).getTime(),
-      precio: prices.reduce((a, b) => a + b, 0) / prices.length
+      precio: Math.min(...prices),  // precio mínimo del día, no media
     }))
 
   if (pvpPoints.length === 0) return null
@@ -281,6 +282,18 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   const minDotX = Math.min(toX(new Date(minLastDay).getTime()), W - PAD.right)
   const lblAbove = minY > PAD.top + cH - 30
 
+  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mouseX = (e.clientX - rect.left) * (W / rect.width)
+    if (mouseX < PAD.left - 8 || mouseX > W - PAD.right + 8) { setHoverIdx(null); return }
+    let best = 0, bestDist = Infinity
+    pvpPoints.forEach((pt, i) => {
+      const d = Math.abs(toX(pt.ts) - mouseX)
+      if (d < bestDist) { bestDist = d; best = i }
+    })
+    setHoverIdx(best)
+  }
+
   return (
     <div>
       <a href={minRow!.url} target="_blank" rel="noopener noreferrer"
@@ -305,7 +318,8 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
       </a>
 
       <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block', cursor: 'crosshair' }}
+             onMouseMove={handleSvgMouseMove} onMouseLeave={() => setHoverIdx(null)}>
           <rect x={PAD.left} y={PAD.top} width={cW} height={cH} fill="rgba(0,0,0,0.025)" />
           <clipPath id="hchart-clip-det">
             <rect x={PAD.left} y={PAD.top} width={cW} height={cH} />
@@ -361,13 +375,48 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
           <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
             r="2.5" fill="#4E7400" />
+          {hoverIdx !== null && (() => {
+            const pt = pvpPoints[hoverIdx]
+            const cx = toX(pt.ts)
+            const cy = toY(pt.precio)
+            const d = new Date(pt.ts)
+            const fecha = `${d.getDate()} ${MESES[d.getMonth()]}`
+            const line1 = `${fecha}  ${pt.precio.toFixed(2)}€`
+            const line2 = `Min · ${minRow!.precio.toFixed(2)}€ · ${minRow!.nombre}`
+            const TW = Math.max(line1.length, line2.length) * 6.1 + 18
+            const TH = 40
+            const tx = Math.max(PAD.left + 2, Math.min(cx - TW / 2, W - PAD.right - TW - 2))
+            const ty = Math.max(PAD.top + 2, cy - TH - 10)
+            return (
+              <g style={{ pointerEvents: 'none' }}>
+                <line x1={cx.toFixed(1)} x2={cx.toFixed(1)}
+                  y1={PAD.top} y2={(PAD.top + cH).toFixed(1)}
+                  stroke="rgba(96,165,250,0.35)" strokeWidth="1" />
+                <circle cx={cx.toFixed(1)} cy={cy.toFixed(1)}
+                  r="4.5" fill="#60A5FA" stroke="white" strokeWidth="1.5" />
+                <rect x={tx.toFixed(1)} y={ty.toFixed(1)}
+                  width={TW.toFixed(1)} height={TH} rx="5"
+                  fill="#0f172a" opacity="0.92" />
+                <text x={(tx + TW / 2).toFixed(1)} y={(ty + 14).toFixed(1)}
+                  textAnchor="middle" fill="#93c5fd"
+                  fontSize="10.5" fontFamily="Space Grotesk, sans-serif" fontWeight="600">
+                  {line1}
+                </text>
+                <text x={(tx + TW / 2).toFixed(1)} y={(ty + 29).toFixed(1)}
+                  textAnchor="middle" fill="#86efac"
+                  fontSize="9.5" fontFamily="Space Grotesk, sans-serif">
+                  {line2}
+                </text>
+              </g>
+            )
+          })()}
         </svg>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio medio diario tiendas</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio mínimo diario tiendas</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7" /></svg>
