@@ -39,6 +39,7 @@ const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bgolpe\b/i,
   /\bno funciona\b/i,
   /\btenis\b/i,
+  /\btest\b/i,
 ]
 
 interface Modelo {
