@@ -243,7 +243,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([day, prices]) => ({
       ts: new Date(day).getTime(),
-      precio: Math.min(...prices),  // precio mínimo del día, no media
+      precio: prices.reduce((a, b) => a + b, 0) / prices.length,  // precio medio diario
     }))
 
   if (pvpPoints.length === 0) return null
@@ -375,6 +375,14 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
             r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
           <circle cx={minDotX.toFixed(1)} cy={minY.toFixed(1)}
             r="2.5" fill="#4E7400" />
+          {Math.abs(minDotX - (W - PAD.right)) > 10 && (
+            <>
+              <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+                r="5.5" fill="#F3F4F7" stroke="#4E7400" strokeWidth="2" />
+              <circle cx={(W - PAD.right).toFixed(1)} cy={minY.toFixed(1)}
+                r="2.5" fill="#4E7400" />
+            </>
+          )}
           {hoverIdx !== null && (() => {
             const pt = pvpPoints[hoverIdx]
             const cx = toX(pt.ts)
@@ -416,7 +424,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 22, height: 3, background: '#60A5FA', borderRadius: 2 }} />
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio mínimo diario tiendas</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: 'var(--muted)' }}>Precio medio diario tiendas</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="3"><line x1="0" y1="1.5" x2="22" y2="1.5" stroke="#4E7400" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.7" /></svg>
