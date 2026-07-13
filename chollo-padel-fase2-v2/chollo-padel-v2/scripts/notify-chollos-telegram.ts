@@ -31,21 +31,10 @@ const BOT_TOKEN      = process.env.TELEGRAM_BOT_TOKEN
 const CHAT_ID        = process.env.TELEGRAM_CHAT_ID
 const SITE_URL       = 'https://huntpadel.com'
 
-// Umbrales idénticos a los de /api/chollos
-const UMBRAL_CHOLLO  = 0.65
-const UMBRAL_OFERTA  = 0.75
-const MIN_REFERENCIA = 50
-const MIN_FUENTES    = 2
-const MIN_ANO        = 2024
+// URL de la API de chollos — fuente de verdad única (misma lógica que la web)
+const API_CHOLLOS_URL = `${SITE_URL}/api/chollos`
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function precioEfectivo(snap: { precio: number; codigo_descuento?: string | null; descuento_pct?: number | null }): number {
-  if (snap.codigo_descuento && snap.descuento_pct && Number(snap.descuento_pct) > 0) {
-    return snap.precio * (1 - Number(snap.descuento_pct) / 100)
-  }
-  return snap.precio
-}
 
 async function sendTelegram(text: string): Promise<boolean> {
   if (!BOT_TOKEN || !CHAT_ID) {
@@ -321,87 +310,43 @@ async function verificarStockEnVivo(url: string): Promise<boolean> {
   }
 }
 
-// ─── Paso 1: Cargar chollos actuales del pipeline ─────────────────────────────
+// ─── Paso 1: Cargar chollos actuales de la API ────────────────────────────────
+// Fuente de verdad única: /api/chollos aplica todos los guards (ref-stale,
+// MIN_FUENTES=3, MAX_SPREAD, guards de URL, umbralMinimo, precio efectivo).
+// Elimina la lógica duplicada que tenía este script con parámetros divergentes.
 
 async function cargarChollosActuales() {
-  const since = new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString() // ventana 26h (algo más que las 24h de la API)
-  const PAGE_SIZE = 1000
-  const snapshots: any[] = []
+  const res = await fetch(API_CHOLLOS_URL, {
+    headers: { 'Cache-Control': 'no-cache' },
+    signal: AbortSignal.timeout(30_000),
+  })
+  if (!res.ok) throw new Error(`/api/chollos devolvió ${res.status}: ${await res.text()}`)
 
-  for (let from = 0; from <= 5000; from += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('price_snapshots')
-      .select(`
-        pala_id, source_id, precio, url_producto, scraped_at,
-        codigo_descuento, descuento_pct,
-        price_sources ( nombre, slug ),
-        palas ( id, nombre, marca, slug, año, modelo,
-          price_reference ( precio_referencia, fuentes_count ) )
-      `)
-      .eq('disponible', true)
-      .gte('scraped_at', since)
-      .gte('match_confidence', 0.95)
-      .neq('source_id', 2)
-      .order('scraped_at', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1)
-
-    if (error) throw error
-    if (!data || data.length === 0) break
-    snapshots.push(...data)
-    if (data.length < PAGE_SIZE) break
+  const json = await res.json() as {
+    chollos: Array<{
+      pala_id: string; source_id: number; precio_actual: number
+      precio_referencia: number; descuento_pct: number; url_producto: string
+      nombre: string; marca: string; tienda: string; tienda_slug: string
+      codigo_descuento: string | null; tag: 'CHOLLO' | 'OFERTA'
+    }>
   }
 
-  // Dedup por (pala_id, source_id): quédate con el más reciente
-  const byKey = new Map<string, any>()
-  for (const snap of snapshots) {
-    const key = `${snap.pala_id}__${snap.source_id}`
-    const ex = byKey.get(key)
-    if (!ex || snap.scraped_at > ex.scraped_at) byKey.set(key, snap)
-  }
-
-  // Filtrar solo CHOLLOs reales
-  const chollos: Array<{
-    pala_id: string; source_id: number; precio: number; precio_referencia: number
-    descuento_pct: number; url_producto: string; nombre_pala: string; marca: string | null
-    tienda: string; tienda_slug: string; codigo_descuento: string | null
-  }> = []
-
-  for (const snap of byKey.values()) {
-    const pala   = snap.palas as any
-    const fuente = snap.price_sources as any
-    if (!pala || !fuente) continue
-
-    const año = pala['año'] ?? pala['ano'] ?? null
-    if (!año || año < MIN_ANO) continue
-
-    const priceRefArr = pala.price_reference
-    const priceRef = Array.isArray(priceRefArr) ? priceRefArr[0] : priceRefArr
-    if (!priceRef) continue
-
-    const ref          = Number(priceRef.precio_referencia)
-    const fuentesCount = priceRef.fuentes_count as number
-    if (!ref || ref < MIN_REFERENCIA || fuentesCount < MIN_FUENTES) continue
-
-    const pEfectivo = precioEfectivo(snap)
-    const ratio     = pEfectivo / ref
-    if (ratio > UMBRAL_CHOLLO) continue  // Solo CHOLLO, no OFERTA
-
-    chollos.push({
-      pala_id:           snap.pala_id,
-      source_id:         snap.source_id,
-      precio:            pEfectivo,
-      precio_referencia: ref,
-      descuento_pct:     Math.round((1 - ratio) * 100),
-      url_producto:      snap.url_producto,
-      nombre_pala:       pala.nombre ?? pala.modelo,
-      marca:             pala.marca,
-      tienda:            fuente.nombre,
-      tienda_slug:       fuente.slug,
-      codigo_descuento:  snap.codigo_descuento ?? null,
-    })
-  }
-
-  return chollos
+  // Solo los CHOLLOs (la API también devuelve OFERTAs)
+  return (json.chollos ?? [])
+    .filter(c => c.tag === 'CHOLLO')
+    .map(c => ({
+      pala_id:           c.pala_id,
+      source_id:         c.source_id,
+      precio:            c.precio_actual,
+      precio_referencia: c.precio_referencia,
+      descuento_pct:     c.descuento_pct,
+      url_producto:      c.url_producto,
+      nombre_pala:       c.nombre,
+      marca:             c.marca ?? null,
+      tienda:            c.tienda,
+      tienda_slug:       c.tienda_slug,
+      codigo_descuento:  c.codigo_descuento ?? null,
+    }))
 }
 
 // ─── Paso 2: Sincronizar con chollos_notificados ──────────────────────────────
