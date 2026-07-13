@@ -237,7 +237,7 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   for (const row of rows) {
     const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
     if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(precioEfectivo(row))  // precio con descuento aplicado
+    byDay.get(day)!.push(Number(row.precio))  // pvp sin descuento
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
