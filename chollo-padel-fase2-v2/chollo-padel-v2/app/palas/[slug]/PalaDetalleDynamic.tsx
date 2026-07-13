@@ -233,11 +233,16 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
     }
   }
 
-  const byDay = new Map<string, number[]>()
+  // byDay: pvp base sin descuento → para la media (línea azul)
+  // byDayMin: precio efectivo con descuento → para el mínimo (línea verde)
+  const byDay    = new Map<string, number[]>()
+  const byDayMin = new Map<string, number[]>()
   for (const row of rows) {
     const day = (row as any).dia_scraped ?? row.scraped_at.slice(0, 10)
-    if (!byDay.has(day)) byDay.set(day, [])
-    byDay.get(day)!.push(Number(row.precio))  // pvp sin descuento
+    if (!byDay.has(day))    byDay.set(day, [])
+    if (!byDayMin.has(day)) byDayMin.set(day, [])
+    byDay.get(day)!.push(Number(row.precio))       // pvp sin descuento (media)
+    byDayMin.get(day)!.push(precioEfectivo(row))   // precio efectivo con descuento (mínimo)
   }
   const pvpPoints = Array.from(byDay.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -253,8 +258,8 @@ function PriceHistorySection({ palaId }: { palaId: string }) {
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
 
-  // Mínimo diario: precio más barato disponible cada día
-  const minDayPoints = Array.from(byDay.entries())
+  // Mínimo diario: precio efectivo más barato (con descuento) cada día
+  const minDayPoints = Array.from(byDayMin.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([day, prices]) => ({
       ts: new Date(day).getTime(),
@@ -447,8 +452,8 @@ export default function PalaDetalleDynamic({ palaId, precioReferencia }: { palaI
         <TiendasSection palaId={palaId} precioReferencia={precioReferencia} />
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Historico de precios · ultimos 60 dias</div>
+      <div style={{borderTop: '1px solid var(--border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 3, color: 'var(--muted)', marginBottom: 14, textTransform: 'uppercase' }}>Historico de precios &middot; ultimos 60 dias</div>
         <PriceHistorySection palaId={palaId} />
       </div>
     </>
