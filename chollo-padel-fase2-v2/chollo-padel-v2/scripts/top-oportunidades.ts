@@ -50,11 +50,14 @@ interface Modelo {
 
 const MODELOS: Modelo[] = [
   // Bullpadel
+  { nombre: 'Bullpadel Vertex 02 2024',           phrase: 'vertex 02 2024' },
   { nombre: 'Bullpadel Vertex 04',                phrase: 'vertex 04' },
   { nombre: 'Bullpadel Vertex 05',                phrase: 'vertex 05',                excludeKeywords: ['comfort'] },
   { nombre: 'Bullpadel Vertex 05 Comfort 2026',   phrase: 'vertex 05 comfort' },
   { nombre: 'Bullpadel Hack 04',                  phrase: 'hack 04',                  excludeKeywords: ['hybrid','paquito'] },
   { nombre: 'Bullpadel Hack 04 Hybrid',           phrase: 'hack 04 hybrid' },
+  { nombre: 'Bullpadel Neuron 02 2024',           phrase: 'neuron 2024',              excludeKeywords: ['edge','chingotto'] },
+  { nombre: 'Bullpadel Neuron 02 2024',           phrase: 'neuron 24',                excludeKeywords: ['edge','chingotto'] },
   { nombre: 'Bullpadel Neuron 02 2025',           phrase: 'neuron 2025',              excludeKeywords: ['edge','chingotto'] },
   { nombre: 'Bullpadel Neuron 02 2025',           phrase: 'neuron 25',                excludeKeywords: ['edge','chingotto'] },
   { nombre: 'Bullpadel Neuron 02 2026',           phrase: 'neuron 02 2026',           excludeKeywords: ['edge','chingotto'] },
@@ -124,6 +127,10 @@ const MODELOS: Modelo[] = [
   { nombre: 'Nox AT10 Pro Cup Soft 2026',         phrase: 'at10 pro cup soft 2026' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 ventus control 3k' },
   { nombre: 'Nox ML10 Ventus Control 3K 2026',    phrase: 'ml10 3k 2026' },
+  { nombre: 'Nox ML10 Pro Cup Luxury',             phrase: 'ml10 pro cup luxury' },
+  { nombre: 'Nox ML10 Pro Cup',                    phrase: 'ml10 pro cup', excludeKeywords: ['beach','tennis','luxury','coorp','3k','black','quantum','shotgun','ventus','bahia','bahía'] },
+  { nombre: 'Nox ML10 Quantum',                    phrase: 'ml10 quantum' },
+  { nombre: 'Nox ML10 Shotgun',                    phrase: 'ml10 shotgun' },
   { nombre: 'Nox EA10 Ventus Attack 2026',        phrase: 'ea10 ventus attack 2026' },
   { nombre: 'Nox EA10 Ventus Attack 2026',        phrase: 'ea10 attack 2026' },
   { nombre: 'Nox EA10 Ventus Hybrid 12K 2026',    phrase: 'ea10 ventus hybrid 12k' },
@@ -155,7 +162,9 @@ const MODELOS: Modelo[] = [
   { nombre: 'Joma Tournament Flex 2.0',           phrase: 'tournament flex 2.0' },
 
   // Siux
+  { nombre: 'Siux Trilogy 6',                     phrase: 'trilogy 6',                excludeKeywords: ['pro','elite','go'] },
   { nombre: 'Siux Trilogy Elite 2026',            phrase: 'trilogy elite 2026' },
+  { nombre: 'Siux Trilogy Pro 4',                 phrase: 'trilogy pro 4',            excludeKeywords: ['5'] },
   { nombre: 'Siux Trilogy Pro 5 2025',            phrase: 'trilogy pro 5 2025' },
   { nombre: 'Siux Trilogy Pro 2026',              phrase: 'trilogy pro 2026',         excludeKeywords: ['elite','5'] },
   { nombre: 'Siux Trilogy Go 4',                  phrase: 'trilogy go' },
@@ -235,6 +244,10 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Cross It Light 2025', phrase: 'cross it light 2025', excludeKeywords: ['pro edt','team'] },
   { nombre: 'Adidas Cross It Light 2026', phrase: 'cross it light 2026', excludeKeywords: ['pro edt','team'] },
   { nombre: 'Adidas Cross It Light Pro EDT 2026', phrase: 'cross it light pro edt 2026' },
+
+  // Adidas Cross It CTRL
+  { nombre: 'Adidas Cross It CTRL 3.4',       phrase: 'cross it ctrl 3.4' },
+  { nombre: 'Adidas Cross It CTRL 3.5',       phrase: 'cross it ctrl 3.5' },
 
   // Adidas Cross It Carbon / Team CTRL
   { nombre: 'Adidas Cross It Carbon 3.5',     phrase: 'cross it carbon 3.5' },
@@ -527,7 +540,7 @@ async function main() {
   }
 
   if (topConTendencia.length === 0) {
-    console.log('\nTop vacio - no se actualiza la tabla.')
+    console.log('\nTop vacio - no seactualiza la tabla.')
     return
   }
 
