@@ -1,0 +1,41 @@
+name: Notify Wallapop Nuevos
+
+# Detecta palas NUEVAS en Wallapop (condition='new') con:
+#   - match_confidence = 1  (100% fiable)
+#   - descuento >= 35% vs precio_referencia de tiendas
+# y envía notificación a Telegram con tarjeta imagen.
+# Se ejecuta justo después del top-oportunidades para aprovechar datos frescos.
+
+on:
+  schedule:
+    - cron: '40 * * * *'   # Cada hora a :40 (tras top-oportunidades a :25)
+  workflow_dispatch:        # Permite lanzarlo manualmente desde GitHub UI
+
+jobs:
+  notify-wallapop-nuevos:
+    name: Notificar palas nuevas en Wallapop
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Notificar palas nuevas
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN:       ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:         ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/notify-wallapop-nuevos-telegram.ts
