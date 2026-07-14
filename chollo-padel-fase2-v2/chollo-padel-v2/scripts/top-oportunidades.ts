@@ -141,16 +141,20 @@ const MODELOS: Modelo[] = [
   { nombre: 'Babolat Viper Juan Lebron 2026',           phrase: 'viper juan lebron 2026' },
 
   // Nox
+  { nombre: 'Nox AT10 18K 2024',                  phrase: 'at10 18k 2024',            excludeKeywords: ['genius','attack'] },
   { nombre: 'Nox AT10 18K 2025',                  phrase: 'at10 18k 2025',            excludeKeywords: ['genius','attack'] },
   { nombre: 'Nox AT10 18K 2026',                  phrase: 'at10 18k 2026',            excludeKeywords: ['genius','attack'] },
+  { nombre: 'Nox AT10 12K 2024',                  phrase: 'at10 12k 2024',            excludeKeywords: ['genius','attack','lite'] },
   { nombre: 'Nox AT10 12K 2025',                  phrase: 'at10 12k 2025',            excludeKeywords: ['genius','attack','lite'] },
   { nombre: 'Nox AT10 12K 2026',                  phrase: 'at10 12k 2026',            excludeKeywords: ['genius','attack','lite'] },
   { nombre: 'Nox AT10 12K Lite 2026',             phrase: 'at10 12k lite 2026' },
   { nombre: 'Nox AT10 18K Attack 2026',           phrase: 'at10 18k attack 2026' },
   { nombre: 'Nox AT10 12K Attack 2026',           phrase: 'at10 12k attack 2026' },
   { nombre: 'Nox AT10 Genius 18K 2025',           phrase: 'at10 genius 18k 2025',     excludeKeywords: ['attack'] },
+  { nombre: 'Nox AT10 Genius 18K 2025',           phrase: 'at10 genius 18k alum',     excludeKeywords: ['attack'] }, // "ALUM BY AGUSTIN TAPIA" rompe la frase con año
   { nombre: 'Nox AT10 Genius 18K 2026',           phrase: 'at10 genius 18k 2026',     excludeKeywords: ['attack'] },
   { nombre: 'Nox AT10 Genius 12K 2025',           phrase: 'at10 genius 12k 2025',     excludeKeywords: ['attack'] },
+  { nombre: 'Nox AT10 Genius 12K 2025',           phrase: 'at10 genius 12k alum',     excludeKeywords: ['attack'] },
   { nombre: 'Nox AT10 Genius 12K 2026',           phrase: 'at10 genius 12k 2026',     excludeKeywords: ['attack'] },
   { nombre: 'Nox AT10 Genius Attack 18K 2025',    phrase: 'at10 genius attack 18k 2025' },
   { nombre: 'Nox AT10 Genius Attack 18K 2026',    phrase: 'at10 genius attack 18k 2026' },
@@ -195,7 +199,8 @@ const MODELOS: Modelo[] = [
 
   // Siux
   { nombre: 'Siux Trilogy 6',                     phrase: 'trilogy 6',                excludeKeywords: ['pro','elite','go'] },
-  { nombre: 'Siux Trilogy Elite 2026',            phrase: 'trilogy elite 2026' },
+  { nombre: 'Siux Trilogy 6 Elite 2026',          phrase: 'trilogy 6 elite' },
+  { nombre: 'Siux Trilogy Elite 2026',            phrase: 'trilogy elite 2026',       excludeKeywords: ['6'] },
   { nombre: 'Siux Trilogy Pro 4',                 phrase: 'trilogy pro 4',            excludeKeywords: ['5'] },
   { nombre: 'Siux Trilogy Pro 5 2025',            phrase: 'trilogy pro 5 2025' },
   { nombre: 'Siux Trilogy Pro 2026',              phrase: 'trilogy pro 2026',         excludeKeywords: ['elite','5'] },
@@ -278,12 +283,15 @@ const MODELOS: Modelo[] = [
   { nombre: 'Adidas Cross It Light Pro EDT 2026', phrase: 'cross it light pro edt 2026' },
 
   // Adidas Cross It CTRL
-  { nombre: 'Adidas Cross It CTRL 3.4',       phrase: 'cross it ctrl 3.4' },
-  { nombre: 'Adidas Cross It CTRL 3.5',       phrase: 'cross it ctrl 3.5' },
+  { nombre: 'Adidas Cross It CTRL 3.4',         phrase: 'cross it ctrl 3.4',         excludeKeywords: ['carbon'] },
+  { nombre: 'Adidas Cross It CTRL 3.5',         phrase: 'cross it ctrl 3.5',         excludeKeywords: ['carbon'] },
 
-  // Adidas Cross It Carbon / Team CTRL
-  { nombre: 'Adidas Cross It Carbon 3.5',     phrase: 'cross it carbon 3.5' },
-  { nombre: 'Adidas Cross It Team CTRL 2026', phrase: 'cross it team ctrl 2026' },
+  // Adidas Cross It Carbon / CTRL Carbon / Team CTRL
+  { nombre: 'Adidas Cross It Carbon 3.4',       phrase: 'cross it carbon 3.4' },
+  { nombre: 'Adidas Cross It Carbon 3.5',       phrase: 'cross it carbon 3.5' },
+  { nombre: 'Adidas Cross It CTRL Carbon 2026', phrase: 'cross it ctrl carbon' },
+  { nombre: 'Adidas Cross It CTRL Carbon 2026', phrase: 'cross it carbon ctrl' },
+  { nombre: 'Adidas Cross It Team CTRL 2026',   phrase: 'cross it team ctrl 2026' },
 
   // Adidas Arrow Hit
   { nombre: 'Adidas Arrow Hit 3.3', phrase: 'arrow hit 3.3',
