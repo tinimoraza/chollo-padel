@@ -121,7 +121,12 @@ function detectarCodigoDescuento(textoPagina) {
 // en la lista de categorias que scrapea hoy padeliberico.js (que solo usa
 // /palas-de-padel) - ese es el caso real que motiva este detector.
 
-const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion/i
+// Palabras clave en path de URL que identifican secciones de rebajas.
+// outlet: /outlet-padel, /30-outlet-...
+// oferta: /30-ofertas-de-padel (keepadel), /ofertas-padel
+// verano/summer: /rebajas-verano-2026, /summer-2026
+// sale: /sale estricto (con slash previo) para no disparar en slugs tipo "pala-apex-sale-12k"
+const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion|outlet|oferta|verano|summer|\/sale(?:[-_\/]|$)/i
 const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module)/i
 
 function normalizarUrl(url, origin) {
@@ -200,6 +205,16 @@ async function detectarRebajasYCodigoViaHtml(url, baseUrl) {
     if (!res.ok) return { codigoDescuento: null, rebajasUrls: [] }
     const html = await res.text()
     const codigoDescuento = detectarCodigoDescuento(html)
+    const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
+    const rebajasUrls = filtrarUrlsRebajas(hrefs, baseUrl || url)
+    return { codigoDescuento, rebajasUrls }
+  } catch {
+    return { codigoDescuento: null, rebajasUrls: [] }
+  }
+}
+
+module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas, detectarRebajasYCodigoViaHtml }
+o(html)
     const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
     const rebajasUrls = filtrarUrlsRebajas(hrefs, baseUrl || url)
     return { codigoDescuento, rebajasUrls }
