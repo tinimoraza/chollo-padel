@@ -29,10 +29,16 @@ const BONUS_NEW = 8
 const PESO_AHORRO_EUROS = 0.10
 
 // Bonus/penalización por año del modelo (extraído del nombre del catálogo)
+// Años modernos suman; años viejos restan para evitar que palas obsoletas
+// aparezcan en el top solo por tener precio bajo en wallapop vs precio de
+// referencia (que puede ser el precio antiguo de una tienda con stock residual).
 const BONUS_AÑO: Record<number, number> = {
   2026: 10,
   2025: 5,
   2024: 2,
+  2023: -5,
+  2022: -15,
+  2021: -20,
 }
 const PENALIZACION_SIN_AÑO = -10   // Sin año resta más: el modelo es incierto
 
@@ -44,7 +50,7 @@ function extraerAñoModelo(nombreModelo: string): number | null {
 function calcularBonusAño(nombreModelo: string): number {
   const año = extraerAñoModelo(nombreModelo)
   if (año === null) return PENALIZACION_SIN_AÑO
-  return BONUS_AÑO[año] ?? 0   // 2023 o anterior → 0
+  return BONUS_AÑO[año] ?? -25   // 2020 o anterior → penalización máxima
 }
 
 const EXCLUIR_SIEMPRE_RE: RegExp[] = [
@@ -407,6 +413,9 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
   const antes = data.length
   const items: any[] = (data as any[]).filter(item => {
     if (EXCLUIR_SIEMPRE_RE.some(re => re.test(item.title))) return false
+    // Descartar si el título menciona explícitamente un año ≤ 2023
+    const mAño = item.title.match(/\b(20\d{2})\b/)
+    if (mAño && parseInt(mAño[1], 10) < 2024) return false
     if (modelo.excludeKeywords) {
       const t = item.title.toLowerCase()
       if (modelo.excludeKeywords.some(excl => t.includes(excl.toLowerCase()))) return false
