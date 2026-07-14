@@ -394,7 +394,9 @@ async function scrape(tienda: string): Promise<{ title: string; price: number; p
   // banner de cupon a nivel de pagina (no por producto). `.map()` crea un
   // array NUEVO que no hereda esa propiedad, así que hay que rescatarla del
   // array original ANTES de mapear y volver a colgarla del resultado.
-  const codigoDescuento = (productos as any).codigoDescuento ?? null
+  // Preservar undefined (scraper sin detector) vs null (inspeccionó, no encontró) vs {...} (encontrado).
+  // El ?? null de antes colapsaba undefined→null y perdía la distinción que usa el auto-sync de manual.
+  const codigoDescuento = (productos as any).codigoDescuento
   const mapeados = productos.map((p: any) => ({ ...p, title: decodeHtmlEntities(p.title) }))
   ;(mapeados as any).codigoDescuento = codigoDescuento
   return mapeados
@@ -493,24 +495,58 @@ async function main() {
   // esta tienda. Validado en vivo solo contra padelmania.com de momento (ver
   // _discount-utils.js); el resto de scrapers no llaman al detector aun, así
   // que aquí valdrá null para ellos y no cambia nada de su comportamiento.
-  let codigoDescuentoTienda = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null
+  // codigoRaw preserva la distinción: undefined=scraper sin detector, null=inspeccionó sin resultado, {...}=encontrado.
+  // codigoDescuentoTienda es la versión colapsada (null cuando no hay código) usada en el resto del pipeline.
+  const codigoRaw = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null | undefined
+  let codigoDescuentoTienda: { codigo: string; descuento_pct: number } | null = codigoRaw ?? null
 
-  // Fallback manual (tarea #177): si el scraper no detectó un código automático
-  // para esta tienda, se usa el que Patricia haya introducido a mano desde
-  // GestorCandidatas (pestaña "💸 Códigos" → tabla codigos_descuento_manual).
-  // Útil para las tiendas donde el detector genérico no aplica (Shopify/WooCommerce
-  // JSON-only) o no encuentra nada. Se aplica igual a todos los productos del
-  // run, igual que el código automático.
-  if (!codigoDescuentoTienda && !DRY_RUN) {
-    const { data: manual } = await supabase
-      .from('codigos_descuento_manual')
-      .select('codigo, descuento_pct')
-      .eq('source_id', sourceId)
-      .eq('activo', true)
-      .maybeSingle()
-    if (manual) {
-      codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
-      console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)`)
+  // Sistema autosuficiente de códigos (2026-07-14):
+  //
+  // Si el scraper inspeccionó el HTML (codigoRaw !== undefined), se sincroniza
+  // con la tabla codigos_descuento_manual:
+  //   - Encontró código → upsert en manual (auto-aprendizaje: queda guardado
+  //     para que futuras ejecuciones sin red no pierdan el código)
+  //   - No encontró   → desactivar manual si había uno activo (el código caducó)
+  //
+  // Si el scraper NO inspecciona HTML (codigoRaw === undefined, scrapers
+  // sin detector wired) → fallback: usar el manual activo si existe
+  // (comportamiento anterior, para Patricia pueda poner el código a mano).
+  if (!DRY_RUN) {
+    if (codigoRaw !== undefined) {
+      if (codigoRaw !== null) {
+        // Código detectado automáticamente → guardarlo en manual (si cambia, lo actualiza)
+        await supabase.from('codigos_descuento_manual').upsert({
+          source_id: sourceId,
+          codigo: codigoRaw.codigo,
+          descuento_pct: codigoRaw.descuento_pct,
+          activo: true,
+          nota: 'Auto-detectado por scraper',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'source_id' })
+        console.log(`  💾 Código auto-guardado en BD: ${codigoRaw.codigo} (-${codigoRaw.descuento_pct}%)`)
+      } else {
+        // Inspeccionó pero no encontró → código caducó, desactivar manual
+        const { data: desactivados } = await supabase.from('codigos_descuento_manual')
+          .update({ activo: false, updated_at: new Date().toISOString() })
+          .eq('source_id', sourceId)
+          .eq('activo', true)
+          .select('codigo')
+        if (desactivados && desactivados.length > 0) {
+          console.log(`  🗑️  Código desactivado automáticamente (ya no visible en web): ${desactivados[0].codigo}`)
+        }
+      }
+    } else {
+      // Scraper sin detector → fallback manual (Patricia lo introduce a mano desde Gestor)
+      const { data: manual } = await supabase
+        .from('codigos_descuento_manual')
+        .select('codigo, descuento_pct')
+        .eq('source_id', sourceId)
+        .eq('activo', true)
+        .maybeSingle()
+      if (manual) {
+        codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
+        console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)`)
+      }
     }
   }
 
@@ -649,14 +685,16 @@ async function main() {
     } else if (snapActivos > 0 && palaIdsEncontrados.length < snapActivos * 0.5) {
       console.log(`  ⚠️  [mark-inactive] ${palaIdsEncontrados.length} matches vs ${snapActivos} activos previos — posible scrape parcial, se omite`)
     } else {
+      // Limpiar también codigo_descuento: si el producto ya no se vende (disponible=false),
+      // su código de descuento es irrelevante y podría sesgar /api/chollos si quedara activo.
       const { error: errInactive } = await supabase
         .from('price_snapshots')
-        .update({ disponible: false })
+        .update({ disponible: false, codigo_descuento: null, descuento_pct: null })
         .eq('source_id', sourceId)
         .eq('disponible', true)
         .not('pala_id', 'in', `(${palaIdsEncontrados.join(',')})`)
       if (errInactive) console.error(`  ⚠️  [mark-inactive] ${errInactive.message}`)
-      else console.log(`  ✅ [mark-inactive] snapshots obsoletos marcados como no disponibles`)
+      else console.log(`  ✅ [mark-inactive] snapshots obsoletos marcados como no disponibles (código limpiado)`)
     }
   }
 
@@ -695,7 +733,7 @@ async function main() {
 
   // Post-pipeline automatico
   if (!DRY_RUN && !NO_POST) {
-    console.log('\n── Post-pipeline ──────────────────────────────────────')
+    console.log('\n── Post-pipeline ───────────────────────────────────────────────')
     await postPipeline()
   }
 
