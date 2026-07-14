@@ -513,13 +513,13 @@ async function main() {
   const deduplicado = new Map<string, any>()
   for (const op of todasOportunidades) {
     const existing = deduplicado.get(op.external_id)
-    if (!existing || op.descuento_pct > existing.descuento_pct) {
+    if (!existing || op.score > existing.score) {
       deduplicado.set(op.external_id, op)
     }
   }
 
   const candidatos = Array.from(deduplicado.values())
-    .sort((a, b) => b.descuento_pct - a.descuento_pct)
+    .sort((a, b) => b.score - a.score)
 
   console.log(`${candidatos.length} candidatos unicos`)
 
