@@ -24,6 +24,29 @@ const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 // Bonus de score para anuncios NUEVOS (sube posiciones en el TOP respecto a casi-nuevos)
 const BONUS_NEW = 8
 
+// ── Sistema de rating multifactor ────────────────────────────────────────────
+// Peso ahorro absoluto: cada 10€ ahorrados = 1 punto
+const PESO_AHORRO_EUROS = 0.10
+
+// Bonus/penalización por año del modelo (extraído del nombre del catálogo)
+const BONUS_AÑO: Record<number, number> = {
+  2026: 10,
+  2025: 5,
+  2024: 2,
+}
+const PENALIZACION_SIN_AÑO = -10   // Sin año resta más: el modelo es incierto
+
+function extraerAñoModelo(nombreModelo: string): number | null {
+  const m = nombreModelo.match(/\b(20\d{2})\b/)
+  return m ? parseInt(m[1], 10) : null
+}
+
+function calcularBonusAño(nombreModelo: string): number {
+  const año = extraerAñoModelo(nombreModelo)
+  if (año === null) return PENALIZACION_SIN_AÑO
+  return BONUS_AÑO[año] ?? 0   // 2023 o anterior → 0
+}
+
 const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bjunior\b/i,
   /\bj\.?r\.?\b/i,
@@ -411,14 +434,21 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
 
   for (const item of items) {
     if (item.price >= umbral) continue
-    const descuento_pct = Math.round(((mediana - item.price) / mediana) * 100)
+    const descuento_pct  = Math.round(((mediana - item.price) / mediana) * 100)
+    const ahorro_euros   = mediana - item.price
+    const score = Math.round(
+      descuento_pct
+      + ahorro_euros   * PESO_AHORRO_EUROS
+      + calcularBonusAño(modelo.nombre)
+      + (item.condition === 'new' ? BONUS_NEW : 0)
+    )
     oportunidades.push({
       external_id:  item.external_id,
       title:        item.title,
       price:        item.price,
       precio_medio: Math.round(mediana * 100) / 100,
       descuento_pct,
-      score:        descuento_pct + (item.condition === 'new' ? BONUS_NEW : 0),
+      score,
       condition:    item.condition,
       platform:     item.platform,
       img:          item.img ?? null,
@@ -536,20 +566,19 @@ async function main() {
   })
 
   if (vendidosABorrar.length > 0) {
-    console.log(`\nEliminando ${vendidosABorrar.length} anuncios vendidos de wallapop_cache...`)
+    console.log(`\nEliminando ${vendidosABorrar.length} anuncios vendidos de wallapop_cache.`)
     const { error: delErr } = await supabase.from('wallapop_cache').delete().in('external_id', vendidosABorrar)
     if (delErr) console.error('  Error al borrar:', delErr)
     else        console.log('  Limpieza OK')
   }
 
   if (topConTendencia.length === 0) {
-    console.log('\nTop vacio - no seactualiza la tabla.')
+    console.log('\nTop vacio - no se actualiza la tabla.')
     return
   }
 
   console.log(`\nGuardando top ${topConTendencia.length}...`)
 
-  // Borrar TODAS las entradas anteriores — el not-in de PostgREST no limpia entradas obsoletas
   const { error: deleteErr } = await supabase
     .from('top_oportunidades')
     .delete()
