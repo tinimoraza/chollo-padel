@@ -214,13 +214,3 @@ async function detectarRebajasYCodigoViaHtml(url, baseUrl) {
 }
 
 module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas, detectarRebajasYCodigoViaHtml }
-o(html)
-    const hrefs = Array.from(html.matchAll(/href="([^"]+)"/g)).map(m => m[1])
-    const rebajasUrls = filtrarUrlsRebajas(hrefs, baseUrl || url)
-    return { codigoDescuento, rebajasUrls }
-  } catch {
-    return { codigoDescuento: null, rebajasUrls: [] }
-  }
-}
-
-module.exports = { detectarCodigoDescuento, filtrarUrlsRebajas, detectarRebajasYCodigoViaHtml }
