@@ -443,6 +443,9 @@ function mapItem(item: any, keyword: string): object {
     keyword,
     platform:    'vinted',
     marca:       detectarMarca(item.title ?? '', ''),
+    seller_score: typeof item.user?.feedback_reputation === 'number'
+      ? Math.round(item.user.feedback_reputation * 10) / 10
+      : null,
   }
 }
 
