@@ -24,6 +24,25 @@ const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 // Bonus de score para anuncios NUEVOS (sube posiciones en el TOP respecto a casi-nuevos)
 const BONUS_NEW = 8
 
+// Penalización progresiva por antigüedad del anuncio (campo date de wallapop_cache)
+// Umbrales en días → penalización acumulada (se aplica el primero que se cumple)
+const PEN_ANTIGÜEDAD: Array<[number, number]> = [
+  [45, -60],
+  [30, -40],
+  [21, -25],
+  [14, -15],
+  [ 7,  -5],
+]
+
+function calcularPenAntiguedad(dateStr: string | null): number {
+  if (!dateStr) return 0
+  const dias = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
+  for (const [umbral, pen] of PEN_ANTIGÜEDAD) {
+    if (dias > umbral) return pen
+  }
+  return 0
+}
+
 // ── Sistema de rating multifactor ────────────────────────────────────────────
 // Peso ahorro absoluto: cada 10€ ahorrados = 1 punto
 const PESO_AHORRO_EUROS = 0.10
@@ -402,7 +421,7 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
 
   const { data, error } = await supabase
     .from('wallapop_cache')
-    .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at')
+    .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at, date')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
     .ilike('title', `%${modelo.phrase}%`)
@@ -458,6 +477,7 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
       + ahorro_euros   * PESO_AHORRO_EUROS
       + calcularBonusAño(modelo.nombre)
       + (item.condition === 'new' ? BONUS_NEW : 0)
+      + calcularPenAntiguedad(item.date ?? null)
     )
     oportunidades.push({
       external_id:  item.external_id,
