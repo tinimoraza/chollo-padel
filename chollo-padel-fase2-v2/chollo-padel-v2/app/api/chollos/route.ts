@@ -187,13 +187,18 @@ export async function GET() {
   // De lo contrario, el dedup elige el más reciente, el guard posterior lo descarta,
   // y no hay fallback → 0 chollos durante el pipeline.
   const GRACIA_MS = 3 * 60 * 60 * 1000
-  const snapsFiltrados = snapshots.filter(snap => {
+  const snapsFiltradosEstrictos = snapshots.filter(snap => {
     const pala = snap.palas as any
     if (!pala) return false
     const refUpdatedAt = pala.precios_updated_at ? new Date(pala.precios_updated_at).getTime() : 0
     const snapAt = new Date(snap.scraped_at).getTime()
     return snapAt <= refUpdatedAt + GRACIA_MS
   })
+
+  // Fallback: si el filtro estricto vacía todo (pipeline en curso o precios_updated_at
+  // desactualizado), usar todos los snapshots. Los guards de ratio/minimo/spread
+  // siguen activos y evitan chollos falsos. Así la página nunca se queda vacía.
+  const snapsFiltrados = snapsFiltradosEstrictos.length > 0 ? snapsFiltradosEstrictos : snapshots
 
   const byTienda = new Map<string, typeof snapshots[0]>()
   for (const snap of snapsFiltrados) {
