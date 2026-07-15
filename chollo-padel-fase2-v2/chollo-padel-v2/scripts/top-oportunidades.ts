@@ -364,77 +364,78 @@ const MODELOS: Modelo[] = [
   { nombre: 'Kuikma PR React',                  phrase: 'kuikma pr react' },
 
   // ── Frases genéricas sin año (vendedores que no ponen año en título) ──────
+  // Sin año en nombre porque la phrase no lo fija — no sabemos qué edición vende el anuncio
   // Bullpadel
-  { nombre: 'Bullpadel Hack 03 2024',           phrase: 'hack 03' },
-  { nombre: 'Bullpadel Iconic 2026',            phrase: 'bullpadel iconic' },
-  { nombre: 'Bullpadel Indiga 2026',            phrase: 'indiga' },
-  { nombre: 'Bullpadel Neuron 02 2026',         phrase: 'neuron 02',             excludeKeywords: ['edge','chingotto'] },
-  { nombre: 'Bullpadel Neuron 02 Edge 2026',    phrase: 'neuron 02 edge' },
-  { nombre: 'Siux Trilogy Pro 5 2025',          phrase: 'trilogy pro 5',         excludeKeywords: ['2024','2023'] },
+  { nombre: 'Bullpadel Hack 03',                phrase: 'hack 03' },
+  { nombre: 'Bullpadel Iconic',                 phrase: 'bullpadel iconic' },
+  { nombre: 'Bullpadel Indiga',                 phrase: 'indiga' },
+  { nombre: 'Bullpadel Neuron 02',              phrase: 'neuron 02',             excludeKeywords: ['edge','chingotto'] },
+  { nombre: 'Bullpadel Neuron 02 Edge',         phrase: 'neuron 02 edge' },
+  { nombre: 'Siux Trilogy Pro 5',               phrase: 'trilogy pro 5',         excludeKeywords: ['2024','2023'] },
 
   // Babolat
-  { nombre: 'Babolat Vertuo 2026',              phrase: 'vertuo',                excludeKeywords: ['air','technical'] },
-  { nombre: 'Babolat Technical Veron 2025',     phrase: 'technical veron' },
-  { nombre: 'Babolat Air Veron 2026',           phrase: 'air veron' },
+  { nombre: 'Babolat Vertuo',                   phrase: 'vertuo',                excludeKeywords: ['air','technical'] },
+  { nombre: 'Babolat Technical Veron',          phrase: 'technical veron' },
+  { nombre: 'Babolat Air Veron',                phrase: 'air veron' },
 
   // Head
-  { nombre: 'Head Gravity 2024',                phrase: 'gravity',               excludeKeywords: ['team','bag','racket'] },
-  { nombre: 'Head Extreme One 2026',            phrase: 'extreme one' },
-  { nombre: 'Head Speed One 2025',              phrase: 'speed one',             excludeKeywords: ['x'] },
-  { nombre: 'Head Speed Evo 2025',              phrase: 'speed evo' },
+  { nombre: 'Head Gravity',                     phrase: 'gravity',               excludeKeywords: ['team','bag','racket'] },
+  { nombre: 'Head Extreme One',                 phrase: 'extreme one' },
+  { nombre: 'Head Speed One',                   phrase: 'speed one',             excludeKeywords: ['x'] },
+  { nombre: 'Head Speed Evo',                   phrase: 'speed evo' },
 
   // Siux
-  { nombre: 'Siux Valkiria 2026',               phrase: 'siux valkiria' },
-  { nombre: 'Siux Electra ST4 2025',            phrase: 'electra st4' },
-  { nombre: 'Siux Trilogy 5 2025',              phrase: 'trilogy 5',             excludeKeywords: ['pro','elite','go','6'] },
-  { nombre: 'Siux Diablo GO 3 2024',            phrase: 'diablo go 3' },
-  { nombre: 'Siux Pegasus 3 2025',              phrase: 'pegasus 3' },
+  { nombre: 'Siux Valkiria',                    phrase: 'siux valkiria' },
+  { nombre: 'Siux Electra ST4',                 phrase: 'electra st4' },
+  { nombre: 'Siux Trilogy 5',                   phrase: 'trilogy 5',             excludeKeywords: ['pro','elite','go','6'] },
+  { nombre: 'Siux Diablo GO 3',                 phrase: 'diablo go 3' },
+  { nombre: 'Siux Pegasus 3',                   phrase: 'pegasus 3' },
 
   // Adidas
-  { nombre: 'Adidas Legend 2025',               phrase: 'adidas legend' },
-  { nombre: 'Adidas Metalbone Reserve 2026',    phrase: 'metalbone reserve' },
-  { nombre: 'Adidas Adipower Carbon 2025',      phrase: 'adipower carbon' },
-  { nombre: 'Adidas Rx Series 2024',            phrase: 'rx series' },
-  { nombre: 'Adidas Bisoke 2024',               phrase: 'bisoke' },
-  { nombre: 'Adidas Drive Black 2026',          phrase: 'drive black' },
+  { nombre: 'Adidas Legend',                    phrase: 'adidas legend' },
+  { nombre: 'Adidas Metalbone Reserve',         phrase: 'metalbone reserve' },
+  { nombre: 'Adidas Adipower Carbon',           phrase: 'adipower carbon' },
+  { nombre: 'Adidas Rx Series',                 phrase: 'rx series' },
+  { nombre: 'Adidas Bisoke',                    phrase: 'bisoke' },
+  { nombre: 'Adidas Drive Black',               phrase: 'drive black' },
 
   // StarVie
-  { nombre: 'StarVie Raptor 2025',              phrase: 'starvie raptor' },
-  { nombre: 'StarVie Titania 2025',             phrase: 'titania' },
-  { nombre: 'StarVie Metheora 2024',            phrase: 'metheora' },
-  { nombre: 'StarVie Basalto 2025',             phrase: 'basalto',              excludeKeywords: ['osiris'] },
-  { nombre: 'StarVie Aquila 2025',              phrase: 'starvie aquila' },
-  { nombre: 'StarVie Astrum 2025',              phrase: 'astrum' },
-  { nombre: 'StarVie Dronos 2024',              phrase: 'dronos' },
+  { nombre: 'StarVie Raptor',                   phrase: 'starvie raptor' },
+  { nombre: 'StarVie Titania',                  phrase: 'titania' },
+  { nombre: 'StarVie Metheora',                 phrase: 'metheora' },
+  { nombre: 'StarVie Basalto',                  phrase: 'basalto',              excludeKeywords: ['osiris'] },
+  { nombre: 'StarVie Aquila',                   phrase: 'starvie aquila' },
+  { nombre: 'StarVie Astrum',                   phrase: 'astrum' },
+  { nombre: 'StarVie Dronos',                   phrase: 'dronos' },
 
   // Black Crown
-  { nombre: 'Black Crown Gladius 2026',         phrase: 'gladius',              excludeKeywords: ['drop shot','drop-shot'] },
+  { nombre: 'Black Crown Gladius',              phrase: 'gladius',              excludeKeywords: ['drop shot','drop-shot'] },
 
   // Wilson
-  { nombre: 'Wilson Endure V1 2026',            phrase: 'endure v1',             excludeKeywords: ['pro','ls'] },
-  { nombre: 'Wilson Bela LS V3 2025',           phrase: 'bela ls v3' },
+  { nombre: 'Wilson Endure V1',                 phrase: 'endure v1',             excludeKeywords: ['pro','ls'] },
+  { nombre: 'Wilson Bela LS V3',                phrase: 'bela ls v3' },
 
   // Nox
-  { nombre: 'Nox AT10 Pro Cup 2025',            phrase: 'at10 pro cup',          excludeKeywords: ['soft'] },
-  { nombre: 'Nox Equation 2025',                phrase: 'nox equation' },
-  { nombre: 'Nox AT10 Luxury Genius 12K 2026',  phrase: 'at10 luxury genius 12k' },
+  { nombre: 'Nox AT10 Pro Cup',                 phrase: 'at10 pro cup',          excludeKeywords: ['soft'] },
+  { nombre: 'Nox Equation',                     phrase: 'nox equation' },
+  { nombre: 'Nox AT10 Luxury Genius 12K',       phrase: 'at10 luxury genius 12k' },
 
   // Dunlop
-  { nombre: 'Dunlop Galactica 2025',            phrase: 'galactica' },
+  { nombre: 'Dunlop Galactica',                 phrase: 'galactica' },
 
   // Lok
-  { nombre: 'Lok Maxx Hype 2024',               phrase: 'maxx hype' },
-  { nombre: 'Lok Be Flow 2025',                 phrase: 'be flow' },
-  { nombre: 'Lok Carbon Hype 2024',             phrase: 'carbon hype' },
-  { nombre: 'Lok Jungle 2026',                  phrase: 'lok jungle' },
-  { nombre: 'Lok Easy Flow 2025',               phrase: 'easy flow' },
+  { nombre: 'Lok Maxx Hype',                    phrase: 'maxx hype' },
+  { nombre: 'Lok Be Flow',                      phrase: 'be flow' },
+  { nombre: 'Lok Carbon Hype',                  phrase: 'carbon hype' },
+  { nombre: 'Lok Jungle',                       phrase: 'lok jungle' },
+  { nombre: 'Lok Easy Flow',                    phrase: 'easy flow' },
 
   // Drop Shot
-  { nombre: 'Drop Shot Explorer Pro 2024',      phrase: 'explorer pro',          excludeKeywords: ['attack'] },
-  { nombre: 'Drop Shot Canyon Pro 2024',        phrase: 'canyon pro' },
+  { nombre: 'Drop Shot Explorer Pro',           phrase: 'explorer pro',          excludeKeywords: ['attack'] },
+  { nombre: 'Drop Shot Canyon Pro',             phrase: 'canyon pro' },
 
   // Enebe
-  { nombre: 'Enebe Spitfire 2024',              phrase: 'spitfire' },
+  { nombre: 'Enebe Spitfire',                   phrase: 'spitfire' },
 ]
 
 function calcMediana(precios: number[]): number | null {
