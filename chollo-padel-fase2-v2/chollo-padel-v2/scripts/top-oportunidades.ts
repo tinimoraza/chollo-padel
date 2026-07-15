@@ -229,6 +229,8 @@ const MODELOS: Modelo[] = [
   { nombre: 'Siux Diablo Pro 4',                  phrase: 'siux diablo pro 4' },
   { nombre: 'Siux Diablo Pro 2026',               phrase: 'diablo pro 2026',          excludeKeywords: ['elite'] },
   { nombre: 'Siux Fenix Pro 2026',                phrase: 'fenix pro 2026' },
+  { nombre: 'Siux Fenix Pro 5 2025',              phrase: 'fenix pro 5' },            // títulos sin año explícito
+  { nombre: 'Siux Fenix Pro 5 2025',              phrase: 'fenix pro black',           excludeKeywords: ['5','elite'] }, // "fenix pro black 2026/leo augsburger" sin "5"
   { nombre: 'Siux Fenix Elite 2026',              phrase: 'fenix elite 2026' },
   { nombre: 'Siux Astra Hybrid 2026',             phrase: 'astra hybrid 2026' },
   { nombre: 'Siux Tsunami 5.0',                   phrase: 'siux tsunami 5.0' },
@@ -360,6 +362,79 @@ const MODELOS: Modelo[] = [
   { nombre: 'Kuikma PR Power Carbon',           phrase: 'kuikma pr power carbon' },
   { nombre: 'Kuikma PR Comfort',                phrase: 'kuikma pr comfort' },
   { nombre: 'Kuikma PR React',                  phrase: 'kuikma pr react' },
+
+  // ── Frases genéricas sin año (vendedores que no ponen año en título) ──────
+  // Bullpadel
+  { nombre: 'Bullpadel Hack 03 2024',           phrase: 'hack 03' },
+  { nombre: 'Bullpadel Iconic 2026',            phrase: 'bullpadel iconic' },
+  { nombre: 'Bullpadel Indiga 2026',            phrase: 'indiga' },
+  { nombre: 'Bullpadel Neuron 02 2026',         phrase: 'neuron 02',             excludeKeywords: ['edge','chingotto'] },
+  { nombre: 'Bullpadel Neuron 02 Edge 2026',    phrase: 'neuron 02 edge' },
+  { nombre: 'Siux Trilogy Pro 5 2025',          phrase: 'trilogy pro 5',         excludeKeywords: ['2024','2023'] },
+
+  // Babolat
+  { nombre: 'Babolat Vertuo 2026',              phrase: 'vertuo',                excludeKeywords: ['air','technical'] },
+  { nombre: 'Babolat Technical Veron 2025',     phrase: 'technical veron' },
+  { nombre: 'Babolat Air Veron 2026',           phrase: 'air veron' },
+
+  // Head
+  { nombre: 'Head Gravity 2024',                phrase: 'gravity',               excludeKeywords: ['team','bag','racket'] },
+  { nombre: 'Head Extreme One 2026',            phrase: 'extreme one' },
+  { nombre: 'Head Speed One 2025',              phrase: 'speed one',             excludeKeywords: ['x'] },
+  { nombre: 'Head Speed Evo 2025',              phrase: 'speed evo' },
+
+  // Siux
+  { nombre: 'Siux Valkiria 2026',               phrase: 'siux valkiria' },
+  { nombre: 'Siux Electra ST4 2025',            phrase: 'electra st4' },
+  { nombre: 'Siux Trilogy 5 2025',              phrase: 'trilogy 5',             excludeKeywords: ['pro','elite','go','6'] },
+  { nombre: 'Siux Diablo GO 3 2024',            phrase: 'diablo go 3' },
+  { nombre: 'Siux Pegasus 3 2025',              phrase: 'pegasus 3' },
+
+  // Adidas
+  { nombre: 'Adidas Legend 2025',               phrase: 'adidas legend' },
+  { nombre: 'Adidas Metalbone Reserve 2026',    phrase: 'metalbone reserve' },
+  { nombre: 'Adidas Adipower Carbon 2025',      phrase: 'adipower carbon' },
+  { nombre: 'Adidas Rx Series 2024',            phrase: 'rx series' },
+  { nombre: 'Adidas Bisoke 2024',               phrase: 'bisoke' },
+  { nombre: 'Adidas Drive Black 2026',          phrase: 'drive black' },
+
+  // StarVie
+  { nombre: 'StarVie Raptor 2025',              phrase: 'starvie raptor' },
+  { nombre: 'StarVie Titania 2025',             phrase: 'titania' },
+  { nombre: 'StarVie Metheora 2024',            phrase: 'metheora' },
+  { nombre: 'StarVie Basalto 2025',             phrase: 'basalto',              excludeKeywords: ['osiris'] },
+  { nombre: 'StarVie Aquila 2025',              phrase: 'starvie aquila' },
+  { nombre: 'StarVie Astrum 2025',              phrase: 'astrum' },
+  { nombre: 'StarVie Dronos 2024',              phrase: 'dronos' },
+
+  // Black Crown
+  { nombre: 'Black Crown Gladius 2026',         phrase: 'gladius' },
+
+  // Wilson
+  { nombre: 'Wilson Endure V1 2026',            phrase: 'endure v1',             excludeKeywords: ['pro','ls'] },
+  { nombre: 'Wilson Bela LS V3 2025',           phrase: 'bela ls v3' },
+
+  // Nox
+  { nombre: 'Nox AT10 Pro Cup 2025',            phrase: 'at10 pro cup',          excludeKeywords: ['soft'] },
+  { nombre: 'Nox Equation 2025',                phrase: 'nox equation' },
+  { nombre: 'Nox AT10 Luxury Genius 12K 2026',  phrase: 'at10 luxury genius 12k' },
+
+  // Dunlop
+  { nombre: 'Dunlop Galactica 2025',            phrase: 'galactica' },
+
+  // Lok
+  { nombre: 'Lok Maxx Hype 2024',               phrase: 'maxx hype' },
+  { nombre: 'Lok Be Flow 2025',                 phrase: 'be flow' },
+  { nombre: 'Lok Carbon Hype 2024',             phrase: 'carbon hype' },
+  { nombre: 'Lok Jungle 2026',                  phrase: 'lok jungle' },
+  { nombre: 'Lok Easy Flow 2025',               phrase: 'easy flow' },
+
+  // Drop Shot
+  { nombre: 'Drop Shot Explorer Pro 2024',      phrase: 'explorer pro',          excludeKeywords: ['attack'] },
+  { nombre: 'Drop Shot Canyon Pro 2024',        phrase: 'canyon pro' },
+
+  // Enebe
+  { nombre: 'Enebe Spitfire 2024',              phrase: 'spitfire' },
 ]
 
 function calcMediana(precios: number[]): number | null {
