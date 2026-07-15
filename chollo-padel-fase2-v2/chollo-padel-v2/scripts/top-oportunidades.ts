@@ -408,7 +408,7 @@ const MODELOS: Modelo[] = [
   { nombre: 'StarVie Dronos 2024',              phrase: 'dronos' },
 
   // Black Crown
-  { nombre: 'Black Crown Gladius 2026',         phrase: 'gladius' },
+  { nombre: 'Black Crown Gladius 2026',         phrase: 'gladius',              excludeKeywords: ['drop shot','drop-shot'] },
 
   // Wilson
   { nombre: 'Wilson Endure V1 2026',            phrase: 'endure v1',             excludeKeywords: ['pro','ls'] },
