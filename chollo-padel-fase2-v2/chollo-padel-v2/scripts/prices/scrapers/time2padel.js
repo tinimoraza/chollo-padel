@@ -36,24 +36,21 @@ async function extractProducts(page) {
       const url   = titleLinkEl?.href || imgLinkEl?.href
       if (!title || !url || !url.startsWith('http')) return
 
-      // Precio actual
       const priceEl = article.querySelector('span.product-price, .price:not(.regular-price):not(.old-price)')
       const priceContent = priceEl?.getAttribute('content')
       let price = priceContent ? parseFloat(priceContent) : NaN
       if (isNaN(price) || price <= 0) {
-        const txt = priceEl?.textContent?.replace(/[^0-9,]/g, '').replace(',', '.') ?? ''
+        const txt = priceEl?.textContent?.replace(/[^0-9,]/g, '').replace(',', '.') || ''
         price = parseFloat(txt)
       }
       if (isNaN(price) || price < 30) return
 
-      // Precio original
       const origEl   = article.querySelector('span.regular-price, .old-price, del .price, s .price')
-      const origText = origEl?.textContent?.trim() ?? ''
+      const origText = origEl?.textContent?.trim() || ''
       const original = origText
         ? parseFloat(origText.replace(/[^0-9,]/g, '').replace(',', '.'))
         : NaN
 
-      // Imagen
       const imgEl = article.querySelector('img[data-src], img.product-thumbnail-first, img')
       const rawImg = imgEl?.getAttribute('data-src') || imgEl?.src || ''
       const image = rawImg && !rawImg.startsWith('data:') && !rawImg.includes('blank.png')
@@ -65,7 +62,7 @@ async function extractProducts(page) {
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
         url,
-        image: image?.startsWith('http') ? image : null,
+        image: (image && image.startsWith('http')) ? image : null,
       })
     })
     return items
@@ -73,7 +70,7 @@ async function extractProducts(page) {
 }
 
 async function scrape() {
-  console.log('[time2padel] Iniciando scraper (Playwright — PrestaShop)…')
+  console.log('[time2padel] Iniciando scraper (Playwright — PrestaShop)...')
 
   let chromium
   try {
@@ -108,12 +105,11 @@ async function scrape() {
   try {
     while (true) {
       const url = pageNum === 1 ? CATEGORY_URL : `${CATEGORY_URL}?page=${pageNum}`
-      console.log(`[time2padel]   Página ${pageNum}: ${url}`)
+      console.log(`[time2padel]   Pagina ${pageNum}: ${url}`)
 
       await page.goto(url, { waitUntil: 'load', timeout: 45000 })
       await page.waitForTimeout(3000)
 
-      // Cerrar cookies/banner
       if (pageNum === 1) {
         try {
           await page.waitForSelector(
@@ -125,7 +121,6 @@ async function scrape() {
         } catch { /* sin banner */ }
       }
 
-      // Esperar productos
       try {
         await page.waitForSelector(
           'article.product-miniature, .product-miniature, .js-product-miniature',
@@ -136,7 +131,7 @@ async function scrape() {
           url: window.location.href,
           status: document.title.substring(0, 80),
         })).catch(() => ({}))
-        console.log(`[time2padel]   Sin productos en pág ${pageNum} — fin`, info)
+        console.log(`[time2padel]   Sin productos en pag ${pageNum} — fin`, info)
         break
       }
 
@@ -147,28 +142,29 @@ async function scrape() {
           console.log(`[time2padel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         }
         const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
-        rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+        const todasRebajas = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+        // Solo rebajas de palas — evitar zapatillas/ropa/paleteros que disparan mas Cloudflare
+        rebajasUrls = todasRebajas.filter(u => /pala|outlet.*pad|pad.*outlet/i.test(u))
         if (rebajasUrls.length > 0) {
-          console.log(`[time2padel] sección rebajas: ${rebajasUrls.join(', ')}`)
+          console.log(`[time2padel] seccion rebajas (palas): ${rebajasUrls.join(', ')}`)
         }
       }
 
       const products = await extractProducts(page)
       const pageNew  = products.filter(p => isPala(p.title) && !seen.has(p.url))
       pageNew.forEach(p => seen.add(p.url))
-      console.log(`[time2padel]   → ${pageNew.length} palas en pág ${pageNum}`)
+      console.log(`[time2padel]   -> ${pageNew.length} palas en pag ${pageNum}`)
       allProducts.push(...pageNew)
 
       if (products.length === 0) break
 
-      // ¿Hay página siguiente?
       const hasNext = await page.evaluate((cur) => (
         !!(document.querySelector(`a[href*="page=${cur + 1}"]`) ||
            document.querySelector('a[rel="next"], .next a, li.next a'))
       ), pageNum)
 
       if (!hasNext) {
-        console.log(`[time2padel] Última página (${pageNum}). Total: ${allProducts.length}`)
+        console.log(`[time2padel] Ultima pagina (${pageNum}). Total: ${allProducts.length}`)
         break
       }
 
@@ -179,7 +175,6 @@ async function scrape() {
     console.error('[time2padel] Error:', err.message)
   }
 
-  // Secciones de rebajas
   for (const rebajasUrl of rebajasUrls) {
     try {
       await page.goto(rebajasUrl, { waitUntil: 'load', timeout: 45000 })
@@ -196,7 +191,7 @@ async function scrape() {
         allProducts.push(p)
         added++
       }
-      console.log(`[time2padel] rebajas ${rebajasUrl} → ${added} nuevos`)
+      console.log(`[time2padel] rebajas ${rebajasUrl} -> ${added} nuevos`)
     } catch (e) {
       console.error(`[time2padel] Error rebajas ${rebajasUrl}:`, e.message)
     }
@@ -212,9 +207,9 @@ async function scrape() {
     source_key:      SOURCE_KEY,
     title:           p.title,
     price:           p.price,
-    precio_original: p.precio_original ?? null,
+    precio_original: p.precio_original || null,
     url:             p.url,
-    image:           p.image ?? null,
+    image:           p.image || null,
     scraped_at,
   }))
   resultado.codigoDescuento = codigoDescuento
