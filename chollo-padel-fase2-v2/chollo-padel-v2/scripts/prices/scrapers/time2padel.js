@@ -3,12 +3,11 @@
 //
 // NOTA (fix 2026-06-18): URL cambió a /es/5-palas-de-padel (con ID).
 // NOTA (fix 2026-07-16): migrado de cheerio+fetch a Playwright — HTTP 403 de Cloudflare.
-// NOTA (fix 2026-07-16b): estrategia subcategorías por marca — pero CF bloquea todas
-//   las subcategorías en GHA desde la primera visita.
+// NOTA (fix 2026-07-16b): estrategia subcategorías por marca — pero CF bloquea todas.
 // NOTA (fix 2026-07-16c): nueva estrategia — paginar categoría principal con delay
-//   largo (10s) + scrolling simulado. La página principal carga OK; las páginas
-//   siguientes también suelen pasar si hay suficiente delay entre ellas.
-//   Fallback h2>a si article.product-miniature = 0 (tema personalizado).
+//   largo (10s) + scrolling simulado.
+// NOTA (fix 2026-07-16d): el contenedor closest() es demasiado pequeño (no contiene
+//   precio); ahora subimos en el DOM hasta encontrar ancestro con precio.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
@@ -40,14 +39,33 @@ async function extractProducts(page) {
       'article.product-miniature, .product-miniature, .js-product-miniature, li[class*="product-miniature"], div[class*="product-miniature"]'
     ))
 
-    // Intento 2: tema personalizado — inferir contenedor desde h2 > a
+    // Intento 2: tema personalizado — subir DOM desde h2 > a hasta ancestro con precio
     if (articles.length === 0) {
       var h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
-        .filter(function(a) { return a.href && a.href.indexOf('#') === -1 && a.textContent && a.textContent.trim().length > 3 })
+        .filter(function(a) {
+          return a.href
+            && a.href.indexOf('#') === -1
+            && a.href.indexOf('time2padel.com') !== -1
+            && a.textContent && a.textContent.trim().length > 3
+        })
       var seen2 = new Set()
       for (var k = 0; k < h2Links.length; k++) {
         var a = h2Links[k]
-        var container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+        // Subir en el DOM hasta encontrar un ancestro que contenga un precio
+        var container = null
+        var el = a.parentElement
+        for (var depth = 0; depth < 10; depth++) {
+          if (!el || el === document.body) break
+          if (el.querySelector('span.product-price, .product-price, [itemprop="price"]')) {
+            container = el
+            break
+          }
+          el = el.parentElement
+        }
+        // Fallback si no encontramos precio: usar closest genérico
+        if (!container) {
+          container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+        }
         if (container && !seen2.has(container)) {
           seen2.add(container)
           articles.push(container)
@@ -187,6 +205,16 @@ async function scrape() {
       await context.close(); await browser.close()
       return []
     }
+
+    // Debug
+    const dbg1 = await page.evaluate(function() {
+      return {
+        h2links: document.querySelectorAll('h2 a[href]').length,
+        priceCount: document.querySelectorAll('.product-price, [itemprop="price"]').length,
+        miniature: document.querySelectorAll('article.product-miniature, .product-miniature').length,
+      }
+    })
+    console.log('[time2padel]   debug pag1:', JSON.stringify(dbg1))
 
     const p1 = await extractProducts(page)
     for (var i = 0; i < p1.length; i++) {

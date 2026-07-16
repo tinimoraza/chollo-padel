@@ -6,11 +6,11 @@
 // Precio: .product-price[content] (entero, ej. "300")
 // Nota: PVP oficial Adidas — útil como precio de referencia techo
 //
-// FIX 2026-07-16 v1: el scraper usaba 'h2 a[href*="/palas-padel/"]' como
-// waitForSelector, que falla en headless (hrefs hidratan tarde).
-// FIX 2026-07-16 v2: article.product-miniature también devuelve 0 en GHA
-// aunque h2count=100. Tema personalizado. Añadido fallback: inferir contenedor
-// desde h2>a y esperar h2 a[href] en vez de article.product-miniature.
+// FIX 2026-07-16 v1: waitForSelector → waitForFunction (h2 a[href] fallback)
+// FIX 2026-07-16 v2: article.product-miniature=0 en GHA; fallback h2>a
+// FIX 2026-07-16 v3: el contenedor closest() es demasiado pequeño (no contiene
+//   el precio); ahora subimos en el DOM hasta encontrar un ancestro que tenga
+//   tanto título como .product-price.
 
 const SOURCE_KEY = 'allforpadel'
 const BASE_URL   = 'https://allforpadel.com/es/54-palas-padel'
@@ -19,22 +19,42 @@ const DELAY_MS   = 2000
 const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 async function extractProducts(page) {
-  return page.evaluate(() => {
-    const items = []
-    const seen  = new Set()
+  return page.evaluate(function() {
+    var items = []
+    var seen  = new Set()
 
     // Intento 1: contenedores estándar PrestaShop
-    let articles = Array.from(document.querySelectorAll(
+    var articles = Array.from(document.querySelectorAll(
       'article.product-miniature, .product-miniature, .js-product-miniature, li[class*="product-miniature"], div[class*="product-miniature"]'
     ))
 
-    // Intento 2: tema personalizado — inferir contenedor desde h2 > a
+    // Intento 2: tema personalizado — subir DOM desde h2 > a hasta ancestro con precio
     if (articles.length === 0) {
-      const h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
-        .filter(a => a.href && !a.href.includes('#') && a.textContent && a.textContent.trim().length > 3)
-      const seen2 = new Set()
-      for (const a of h2Links) {
-        const container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+      var h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
+        .filter(function(a) {
+          return a.href
+            && a.href.indexOf('#') === -1
+            && a.href.indexOf('allforpadel.com') !== -1
+            && a.textContent && a.textContent.trim().length > 3
+        })
+      var seen2 = new Set()
+      for (var k = 0; k < h2Links.length; k++) {
+        var a = h2Links[k]
+        // Subir en el DOM hasta encontrar un ancestro que contenga un precio
+        var container = null
+        var el = a.parentElement
+        for (var depth = 0; depth < 10; depth++) {
+          if (!el || el === document.body) break
+          if (el.querySelector('span.product-price, .product-price, [itemprop="price"]')) {
+            container = el
+            break
+          }
+          el = el.parentElement
+        }
+        // Fallback si no encontramos precio: usar closest genérico
+        if (!container) {
+          container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+        }
         if (container && !seen2.has(container)) {
           seen2.add(container)
           articles.push(container)
@@ -150,9 +170,7 @@ async function scrape() {
         } catch (e) { /* sin banner */ }
       }
 
-      // Esperar productos.
-      // Fallback: temas personalizados no usan article.product-miniature;
-      // aceptar tambien cuando hay >=5 enlaces h2 (titulos de producto).
+      // Esperar productos: estándar PrestaShop o h2 a[href] >= 5
       var gotProducts = false
       try {
         await page.waitForFunction(function() {
@@ -167,10 +185,10 @@ async function scrape() {
           debugInfo = await page.evaluate(function() {
             return {
               url: window.location.href,
-              bodyClass: document.body.className.substring(0, 150),
               title: document.title.substring(0, 100),
               h2count: document.querySelectorAll('h2').length,
               h2links: document.querySelectorAll('h2 a[href]').length,
+              priceCount: document.querySelectorAll('.product-price, [itemprop="price"]').length,
             }
           })
         } catch(e2) {}
@@ -192,6 +210,16 @@ async function scrape() {
           console.log('[allforpadel] seccion(es) de rebajas: ' + rebajasUrls.join(', '))
         }
       }
+
+      // Debug antes de extraer
+      const debugPre = await page.evaluate(function() {
+        return {
+          h2links: document.querySelectorAll('h2 a[href]').length,
+          priceCount: document.querySelectorAll('.product-price, [itemprop="price"]').length,
+          miniature: document.querySelectorAll('article.product-miniature, .product-miniature').length,
+        }
+      })
+      console.log('[allforpadel] debug pag' + pageNum + ':', JSON.stringify(debugPre))
 
       const products = await extractProducts(page)
       console.log('[allforpadel]  -> ' + products.length + ' palas')
@@ -247,8 +275,8 @@ async function scrape() {
   await browser.close()
 
   // Deduplicar por URL
-  const seen2  = new Set()
-  const unique = allProducts.filter(function(p) {
+  var seen2  = new Set()
+  var unique = allProducts.filter(function(p) {
     if (seen2.has(p.url)) return false
     seen2.add(p.url)
     return true
