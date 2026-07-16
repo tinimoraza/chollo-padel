@@ -55,12 +55,14 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
+      - name: Instalar Playwright Chromium (time2padel)
+        run: npx playwright install --with-deps chromium
       - name: Scrape padelnuestro
         timeout-minutes: 12
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelnuestro --no-post
       - name: Scrape time2padel
-        timeout-minutes: 5
+        timeout-minutes: 20
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts time2padel --no-post
       - name: Scrape padelproshop
