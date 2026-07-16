@@ -13,58 +13,78 @@ const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-uti
 
 async function extractProducts(page) {
   return page.evaluate(() => {
-    const items = []
-    const articles = Array.from(document.querySelectorAll(
-      'article.product-miniature, .product-miniature, li.ajax_block_product, .ajax_block_product'
-    ))
+    const items  = []
+    const seen   = new Set()
 
-    articles.forEach(article => {
-      // Titulo y URL
-      // .product-title a tiene el texto y la URL del producto
-      // a.thumbnail es el enlace de imagen (texto vacio) -> NO sirve para titulo
-      const titleLinkEl = article.querySelector('.product-title a, h2 a, h3 a')
-      const imgLinkEl   = article.querySelector('a.thumbnail.product-thumbnail')
-      const title = titleLinkEl?.textContent?.trim()
-      const url   = titleLinkEl?.href || imgLinkEl?.href
-      if (!title || !url || !url.startsWith('http')) return
+    // El tema custom de allforpadel (Adidas oficial) NO usa article.product-miniature.
+    // Los títulos están en <h2><a href="/es/palas-padel/...">Titulo</a></h2>.
+    // Usamos ese patrón para identificar productos.
+    const titleLinks = Array.from(
+      document.querySelectorAll('h2 a[href*="/palas-padel/"]')
+    )
 
-      // Precio actual — PrestaShop pone valor en atributo content
-      // allforpadel usa span.product-price con atributo content="300" (sin itemprop)
-      const priceEl = article.querySelector('span.product-price')
-      const price   = priceEl ? parseFloat(priceEl.getAttribute('content')) : NaN
+    for (const link of titleLinks) {
+      const url = link.href
+      if (!url || seen.has(url)) continue
+      seen.add(url)
 
-      // Fallback: texto del precio
-      const priceTextEl = article.querySelector(
-        '.price .price, .product-price, .price-box .price, span.price:not(.old-price)'
-      )
-      const priceFallback = priceTextEl
-        ? parseFloat(priceTextEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.'))
-        : NaN
+      const title = link.textContent?.trim()
+      if (!title) continue
 
-      const finalPrice = !isNaN(price) && price > 0 ? price
-        : !isNaN(priceFallback) && priceFallback > 0 ? priceFallback
-        : NaN
-      if (isNaN(finalPrice) || finalPrice <= 0) return
+      // Subir al contenedor del producto (max 8 niveles) buscando el precio
+      let price = NaN
+      let original = NaN
+      let image = null
+      let node = link.parentElement
 
-      // Precio original (tachado)
-      const origEl   = article.querySelector('span.regular-price, .old-price, del .price')
-      const origText = origEl?.textContent?.trim() ?? ''
-      const original = origText
-        ? parseFloat(origText.replace(/[^0-9,]/g, '').replace(',', '.'))
-        : NaN
+      for (let i = 0; i < 8 && node; i++) {
+        // Precio: [itemprop="price"], span con content numérico, .price, [class*=price]
+        const priceEl = node.querySelector(
+          '[itemprop="price"], span[content], .price:not(.old-price):not(.regular-price), [class*="current"], [class*="sale"]'
+        )
+        if (priceEl) {
+          const content = priceEl.getAttribute('content') || priceEl.getAttribute('data-price')
+          if (content) {
+            const v = parseFloat(content)
+            if (!isNaN(v) && v > 0) { price = v; break }
+          }
+          const txt = priceEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')
+          const v = parseFloat(txt)
+          if (!isNaN(v) && v > 0) { price = v; break }
+        }
+        node = node.parentElement
+      }
 
-      // Imagen
-      const imgEl = article.querySelector('img[data-src], img.product-cover-img, img')
-      const image = imgEl?.getAttribute('data-src') || imgEl?.src || null
+      // Si no encontramos precio por selector, extraer del innerText del contenedor
+      if (isNaN(price) && node) {
+        const m = node.innerText.match(/(\d{2,3}(?:[.,]\d{2})?)\s*€/)
+        if (m) price = parseFloat(m[1].replace(',', '.'))
+      }
+      if (isNaN(price) || price <= 0) continue
+
+      // Precio original (tachado): buscar .old-price, .regular-price, s, del
+      if (node) {
+        const origEl = node.querySelector('.old-price, .regular-price, s, del, [class*="old"], [class*="regular"]')
+        if (origEl) {
+          const txt = origEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')
+          const v = parseFloat(txt)
+          if (!isNaN(v) && v > price) original = v
+        }
+        // Imagen
+        const imgEl = node.querySelector('img[data-src], img[src*="/p/"], img')
+        const src = imgEl?.getAttribute('data-src') || imgEl?.src || null
+        if (src && src.startsWith('http')) image = src
+      }
 
       items.push({
         title,
-        price: finalPrice,
-        precio_original: (!isNaN(original) && original > finalPrice) ? original : null,
+        price,
+        precio_original: !isNaN(original) ? original : null,
         url,
-        image: image && image.startsWith('http') ? image : null,
+        image,
       })
-    })
+    }
+
     return items
   })
 }
@@ -126,14 +146,13 @@ async function scrape() {
         } catch { /* sin banner */ }
       }
 
-      // Esperar productos
+      // Esperar productos — tema custom Adidas, NO usa article.product-miniature
       try {
         await page.waitForSelector(
-          'article.product-miniature, .product-miniature, li.ajax_block_product',
+          'h2 a[href*="/palas-padel/"]',
           { timeout: 30000 }
         )
       } catch {
-        // Debug: loguear la URL real y clase del body para diagnosticar bloqueo
         const debugInfo = await page.evaluate(() => ({
           url: window.location.href,
           bodyClass: document.body.className.substring(0, 150),
