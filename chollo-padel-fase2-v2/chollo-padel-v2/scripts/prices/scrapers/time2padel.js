@@ -1,25 +1,41 @@
 // scripts/prices/scrapers/time2padel.js
 // Time2Padel — PrestaShop, Playwright (Cloudflare bloquea fetch/cheerio básico)
-// URL: https://www.time2padel.com/es/5-palas-de-padel
-// Paginación: ?page=N
+// La categoría principal tiene 444 palas en múltiples páginas; Cloudflare bloquea
+// la paginación (?page=2+) en la misma sesión. Estrategia: extraer subcategorías
+// por marca de la página principal y scrapearlas individualmente — cada una tiene
+// pocas palas y son URLs distintas que Cloudflare no correlaciona.
 //
 // NOTA (fix 2026-06-18): URL cambió a /es/5-palas-de-padel (con ID).
 // NOTA (fix 2026-07-16): migrado de cheerio+fetch a Playwright — HTTP 403 de Cloudflare.
+// NOTA (fix 2026-07-16b): estrategia subcategorías por marca para cubrir las 444 palas.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
 const CATEGORY_URL = `${BASE_URL}/es/5-palas-de-padel`
-const DELAY_MS     = 2000
+const DELAY_MS     = 3500   // entre subcategorías
+const PAGE_DELAY   = 5000   // entre páginas de la misma subcategoría
 
 const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
-const EXCLUIR = ['zapatilla', 'mochila', 'paletero', 'bolsa', 'grip', 'overgrip',
-  'pelota', 'pelotas', 'camiseta', 'short', 'polo', 'funda', 'muñequera', 'protector',
-  'cordaje', 'antivibrador', 'visera', 'gorra', 'calcetín', 'ropa', 'pack ']
+// Fragmentos que identifican subcategorías de NAVEGACIÓN (nivel/jugador/estilo/outlet)
+// — no son marcas, sus palas ya aparecen en la subcategoría de marca correspondiente
+const EXCLUIR_SUBCATS = [
+  'nivel-', 'hombre', 'mujer', 'junior', 'potencia', 'control', 'polivalente',
+  'equilibrio', 'outlet', 'rebajas', 'todos-los-productos', 'paletero', 'zapatilla',
+  'mochila', 'accesor', 'indumentaria', 'ropa', 'calzado', 'bolsa',
+]
+
+// Palabras en títulos de producto que indican que NO es una pala
+const EXCLUIR_TITULO = [
+  'zapatilla', 'mochila', 'paletero', 'bolsa', 'grip', 'overgrip',
+  'pelota', 'pelotas', 'camiseta', 'short', 'polo', 'funda', 'muñequera',
+  'protector', 'cordaje', 'antivibrador', 'visera', 'gorra', 'calcetín',
+  'ropa', 'pack ', 'muñeq',
+]
 
 function isPala(title) {
   const t = title.toLowerCase()
-  return !EXCLUIR.some(w => t.includes(w))
+  return !EXCLUIR_TITULO.some(w => t.includes(w))
 }
 
 async function extractProducts(page) {
@@ -69,8 +85,76 @@ async function extractProducts(page) {
   })
 }
 
+// Extrae subcategorías de marca de la página de categoría principal.
+// Devuelve array de URLs absolutas.
+async function extraerSubcategorias(page) {
+  const hrefs = await page.evaluate((BASE) => {
+    return Array.from(document.querySelectorAll('a[href]'))
+      .map(a => a.href)
+      .filter(h => h.startsWith(BASE + '/es/') && /pala/i.test(h))
+  }, BASE_URL)
+
+  const seen = new Set()
+  const result = []
+  for (const h of hrefs) {
+    if (seen.has(h)) continue
+    seen.add(h)
+    const path = h.replace(BASE_URL, '').toLowerCase()
+    // Excluir la categoría principal misma y las de navegación
+    if (path === '/es/5-palas-de-padel') continue
+    if (path.includes('?')) continue
+    if (EXCLUIR_SUBCATS.some(frag => path.includes(frag))) continue
+    result.push(h)
+  }
+  return result
+}
+
+// Scrapea todas las páginas de una URL de subcategoría
+async function scrapeCategoria(page, catUrl, seen, allProducts) {
+  let pageNum = 1
+  while (true) {
+    const url = pageNum === 1 ? catUrl : `${catUrl}?page=${pageNum}`
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 40000 })
+      await page.waitForTimeout(2500)
+      await page.waitForSelector(
+        'article.product-miniature, .product-miniature, .js-product-miniature',
+        { timeout: 20000 }
+      )
+    } catch {
+      const info = await page.evaluate(() => document.title.substring(0, 60)).catch(() => '')
+      if (info.includes('Cloudflare') || info.includes('Attention') || info.includes('Error')) {
+        console.warn(`[time2padel]   Cloudflare en ${url} — saltando`)
+      }
+      break
+    }
+
+    const products = await extractProducts(page)
+    let added = 0
+    for (const p of products) {
+      if (!isPala(p.title) || seen.has(p.url)) continue
+      seen.add(p.url)
+      allProducts.push(p)
+      added++
+    }
+    if (added > 0 || pageNum === 1) {
+      console.log(`[time2padel]   ${catUrl.split('/es/')[1]} pág ${pageNum} -> ${added} nuevas`)
+    }
+    if (products.length === 0) break
+
+    const hasNext = await page.evaluate((cur) => (
+      !!(document.querySelector(`a[href*="page=${cur + 1}"]`) ||
+         document.querySelector('a[rel="next"], .next a, li.next a'))
+    ), pageNum)
+    if (!hasNext) break
+
+    pageNum++
+    await page.waitForTimeout(PAGE_DELAY)
+  }
+}
+
 async function scrape() {
-  console.log('[time2padel] Iniciando scraper (Playwright — PrestaShop)...')
+  console.log('[time2padel] Iniciando scraper (Playwright — subcategorías por marca)...')
 
   let chromium
   try {
@@ -98,113 +182,79 @@ async function scrape() {
 
   const allProducts = []
   const seen = new Set()
-  let pageNum = 1
   let codigoDescuento = null
-  let rebajasUrls = []
 
   try {
-    while (true) {
-      const url = pageNum === 1 ? CATEGORY_URL : `${CATEGORY_URL}?page=${pageNum}`
-      console.log(`[time2padel]   Pagina ${pageNum}: ${url}`)
+    // 1. Cargar categoría principal — extraer código descuento + subcategorías
+    console.log(`[time2padel]   Cargando categoría principal...`)
+    await page.goto(CATEGORY_URL, { waitUntil: 'load', timeout: 45000 })
+    await page.waitForTimeout(3000)
 
-      await page.goto(url, { waitUntil: 'load', timeout: 45000 })
-      await page.waitForTimeout(3000)
-
-      if (pageNum === 1) {
-        try {
-          await page.waitForSelector(
-            '.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn',
-            { timeout: 5000 }
-          )
-          await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn')
-          await page.waitForTimeout(1000)
-        } catch { /* sin banner */ }
-      }
-
-      try {
-        await page.waitForSelector(
-          'article.product-miniature, .product-miniature, .js-product-miniature',
-          { timeout: 30000 }
-        )
-      } catch {
-        const info = await page.evaluate(() => ({
-          url: window.location.href,
-          status: document.title.substring(0, 80),
-        })).catch(() => ({}))
-        console.log(`[time2padel]   Sin productos en pag ${pageNum} — fin`, info)
-        break
-      }
-
-      if (pageNum === 1) {
-        const bodyText = await page.evaluate(() => document.body.innerText)
-        codigoDescuento = detectarCodigoDescuento(bodyText)
-        if (codigoDescuento) {
-          console.log(`[time2padel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
-        }
-        const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
-        const todasRebajas = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
-        // Solo rebajas de PALAS — excluir paleteros/ropa/zapatillas que disparan Cloudflare
-        rebajasUrls = todasRebajas.filter(u =>
-          !(/paletero/i.test(u)) &&
-          /palas|outlet.*pad|pad.*outlet/i.test(u)
-        )
-        if (rebajasUrls.length > 0) {
-          console.log(`[time2padel] seccion rebajas (palas): ${rebajasUrls.join(', ')}`)
-        }
-      }
-
-      const products = await extractProducts(page)
-      const pageNew  = products.filter(p => isPala(p.title) && !seen.has(p.url))
-      pageNew.forEach(p => seen.add(p.url))
-      console.log(`[time2padel]   -> ${pageNew.length} palas en pag ${pageNum}`)
-      allProducts.push(...pageNew)
-
-      if (products.length === 0) break
-
-      const hasNext = await page.evaluate((cur) => (
-        !!(document.querySelector(`a[href*="page=${cur + 1}"]`) ||
-           document.querySelector('a[rel="next"], .next a, li.next a'))
-      ), pageNum)
-
-      if (!hasNext) {
-        console.log(`[time2padel] Ultima pagina (${pageNum}). Total: ${allProducts.length}`)
-        break
-      }
-
-      pageNum++
-      await page.waitForTimeout(DELAY_MS)
-    }
-  } catch (err) {
-    console.error('[time2padel] Error:', err.message)
-  }
-
-  for (const rebajasUrl of rebajasUrls) {
+    // Cerrar banner cookies si aparece
     try {
-      await page.goto(rebajasUrl, { waitUntil: 'load', timeout: 45000 })
-      await page.waitForTimeout(2000)
+      await page.waitForSelector(
+        '.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn',
+        { timeout: 5000 }
+      )
+      await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn')
+      await page.waitForTimeout(1000)
+    } catch { /* sin banner */ }
+
+    // Detectar código descuento
+    const bodyText = await page.evaluate(() => document.body.innerText)
+    codigoDescuento = detectarCodigoDescuento(bodyText)
+    if (codigoDescuento) {
+      console.log(`[time2padel] codigo: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+    }
+
+    // Scrapear la propia página principal (primera página, normalmente 12 palas)
+    try {
       await page.waitForSelector(
         'article.product-miniature, .product-miniature, .js-product-miniature',
         { timeout: 15000 }
       )
       const products = await extractProducts(page)
-      let added = 0
       for (const p of products) {
         if (!isPala(p.title) || seen.has(p.url)) continue
         seen.add(p.url)
         allProducts.push(p)
-        added++
       }
-      console.log(`[time2padel] rebajas ${rebajasUrl} -> ${added} nuevos`)
-    } catch (e) {
-      console.warn(`[time2padel] rebajas ${rebajasUrl} no disponibles (Cloudflare probable)`)
+      console.log(`[time2padel]   pág principal -> ${allProducts.length} palas`)
+    } catch { /* sin productos en main */ }
+
+    // Extraer subcategorías de marca
+    const subcats = await extraerSubcategorias(page)
+    console.log(`[time2padel]   Subcategorías detectadas: ${subcats.length}`)
+
+    // Detectar secciones outlet/rebajas de palas (separadas del flujo de subcategorías)
+    const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
+    const todasRebajas = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+    const rebajasUrls = todasRebajas.filter(u =>
+      !(/paletero/i.test(u)) &&
+      /palas|outlet.*pad|pad.*outlet/i.test(u)
+    )
+
+    // 2. Scrapear cada subcategoría de marca
+    for (const cat of subcats) {
+      await page.waitForTimeout(DELAY_MS)
+      await scrapeCategoria(page, cat, seen, allProducts)
     }
-    await page.waitForTimeout(DELAY_MS)
+
+    // 3. Scrapear secciones outlet/rebajas
+    for (const rebajasUrl of rebajasUrls) {
+      await page.waitForTimeout(DELAY_MS)
+      console.log(`[time2padel]   Rebajas: ${rebajasUrl}`)
+      await scrapeCategoria(page, rebajasUrl, seen, allProducts)
+    }
+
+  } catch (err) {
+    console.error('[time2padel] Error:', err.message)
   }
 
   await context.close()
   await browser.close()
 
-  console.log(`[time2padel] Total palas: ${allProducts.length}`)
+  console.log(`[time2padel] Total palas únicas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
   const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
