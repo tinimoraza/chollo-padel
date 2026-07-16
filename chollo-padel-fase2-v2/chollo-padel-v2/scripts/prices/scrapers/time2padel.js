@@ -1,27 +1,17 @@
 // scripts/prices/scrapers/time2padel.js
-// Time2Padel — PrestaShop HTML scraping
+// Time2Padel — PrestaShop, Playwright (Cloudflare bloquea fetch/cheerio básico)
 // URL: https://www.time2padel.com/es/5-palas-de-padel
-// Plataforma: PrestaShop (patrón similar a ofertasdepadel.com)
-// Paginación: ?page=2
+// Paginación: ?page=N
 //
-// NOTA (fix 2026-06-18): la URL "/es/palas-de-padel" (sin ID) da 404 — PrestaShop
-// regeneró el slug con el ID delante: "/es/5-palas-de-padel". Los selectores
-// (article.product-miniature, .product-title, etc.) seguían siendo correctos.
-//
-// Ejecutar:
-//   node scripts/prices/pipeline.js time2padel
+// NOTA (fix 2026-06-18): URL cambió a /es/5-palas-de-padel (con ID).
+// NOTA (fix 2026-07-16): migrado de cheerio+fetch a Playwright — HTTP 403 de Cloudflare.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
 const CATEGORY_URL = `${BASE_URL}/es/5-palas-de-padel`
-const DELAY_MS     = 1200
-const MAX_PAGES    = 60
+const DELAY_MS     = 2000
 
-const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-  'Accept':          'text/html,application/xhtml+xml',
-  'Accept-Language': 'es-ES,es;q=0.9',
-}
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 const EXCLUIR = ['zapatilla', 'mochila', 'paletero', 'bolsa', 'grip', 'overgrip',
   'pelota', 'pelotas', 'camiseta', 'short', 'polo', 'funda', 'muñequera', 'protector',
@@ -32,158 +22,189 @@ function isPala(title) {
   return !EXCLUIR.some(w => t.includes(w))
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+async function extractProducts(page) {
+  return page.evaluate(() => {
+    const items = []
+    const articles = Array.from(document.querySelectorAll(
+      'article.product-miniature, .product-miniature, .js-product-miniature'
+    ))
 
-function parsePrice(text) {
-  if (!text) return NaN
-  return parseFloat(text.replace(/[^\d,]/g, '').replace(',', '.'))
-}
+    articles.forEach(article => {
+      const titleLinkEl = article.querySelector('.product-title a, h2 a, h3 a, .product-name a')
+      const imgLinkEl   = article.querySelector('a.product-thumbnail, a.thumbnail')
+      const title = titleLinkEl?.textContent?.trim()
+      const url   = titleLinkEl?.href || imgLinkEl?.href
+      if (!title || !url || !url.startsWith('http')) return
 
-async function scrape() {
-  console.log('[time2padel] Iniciando scraper (PrestaShop HTML)…')
-
-  let cheerio
-  try {
-    cheerio = require('cheerio')
-  } catch {
-    console.error('[time2padel] cheerio no instalado')
-    return []
-  }
-
-  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
-
-  function parseProductos($) {
-    const out = []
-
-    $('article.product-miniature').each((_, el) => {
-      const $el = $(el)
-      const title = $el.find('.product-title a').first().text().trim()
-        || $el.find('h3.product-title').first().text().trim()
-      if (!title || !isPala(title)) return
-
-      const link = $el.find('a.product-thumbnail').first().attr('href')
-        || $el.find('.product-title a').first().attr('href')
-      if (!link || !link.startsWith('http')) return
-
-      const priceText    = $el.find('span.product-price').first().text()
-      const originalText = $el.find('span.regular-price').first().text()
-      const price    = parsePrice(priceText)
-      const original = parsePrice(originalText)
-
+      // Precio actual
+      const priceEl = article.querySelector('span.product-price, .price:not(.regular-price):not(.old-price)')
+      const priceContent = priceEl?.getAttribute('content')
+      let price = priceContent ? parseFloat(priceContent) : NaN
+      if (isNaN(price) || price <= 0) {
+        const txt = priceEl?.textContent?.replace(/[^0-9,]/g, '').replace(',', '.') ?? ''
+        price = parseFloat(txt)
+      }
       if (isNaN(price) || price < 30) return
 
-      const imgEl  = $el.find('img.product-thumbnail-first, img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
-        ? null
-        : (rawImg.split('?')[0] || null)
+      // Precio original
+      const origEl   = article.querySelector('span.regular-price, .old-price, del .price, s .price')
+      const origText = origEl?.textContent?.trim() ?? ''
+      const original = origText
+        ? parseFloat(origText.replace(/[^0-9,]/g, '').replace(',', '.'))
+        : NaN
 
-      out.push({
+      // Imagen
+      const imgEl = article.querySelector('img[data-src], img.product-thumbnail-first, img')
+      const rawImg = imgEl?.getAttribute('data-src') || imgEl?.src || ''
+      const image = rawImg && !rawImg.startsWith('data:') && !rawImg.includes('blank.png')
+        ? rawImg.split('?')[0]
+        : null
+
+      items.push({
         title,
         price,
         precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: link,
-        image,
+        url,
+        image: image?.startsWith('http') ? image : null,
       })
     })
+    return items
+  })
+}
 
-    // Fallback: intentar selector estándar PrestaShop alternativo si no hubo resultados
-    if (out.length === 0) {
-      $('.js-product-miniature, .product_item').each((_, el) => {
-        const $el = $(el)
-        const title = $el.find('.product-title, h2.product-title, .product-name').first().text().trim()
-        if (!title || !isPala(title)) return
-        const link = $el.find('a').first().attr('href')
-        if (!link) return
-        const priceText = $el.find('.price, .product-price').first().text()
-        const price = parsePrice(priceText)
-        if (isNaN(price) || price < 30) return
-        const imgEl  = $el.find('img').first()
-        const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-        const image  = (!rawImg || rawImg.startsWith('data:') || rawImg.includes('blank.png'))
-          ? null
-          : (rawImg.split('?')[0] || null)
-        out.push({ title, price, precio_original: null, url: link, image })
-      })
-    }
+async function scrape() {
+  console.log('[time2padel] Iniciando scraper (Playwright — PrestaShop)…')
 
-    return out
+  let chromium
+  try {
+    ({ chromium } = require('playwright'))
+  } catch {
+    console.error('[time2padel] playwright no instalado')
+    return []
   }
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
+  })
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    locale: 'es-ES',
+    extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9' },
+  })
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+    window.chrome = { runtime: {} }
+  })
+  const page = await context.newPage()
 
   const allProducts = []
   const seen = new Set()
   let pageNum = 1
-  let hasMore = true
   let codigoDescuento = null
   let rebajasUrls = []
 
-  while (hasMore && pageNum <= MAX_PAGES) {
-    const url = pageNum === 1
-      ? CATEGORY_URL
-      : `${CATEGORY_URL}?page=${pageNum}`
+  try {
+    while (true) {
+      const url = pageNum === 1 ? CATEGORY_URL : `${CATEGORY_URL}?page=${pageNum}`
+      console.log(`[time2padel]   Página ${pageNum}: ${url}`)
 
-    console.log(`[time2padel]   Página ${pageNum}: ${url}`)
+      await page.goto(url, { waitUntil: 'load', timeout: 45000 })
+      await page.waitForTimeout(3000)
 
-    let html
-    try {
-      const res = await fetch(url, { headers: HEADERS })
-      if (!res.ok) { console.log(`[time2padel]   HTTP ${res.status} — fin`); break }
-      html = await res.text()
-    } catch (err) {
-      console.error(`[time2padel]   Error:`, err.message)
-      break
-    }
-
-    const $ = cheerio.load(html)
-    const pageProducts = []
-
-    if (pageNum === 1) {
-      codigoDescuento = detectarCodigoDescuento($('body').text())
-      if (codigoDescuento) {
-        console.log(`[time2padel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      // Cerrar cookies/banner
+      if (pageNum === 1) {
+        try {
+          await page.waitForSelector(
+            '.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn',
+            { timeout: 5000 }
+          )
+          await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn')
+          await page.waitForTimeout(1000)
+        } catch { /* sin banner */ }
       }
-      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
-      rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
-      if (rebajasUrls.length > 0) {
-        console.log(`[time2padel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+
+      // Esperar productos
+      try {
+        await page.waitForSelector(
+          'article.product-miniature, .product-miniature, .js-product-miniature',
+          { timeout: 30000 }
+        )
+      } catch {
+        const info = await page.evaluate(() => ({
+          url: window.location.href,
+          status: document.title.substring(0, 80),
+        })).catch(() => ({}))
+        console.log(`[time2padel]   Sin productos en pág ${pageNum} — fin`, info)
+        break
       }
+
+      if (pageNum === 1) {
+        const bodyText = await page.evaluate(() => document.body.innerText)
+        codigoDescuento = detectarCodigoDescuento(bodyText)
+        if (codigoDescuento) {
+          console.log(`[time2padel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+        }
+        const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
+        rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+        if (rebajasUrls.length > 0) {
+          console.log(`[time2padel] sección rebajas: ${rebajasUrls.join(', ')}`)
+        }
+      }
+
+      const products = await extractProducts(page)
+      const pageNew  = products.filter(p => isPala(p.title) && !seen.has(p.url))
+      pageNew.forEach(p => seen.add(p.url))
+      console.log(`[time2padel]   → ${pageNew.length} palas en pág ${pageNum}`)
+      allProducts.push(...pageNew)
+
+      if (products.length === 0) break
+
+      // ¿Hay página siguiente?
+      const hasNext = await page.evaluate((cur) => (
+        !!(document.querySelector(`a[href*="page=${cur + 1}"]`) ||
+           document.querySelector('a[rel="next"], .next a, li.next a'))
+      ), pageNum)
+
+      if (!hasNext) {
+        console.log(`[time2padel] Última página (${pageNum}). Total: ${allProducts.length}`)
+        break
+      }
+
+      pageNum++
+      await page.waitForTimeout(DELAY_MS)
     }
-
-    for (const item of parseProductos($)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      pageProducts.push(item)
-    }
-
-    console.log(`[time2padel]   → ${pageProducts.length} palas en página ${pageNum}`)
-    allProducts.push(...pageProducts)
-
-    hasMore = $('a[rel="next"]').length > 0
-    pageNum++
-    if (hasMore) await sleep(DELAY_MS)
+  } catch (err) {
+    console.error('[time2padel] Error:', err.message)
   }
 
+  // Secciones de rebajas
   for (const rebajasUrl of rebajasUrls) {
-    let html
     try {
-      const res = await fetch(rebajasUrl, { headers: HEADERS })
-      if (!res.ok) { console.log(`[time2padel] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
-      html = await res.text()
-    } catch (err) {
-      console.error(`[time2padel] Error sección rebajas ${rebajasUrl}:`, err.message)
-      continue
+      await page.goto(rebajasUrl, { waitUntil: 'load', timeout: 45000 })
+      await page.waitForTimeout(2000)
+      await page.waitForSelector(
+        'article.product-miniature, .product-miniature, .js-product-miniature',
+        { timeout: 15000 }
+      )
+      const products = await extractProducts(page)
+      let added = 0
+      for (const p of products) {
+        if (!isPala(p.title) || seen.has(p.url)) continue
+        seen.add(p.url)
+        allProducts.push(p)
+        added++
+      }
+      console.log(`[time2padel] rebajas ${rebajasUrl} → ${added} nuevos`)
+    } catch (e) {
+      console.error(`[time2padel] Error rebajas ${rebajasUrl}:`, e.message)
     }
-    const $ = cheerio.load(html)
-    let added = 0
-    for (const item of parseProductos($)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-      added++
-    }
-    console.log(`[time2padel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
-    await sleep(DELAY_MS)
+    await page.waitForTimeout(DELAY_MS)
   }
+
+  await context.close()
+  await browser.close()
 
   console.log(`[time2padel] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
