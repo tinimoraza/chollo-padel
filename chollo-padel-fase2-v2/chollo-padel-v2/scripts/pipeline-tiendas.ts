@@ -261,7 +261,7 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string, sour
         })
       }
       // Guardar colisiones en BD para análisis posterior
-      await supabaseAdmin.from('log_colisiones').insert(colisionesPayload)
+      await supabase.from('log_colisiones').insert(colisionesPayload)
     }
     const chunk = Array.from(vistos.values())
     const payloadSnaps = chunk.map(m => ({
