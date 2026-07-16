@@ -12,8 +12,7 @@
 //   precio original: span.regular-price
 //   siguiente pág:  a[rel="next"]
 //
-// Ejecutar manualmente:
-//   node scripts/prices/pipeline.js ofertasdepadel
+// FIX 2026-07-16: headers enriquecidos (Sec-Fetch-*, Referer) para evitar 403
 
 const SOURCE_KEY   = 'ofertasdepadel'
 const BASE_URL     = 'https://www.ofertasdepadel.com'
@@ -22,9 +21,18 @@ const DELAY_MS     = 1200   // respetuoso con el servidor
 const MAX_PAGES    = 50     // techo de seguridad
 
 const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Accept':          'text/html,application/xhtml+xml',
-  'Accept-Language': 'es-ES,es;q=0.9',
+  'User-Agent':                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept':                    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language':           'es-ES,es;q=0.9,en;q=0.8',
+  'Accept-Encoding':           'gzip, deflate, br',
+  'Cache-Control':             'no-cache',
+  'Pragma':                    'no-cache',
+  'Sec-Fetch-Dest':            'document',
+  'Sec-Fetch-Mode':            'navigate',
+  'Sec-Fetch-Site':            'none',
+  'Sec-Fetch-User':            '?1',
+  'Upgrade-Insecure-Requests': '1',
+  'Referer':                   'https://www.google.es/',
 }
 
 // Productos no pala que pueden colar aunque estén en la categoría
