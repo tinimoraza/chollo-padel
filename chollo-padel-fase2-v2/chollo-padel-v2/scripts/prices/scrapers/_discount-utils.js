@@ -127,7 +127,10 @@ function detectarCodigoDescuento(textoPagina) {
 // verano/summer: /rebajas-verano-2026, /summer-2026
 // sale: /sale estricto (con slash previo) para no disparar en slugs tipo "pala-apex-sale-12k"
 const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion|outlet|oferta|verano|summer|\/sale(?:[-_\/]|$)/i
-const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module)/i
+// Excluir URLs administrativas y categorías de productos que NO son palas
+// (mochilas, ropa, zapatillas, etc.) — evita que filtrarUrlsRebajas devuelva
+// secciones irrelevantes en tiendas multi-producto como ofertasdepadel.
+const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module|mochila|paletero|ropa|calzado|zapatilla|camiseta|polo|pantalon|sudadera|chaleco|short|pelota|grip|overgrip|complement|accesor|indumentaria)/i
 
 function normalizarUrl(url, origin) {
   try {

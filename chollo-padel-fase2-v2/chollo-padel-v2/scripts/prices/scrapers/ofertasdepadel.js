@@ -132,7 +132,10 @@ async function scrape() {
         console.log(`[ofertasdepadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
       const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
+      // Solo secciones de palas (la tienda tiene rebajas de mochilas/ropa/zapatillas
+      // que no nos interesan — filtrar por URL para no desperdiciar tiempo)
       rebajasUrls = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
+        .filter(u => /pala/i.test(u) && !/paletero/i.test(u))
       if (rebajasUrls.length > 0) {
         console.log(`[ofertasdepadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
       }
