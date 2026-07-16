@@ -207,7 +207,7 @@ interface MatchPendiente {
 // Vuelca los matches pendientes en bloques de CHUNK. Devuelve cuántos
 // snapshots fallaron (para que el llamador no cree alias de ese bloque ni
 // los cuente como éxito en el resumen final).
-async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Promise<number> {
+async function flushMatches(pendientes: MatchPendiente[], sourceId: string, sourceKey: string): Promise<number> {
   const CHUNK = 300
   const CONCURRENCIA_IMG = 15
   let fallidos = 0
@@ -239,10 +239,29 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string): Pro
       }
     }
     if (colisiones.length > 0) {
+      const colisionesPayload: {
+        tienda: string; pala_id: string
+        titulo_ganador: string; url_ganador: string
+        titulo_descartado: string; url_descartado: string
+      }[] = []
       for (const c of colisiones) {
         const original = vistos.get(c.palaId)
-        console.error(`  ⚠️  [colisión pala_id] "${c.titulo}" y "${original?.titulo}" resolvieron a la misma pala (${c.palaId}) en el mismo scrape — se descarta "${c.titulo}", revisar matching`)
+        console.error(
+          `  ⚠️  [colisión pala_id] "${c.titulo}" (${c.url})\n` +
+          `       y "${original?.titulo}" (${original?.url})\n` +
+          `       resolvieron a la misma pala (${c.palaId}) — se descarta "${c.titulo}"`
+        )
+        colisionesPayload.push({
+          tienda:            sourceKey,
+          pala_id:           c.palaId,
+          titulo_ganador:    original?.titulo ?? '',
+          url_ganador:       original?.url    ?? '',
+          titulo_descartado: c.titulo,
+          url_descartado:    c.url,
+        })
       }
+      // Guardar colisiones en BD para análisis posterior
+      await supabaseAdmin.from('log_colisiones').insert(colisionesPayload)
     }
     const chunk = Array.from(vistos.values())
     const payloadSnaps = chunk.map(m => ({
@@ -662,7 +681,7 @@ async function main() {
   // eran la causa raíz del timeout.
   if (!DRY_RUN && pendientesMatch.length > 0) {
     console.log(`\n💾 Guardando ${pendientesMatch.length} matches en BD (en bloques)...`)
-    snapshotsFallidos = await flushMatches(pendientesMatch, sourceId)
+    snapshotsFallidos = await flushMatches(pendientesMatch, sourceId, TIENDA)
   }
 
   // Fix 2026-07-06: marcar disponible=false las palas de esta tienda que NO

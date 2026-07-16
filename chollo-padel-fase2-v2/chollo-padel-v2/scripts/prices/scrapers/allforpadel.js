@@ -1,9 +1,14 @@
 // scripts/prices/scrapers/allforpadel.js
 // AllForPadel — tienda oficial Adidas Pádel en España
-// Plataforma: PrestaShop (URLs /es/54-palas-padel, /modules/ en assets)
+// Plataforma: PrestaShop estándar (article.product-miniature, igual que otras tiendas)
 // URL categoría: https://allforpadel.com/es/54-palas-padel
 // Paginación: ?p=N
+// Precio: .product-price[content] (entero, ej. "300")
 // Nota: PVP oficial Adidas — útil como precio de referencia techo
+//
+// FIX 2026-07-16: el scraper anterior usaba 'h2 a[href*="/palas-padel/"]' como
+// waitForSelector, que falla en headless porque los hrefs se hidratan tarde.
+// La página SÍ usa article.product-miniature — usar ese selector como wait+container.
 
 const SOURCE_KEY = 'allforpadel'
 const BASE_URL   = 'https://allforpadel.com/es/54-palas-padel'
@@ -13,75 +18,58 @@ const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-uti
 
 async function extractProducts(page) {
   return page.evaluate(() => {
-    const items  = []
-    const seen   = new Set()
+    const items = []
+    const seen  = new Set()
 
-    // El tema custom de allforpadel (Adidas oficial) NO usa article.product-miniature.
-    // Los títulos están en <h2><a href="/es/palas-padel/...">Titulo</a></h2>.
-    // Usamos ese patrón para identificar productos.
-    const titleLinks = Array.from(
-      document.querySelectorAll('h2 a[href*="/palas-padel/"]')
-    )
+    const articles = Array.from(document.querySelectorAll(
+      'article.product-miniature, .product-miniature, .js-product-miniature'
+    ))
 
-    for (const link of titleLinks) {
-      const url = link.href
-      if (!url || seen.has(url)) continue
+    for (const art of articles) {
+      const linkEl = art.querySelector('h2 a, .product-title a, h3 a, a.product-thumbnail')
+      if (!linkEl) continue
+      const url   = linkEl.href
+      const title = linkEl.textContent?.trim()
+      if (!url || !title || seen.has(url)) continue
       seen.add(url)
 
-      const title = link.textContent?.trim()
-      if (!title) continue
-
-      // Subir al contenedor del producto (max 8 niveles) buscando el precio
+      // Precio: .product-price[content] = entero sin decimales (ej. "300")
       let price = NaN
+      const priceContentEl = art.querySelector('.product-price[content], [itemprop="price"]')
+      if (priceContentEl) {
+        const c = priceContentEl.getAttribute('content')
+        if (c) price = parseFloat(c)
+      }
+      if (isNaN(price) || price <= 0) {
+        const priceTextEl = art.querySelector('.product-price, .price:not(.old-price):not(.regular-price)')
+        const txt = priceTextEl?.textContent?.replace(/[^0-9,]/g, '').replace(',', '.') || ''
+        price = parseFloat(txt)
+      }
+      if (isNaN(price) || price < 30) continue
+
+      // Precio original (tachado)
+      const origEl = art.querySelector('.regular-price, .old-price, s .price, del .price')
       let original = NaN
-      let image = null
-      let node = link.parentElement
-
-      for (let i = 0; i < 8 && node; i++) {
-        // Precio: [itemprop="price"], span con content numérico, .price, [class*=price]
-        const priceEl = node.querySelector(
-          '[itemprop="price"], span[content], .price:not(.old-price):not(.regular-price), [class*="current"], [class*="sale"]'
-        )
-        if (priceEl) {
-          const content = priceEl.getAttribute('content') || priceEl.getAttribute('data-price')
-          if (content) {
-            const v = parseFloat(content)
-            if (!isNaN(v) && v > 0) { price = v; break }
-          }
-          const txt = priceEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')
-          const v = parseFloat(txt)
-          if (!isNaN(v) && v > 0) { price = v; break }
-        }
-        node = node.parentElement
+      if (origEl) {
+        const c = origEl.getAttribute('content')
+        const txt = c || origEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')
+        const v = parseFloat(txt)
+        if (!isNaN(v) && v > price) original = v
       }
 
-      // Si no encontramos precio por selector, extraer del innerText del contenedor
-      if (isNaN(price) && node) {
-        const m = node.innerText.match(/(\d{2,3}(?:[.,]\d{2})?)\s*€/)
-        if (m) price = parseFloat(m[1].replace(',', '.'))
-      }
-      if (isNaN(price) || price <= 0) continue
-
-      // Precio original (tachado): buscar .old-price, .regular-price, s, del
-      if (node) {
-        const origEl = node.querySelector('.old-price, .regular-price, s, del, [class*="old"], [class*="regular"]')
-        if (origEl) {
-          const txt = origEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')
-          const v = parseFloat(txt)
-          if (!isNaN(v) && v > price) original = v
-        }
-        // Imagen
-        const imgEl = node.querySelector('img[data-src], img[src*="/p/"], img')
-        const src = imgEl?.getAttribute('data-src') || imgEl?.src || null
-        if (src && src.startsWith('http')) image = src
-      }
+      // Imagen: data-src lazy
+      const imgEl = art.querySelector('img[data-src], img.js-lazy-product-image, img.product-thumbnail-first, img')
+      const rawImg = imgEl?.getAttribute('data-src') || imgEl?.src || ''
+      const image = rawImg && !rawImg.startsWith('data:') && !rawImg.includes('blank.png')
+        ? rawImg.split('?')[0]
+        : null
 
       items.push({
         title,
         price,
-        precio_original: !isNaN(original) ? original : null,
+        precio_original: (!isNaN(original)) ? original : null,
         url,
-        image,
+        image: (image && image.startsWith('http')) ? image : null,
       })
     }
 
@@ -105,7 +93,6 @@ async function scrape() {
     args: [
       '--no-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ],
   })
   const context = await browser.newContext({
@@ -113,7 +100,6 @@ async function scrape() {
     locale: 'es-ES',
     extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9' },
   })
-  // Ocultar senales de automatizacion
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
@@ -146,10 +132,10 @@ async function scrape() {
         } catch { /* sin banner */ }
       }
 
-      // Esperar productos — tema custom Adidas, NO usa article.product-miniature
+      // Esperar productos — PrestaShop estándar article.product-miniature
       try {
         await page.waitForSelector(
-          'h2 a[href*="/palas-padel/"]',
+          'article.product-miniature, .product-miniature, .js-product-miniature',
           { timeout: 30000 }
         )
       } catch {
@@ -157,6 +143,7 @@ async function scrape() {
           url: window.location.href,
           bodyClass: document.body.className.substring(0, 150),
           title: document.title.substring(0, 100),
+          h2count: document.querySelectorAll('h2').length,
         })).catch(() => ({}))
         console.log(`[allforpadel] Sin productos en pagina ${pageNum} — fin`, debugInfo)
         break
@@ -171,7 +158,7 @@ async function scrape() {
         const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
         rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
         if (rebajasUrls.length > 0) {
-          console.log(`[allforpadel] seccion(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+          console.log(`[allforpadel] seccion(es) de rebajas: ${rebajasUrls.join(', ')}`)
         }
       }
 
@@ -185,7 +172,8 @@ async function scrape() {
       const hasNext = await page.evaluate((cur) => {
         return !!(
           document.querySelector(`a[href*="?p=${cur + 1}"]`) ||
-          document.querySelector('a[rel="next"], .next, a.next')
+          document.querySelector(`a[href*="p=${cur + 1}"]`) ||
+          document.querySelector('a[rel="next"], .next a, li.next a')
         )
       }, pageNum)
 
@@ -201,16 +189,21 @@ async function scrape() {
     console.error('[allforpadel] Error:', err.message)
   }
 
+  // Secciones de rebajas
   for (const rebajasUrl of rebajasUrls) {
     try {
+      console.log(`[allforpadel] Rebajas: ${rebajasUrl}`)
       await page.goto(rebajasUrl, { waitUntil: 'load', timeout: 45000 })
       await page.waitForTimeout(2000)
-      await page.waitForSelector('article.product-miniature, .product-miniature, li.ajax_block_product', { timeout: 15000 })
+      await page.waitForSelector(
+        'article.product-miniature, .product-miniature, .js-product-miniature',
+        { timeout: 15000 }
+      )
       const products = await extractProducts(page)
-      console.log(`[allforpadel] seccion rebajas ${rebajasUrl} -> ${products.length} productos`)
+      console.log(`[allforpadel]  -> ${products.length} productos`)
       allProducts.push(...products)
     } catch (e) {
-      console.error(`[allforpadel] Error seccion rebajas ${rebajasUrl}:`, e.message)
+      console.error(`[allforpadel] Error rebajas ${rebajasUrl}:`, e.message)
     }
     await page.waitForTimeout(DELAY_MS)
   }
