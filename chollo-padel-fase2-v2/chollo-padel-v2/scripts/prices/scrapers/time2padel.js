@@ -143,8 +143,11 @@ async function scrape() {
         }
         const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
         const todasRebajas = filtrarUrlsRebajas(hrefs, CATEGORY_URL)
-        // Solo rebajas de palas — evitar zapatillas/ropa/paleteros que disparan mas Cloudflare
-        rebajasUrls = todasRebajas.filter(u => /pala|outlet.*pad|pad.*outlet/i.test(u))
+        // Solo rebajas de PALAS — excluir paleteros/ropa/zapatillas que disparan Cloudflare
+        rebajasUrls = todasRebajas.filter(u =>
+          !(/paletero/i.test(u)) &&
+          /palas|outlet.*pad|pad.*outlet/i.test(u)
+        )
         if (rebajasUrls.length > 0) {
           console.log(`[time2padel] seccion rebajas (palas): ${rebajasUrls.join(', ')}`)
         }
@@ -193,7 +196,7 @@ async function scrape() {
       }
       console.log(`[time2padel] rebajas ${rebajasUrl} -> ${added} nuevos`)
     } catch (e) {
-      console.error(`[time2padel] Error rebajas ${rebajasUrl}:`, e.message)
+      console.warn(`[time2padel] rebajas ${rebajasUrl} no disponibles (Cloudflare probable)`)
     }
     await page.waitForTimeout(DELAY_MS)
   }
