@@ -97,7 +97,7 @@ jobs:
   scrape-grupo-b:
     name: "Scrape B: padelzoom, ofertasdepadel, zonadepadel, padelmarket, padelkiwi, padelstyle, misterpadel, pelotapadel"
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: chollo-padel-fase2-v2/chollo-padel-v2
@@ -109,24 +109,40 @@ jobs:
       - name: Instalar dependencias
         run: npm install
       - name: Scrape padelzoom (catálogo)
+        timeout-minutes: 15
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelzoom --no-post
       - name: Scrape ofertasdepadel
+        timeout-minutes: 7
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts ofertasdepadel --no-post
       - name: Scrape zonadepadel
+        timeout-minutes: 7
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts zonadepadel --no-post
       - name: Scrape padelmarket
+        timeout-minutes: 7
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelmarket --no-post
       - name: Scrape padelkiwi
+        timeout-minutes: 5
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelkiwi --no-post
       - name: Scrape padelstyle
+        timeout-minutes: 5
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelstyle --no-post
       - name: Scrape misterpadel
+        timeout-minutes: 5
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts misterpadel --no-post
       - name: Scrape outletdepadel
+        timeout-minutes: 5
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts outletdepadel --no-post
       - name: Scrape pelotapadel
+        timeout-minutes: 5
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts pelotapadel --no-post
 
   scrape-grupo-c:
