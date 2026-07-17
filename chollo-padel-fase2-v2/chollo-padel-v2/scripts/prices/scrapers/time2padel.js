@@ -3,22 +3,15 @@
 //
 // NOTA (fix 2026-06-18): URL cambió a /es/5-palas-de-padel (con ID).
 // NOTA (fix 2026-07-16): migrado de cheerio+fetch a Playwright — HTTP 403 de Cloudflare.
-// NOTA (fix 2026-07-16b): estrategia subcategorías por marca — pero CF bloquea todas.
-// NOTA (fix 2026-07-16c): nueva estrategia — paginar categoría principal con delay
-//   largo (10s) + scrolling simulado.
-// NOTA (fix 2026-07-16d): el contenedor closest() es demasiado pequeño (no contiene
-//   precio); ahora subimos en el DOM hasta encontrar ancestro con precio.
-// NOTA (fix 2026-07-17): DOM-walker pasa a ser estrategia PRIMARIA — article.product-miniature
-//   en time2padel solo contiene la imagen; título y precio son hermanos del article.
-//   Con miniature>0 la lógica anterior nunca ejecutaba el DOM-walker.
-// NOTA (fix 2026-07-17b): click en enlace "siguiente" en vez de page.goto() —
-//   goto() directo no envía Referer y CF lo detecta como bot.
+// NOTA (fix 2026-07-17): DOM-walker primario — article.product-miniature solo contiene imagen.
+// NOTA (fix 2026-07-17c): scroll infinito — la tienda carga productos a medida que
+//   se hace scroll; no hay paginación clásica ni ?page=N.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
 const CATEGORY_URL = `${BASE_URL}/es/5-palas-de-padel`
-const PAGE_DELAY   = 10000  // 10s entre páginas — necesario para no disparar CF
-const MAX_PAGES    = 50
+const SCROLL_DELAY = 1800  // ms entre cada scroll — tiempo para lazy-load
+const MAX_SCROLLS  = 80    // límite de seguridad (446 palas / ~6 por scroll = ~75)
 
 const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
@@ -34,6 +27,51 @@ function isPala(title) {
   return !EXCLUIR_TITULO.some(w => t.includes(w))
 }
 
+// Scroll incremental hasta cargar todos los productos (scroll infinito)
+// Usa scrollBy(0, innerHeight) en lugar de scrollTo(bottom) para que el
+// IntersectionObserver del sitio se dispare al pasar por cada elemento.
+async function scrollHastaCargarTodo(page, label) {
+  label = label || ''
+  var prev = 0
+  var sinCambio = 0
+  var posY = 0
+
+  for (var i = 0; i < MAX_SCROLLS; i++) {
+    // Scroll por un viewport completo hacia abajo
+    var info = await page.evaluate(function() {
+      window.scrollBy(0, window.innerHeight)
+      return {
+        scrollY:      window.scrollY,
+        innerHeight:  window.innerHeight,
+        scrollHeight: document.body.scrollHeight,
+      }
+    })
+    await page.waitForTimeout(SCROLL_DELAY)
+
+    var cur = await page.evaluate(function() {
+      return document.querySelectorAll('h2 a[href]').length
+    })
+
+    var atBottom = (info.scrollY + info.innerHeight + 50) >= info.scrollHeight
+    console.log('[time2padel]   ' + label + 'scroll ' + (i + 1) + ': ' + cur + ' productos' + (atBottom ? ' [fin]' : ''))
+
+    if (cur !== prev) {
+      sinCambio = 0
+      prev = cur
+      // Si cargaron nuevos productos, hacer scroll a bottom para forzar
+      // que el siguiente chunk ya esté al fondo correcto
+    } else if (atBottom) {
+      sinCambio++
+      if (sinCambio >= 3) {
+        console.log('[time2padel]   ' + label + 'fin de scroll — ' + cur + ' productos cargados')
+        break
+      }
+    }
+    // Si no hay cambio pero no estamos al fondo, seguir scrolleando
+  }
+  return prev
+}
+
 async function extractProducts(page) {
   return page.evaluate(function() {
     var items = []
@@ -41,9 +79,7 @@ async function extractProducts(page) {
 
     // Estrategia PRIMARIA: DOM-walker desde h2 a[href]
     // En time2padel, article.product-miniature SOLO contiene la imagen.
-    // El título y el precio son hermanos del article (fuera de él), así que
-    // buscar dentro del article siempre da null. El DOM-walker sube desde
-    // cada h2 a hasta el ancestro que contiene TAMBIÉN el precio.
+    // El título y el precio son hermanos del article (fuera de él).
     var articles = []
     var h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
       .filter(function(a) {
@@ -74,7 +110,7 @@ async function extractProducts(page) {
       }
     }
 
-    // Fallback: contenedores estándar PrestaShop (solo si DOM-walker no encontró nada)
+    // Fallback: contenedores estándar PrestaShop
     if (articles.length === 0) {
       articles = Array.from(document.querySelectorAll(
         'article.product-miniature, .product-miniature, .js-product-miniature, li[class*="product-miniature"], div[class*="product-miniature"]'
@@ -133,7 +169,7 @@ async function esCloudflarePage(page) {
 }
 
 async function scrape() {
-  console.log('[time2padel] Iniciando scraper (Playwright — paginación directa)...')
+  console.log('[time2padel] Iniciando scraper (Playwright — scroll infinito)...')
 
   var chromium
   try {
@@ -165,24 +201,24 @@ async function scrape() {
   let rebajasUrls = []
 
   try {
-    // ── Página 1 ─────────────────────────────────────────────────────────────
-    console.log('[time2padel]   Cargando página 1...')
+    // ── Cargar categoría principal ────────────────────────────────────────────
+    console.log('[time2padel]   Cargando categoría...')
     await page.goto(CATEGORY_URL, { waitUntil: 'load', timeout: 45000 })
     await page.waitForTimeout(4000)
 
     // Cerrar banner cookies
     try {
       await page.waitForSelector(
-        '.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn',
+        '.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn, #didomi-notice-agree-button',
         { timeout: 5000 }
       )
-      await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn')
+      await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler, .js-btn-accept-all, .cc-btn, #didomi-notice-agree-button')
       await page.waitForTimeout(1000)
     } catch(e) { /* sin banner */ }
 
     // CF check
     if (await esCloudflarePage(page)) {
-      console.log('[time2padel]   Cloudflare en página 1 — abortando')
+      console.log('[time2padel]   Cloudflare — abortando')
       await context.close(); await browser.close()
       return []
     }
@@ -194,7 +230,7 @@ async function scrape() {
       console.log('[time2padel] codigo: ' + codigoDescuento.codigo + ' (-' + codigoDescuento.descuento_pct + '%)')
     }
 
-    // Secciones rebajas
+    // Secciones rebajas (detectar antes del scroll, los links ya están en el DOM)
     const hrefs = await page.evaluate(function() {
       return Array.from(document.querySelectorAll('a[href]')).map(function(a) { return a.href })
     })
@@ -202,159 +238,147 @@ async function scrape() {
       return !/paletero/i.test(u) && /palas|outlet.*pad|pad.*outlet/i.test(u)
     })
 
-    // Esperar productos pág 1
+    // Esperar primeros productos
     try {
       await page.waitForFunction(function() {
         return document.querySelectorAll('article.product-miniature, .product-miniature, .js-product-miniature').length > 0
           || document.querySelectorAll('h2 a[href]').length >= 5
       }, { timeout: 20000 })
     } catch(e) {
-      console.log('[time2padel]   Sin productos en página 1 — abortando')
+      console.log('[time2padel]   Sin productos — abortando')
       await context.close(); await browser.close()
       return []
     }
 
-    // Debug
-    const dbg1 = await page.evaluate(function() {
+    // ── Scroll hasta cargar todo el catálogo ─────────────────────────────────
+    await scrollHastaCargarTodo(page, '')
+
+    // Debug final
+    const dbgFinal = await page.evaluate(function() {
       return {
-        h2links: document.querySelectorAll('h2 a[href]').length,
+        h2links:   document.querySelectorAll('h2 a[href]').length,
         priceCount: document.querySelectorAll('.product-price, [itemprop="price"]').length,
-        miniature: document.querySelectorAll('article.product-miniature, .product-miniature').length,
+        miniature:  document.querySelectorAll('article.product-miniature, .product-miniature').length,
       }
     })
-    console.log('[time2padel]   debug pag1:', JSON.stringify(dbg1))
+    console.log('[time2padel]   debug final:', JSON.stringify(dbgFinal))
 
-    const p1 = await extractProducts(page)
-    for (var i = 0; i < p1.length; i++) {
-      var p = p1[i]
+    const products = await extractProducts(page)
+    for (var i = 0; i < products.length; i++) {
+      var p = products[i]
       if (!isPala(p.title) || seen.has(p.url)) continue
       seen.add(p.url)
       allProducts.push(p)
     }
-    console.log('[time2padel]   Página 1 -> ' + allProducts.length + ' palas')
+    console.log('[time2padel]   Categoría -> ' + allProducts.length + ' palas')
 
-    // ── Páginas 2+ ──────────────────────────────────────────────────────────
-    var pageNum = 2
-    while (pageNum <= MAX_PAGES) {
-      // Simular lectura: scroll aleatorio + tiempo largo
-      try {
-        var scrollFrac = 0.3 + Math.random() * 0.5
-        await page.evaluate(function(sf) { window.scrollTo(0, document.body.scrollHeight * sf) }, scrollFrac)
-        await page.waitForTimeout(800 + Math.floor(Math.random() * 800))
-        await page.evaluate(function() { window.scrollTo(0, document.body.scrollHeight) })
-        await page.waitForTimeout(500 + Math.floor(Math.random() * 500))
-      } catch(e) {}
-
-      // Delay largo antes de pasar página
-      await page.waitForTimeout(PAGE_DELAY + Math.floor(Math.random() * 4000))
-
-      console.log('[time2padel]   Cargando página ' + pageNum + '...')
-
-      // ESTRATEGIA: navegar via window.location desde JS del contexto de la página.
-      // Esto: (1) manda Referer correcto, (2) bypasea overlays que interceptan pointer
-      // events (didomi, leadcards-modal, newsletter popups, etc.) sin necesidad de cerrarlos.
-      var navigated = false
-      var nextSel = 'a[rel="next"], li.next > a, .pagination-next a, a[aria-label="Siguiente"]'
-      try {
-        var nextHref = await page.evaluate(function(sel) {
-          var el = document.querySelector(sel)
-          return el ? el.href : null
-        }, nextSel)
-        if (nextHref) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'load', timeout: 40000 }),
-            page.evaluate(function(href) { window.location.href = href }, nextHref),
-          ])
-          navigated = true
-        }
-      } catch(navErr) {
-        console.log('[time2padel]   JS-nav pag' + pageNum + ' falló: ' + (navErr.message || navErr))
-      }
-
-      // Fallback: goto directo
-      if (!navigated) {
-        await page.goto(CATEGORY_URL + '?page=' + pageNum, { waitUntil: 'load', timeout: 40000 })
-      }
-
-      await page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
-
-      if (await esCloudflarePage(page)) {
-        console.log('[time2padel]   Cloudflare en página ' + pageNum + ' — deteniendo paginación')
-        break
-      }
-
-      var gotProds = false
-      try {
-        await page.waitForFunction(function() {
-          return document.querySelectorAll('article.product-miniature, .product-miniature, .js-product-miniature').length > 0
-            || document.querySelectorAll('h2 a[href]').length >= 5
-        }, { timeout: 15000 })
-        gotProds = true
-      } catch(e) {}
-
-      if (!gotProds) {
-        console.log('[time2padel]   Sin productos en página ' + pageNum + ' — fin')
-        break
-      }
-
-      const pN = await extractProducts(page)
-      var added = 0
-      for (var j = 0; j < pN.length; j++) {
-        var pj = pN[j]
-        if (!isPala(pj.title) || seen.has(pj.url)) continue
-        seen.add(pj.url)
-        allProducts.push(pj)
-        added++
-      }
-      console.log('[time2padel]   Página ' + pageNum + ' -> ' + added + ' nuevas (total: ' + allProducts.length + ')')
-
-      if (pN.length === 0) break
-
-      // ¿Hay página siguiente?
-      var hasNext = false
-      try {
-        hasNext = await page.evaluate(function(cur) {
-          return !!(
-            document.querySelector('a[href*="page=' + (cur + 1) + '"]') ||
-            document.querySelector('a[rel="next"], .next a, li.next a')
-          )
-        }, pageNum)
-      } catch(e) {}
-      if (!hasNext) {
-        console.log('[time2padel]   Última página (' + pageNum + ')')
-        break
-      }
-
-      pageNum++
-    }
-
-    // ── Secciones rebajas ────────────────────────────────────────────────────
+    // ── Secciones rebajas — fetch() desde sesión CF ya establecida ──────────
+    // goto() a rebajas es bloqueado por CF desde IPs de GHA.
+    // fetch() desde dentro de la página lleva las cookies CF válidas y pasa.
+    // Se itera ?page=N hasta que no haya más productos.
     for (var ri = 0; ri < rebajasUrls.length; ri++) {
       var rUrl = rebajasUrls[ri]
-      await page.waitForTimeout(PAGE_DELAY)
-      console.log('[time2padel]   Rebajas: ' + rUrl)
-      try {
-        await page.goto(rUrl, { waitUntil: 'load', timeout: 40000 })
-        await page.waitForTimeout(3000)
-        if (await esCloudflarePage(page)) { console.log('[time2padel]   CF en rebajas — saltando'); continue }
-        try {
-          await page.waitForFunction(function() {
-            return document.querySelectorAll('article.product-miniature, .product-miniature, .js-product-miniature').length > 0
-              || document.querySelectorAll('h2 a[href]').length >= 5
-          }, { timeout: 15000 })
-        } catch(e) {}
-        const rps = await extractProducts(page)
+      console.log('[time2padel]   Rebajas fetch: ' + rUrl)
+      var rpageNum = 1
+      while (rpageNum <= 30) {
+        var fetchUrl = rpageNum === 1 ? rUrl : rUrl + '?page=' + rpageNum
+        var rResult = await page.evaluate(async function({ url, baseUrl }) {
+          try {
+            var res = await fetch(url, {
+              credentials: 'include',
+              headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'es-ES,es;q=0.9',
+                'Referer': 'https://www.time2padel.com/es/5-palas-de-padel',
+              }
+            })
+            if (!res.ok) return { error: 'HTTP ' + res.status }
+            var html = await res.text()
+            if (html.indexOf('Just a moment') !== -1 || html.indexOf('cf-browser-verification') !== -1) {
+              return { error: 'CF' }
+            }
+            var doc = new DOMParser().parseFromString(html, 'text/html')
+            var items = []
+            var seen = new Set()
+            var h2Links = Array.from(doc.querySelectorAll('h2 a[href]'))
+              .filter(function(a) {
+                var href = a.getAttribute('href') || ''
+                return href && href.indexOf('#') === -1
+                  && a.textContent && a.textContent.trim().length > 3
+              })
+            var seen2 = new Set()
+            var articles = []
+            for (var k = 0; k < h2Links.length; k++) {
+              var a = h2Links[k]
+              var container = null
+              var el = a.parentElement
+              for (var depth = 0; depth < 10; depth++) {
+                if (!el || el.tagName === 'BODY') break
+                if (el.querySelector('span.product-price, .product-price, [itemprop="price"]')) {
+                  container = el; break
+                }
+                el = el.parentElement
+              }
+              if (!container) container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+              if (container && !seen2.has(container)) { seen2.add(container); articles.push(container) }
+            }
+            for (var i = 0; i < articles.length; i++) {
+              var art = articles[i]
+              var linkEl = art.querySelector('.product-title a, h2 a, h3 a, .product-name a')
+              if (!linkEl) continue
+              var href2 = linkEl.getAttribute('href') || ''
+              var url2 = href2.startsWith('http') ? href2 : (baseUrl + href2)
+              var title = (linkEl.textContent || '').trim()
+              if (!url2 || !title || seen.has(url2)) continue
+              seen.add(url2)
+              var priceEl = art.querySelector('span.product-price, .price')
+              var priceContent = priceEl && priceEl.getAttribute('content')
+              var price = priceContent ? parseFloat(priceContent) : NaN
+              if (isNaN(price) || price <= 0) {
+                var txt = priceEl ? priceEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.') : ''
+                price = parseFloat(txt)
+              }
+              if (isNaN(price) || price < 30) continue
+              var origEl = art.querySelector('span.regular-price, .old-price, del, s')
+              var origText = origEl ? origEl.textContent.trim() : ''
+              var original = origText ? parseFloat(origText.replace(/[^0-9,]/g, '').replace(',', '.')) : NaN
+              var imgEl = art.querySelector('img[data-src], img')
+              var rawImg = imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
+              var image = rawImg && !rawImg.startsWith('data:') && rawImg.indexOf('blank.png') === -1 ? rawImg.split('?')[0] : null
+              items.push({
+                title: title, price: price,
+                precio_original: (!isNaN(original) && original > price) ? original : null,
+                url: url2, image: (image && image.startsWith('http')) ? image : null,
+              })
+            }
+            // ¿Hay página siguiente?
+            var hasNext = html.indexOf('page=' + (parseInt(url.split('page=')[1] || '1') + 1)) !== -1
+              || html.indexOf('rel="next"') !== -1
+              || (h2Links.length >= 12 && html.indexOf('rel="next"') !== -1)
+            return { items: items, h2count: h2Links.length, hasNext: hasNext }
+          } catch(e) { return { error: e.message } }
+        }, { url: fetchUrl, baseUrl: BASE_URL })
+
+        if (rResult.error) {
+          console.log('[time2padel]   Rebajas p' + rpageNum + ' — ' + rResult.error)
+          break
+        }
+        console.log('[time2padel]   Rebajas ' + rUrl.split('/es/')[1] + ' p' + rpageNum + ': ' + rResult.h2count + ' en html')
+        if (!rResult.items || rResult.items.length === 0) break
+
         var radd = 0
-        for (var rj = 0; rj < rps.length; rj++) {
-          var rp = rps[rj]
+        for (var rj = 0; rj < rResult.items.length; rj++) {
+          var rp = rResult.items[rj]
           if (!isPala(rp.title) || seen.has(rp.url)) continue
           seen.add(rp.url)
           allProducts.push(rp)
           radd++
         }
-        console.log('[time2padel]   Rebajas ' + rUrl.split('/es/')[1] + ' -> ' + radd + ' nuevas')
-      } catch(e) {
-        console.error('[time2padel]   Error rebajas ' + rUrl + ':', e.message)
+        console.log('[time2padel]   -> ' + radd + ' nuevas (total: ' + allProducts.length + ')')
+
+        if (!rResult.hasNext || rResult.h2count < 12) break
+        rpageNum++
+        await page.waitForTimeout(1500)
       }
     }
 
