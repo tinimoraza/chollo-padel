@@ -8,6 +8,9 @@
 //   largo (10s) + scrolling simulado.
 // NOTA (fix 2026-07-16d): el contenedor closest() es demasiado pequeño (no contiene
 //   precio); ahora subimos en el DOM hasta encontrar ancestro con precio.
+// NOTA (fix 2026-07-17): DOM-walker pasa a ser estrategia PRIMARIA — article.product-miniature
+//   en time2padel solo contiene la imagen; título y precio son hermanos del article.
+//   Con miniature>0 la lógica anterior nunca ejecutaba el DOM-walker.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
@@ -34,43 +37,46 @@ async function extractProducts(page) {
     var items = []
     var seen  = new Set()
 
-    // Intento 1: contenedores estándar PrestaShop
-    var articles = Array.from(document.querySelectorAll(
-      'article.product-miniature, .product-miniature, .js-product-miniature, li[class*="product-miniature"], div[class*="product-miniature"]'
-    ))
-
-    // Intento 2: tema personalizado — subir DOM desde h2 > a hasta ancestro con precio
-    if (articles.length === 0) {
-      var h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
-        .filter(function(a) {
-          return a.href
-            && a.href.indexOf('#') === -1
-            && a.href.indexOf('time2padel.com') !== -1
-            && a.textContent && a.textContent.trim().length > 3
-        })
-      var seen2 = new Set()
-      for (var k = 0; k < h2Links.length; k++) {
-        var a = h2Links[k]
-        // Subir en el DOM hasta encontrar un ancestro que contenga un precio
-        var container = null
-        var el = a.parentElement
-        for (var depth = 0; depth < 10; depth++) {
-          if (!el || el === document.body) break
-          if (el.querySelector('span.product-price, .product-price, [itemprop="price"]')) {
-            container = el
-            break
-          }
-          el = el.parentElement
+    // Estrategia PRIMARIA: DOM-walker desde h2 a[href]
+    // En time2padel, article.product-miniature SOLO contiene la imagen.
+    // El título y el precio son hermanos del article (fuera de él), así que
+    // buscar dentro del article siempre da null. El DOM-walker sube desde
+    // cada h2 a hasta el ancestro que contiene TAMBIÉN el precio.
+    var articles = []
+    var h2Links = Array.from(document.querySelectorAll('h2 a[href]'))
+      .filter(function(a) {
+        return a.href
+          && a.href.indexOf('#') === -1
+          && a.href.indexOf('time2padel.com') !== -1
+          && a.textContent && a.textContent.trim().length > 3
+      })
+    var seen2 = new Set()
+    for (var k = 0; k < h2Links.length; k++) {
+      var a = h2Links[k]
+      var container = null
+      var el = a.parentElement
+      for (var depth = 0; depth < 10; depth++) {
+        if (!el || el === document.body) break
+        if (el.querySelector('span.product-price, .product-price, [itemprop="price"]')) {
+          container = el
+          break
         }
-        // Fallback si no encontramos precio: usar closest genérico
-        if (!container) {
-          container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
-        }
-        if (container && !seen2.has(container)) {
-          seen2.add(container)
-          articles.push(container)
-        }
+        el = el.parentElement
       }
+      if (!container) {
+        container = a.closest('li, article, div[class]') || (a.parentElement && a.parentElement.parentElement)
+      }
+      if (container && !seen2.has(container)) {
+        seen2.add(container)
+        articles.push(container)
+      }
+    }
+
+    // Fallback: contenedores estándar PrestaShop (solo si DOM-walker no encontró nada)
+    if (articles.length === 0) {
+      articles = Array.from(document.querySelectorAll(
+        'article.product-miniature, .product-miniature, .js-product-miniature, li[class*="product-miniature"], div[class*="product-miniature"]'
+      ))
     }
 
     for (var i = 0; i < articles.length; i++) {

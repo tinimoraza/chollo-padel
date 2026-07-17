@@ -11,6 +11,7 @@
 // FIX 2026-07-16 v3: el contenedor closest() es demasiado pequeño (no contiene
 //   el precio); ahora subimos en el DOM hasta encontrar un ancestro que tenga
 //   tanto título como .product-price.
+// FIX 2026-07-17 v4: DOM-walker pasa a ser estrategia PRIMARIA (igual que time2padel).
 
 const SOURCE_KEY = 'allforpadel'
 const BASE_URL   = 'https://allforpadel.com/es/54-palas-padel'
