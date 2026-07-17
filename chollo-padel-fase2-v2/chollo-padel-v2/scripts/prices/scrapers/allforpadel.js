@@ -227,7 +227,15 @@ async function scrape() {
       console.log('[allforpadel]  -> ' + products.length + ' palas')
 
       if (products.length === 0) break
-      allProducts.push.apply(allProducts, products)
+
+      // Contar cuántos son realmente nuevos (no vistos antes)
+      const seenUrls = new Set(allProducts.map(function(p) { return p.url }))
+      const nuevos = products.filter(function(p) { return !seenUrls.has(p.url) })
+      if (nuevos.length === 0) {
+        console.log('[allforpadel] Sin productos nuevos en pagina ' + pageNum + ' — fin')
+        break
+      }
+      allProducts.push.apply(allProducts, nuevos)
 
       // Hay pagina siguiente?
       const hasNext = await page.evaluate(function(cur) {
