@@ -108,6 +108,8 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
+      - name: Instalar navegadores Playwright
+        run: npx playwright install --with-deps chromium
       - name: Scrape padelzoom (catálogo)
         timeout-minutes: 15
         continue-on-error: true
