@@ -11,6 +11,8 @@
 // NOTA (fix 2026-07-17): DOM-walker pasa a ser estrategia PRIMARIA — article.product-miniature
 //   en time2padel solo contiene la imagen; título y precio son hermanos del article.
 //   Con miniature>0 la lógica anterior nunca ejecutaba el DOM-walker.
+// NOTA (fix 2026-07-17b): click en enlace "siguiente" en vez de page.goto() —
+//   goto() directo no envía Referer y CF lo detecta como bot.
 
 const SOURCE_KEY   = 'time2padel'
 const BASE_URL     = 'https://www.time2padel.com'
@@ -234,17 +236,47 @@ async function scrape() {
     // ── Páginas 2+ ──────────────────────────────────────────────────────────
     var pageNum = 2
     while (pageNum <= MAX_PAGES) {
-      // Delay largo + scroll simulado para no disparar CF
-      await page.waitForTimeout(PAGE_DELAY + Math.floor(Math.random() * 3000))
+      // Simular lectura: scroll aleatorio + tiempo largo
       try {
-        await page.evaluate(function() { window.scrollTo(0, document.body.scrollHeight * 0.7) })
-        await page.waitForTimeout(800)
+        var scrollFrac = 0.3 + Math.random() * 0.5
+        await page.evaluate(function(sf) { window.scrollTo(0, document.body.scrollHeight * sf) }, scrollFrac)
+        await page.waitForTimeout(800 + Math.floor(Math.random() * 800))
+        await page.evaluate(function() { window.scrollTo(0, document.body.scrollHeight) })
+        await page.waitForTimeout(500 + Math.floor(Math.random() * 500))
       } catch(e) {}
 
-      const nextUrl = CATEGORY_URL + '?page=' + pageNum
+      // Delay largo antes de pasar página
+      await page.waitForTimeout(PAGE_DELAY + Math.floor(Math.random() * 4000))
+
       console.log('[time2padel]   Cargando página ' + pageNum + '...')
-      await page.goto(nextUrl, { waitUntil: 'load', timeout: 40000 })
-      await page.waitForTimeout(3000)
+
+      // ESTRATEGIA PRINCIPAL: click en enlace "siguiente" (envía Referer correcto, más humano)
+      // goto() directo no manda Referer y CF lo detecta como bot navegación automática.
+      var navigated = false
+      var nextSel = 'a[rel="next"], li.next > a, .pagination-next a, a[aria-label="Siguiente"], a[aria-label="Next page"]'
+      try {
+        var nextEl = await page.$(nextSel)
+        if (nextEl) {
+          await nextEl.scrollIntoViewIfNeeded()
+          await page.waitForTimeout(200 + Math.floor(Math.random() * 300))
+          await nextEl.hover()
+          await page.waitForTimeout(150 + Math.floor(Math.random() * 250))
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'load', timeout: 40000 }),
+            nextEl.click(),
+          ])
+          navigated = true
+        }
+      } catch(clickErr) {
+        console.log('[time2padel]   Click-nav pag' + pageNum + ' falló: ' + (clickErr.message || clickErr))
+      }
+
+      // Fallback: goto directo
+      if (!navigated) {
+        await page.goto(CATEGORY_URL + '?page=' + pageNum, { waitUntil: 'load', timeout: 40000 })
+      }
+
+      await page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
 
       if (await esCloudflarePage(page)) {
         console.log('[time2padel]   Cloudflare en página ' + pageNum + ' — deteniendo paginación')
