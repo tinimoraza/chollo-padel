@@ -18,6 +18,12 @@
 // Revolution Slider o Elementor donde el texto va en data-text/data-title
 // en vez de como nodo de texto visible.
 //
+// Fix 2026-07-17: dos nuevos patrones de deteccion:
+//   - PASO 2: keyword → % entre medio → codigo
+//     Ej: "CUPON 20% EXTRA HOT20" (padeliberico.es)
+//   - PASO 3: N% … con CODIGO (sin keyword explicito)
+//     Ej: "5% extra con SUMMER5" (padelkiwi.com)
+//
 // Validado 2026-06-28 contra HTML real (no inventado):
 //   - padelmania.com  -> SI detecta: "-10% EXTRA EN TODA LA WEB POR TIEMPO
 //     LIMITADO. CODIGO: PADELMANIA10" -> { codigo: 'PADELMANIA10', descuento_pct: 10 }
@@ -37,7 +43,8 @@ const VENTANA = 80 // caracteres de margen para buscar el % cerca del codigo
 const VENTANA_EXCLUSION = 150 // margen mas amplio para detectar contexto de newsletter
 const PALABRAS_GENERICAS = new Set([
   'DESCUENTO', 'EXTRA', 'OFERTA', 'OFERTAS', 'PROMOCION', 'PROMO', 'PADEL',
-  'GRATIS', 'NUEVO', 'NUEVA', 'WEB',
+  'GRATIS', 'NUEVO', 'NUEVA', 'WEB', 'TARJETA', 'ENVIO', 'ENVIOS',
+  'COMPRA', 'PRIMERA', 'BIENVENIDA',
 ])
 // Banners de "suscribete a la newsletter y consigue X% con el codigo ..." son
 // un patron habitual en Shopify/tiendas: el "codigo" mostrado suele ser
@@ -75,6 +82,8 @@ function detectarCodigoDescuento(textoPagina) {
   const texto = limpiarTexto(textoPagina)
   if (!texto) return null
 
+  // --- PASO 1: keyword inmediatamente antes del codigo ----------------------
+  // Ej: "CODIGO: PADELMANIA10 -10%", "cod: SUM15 15% EXTRA"
   const reCodigo = /\b(?:c[oó]digo|cup[oó]n|cod)\b\s*:?\s*["']?\b([A-Za-z][A-Za-z0-9]{2,14})\b/gi
   let m
   while ((m = reCodigo.exec(texto)) !== null) {
@@ -82,9 +91,9 @@ function detectarCodigoDescuento(textoPagina) {
     if (codigo !== codigo.toUpperCase() || !/[A-Z]/.test(codigo)) continue
     if (PALABRAS_GENERICAS.has(codigo)) continue
 
-    // Buscar % más cercano al token: primero DESPUÉS (es el del código),
-    // si no hay, el ÚLTIMO antes (más cercano al código que el primero).
-    // Ej: "-16%15% EXTRA COD: SUM15" → toma 15%, no 16%.
+    // Buscar % mas cercano al token: primero DESPUES (es el del codigo),
+    // si no hay, el ULTIMO antes (mas cercano al codigo que el primero).
+    // Ej: "-16%15% EXTRA COD: SUM15" -> toma 15%, no 16%.
     const posFin = m.index + m[0].length
     const despues = texto.slice(posFin, Math.min(texto.length, posFin + VENTANA))
     const mDespues = despues.match(/(\d{1,2})\s*%/)
@@ -106,6 +115,49 @@ function detectarCodigoDescuento(textoPagina) {
       }
     }
   }
+
+  // --- PASO 2: keyword -> % entre medio -> codigo ---------------------------
+  // Cubre patrones donde el % aparece ENTRE la keyword y el codigo.
+  // Ej: "CUPON 20% EXTRA HOT20", "codigo 10% dto VERANO10"
+  // El .{0,15}? lazy asegura que (\d{1,2}) captura el numero completo del %.
+  // Luego escaneamos todos los tokens MAYUSCULAS en la ventana despues del %
+  // y devolvemos el PRIMERO que no sea generico (= el codigo real).
+  const reKwPct = /\b(?:c[oó]digo|cup[oó]n|cod)\b.{0,15}?(\d{1,2})\s*%([^.!?\n]{0,60})/gi
+  while ((m = reKwPct.exec(texto)) !== null) {
+    const pct = parseInt(m[1], 10)
+    if (pct <= 0 || pct > 50) continue
+
+    const ventana = m[2]
+    const tokens = ventana.match(/\b[A-Z][A-Z0-9]{2,14}\b/g) || []
+    for (const codigo of tokens) {
+      if (PALABRAS_GENERICAS.has(codigo)) continue
+
+      const inicioExcl = Math.max(0, m.index - VENTANA_EXCLUSION)
+      const finExcl = Math.min(texto.length, m.index + m[0].length + VENTANA_EXCLUSION)
+      if (RE_CONTEXTO_NEWSLETTER.test(texto.slice(inicioExcl, finExcl))) continue
+
+      return { codigo, descuento_pct: pct }
+    }
+  }
+
+  // --- PASO 3: N% ... con CODIGO (sin keyword explicito) --------------------
+  // Cubre patrones donde el conector es "con" en lugar de "codigo/cupon".
+  // Ej: "5% extra con SUMMER5", "15% de descuento con VERANO15"
+  // Requiere que el codigo sea INTEGRAMENTE MAYUSCULAS y alfanumerico (>=3 chars).
+  const rePctCon = /\b(\d{1,2})\s*%[^.!?\n]{0,30}\bcon\s+([A-Z][A-Z0-9]{2,14})\b/gi
+  while ((m = rePctCon.exec(texto)) !== null) {
+    const pct = parseInt(m[1], 10)
+    const codigo = m[2]
+    if (pct <= 0 || pct > 50) continue
+    if (PALABRAS_GENERICAS.has(codigo)) continue
+
+    const inicioExcl = Math.max(0, m.index - VENTANA_EXCLUSION)
+    const finExcl = Math.min(texto.length, m.index + m[0].length + VENTANA_EXCLUSION)
+    if (RE_CONTEXTO_NEWSLETTER.test(texto.slice(inicioExcl, finExcl))) continue
+
+    return { codigo, descuento_pct: pct }
+  }
+
   return null
 }
 
@@ -134,8 +186,8 @@ function detectarCodigoDescuento(textoPagina) {
 // verano/summer: /rebajas-verano-2026, /summer-2026
 // sale: /sale estricto (con slash previo) para no disparar en slugs tipo "pala-apex-sale-12k"
 const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion|outlet|oferta|verano|summer|\/sale(?:[-_\/]|$)/i
-// Excluir URLs administrativas y categorías de productos que NO son palas
-// (mochilas, ropa, zapatillas, etc.) — evita que filtrarUrlsRebajas devuelva
+// Excluir URLs administrativas y categorias de productos que NO son palas
+// (mochilas, ropa, zapatillas, etc.) - evita que filtrarUrlsRebajas devuelva
 // secciones irrelevantes en tiendas multi-producto como ofertasdepadel.
 const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module|mochila|paletero|ropa|calzado|zapatilla|camiseta|polo|pantalon|sudadera|chaleco|short|pelota|grip|overgrip|complement|accesor|indumentaria)/i
 
