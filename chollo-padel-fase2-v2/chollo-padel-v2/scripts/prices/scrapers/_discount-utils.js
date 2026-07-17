@@ -75,18 +75,25 @@ function detectarCodigoDescuento(textoPagina) {
   const texto = limpiarTexto(textoPagina)
   if (!texto) return null
 
-  const reCodigo = /(?:c[oó]digo|cup[oó]n)\s*:?\s*["']?\b([A-Za-z][A-Za-z0-9]{2,14})\b/gi
+  const reCodigo = /\b(?:c[oó]digo|cup[oó]n|cod)\b\s*:?\s*["']?\b([A-Za-z][A-Za-z0-9]{2,14})\b/gi
   let m
   while ((m = reCodigo.exec(texto)) !== null) {
     const codigo = m[1]
     if (codigo !== codigo.toUpperCase() || !/[A-Z]/.test(codigo)) continue
     if (PALABRAS_GENERICAS.has(codigo)) continue
 
-    const inicio = Math.max(0, m.index - VENTANA)
-    const fin = Math.min(texto.length, m.index + m[0].length + VENTANA)
-    const entorno = texto.slice(inicio, fin)
-
-    const mPct = entorno.match(/(\d{1,2})\s*%/)
+    // Buscar % más cercano al token: primero DESPUÉS (es el del código),
+    // si no hay, el ÚLTIMO antes (más cercano al código que el primero).
+    // Ej: "-16%15% EXTRA COD: SUM15" → toma 15%, no 16%.
+    const posFin = m.index + m[0].length
+    const despues = texto.slice(posFin, Math.min(texto.length, posFin + VENTANA))
+    const mDespues = despues.match(/(\d{1,2})\s*%/)
+    let mPct = mDespues
+    if (!mPct) {
+      const antes = texto.slice(Math.max(0, m.index - VENTANA), m.index)
+      const todosAntes = [...antes.matchAll(/(\d{1,2})\s*%/g)]
+      if (todosAntes.length > 0) mPct = todosAntes[todosAntes.length - 1]
+    }
     if (mPct) {
       const pct = parseInt(mPct[1], 10)
       if (pct > 0 && pct <= 50) {
