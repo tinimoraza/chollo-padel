@@ -250,6 +250,24 @@ async function scrape() {
 
       console.log('[time2padel]   Cargando página ' + pageNum + '...')
 
+      // Cerrar cualquier overlay de cookies que bloquee eventos (didomi, onetrust, etc.)
+      try {
+        // Intentar click en botón de aceptar didomi
+        await page.click('#didomi-notice-agree-button, .didomi-components-button--color-primary, #onetrust-accept-btn-handler', { timeout: 2000 })
+        await page.waitForTimeout(400)
+      } catch(e) {}
+      try {
+        // Forzar ocultar overlays si siguen bloqueando
+        await page.evaluate(function() {
+          var sels = ['#didomi-host', '#didomi-popup', '.didomi-popup-backdrop',
+                      '#onetrust-banner-sdk', '.cmplz-cookiebanner', '[id*="cookie-banner"]',
+                      '[class*="cookie-overlay"]', '[class*="consent-overlay"]']
+          sels.forEach(function(s) {
+            document.querySelectorAll(s).forEach(function(el) { el.style.display = 'none' })
+          })
+        })
+      } catch(e) {}
+
       // ESTRATEGIA PRINCIPAL: click en enlace "siguiente" (envía Referer correcto, más humano)
       // goto() directo no manda Referer y CF lo detecta como bot navegación automática.
       var navigated = false
