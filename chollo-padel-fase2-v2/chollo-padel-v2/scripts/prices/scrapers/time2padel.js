@@ -250,43 +250,25 @@ async function scrape() {
 
       console.log('[time2padel]   Cargando página ' + pageNum + '...')
 
-      // Cerrar cualquier overlay de cookies que bloquee eventos (didomi, onetrust, etc.)
-      try {
-        // Intentar click en botón de aceptar didomi
-        await page.click('#didomi-notice-agree-button, .didomi-components-button--color-primary, #onetrust-accept-btn-handler', { timeout: 2000 })
-        await page.waitForTimeout(400)
-      } catch(e) {}
-      try {
-        // Forzar ocultar overlays si siguen bloqueando
-        await page.evaluate(function() {
-          var sels = ['#didomi-host', '#didomi-popup', '.didomi-popup-backdrop',
-                      '#onetrust-banner-sdk', '.cmplz-cookiebanner', '[id*="cookie-banner"]',
-                      '[class*="cookie-overlay"]', '[class*="consent-overlay"]']
-          sels.forEach(function(s) {
-            document.querySelectorAll(s).forEach(function(el) { el.style.display = 'none' })
-          })
-        })
-      } catch(e) {}
-
-      // ESTRATEGIA PRINCIPAL: click en enlace "siguiente" (envía Referer correcto, más humano)
-      // goto() directo no manda Referer y CF lo detecta como bot navegación automática.
+      // ESTRATEGIA: navegar via window.location desde JS del contexto de la página.
+      // Esto: (1) manda Referer correcto, (2) bypasea overlays que interceptan pointer
+      // events (didomi, leadcards-modal, newsletter popups, etc.) sin necesidad de cerrarlos.
       var navigated = false
-      var nextSel = 'a[rel="next"], li.next > a, .pagination-next a, a[aria-label="Siguiente"], a[aria-label="Next page"]'
+      var nextSel = 'a[rel="next"], li.next > a, .pagination-next a, a[aria-label="Siguiente"]'
       try {
-        var nextEl = await page.$(nextSel)
-        if (nextEl) {
-          await nextEl.scrollIntoViewIfNeeded()
-          await page.waitForTimeout(200 + Math.floor(Math.random() * 300))
-          await nextEl.hover()
-          await page.waitForTimeout(150 + Math.floor(Math.random() * 250))
+        var nextHref = await page.evaluate(function(sel) {
+          var el = document.querySelector(sel)
+          return el ? el.href : null
+        }, nextSel)
+        if (nextHref) {
           await Promise.all([
             page.waitForNavigation({ waitUntil: 'load', timeout: 40000 }),
-            nextEl.click(),
+            page.evaluate(function(href) { window.location.href = href }, nextHref),
           ])
           navigated = true
         }
-      } catch(clickErr) {
-        console.log('[time2padel]   Click-nav pag' + pageNum + ' falló: ' + (clickErr.message || clickErr))
+      } catch(navErr) {
+        console.log('[time2padel]   JS-nav pag' + pageNum + ' falló: ' + (navErr.message || navErr))
       }
 
       // Fallback: goto directo
