@@ -91,6 +91,22 @@ const EXCLUIR_SIEMPRE_RE: RegExp[] = [
   /\bno funciona\b/i,
   /\btenis\b/i,
   /\btest\b/i,
+  // Accesorios que no son palas
+  /\bmochila\b/i,
+  /\bpaletero\b/i,
+  /\bbolsa\b/i,
+  /\bfunda\b/i,
+  /\bgrip\b/i,
+  /\bovergrip\b/i,
+  /\bprotector\b/i,
+  /\bmu[\xf1n]equera\b/i,
+  /\bvisera\b/i,
+  /\bgorra\b/i,
+  /\bpelota(s)?\b/i,
+  /\bzapatilla(s)?\b/i,
+  /\bcamiseta\b/i,
+  /\bpantalon\b/i,
+  /\bshort\b/i,
 ]
 
 interface Modelo {
