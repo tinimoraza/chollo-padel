@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import AnalyticsWrapper from '@/components/AnalyticsWrapper'
 import CookieBanner from '@/components/CookieBanner'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: {
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="bg-black text-white antialiased">
         {children}
+        <Footer />
         <AnalyticsWrapper />
         <CookieBanner />
       </body>

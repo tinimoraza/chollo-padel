@@ -27,6 +27,7 @@ export default function Header({ onNewAlert }: HeaderProps) {
           <a href="/alertas" className={`hp-nav-link ${isActive('/alertas') ? 'active' : ''}`}>Alertas</a>
           <a href="/chollos" className={`hp-nav-link nav-chollos ${isActive('/chollos') ? 'active' : ''}`}>🔥 Chollos</a>
           <a href="/clubes" className={`hp-nav-link ${isActive('/clubes') ? 'active' : ''}`}>Clubes</a>
+          <a href="/contacto" className={`hp-nav-link ${isActive('/contacto') ? 'active' : ''}`}>Contacto</a>
         </nav>
 
         <div className="hp-header-actions">
@@ -73,6 +74,9 @@ export default function Header({ onNewAlert }: HeaderProps) {
           </a>
           <a href="/clubes" className={isActive('/clubes') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
             <span>🏐</span> Clubes
+          </a>
+          <a href="/contacto" className={isActive('/contacto') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
+            <span>✉️</span> Contacto
           </a>
 
           {onNewAlert && (
