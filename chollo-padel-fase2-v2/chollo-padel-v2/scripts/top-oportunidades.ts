@@ -511,11 +511,18 @@ async function isWallapopActive(externalId: string, phrase?: string): Promise<bo
 async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
   console.log(`\nBuscando "${modelo.nombre}" - frase: "${modelo.phrase}"`)
 
+  // Solo anuncios vistos por el scraper en los últimos 7 días → precio fresco.
+  // Si el vendedor cambia el precio y el anuncio cae del ranking de búsqueda,
+  // el scraper deja de verlo y last_seen_at queda desactualizado; excluirlo
+  // evita mostrar precios congelados que ya no reflejan la realidad.
+  const hace7Dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
   const { data, error } = await supabase
     .from('wallapop_cache')
     .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at, date')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
+    .gte('last_seen_at', hace7Dias)
     .ilike('title', `%${modelo.phrase}%`)
     .limit(500)
 
