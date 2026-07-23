@@ -1,0 +1,38 @@
+name: Refresh Wallapop Prices
+
+# Refresca precios de todos los anuncios de wallapop_cache con last_seen_at > 6h.
+# Independiente de la extensión — funciona aunque Chrome esté cerrado.
+# Corre cada hora a :10 (antes del top-oportunidades de :25).
+
+on:
+  schedule:
+    - cron: '10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh-prices:
+    name: Refrescar precios Wallapop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: chollo-padel-fase2-v2/chollo-padel-v2
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Refrescar precios Wallapop
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY:      ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/refresh-wallapop-prices.ts
