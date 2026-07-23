@@ -19,21 +19,22 @@ const THROTTLE_MS  = 150   // ms entre batches
 const STALE_HOURS  = 6     // refresh items no vistos en más de 6h
 const HEADERS      = { 'Accept': 'application/json', 'MPlatform': 'WEB', 'Accept-Language': 'es-ES' }
 
-async function fetchItemPrice(externalId: string): Promise<{ price: number | null; sold: boolean }> {
+async function fetchItemPrice(externalId: string): Promise<{ price: number | null; sold: boolean; favorites: number }> {
   try {
     const res = await fetch(`https://api.wallapop.com/api/v3/items/${externalId}`, { headers: HEADERS })
-    if (res.status === 404 || res.status === 410) return { price: null, sold: true }
-    if (!res.ok) return { price: null, sold: false }
+    if (res.status === 404 || res.status === 410) return { price: null, sold: true, favorites: 0 }
+    if (!res.ok) return { price: null, sold: false, favorites: 0 }
     const d = await res.json()
     // Vendido puede venir como flag en diferentes estructuras de respuesta
     const isSold = d?.flags?.sold === true
                 || d?.sold?.flag   === true
                 || d?.item?.flags?.sold === true
-    if (isSold) return { price: null, sold: true }
-    const price = d?.price?.cash?.amount ?? d?.item?.price?.cash?.amount ?? null
-    return { price, sold: false }
+    if (isSold) return { price: null, sold: true, favorites: 0 }
+    const price     = d?.price?.cash?.amount ?? d?.item?.price?.cash?.amount ?? null
+    const favorites = d?.counters?.favorites ?? 0
+    return { price, sold: false, favorites }
   } catch {
-    return { price: null, sold: false }
+    return { price: null, sold: false, favorites: 0 }
   }
 }
 
@@ -72,7 +73,7 @@ async function main() {
     const batch = items.slice(i, i + BATCH_SIZE)
 
     await Promise.all(batch.map(async (item) => {
-      const { price, sold } = await fetchItemPrice(item.external_id)
+      const { price, sold, favorites } = await fetchItemPrice(item.external_id)
 
       if (sold) {
         toDelete.push(item.external_id)
@@ -84,12 +85,12 @@ async function main() {
         return
       }
 
-      const pricioAnterior = Number(item.price)
-      const updates: Record<string, unknown> = { last_seen_at: now }
-      if (price !== pricioAnterior) {
+      const precioAnterior = Number(item.price)
+      const updates: Record<string, unknown> = { last_seen_at: now, favorites }
+      if (price !== precioAnterior) {
         updates.price = price
         updated++
-        console.log(`  💰 ${item.external_id}: ${pricioAnterior}€ → ${price}€`)
+        console.log(`  💰 ${item.external_id}: ${precioAnterior}€ → ${price}€`)
       } else {
         unchanged++
       }
