@@ -129,6 +129,49 @@ async function main() {
   console.log(`   - ${unchanged} sin cambio`)
   console.log(`   - ${deleted} eliminados (vendidos)`)
   console.log(`   - ${errors} errores de API (se reintentarán en próxima ejecución)`)
+
+  // ── Sincronizar precios en top_oportunidades ──────────────────────────────
+  // El TOP se regenera cada hora a :25, pero el refresh puede correr a cualquier hora.
+  // Si un precio cambia entre dos ejecuciones del TOP, top_oportunidades queda
+  // desincronizado. Aquí lo corregimos actualizando directamente los precios que
+  // hayan cambiado, sin esperar a la próxima regeneración completa del top.
+  if (updated > 0) {
+    console.log('\n🔄 Sincronizando precios en top_oportunidades...')
+    const { data: topItems } = await supabase
+      .from('top_oportunidades')
+      .select('external_id, price')
+
+    if (topItems && topItems.length > 0) {
+      const topIds = topItems.map((t: any) => t.external_id)
+      const { data: cacheItems } = await supabase
+        .from('wallapop_cache')
+        .select('external_id, price')
+        .in('external_id', topIds)
+
+      if (cacheItems) {
+        const cacheMap = new Map((cacheItems as any[]).map(c => [c.external_id, Number(c.price)]))
+        const toSync = (topItems as any[]).filter(t => {
+          const newPrice = cacheMap.get(t.external_id)
+          return newPrice !== undefined && newPrice !== Number(t.price)
+        })
+
+        for (const t of toSync) {
+          const newPrice = cacheMap.get(t.external_id)!
+          await supabase
+            .from('top_oportunidades')
+            .update({ price: newPrice })
+            .eq('external_id', t.external_id)
+          console.log(`  💰 Top sincronizado: ${t.external_id} ${t.price}€ → ${newPrice}€`)
+        }
+
+        if (toSync.length > 0) {
+          console.log(`  ✅ ${toSync.length} precio(s) sincronizados en top_oportunidades`)
+        } else {
+          console.log('  ✅ top_oportunidades ya estaba sincronizado')
+        }
+      }
+    }
+  }
 }
 
 main().catch((err) => {
