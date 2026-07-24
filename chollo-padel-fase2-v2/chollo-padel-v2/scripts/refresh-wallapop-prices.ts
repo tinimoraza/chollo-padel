@@ -16,7 +16,7 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
 
 const BATCH_SIZE   = 10    // peticiones en paralelo
 const THROTTLE_MS  = 150   // ms entre batches
-const STALE_HOURS  = 6     // refresh items no vistos en más de 6h
+const STALE_HOURS  = 0.5   // refresh items no vistos en más de 30 min
 const HEADERS      = { 'Accept': 'application/json', 'MPlatform': 'WEB', 'Accept-Language': 'es-ES' }
 
 async function fetchItemPrice(externalId: string): Promise<{ price: number | null; sold: boolean; favorites: number }> {
