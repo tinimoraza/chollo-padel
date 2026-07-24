@@ -24,9 +24,9 @@ const CONDICIONES_TOP = ['new', 'un_opened', 'as_good_as_new']
 // Bonus de score para anuncios NUEVOS (sube posiciones en el TOP respecto a casi-nuevos)
 const BONUS_NEW = 8
 
-// Bonus por me-gustas de Wallapop — escala logarítmica para no dominar el ranking
-// Ejemplos: 10 likes → +7 pts, 50 likes → +12 pts, 100 likes → +14 pts
-const BONUS_LIKES = 3
+// Bonus por me-gustas — escala logarítmica para no dominar el ranking
+// Ejemplos: 3 likes → +11 pts, 5 likes → +14 pts, 10 likes → +19 pts, 20 likes → +24 pts
+const BONUS_LIKES = 8
 
 // Penalización progresiva por antigüedad del anuncio (campo date de wallapop_cache)
 // Umbrales en días → penalización acumulada (se aplica el primero que se cumple)

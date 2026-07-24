@@ -446,6 +446,7 @@ function mapItem(item: any, keyword: string): object {
     seller_score: typeof item.user?.feedback_reputation === 'number'
       ? Math.round(item.user.feedback_reputation * 10) / 10
       : null,
+    favorites:   item.favourite_count ?? 0,
   }
 }
 
