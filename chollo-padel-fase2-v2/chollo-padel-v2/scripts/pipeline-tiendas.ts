@@ -544,14 +544,28 @@ async function main() {
         }, { onConflict: 'source_id' })
         console.log(`  💾 Código auto-guardado en BD: ${codigoRaw.codigo} (-${codigoRaw.descuento_pct}%)`)
       } else {
-        // Inspeccionó pero no encontró → código caducó, desactivar manual
+        // Inspeccionó pero no encontró → el código auto-detectado caducó.
+        // SOLO desactivar los marcados como 'Auto-detectado por scraper'.
+        // Los códigos introducidos manualmente por Patricia NO se tocan aquí.
         const { data: desactivados } = await supabase.from('codigos_descuento_manual')
           .update({ activo: false, updated_at: new Date().toISOString() })
           .eq('source_id', sourceId)
           .eq('activo', true)
+          .eq('nota', 'Auto-detectado por scraper')
           .select('codigo')
         if (desactivados && desactivados.length > 0) {
-          console.log(`  🗑️  Código desactivado automáticamente (ya no visible en web): ${desactivados[0].codigo}`)
+          console.log(`  🗑️  Código auto-detectado desactivado (ya no visible en web): ${desactivados[0].codigo}`)
+        }
+        // Aunque el detector no lo encontró, respetar cualquier código manual activo
+        const { data: manual } = await supabase
+          .from('codigos_descuento_manual')
+          .select('codigo, descuento_pct')
+          .eq('source_id', sourceId)
+          .eq('activo', true)
+          .maybeSingle()
+        if (manual) {
+          codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
+          console.log(`  💸 Código manual aplicado (override): ${manual.codigo} (-${manual.descuento_pct}%)`)
         }
       }
     } else {
