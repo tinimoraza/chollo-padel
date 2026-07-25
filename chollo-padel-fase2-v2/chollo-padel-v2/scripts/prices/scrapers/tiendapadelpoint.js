@@ -137,8 +137,26 @@ async function scrape() {
   })
   console.log(`[tiendapadelpoint] Total páginas: ${totalPages}`)
 
-  const bodyText = await page.evaluate(() => document.body.innerText)
-  const codigoDescuento = detectarCodigoDescuento(bodyText)
+  // Detección de cupón: usar innerHTML (no innerText) para capturar sliders JS
+  // con elementos ocultos/animados y atributos data-* donde OpenCart/RevSlider
+  // suele poner el texto del banner. Comprobar también la homepage, donde los
+  // banners de oferta suelen estar solo en el slider principal.
+  let codigoDescuento = null
+  {
+    const listingHtml = await page.evaluate(() => document.documentElement.innerHTML)
+    codigoDescuento = detectarCodigoDescuento(listingHtml)
+    if (!codigoDescuento) {
+      try {
+        await page.goto('https://www.tiendapadelpoint.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
+        await page.waitForTimeout(2000)
+        const homeHtml = await page.evaluate(() => document.documentElement.innerHTML)
+        codigoDescuento = detectarCodigoDescuento(homeHtml)
+        // Volver a la página de listado para continuar el scrape
+        await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+        await page.waitForTimeout(1500)
+      } catch {}
+    }
+  }
   if (codigoDescuento) {
     console.log(`[tiendapadelpoint] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
   }
