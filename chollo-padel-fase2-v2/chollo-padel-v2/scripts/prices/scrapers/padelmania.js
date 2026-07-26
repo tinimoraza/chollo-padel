@@ -1,19 +1,14 @@
 // scripts/prices/scrapers/padelmania.js
-// Padelmania - PrestaShop HTML scraping (fetch + cheerio)
-// URL catalogo: https://padelmania.com/es/338-todas-las-palas-de-padel (todas las palas, ~196 productos)
+// Padelmania - PrestaShop con protección anti-bot → Playwright
+// URL catalogo: https://padelmania.com/es/338-todas-las-palas-de-padel (todas las palas)
 // Paginacion: ?page=N
+//
+// Fix 2026-07-26: reescrito con Playwright (la URL daba HTTP 403 con fetch plain).
 
 const SOURCE_KEY    = 'padelmania'
 const BASE_URL      = 'https://padelmania.com'
 const CATEGORY_PATH = '/es/338-todas-las-palas-de-padel'
-const DELAY_MS      = 800
-const MAX_PAGES     = 40
-
-const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-  'Accept':          'text/html,application/xhtml+xml',
-  'Accept-Language': 'es-ES,es;q=0.9',
-}
+const DELAY_MS      = 1500
 
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'munequera', 'camiseta', 'zapatilla', 'pack ']
@@ -23,161 +18,170 @@ function isPala(title) {
   return !EXCLUIR.some(w => t.includes(w))
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
-function parsePrice(text) {
-  if (!text) return NaN
-  const m = text.match(/([\d.]+,\d{2})/)
-  if (!m) return NaN
-  return parseFloat(m[1].replace('.', '').replace(',', '.'))
-}
+async function extractProducts(page) {
+  return page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll('article.product-miniature, .js-product-miniature'))
+    return cards.map(card => {
+      const linkEl = card.querySelector('h3.product-title a, h2.product-title a, .product-title a')
+      const title  = linkEl?.textContent?.trim()
+      const url    = linkEl?.href
+      if (!title || !url) return null
 
-async function fetchPage(url) {
-  const res = await fetch(url, { headers: HEADERS })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
+      // Precio: atributo content es más fiable que el texto formateado
+      const priceEl = card.querySelector('span[itemprop="price"][content], span.product-price[content]')
+      const price   = priceEl
+        ? parseFloat(priceEl.getAttribute('content'))
+        : (() => {
+            const t = (card.querySelector('span.product-price')?.textContent ?? '').replace(/[^\d,]/g, '').replace(',', '.')
+            return parseFloat(t) || NaN
+          })()
+      if (isNaN(price) || price < 30) return null
+
+      const regularEl = card.querySelector('.regular-price')
+      const origText  = regularEl?.textContent?.trim() ?? ''
+      const original  = origText
+        ? parseFloat(origText.replace(/[^0-9,]/g, '').replace(',', '.'))
+        : NaN
+
+      const imgEl  = card.querySelector('img')
+      const rawImg = imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
+      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+
+      return { title, price, original, url, image }
+    }).filter(Boolean)
+  })
 }
 
 async function scrape() {
-  console.log('[padelmania] Iniciando scraper (PrestaShop HTML)...')
+  console.log('[padelmania] Iniciando scraper (Playwright — anti-bot activo)…')
 
-  let cheerio
-  try { cheerio = require('cheerio') } catch {
-    console.error('[padelmania] cheerio no instalado'); return []
+  let chromium
+  try {
+    ({ chromium } = require('playwright'))
+  } catch {
+    console.error('[padelmania] playwright no instalado')
+    return []
   }
 
-  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
-
-  function parseCards($, cards) {
-    const out = []
-    cards.each((_, el) => {
-      const $card = $(el)
-
-      // Titulo y URL
-      const linkEl = $card.find('h3.product-title a, h2.product-title a').first()
-      const title  = linkEl.text().trim()
-      const href   = linkEl.attr('href')
-      if (!title || !href || !isPala(title)) return
-
-      // Precio
-      const priceEl = $card.find('span.product-price').first()
-      const price   = priceEl.attr('content')
-        ? parseFloat(priceEl.attr('content'))
-        : parsePrice(priceEl.text())
-      if (isNaN(price) || price < 30) return
-
-      // Precio original tachado
-      const original = parsePrice($card.find('.regular-price').first().text())
-
-      // Imagen - lazy load en data-src
-      const imgEl  = $card.find('img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-
-      out.push({
-        title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url: href,
-        image,
-      })
-    })
-    return out
-  }
+  const browser = await chromium.launch({ headless: true })
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    locale: 'es-ES',
+    extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9' },
+  })
+  const page = await context.newPage()
 
   const allProducts = []
   const seen = new Set()
-  let page = 1
+  let pageNum = 1
   let lastPage = 1
-  // Piloto 2026-06-28: padelmania muestra un banner de cupon site-wide
-  // ("CODIGO: PADELMANIA10 -10% EXTRA") en la cabecera de cada pagina de
-  // categoria - basta con mirar la pagina 1, no hace falta repetir por
-  // pagina. Validado contra HTML real (ver _discount-utils.js).
   let codigoDescuento = null
   let rebajasUrls = []
 
-  while (page <= MAX_PAGES) {
-    const url = page === 1
-      ? `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36`
-      : `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36&page=${page}`
+  try {
+    while (true) {
+      const url = pageNum === 1
+        ? `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36`
+        : `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36&page=${pageNum}`
 
-    let html
-    try { html = await fetchPage(url) }
-    catch (e) { console.error(`[padelmania] Error ${url}:`, e.message); break }
+      console.log(`[padelmania] Página ${pageNum}: ${url}`)
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+      await page.waitForTimeout(2000)
 
-    const $ = cheerio.load(html)
-    const cards = $('article.product-miniature, .js-product-miniature')
-    if (cards.length === 0) break
+      // Cerrar cookie banner si aparece
+      try {
+        await page.click('.cmplz-accept, #cookieMsg a.close, .cookies-accept, [data-cky-tag="accept-button"]', { timeout: 2000 })
+        await page.waitForTimeout(500)
+      } catch { /* sin banner */ }
 
-    if (page === 1) {
-      codigoDescuento = detectarCodigoDescuento($('body').text())
-      if (codigoDescuento) {
-        console.log(`[padelmania] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      // Verificar que hay productos (no bloqueo / challenge)
+      try {
+        await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 12_000 })
+      } catch {
+        if (pageNum === 1) {
+          console.error('[padelmania] Sin productos en página 1 — posible bloqueo anti-bot')
+        }
+        break
       }
-      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
-      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
-      if (rebajasUrls.length > 0) {
-        console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+
+      if (pageNum === 1) {
+        const bodyText = await page.evaluate(() => document.body.innerText)
+        codigoDescuento = detectarCodigoDescuento(bodyText)
+        if (codigoDescuento) {
+          console.log(`[padelmania] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+        }
+        const hrefs = await page.evaluate(() =>
+          Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+        )
+        rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+        if (rebajasUrls.length > 0) {
+          console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+        }
+        // Detectar última página desde la paginación
+        const paginaLinks = await page.evaluate(() =>
+          Array.from(document.querySelectorAll('.pagination a')).map(a => a.href)
+        )
+        for (const href of paginaLinks) {
+          const m = href.match(/page=(\d+)/)
+          if (m) {
+            const n = parseInt(m[1])
+            if (!isNaN(n) && n > lastPage) lastPage = n
+          }
+        }
       }
+
+      const products = await extractProducts(page)
+      console.log(`[padelmania]  → ${products.length} productos en página ${pageNum}/${lastPage}`)
+
+      for (const p of products) {
+        if (!isPala(p.title) || seen.has(p.url)) continue
+        seen.add(p.url)
+        const original = p.original ?? NaN
+        allProducts.push({
+          title:           p.title,
+          price:           p.price,
+          precio_original: (!isNaN(original) && original > p.price) ? original : null,
+          url:             p.url,
+          image:           p.image,
+        })
+      }
+
+      if (pageNum >= lastPage) break
+      pageNum++
+      await page.waitForTimeout(DELAY_MS)
     }
-
-    // Detectar ultima pagina desde la paginacion
-    $('.pagination a').each((_, a) => {
-      const href = $(a).attr('href') || ''
-      const m = href.match(/page=(\d+)/)
-      if (m) {
-        const n = parseInt(m[1])
-        if (!isNaN(n) && n > lastPage) lastPage = n
-      }
-    })
-
-    for (const item of parseCards($, cards)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-    }
-
-    console.log(`[padelmania] pagina ${page}/${lastPage} -> ${cards.length} cards`)
-
-    if (page >= lastPage) break
-    page++
-    await sleep(DELAY_MS)
+  } catch (err) {
+    console.error('[padelmania] Error:', err.message)
   }
 
   for (const rebajasUrl of rebajasUrls) {
-    let html
-    try { html = await fetchPage(rebajasUrl) }
-    catch (e) { console.error(`[padelmania] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
-    const $ = cheerio.load(html)
-    const cards = $('article.product-miniature, .js-product-miniature')
-    let added = 0
-    for (const item of parseCards($, cards)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-      added++
+    try {
+      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+      await page.waitForTimeout(1500)
+      await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 10_000 })
+      const products = await extractProducts(page)
+      let added = 0
+      for (const p of products) {
+        if (!isPala(p.title) || seen.has(p.url)) continue
+        seen.add(p.url)
+        const original = p.original ?? NaN
+        allProducts.push({
+          title:           p.title, price: p.price,
+          precio_original: (!isNaN(original) && original > p.price) ? original : null,
+          url: p.url, image: p.image,
+        })
+        added++
+      }
+      console.log(`[padelmania] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[padelmania] Error sección rebajas ${rebajasUrl}:`, e.message)
     }
-    console.log(`[padelmania] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
-    await sleep(DELAY_MS)
+    await page.waitForTimeout(DELAY_MS)
   }
 
-  // Para productos sin imagen del listing (data-src vacío), extraer og:image de la ficha.
-  // PrestaShop siempre pone og:image en el <head> — HTML estático, sin JS necesario.
-  const sinImagen = allProducts.filter(p => !p.image)
-  if (sinImagen.length > 0) {
-    console.log(`[padelmania] Completando imagen de ficha para ${sinImagen.length} productos sin imagen…`)
-    for (const p of sinImagen) {
-      try {
-        const html = await fetchPage(p.url)
-        const $ = cheerio.load(html)
-        const ogImg = $('meta[property="og:image"]').attr('content') || null
-        if (ogImg) p.image = ogImg
-      } catch (e) {
-        console.error(`[padelmania] No se pudo obtener imagen de ${p.url}:`, e.message)
-      }
-      await sleep(DELAY_MS)
-    }
-  }
+  await browser.close()
 
   console.log(`[padelmania] Total palas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
@@ -190,8 +194,6 @@ async function scrape() {
     image:           p.image ?? null,
     scraped_at,
   }))
-  // Propiedad a nivel de array (no de producto): pipeline-tiendas.ts la lee
-  // en su wrapper scrape() y la propaga a cada price_snapshot de esta tienda.
   resultado.codigoDescuento = codigoDescuento
   return resultado
 }

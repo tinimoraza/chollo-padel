@@ -25,11 +25,23 @@ async function safeEvaluate(page, fn, attempts = 3) {
 }
 
 async function scrapeBrandPage(page, url, state, excludeUrls = []) {
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 40000 }).catch(() => {})
-  await page.waitForTimeout(2500)
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {})
+  await page.waitForTimeout(3000)
+
+  // Elementor 4.2+ puede usar .e-loop-item, article.type-product, li.product o
+  // simplemente renderizar los enlaces /producto/ directamente en el DOM.
+  // Esperamos cualquiera de estas señales; si ninguna aparece, no hay productos.
+  const PRODUCT_SELECTOR = [
+    '.e-loop-item.product',
+    '.e-loop-item',
+    'li.product',
+    'article.type-product',
+    'article.product',
+    'a[href*="/producto/"]',
+  ].join(', ')
 
   try {
-    await page.waitForSelector('.e-loop-item.product, li.product', { timeout: 8000 })
+    await page.waitForSelector(PRODUCT_SELECTOR, { timeout: 15000 })
   } catch {
     console.log(`[padelcoronado]   Sin productos en ${url}`)
     return []
@@ -53,12 +65,13 @@ async function scrapeBrandPage(page, url, state, excludeUrls = []) {
   let prevCount = 0, stableCount = 0, scrolls = 0
   while (scrolls < MAX_SCROLLS) {
     const count = (await safeEvaluate(page, () => {
-      const selectors = ['.e-loop-item.product', 'li.product', '.type-product']
+      const selectors = ['.e-loop-item.product', '.e-loop-item', 'li.product', 'article.type-product', 'article.product']
       for (const sel of selectors) {
         const els = document.querySelectorAll(sel)
         if (els.length > 0) return els.length
       }
-      return 0
+      // Fallback: contar enlaces de producto únicos
+      return new Set(Array.from(document.querySelectorAll('a[href*="/producto/"]')).map(a => a.href)).size
     })) ?? 0
     if (count === prevCount) {
       stableCount++
@@ -80,11 +93,42 @@ async function scrapeBrandPage(page, url, state, excludeUrls = []) {
       return parseFloat(m[1].replace('.', '').replace(',', '.'))
     }
 
-    const selectors = ['.e-loop-item.product', 'li.product', '.type-product']
+    // Probar selectores de contenedor en orden de preferencia
+    const selectors = ['.e-loop-item.product', '.e-loop-item', 'li.product', 'article.type-product', 'article.product']
     let els = []
     for (const sel of selectors) {
       els = Array.from(document.querySelectorAll(sel))
       if (els.length > 0) break
+    }
+
+    // Fallback: extraer directamente de los enlaces de producto con precio cercano
+    if (els.length === 0) {
+      const seen = new Set()
+      const out = []
+      document.querySelectorAll('a[href*="/producto/"]').forEach(a => {
+        const url = a.href.split('?')[0]
+        if (seen.has(url)) return
+        // Buscar el contenedor raíz más cercano que tenga precio
+        let container = a
+        for (let i = 0; i < 6; i++) {
+          if (!container.parentElement) break
+          container = container.parentElement
+          const priceEl = container.querySelector('.woocommerce-Price-amount bdi, ins .amount, .price .amount')
+          if (priceEl) break
+        }
+        const title = (a.getAttribute('title') || a.textContent || '').trim()
+        const priceEl = container.querySelector('.price ins .woocommerce-Price-amount bdi, .price .woocommerce-Price-amount bdi')
+        const origEl  = container.querySelector('.price del .woocommerce-Price-amount bdi')
+        const price    = parsePrice(priceEl?.textContent ?? '')
+        const original = parsePrice(origEl?.textContent ?? '')
+        const imgEl    = container.querySelector('img')
+        const rawImg   = imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
+        const image    = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
+        if (!title || isNaN(price) || price <= 0) return
+        seen.add(url)
+        out.push({ title, price, precio_original: (!isNaN(original) && original > price) ? original : null, url, image })
+      })
+      return out
     }
 
     return els.map(el => {
@@ -172,10 +216,15 @@ async function scrape() {
   await page.waitForLoadState('domcontentloaded').catch(() => {})
   await page.waitForTimeout(1000)
 
-  // Descubrir URLs de marca desde el sidebar de filtros
+  // Descubrir URLs de marca desde el sidebar de filtros (selectores de checkbox).
+  // El HTML tiene dos estilos de URL: /marca-de-palas/{brand}/ (menú) y
+  // /categoria-producto/palas-padel/marca-palas-{brand}/ (filtros).
+  // Usamos los filtros porque son más fiables para paginación WooCommerce.
   const brandUrls = (await safeEvaluate(page, () => {
-    const links = Array.from(document.querySelectorAll('a[href*="/marca-palas-"]'))
-    const urls  = links.map(a => a.href).filter(h => h.includes('/categoria-producto/palas-padel/'))
+    const links = Array.from(document.querySelectorAll('a[href*="/marca-palas-"], a[href*="/marca-de-palas/"]'))
+    const urls  = links
+      .map(a => a.href)
+      .filter(h => h.includes('/categoria-producto/palas-padel/') || h.includes('/marca-de-palas/'))
     return [...new Set(urls)]
   })) ?? []
 

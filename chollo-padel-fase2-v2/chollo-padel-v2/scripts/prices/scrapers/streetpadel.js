@@ -1,175 +1,131 @@
 // scripts/prices/scrapers/streetpadel.js
-// osCommerce — fetch + cheerio
-// ~12 páginas, ~1200 productos en categoría palas
+// Shopify JSON API — /collections/all con filtro client-side por product_type='Palas'
+//
+// Nota: streetpadel.com migró de osCommerce a Shopify (detectado 2026-07-26).
+// La API products.json ignora el param ?product_type= a nivel de servidor, por lo
+// que se pagina toda la colección /all y se filtra en cliente. Confirmado que el
+// campo product_type usa el valor "Palas" (mismo que el filtro del storefront).
+// El catálogo total es ~3.000+ productos; las palas son ~667 según filtros de la web.
 
 const SOURCE_KEY = 'streetpadel'
-const BASE_URL   = 'https://www.streetpadel.com/palas-de-padel-c-49.html'
-const DELAY_MS   = 700
+const SITE_URL   = 'https://www.streetpadel.com'
+const BASE_URL   = 'https://www.streetpadel.com/collections/all/products.json'
+const LIMIT      = 250
+const DELAY_MS   = 600
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-function parsePrice(text) {
-  if (!text) return NaN
-  const m = text.match(/([\d.]+,\d{2})/)
-  if (!m) return NaN
-  return parseFloat(m[1].replace('.', '').replace(',', '.'))
-}
-
-async function fetchPage(pageNum) {
-  const url = pageNum === 1 ? BASE_URL : `${BASE_URL}?page=${pageNum}`
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
-      'Accept-Language': 'es-ES,es;q=0.9',
-    },
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  // La web no manda charset en las cabeceras pero el HTML va en Latin-1 (ISO-8859-1),
-  // no UTF-8. res.text() asume UTF-8 y destroza Ñ/Á/Í/Ó/É → "�" (rompe el matching
-  // de nombres de jugador y modelos con tildes). Decodificamos explícitamente como Latin-1.
-  const buf = Buffer.from(await res.arrayBuffer())
-  return new TextDecoder('iso-8859-1').decode(buf)
-}
-
 async function scrape() {
-  console.log('[streetpadel] Iniciando scraper (fetch + cheerio)…')
+  console.log('[streetpadel] Iniciando scraper (Shopify JSON API — migración osCommerce→Shopify)…')
 
-  let cheerio
-  try { ({ load: cheerio } = require('cheerio')) }
-  catch { console.error('[streetpadel] cheerio no instalado'); return [] }
-
-  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
-
-  function parseLis($p, lis) {
-    const out = []
-    lis.each((_, li) => {
-      const $li = $p(li)
-
-      const productLink = $li.find('a').filter((_, a) => {
-        const h = $p(a).attr('href') || ''
-        return h.includes('-p-') && !h.includes('?') && !h.includes('osCsid')
-      }).first()
-
-      const url = productLink.attr('href')
-      if (!url) return
-
-      let title = $li.find('h4').first().text().trim()
-      if (!title) {
-        title = $li.find('a').filter((_, a) => {
-          const h = $p(a).attr('href') || ''
-          return h.includes('-p-') && !h.includes('?')
-        }).map((_, a) => $p(a).text().trim()).get().sort((a, b) => b.length - a.length)[0] || ''
-      }
-      if (!title) return
-
-      const price    = parsePrice($li.find('dd').first().text())
-      const original = parsePrice($li.find('strong').first().text())
-
-      if (isNaN(price) || price < 30) return
-
-      const imgEl  = $li.find('img').first()
-      const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || ''
-      let image = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
-      // Convertir URL relativa a absoluta
-      if (image && !image.startsWith('http')) image = 'https://www.streetpadel.com' + (image.startsWith('/') ? '' : '/') + image
-      // Descartar placeholder de "próximamente" u otras imágenes genéricas
-      if (image && /proximamente|no[_-]?image|placeholder/i.test(image)) image = null
-
-      out.push({
-        title,
-        price,
-        precio_original: (!isNaN(original) && original > price) ? original : null,
-        url,
-        image,
-      })
-    })
-    return out
-  }
+  const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
 
   const allProducts = []
   const seen = new Set()
-  let totalPages = 1
-  let codigoDescuento = null
-  let rebajasUrls = []
+  let page = 1
 
-  // Primera página para detectar total de páginas
-  let html
-  try { html = await fetchPage(1) }
-  catch (e) { console.error('[streetpadel] Error página 1:', e.message); return [] }
+  while (true) {
+    const url = `${BASE_URL}?limit=${LIMIT}&page=${page}`
+    console.log(`[streetpadel] Página ${page}: ${url}`)
 
-  const $ = cheerio(html)
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':     'application/json',
+      },
+    })
 
-  codigoDescuento = detectarCodigoDescuento($('body').text())
+    if (!res.ok) { console.error(`[streetpadel] HTTP ${res.status}`); break }
+
+    const data = await res.json()
+    const products = data.products ?? []
+
+    if (products.length === 0) break
+
+    let palasEnPagina = 0
+    for (const p of products) {
+      // Solo palas de pádel — filtro client-side por el product_type del storefront
+      if (p.product_type !== 'Palas') continue
+
+      // Variante disponible con menor precio; si ninguna disponible, la primera
+      const variant = p.variants?.find(v => v.available) ?? p.variants?.[0]
+      if (!variant) continue
+
+      const price      = parseFloat(variant.price)
+      const compare    = parseFloat(variant.compare_at_price)
+      const productUrl = `${SITE_URL}/products/${p.handle}`
+      if (isNaN(price) || price < 30 || seen.has(productUrl)) continue
+      seen.add(productUrl)
+
+      let image = p.image?.src ?? p.images?.[0]?.src ?? null
+      if (image && image.startsWith('//')) image = `https:${image}`
+
+      allProducts.push({
+        title:           p.title,
+        price,
+        precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+        url:             productUrl,
+        image,
+        sku:             variant.sku || null,
+      })
+      palasEnPagina++
+    }
+
+    console.log(`[streetpadel]  → ${products.length} totales en página, ${palasEnPagina} palas (acumulado: ${allProducts.length})`)
+
+    if (products.length < LIMIT) break
+    page++
+    await sleep(DELAY_MS)
+  }
+
+  // Tienda Shopify: petición HTML extra para detectar código descuento y secciones rebajas
+  const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(
+    `${SITE_URL}/collections/all`, SITE_URL
+  )
   if (codigoDescuento) {
     console.log(`[streetpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
   }
-
-  // Detectar total páginas (último número en paginación)
-  const pageNums = []
-  $('[class*="pag"] a, .pagination a').each((_, el) => {
-    const n = parseInt($(el).text().trim())
-    if (!isNaN(n)) pageNums.push(n)
-  })
-  if (pageNums.length > 0) totalPages = Math.max(...pageNums)
-  console.log(`[streetpadel] Total páginas: ${totalPages}`)
-
-  const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
-  rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
   if (rebajasUrls.length > 0) {
     console.log(`[streetpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
   }
-
-  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-    if (pageNum > 1) {
-      try { html = await fetchPage(pageNum) }
-      catch (e) { console.error(`[streetpadel] Error página ${pageNum}:`, e.message); break }
-    }
-
-    const $p = cheerio(html)
-    const container = $p('#contenedor_productos')
-    let newInPage = 0
-
-    for (const item of parseLis($p, container.find('li'))) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-      newInPage++
-    }
-
-    console.log(`[streetpadel] Página ${pageNum}/${totalPages} → ${newInPage} palas nuevas`)
-
-    if (newInPage === 0 && pageNum > 3) break
-    if (pageNum < totalPages) await sleep(DELAY_MS)
-  }
-
   for (const rebajasUrl of rebajasUrls) {
-    let htmlR
+    const slugMatch = rebajasUrl.match(/\/collections\/([^/?#]+)/)
+    if (!slugMatch) continue
     try {
-      const res = await fetch(rebajasUrl, {
+      const res = await fetch(`${SITE_URL}/collections/${slugMatch[1]}/products.json?limit=${LIMIT}`, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'es-ES,es;q=0.9',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept':     'application/json',
         },
       })
-      if (!res.ok) { console.log(`[streetpadel] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
-      const buf = Buffer.from(await res.arrayBuffer())
-      htmlR = new TextDecoder('iso-8859-1').decode(buf)
+      if (!res.ok) { console.error(`[streetpadel] sección rebajas ${rebajasUrl} HTTP ${res.status}`); continue }
+      const data = await res.json()
+      let added = 0
+      for (const p of data.products ?? []) {
+        if (p.product_type !== 'Palas') continue
+        const variant    = p.variants?.find(v => v.available) ?? p.variants?.[0]
+        if (!variant) continue
+        const price      = parseFloat(variant.price)
+        const compare    = parseFloat(variant.compare_at_price)
+        const productUrl = `${SITE_URL}/products/${p.handle}`
+        if (isNaN(price) || price < 30 || seen.has(productUrl)) continue
+        seen.add(productUrl)
+        let image = p.image?.src ?? p.images?.[0]?.src ?? null
+        if (image && image.startsWith('//')) image = `https:${image}`
+        allProducts.push({
+          title:           p.title,
+          price,
+          precio_original: (!isNaN(compare) && compare > price) ? compare : null,
+          url:             productUrl,
+          image,
+          sku:             variant.sku || null,
+        })
+        added++
+      }
+      console.log(`[streetpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
     } catch (e) {
       console.error(`[streetpadel] Error sección rebajas ${rebajasUrl}:`, e.message)
-      continue
     }
-    const $r = cheerio(htmlR)
-    const containerR = $r('#contenedor_productos')
-    let added = 0
-    for (const item of parseLis($r, containerR.find('li'))) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-      added++
-    }
-    console.log(`[streetpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
     await sleep(DELAY_MS)
   }
 
@@ -182,6 +138,7 @@ async function scrape() {
     precio_original: p.precio_original ?? null,
     url:             p.url,
     image:           p.image ?? null,
+    sku:             p.sku ?? null,
     scraped_at,
   }))
   resultado.codigoDescuento = codigoDescuento
