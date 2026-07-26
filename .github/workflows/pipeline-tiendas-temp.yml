@@ -145,7 +145,7 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts pelotapadel --no-post
 
   scrape-grupo-c:
-    name: "Scrape C: originalpadel, streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, keepadel, padelcoronado"
+    name: "Scrape C: originalpadel, streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, keepadel"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -179,12 +179,9 @@ jobs:
       - name: Scrape keepadel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts keepadel --no-post
-      - name: Scrape padelcoronado
-        continue-on-error: true
-        run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
 
   scrape-grupo-playwright:
-    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, tiendapadelpoint, padelmania"
+    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint, padelmania"
     runs-on: ubuntu-latest
     timeout-minutes: 55
     defaults:
@@ -211,6 +208,9 @@ jobs:
       - name: Scrape tiendapadel5
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts tiendapadel5 --no-post
+      - name: Scrape padelcoronado
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
       - name: Scrape tiendapadelpoint
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts tiendapadelpoint --no-post
