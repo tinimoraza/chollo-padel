@@ -1,13 +1,20 @@
 // scripts/prices/scrapers/padelcoronado.js
-// WooCommerce Store API (wc/store/v1) — sin Playwright, sin cheerio
+// WooCommerce Store API — llamada desde dentro de Playwright (same-origin)
 //
-// Fix 2026-07-26: reescrito. El scraper anterior usaba Playwright (headless
-// Chromium), pero padelcoronado.com bloquea los navegadores automatizados
-// (CDN/firewall sirve página en blanco a Playwright headless). El HTML SSR
-// y la Store API son accesibles directamente con fetch normal.
+// Fix 2026-07-26 v2: Cloudflare bloquea tanto el scraper Playwright original
+// (headless detectado como bot) como la Store API desde Node.js fetch (TLS
+// fingerprint de undici ≠ Chrome real → HTTP 403).
+//
+// Solución híbrida:
+//   1. Playwright carga la home (establece cf_clearance + cookies Cloudflare).
+//   2. page.evaluate(fetch(...)) llama a la Store API DESDE dentro del browser:
+//      - TLS fingerprint real de Chrome
+//      - sec-fetch-site: same-origin  (Cloudflare lo permite)
+//      - cf_clearance cookie incluida automáticamente
+//   3. Se parsea el JSON directamente sin scrapear HTML.
 //
 // Endpoint: /wp-json/wc/store/v1/products?category=palas-padel
-// Precios: strings de céntimos ("15995" = 159,95€), minor_unit=2 por defecto
+// Precios: strings de céntimos ("15995" = 159,95€), minor_unit=2
 // Total: ~149 palas en 2 páginas (per_page=100)
 
 const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
@@ -16,7 +23,7 @@ const SOURCE_KEY = 'padelcoronado'
 const BASE_URL   = 'https://padelcoronado.com'
 const CATEGORY   = 'palas-padel'
 const PER_PAGE   = 100
-const DELAY_MS   = 500
+const DELAY_MS   = 800
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -33,47 +40,100 @@ function bestImage(images) {
   return images[0].src || images[0].thumbnail || null
 }
 
-async function fetchPage(page) {
-  const url = `${BASE_URL}/wp-json/wc/store/v1/products?category=${CATEGORY}&per_page=${PER_PAGE}&page=${page}`
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept':     'application/json',
-    },
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1', 10)
-  const data = await res.json()
-  return { data, totalPages }
+// Llama a la Store API desde dentro del contexto del browser (same-origin).
+// Así se evita el TLS fingerprinting de Node.js y se envían los cookies
+// Cloudflare que el browser ya tiene en su sesión.
+async function fetchViaPage(page, pageNum) {
+  return page.evaluate(async ({ base, category, perPage, num }) => {
+    const url = `${base}/wp-json/wc/store/v1/products?category=${category}&per_page=${perPage}&page=${num}`
+    try {
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include',
+      })
+      if (!res.ok) return { error: `HTTP ${res.status}`, data: null, totalPages: 1 }
+      const totalPagesHdr = res.headers.get('x-wp-totalpages')
+      const totalPages    = totalPagesHdr ? parseInt(totalPagesHdr, 10) : 1
+      const data          = await res.json()
+      return { data, totalPages, error: null }
+    } catch (e) {
+      return { error: e.message, data: null, totalPages: 1 }
+    }
+  }, { base: BASE_URL, category: CATEGORY, perPage: PER_PAGE, num: pageNum })
 }
 
 async function scrape() {
-  console.log('[padelcoronado] Iniciando scraper (WooCommerce Store API)…')
+  console.log('[padelcoronado] Iniciando scraper (Playwright + Store API same-origin)…')
 
+  let chromium
+  try {
+    ({ chromium } = require('playwright'))
+  } catch {
+    console.error('[padelcoronado] playwright no instalado')
+    return []
+  }
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+  })
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    locale: 'es-ES',
+    timezoneId: 'Europe/Madrid',
+    viewport: { width: 1280, height: 800 },
+    extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9' },
+  })
+  const page = await context.newPage()
+
+  // Ocultar navigator.webdriver para evitar detección básica de headless
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+  })
+
+  // Paso 1: cargar la home para establecer sesión Cloudflare (cf_clearance, etc.)
+  console.log('[padelcoronado] Estableciendo sesión Cloudflare…')
+  try {
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  } catch (e) {
+    console.warn('[padelcoronado] Warning en carga home:', e.message)
+  }
+  await page.waitForTimeout(3000)  // Dar tiempo a scripts Cloudflare
+
+  // Cerrar cookie banner si aparece
+  try {
+    await page.click('.cmplz-accept, #cookieMsg a.close, .cookies-accept, [data-cky-tag="accept-button"]', { timeout: 3000 })
+    await page.waitForTimeout(800)
+  } catch { /* sin banner */ }
+
+  // Paso 2: llamar a la Store API desde dentro del browser (same-origin)
   const allProducts = []
-  let page = 1
+  const seen = new Set()
+  let pageNum    = 1
   let totalPages = 1
 
-  while (page <= totalPages) {
-    let result
-    try {
-      result = await fetchPage(page)
-    } catch (e) {
-      console.error(`[padelcoronado] Error página ${page}:`, e.message)
+  while (pageNum <= totalPages) {
+    console.log(`[padelcoronado] API página ${pageNum}/${totalPages}…`)
+
+    const result = await fetchViaPage(page, pageNum)
+
+    if (result.error) {
+      console.error(`[padelcoronado] Error en página ${pageNum}: ${result.error}`)
       break
     }
 
     const { data, totalPages: tp } = result
-    totalPages = tp
+    totalPages = tp || totalPages
     if (!Array.isArray(data) || data.length === 0) break
 
     for (const p of data) {
       const title = p.name
       const url   = p.permalink
-      if (!title || !url) continue
+      if (!title || !url || seen.has(url)) continue
+      seen.add(url)
 
       const minorUnit    = p.prices?.currency_minor_unit ?? 2
-      const salePrice    = centsToEuros(p.prices?.sale_price, minorUnit)
+      const salePrice    = centsToEuros(p.prices?.sale_price,    minorUnit)
       const regularPrice = centsToEuros(p.prices?.regular_price, minorUnit)
 
       const price = !isNaN(salePrice) && salePrice > 0 ? salePrice : regularPrice
@@ -91,11 +151,13 @@ async function scrape() {
       })
     }
 
-    console.log(`[padelcoronado] página ${page}/${totalPages} → ${data.length} productos`)
+    console.log(`[padelcoronado]  → ${data.length} productos en pág ${pageNum}/${totalPages} (acumulado: ${allProducts.length})`)
 
-    page++
-    if (page <= totalPages) await sleep(DELAY_MS)
+    pageNum++
+    if (pageNum <= totalPages) await sleep(DELAY_MS)
   }
+
+  await browser.close()
 
   console.log(`[padelcoronado] Total palas: ${allProducts.length}`)
 
