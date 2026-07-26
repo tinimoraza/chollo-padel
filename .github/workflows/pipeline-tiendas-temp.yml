@@ -165,6 +165,7 @@ jobs:
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts originalpadel --no-post
       - name: Scrape streetpadel
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts streetpadel --no-post
       - name: Scrape m1padel
         continue-on-error: true
@@ -176,8 +177,10 @@ jobs:
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts futurapadelshop --no-post
       - name: Scrape virtualpadel
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts virtualpadel --no-post
       - name: Scrape padelmania
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelmania --no-post
       - name: Scrape keepadel
         continue-on-error: true
@@ -200,14 +203,19 @@ jobs:
       - name: Instalar Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Scrape allforpadel
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts allforpadel --no-post
       - name: Scrape padeliberico
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padeliberico --no-post
       - name: Scrape romasport
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts romasport --no-post
       - name: Scrape tiendapadel5
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts tiendapadel5 --no-post
       - name: Scrape padelcoronado
+        continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelcoronado --no-post
       - name: Scrape tiendapadelpoint
         continue-on-error: true
