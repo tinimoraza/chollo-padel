@@ -189,7 +189,7 @@ const REBAJAS_KEYWORDS = /rebajas|black-?friday|liquidacion|outlet|oferta|verano
 // Excluir URLs administrativas y categorias de productos que NO son palas
 // (mochilas, ropa, zapatillas, etc.) - evita que filtrarUrlsRebajas devuelva
 // secciones irrelevantes en tiendas multi-producto como ofertasdepadel.
-const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module|mochila|paletero|ropa|calzado|zapatilla|camiseta|polo|pantalon|sudadera|chaleco|short|pelota|grip|overgrip|complement|accesor|indumentaria)/i
+const REBAJAS_EXCLUDE_PATH = /\/(blog|content|aviso-legal|politica|condiciones|contactenos|mapa-del-sitio|opiniones|module|login|carrito|cart|checkout|cuenta|account|mochila|paletero|ropa|calzado|zapatilla|camiseta|polo|pantalon|sudadera|chaleco|short|pelota|grip|overgrip|complement|accesor|indumentaria)/i
 
 function normalizarUrl(url, origin) {
   try {
