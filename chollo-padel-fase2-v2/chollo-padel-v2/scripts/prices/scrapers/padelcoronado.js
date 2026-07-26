@@ -1,20 +1,18 @@
 // scripts/prices/scrapers/padelcoronado.js
-// WooCommerce Store API — llamada desde dentro de Playwright (same-origin)
+// WooCommerce Store API — con playwright-extra + stealth plugin para bypasear Cloudflare Turnstile
 //
-// Fix 2026-07-26 v2: Cloudflare bloquea tanto el scraper Playwright original
-// (headless detectado como bot) como la Store API desde Node.js fetch (TLS
-// fingerprint de undici ≠ Chrome real → HTTP 403).
+// Problema: padelcoronado.com usa Cloudflare Turnstile (captcha "no soy robot")
+// que bloquea tanto Node.js fetch (TLS fingerprint de undici ≠ Chrome real → HTTP 403)
+// como Playwright headless estándar (detectado como bot → Turnstile se activa → sin cf_clearance → 403).
 //
-// Solución híbrida:
-//   1. Playwright carga la home (establece cf_clearance + cookies Cloudflare).
-//   2. page.evaluate(fetch(...)) llama a la Store API DESDE dentro del browser:
-//      - TLS fingerprint real de Chrome
-//      - sec-fetch-site: same-origin  (Cloudflare lo permite)
-//      - cf_clearance cookie incluida automáticamente
-//   3. Se parsea el JSON directamente sin scrapear HTML.
+// Solución: playwright-extra + puppeteer-extra-plugin-stealth
+//   - Parchea navigator.webdriver, chrome runtime, plugins, permissions, WebGL, canvas, etc.
+//   - Con estos parches, Cloudflare no detecta headless → Turnstile NO se activa
+//   - El browser obtiene cf_clearance automáticamente (como Chrome real)
+//   - page.evaluate(fetch(...)) llama a la Store API same-origin con esas cookies
 //
 // Endpoint: /wp-json/wc/store/v1/products?category=palas-padel
-// Precios: strings de céntimos ("15995" = 159,95€), minor_unit=2
+// Precios: strings de céntimos enteros ("15995" = 159,95€), minor_unit=2
 // Total: ~149 palas en 2 páginas (per_page=100)
 
 const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
@@ -23,7 +21,7 @@ const SOURCE_KEY = 'padelcoronado'
 const BASE_URL   = 'https://padelcoronado.com'
 const CATEGORY   = 'palas-padel'
 const PER_PAGE   = 100
-const DELAY_MS   = 800
+const DELAY_MS   = 1200
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -63,19 +61,22 @@ async function fetchViaPage(page, pageNum) {
 }
 
 async function scrape() {
-  console.log('[padelcoronado] Iniciando scraper (Playwright + Store API same-origin)…')
+  console.log('[padelcoronado] Iniciando scraper (playwright-extra + stealth + Store API same-origin)…')
 
-  let chromium
+  let chromium, StealthPlugin
   try {
-    ({ chromium } = require('playwright'))
-  } catch {
-    console.error('[padelcoronado] playwright no instalado')
+    ({ chromium } = require('playwright-extra'))
+    StealthPlugin = require('puppeteer-extra-plugin-stealth')
+    chromium.use(StealthPlugin())
+  } catch (e) {
+    console.error('[padelcoronado] playwright-extra o puppeteer-extra-plugin-stealth no instalados:', e.message)
+    console.error('[padelcoronado] Instala con: npm install playwright-extra puppeteer-extra-plugin-stealth')
     return []
   }
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+    args: ['--no-sandbox', '--disable-dev-shm-usage'],
   })
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -86,19 +87,25 @@ async function scrape() {
   })
   const page = await context.newPage()
 
-  // Ocultar navigator.webdriver para evitar detección básica de headless
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
-  })
-
   // Paso 1: cargar la home para establecer sesión Cloudflare (cf_clearance, etc.)
-  console.log('[padelcoronado] Estableciendo sesión Cloudflare…')
+  // Con stealth plugin activo, Cloudflare no debería mostrar Turnstile
+  console.log('[padelcoronado] Cargando home para establecer sesión Cloudflare…')
   try {
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   } catch (e) {
     console.warn('[padelcoronado] Warning en carga home:', e.message)
   }
-  await page.waitForTimeout(3000)  // Dar tiempo a scripts Cloudflare
+
+  // Esperar a que Cloudflare procese la sesión (los scripts CF tardan unos segundos)
+  await page.waitForTimeout(4000)
+
+  // Verificar que no estamos en una página de challenge de Cloudflare
+  const title = await page.title().catch(() => '')
+  if (title.toLowerCase().includes('just a moment') || title.toLowerCase().includes('checking')) {
+    console.warn('[padelcoronado] Cloudflare challenge detectado en home — esperando resolución…')
+    // Dar más tiempo al challenge de Cloudflare
+    await page.waitForTimeout(8000)
+  }
 
   // Cerrar cookie banner si aparece
   try {
