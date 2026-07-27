@@ -1,0 +1,222 @@
+npm warn exec The following package was not found and will be installed: tsx@4.23.1
+◇ injected env (0) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+Analizando 32 tienda(s)…
+
+[padelstyle]
+  Observaciones: 6847 · Productos: 243 · Días cubiertos: 32
+  Bajadas de precio detectadas: 166
+  Hora más frecuente de bajada: 8:00 (hora España)
+  Día más frecuente de bajada: lunes
+  Fiable: sí
+
+[padelspain]
+  Observaciones: 8919 · Productos: 297 · Días cubiertos: 32
+  Bajadas de precio detectadas: 186
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[m1padel]
+  Observaciones: 11526 · Productos: 396 · Días cubiertos: 32
+  Bajadas de precio detectadas: 367
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: miércoles
+  Fiable: sí
+
+[padelkiwi]
+  Observaciones: 7325 · Productos: 244 · Días cubiertos: 32
+  Bajadas de precio detectadas: 315
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[time2padel]
+  Observaciones: 11086 · Productos: 537 · Días cubiertos: 30
+  Bajadas de precio detectadas: 493
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[misterpadel]
+  Observaciones: 4832 · Productos: 178 · Días cubiertos: 32
+  Bajadas de precio detectadas: 164
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[ofertasdepadel]
+  Observaciones: 12628 · Productos: 604 · Días cubiertos: 31
+  Bajadas de precio detectadas: 527
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: sábado
+  Fiable: sí
+
+[padelmania]
+  Observaciones: 4892 · Productos: 309 · Días cubiertos: 29
+  Bajadas de precio detectadas: 140
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: sábado
+  Fiable: sí
+
+[padeltienda]
+  Observaciones: 6598 · Productos: 246 · Días cubiertos: 32
+  Bajadas de precio detectadas: 127
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: lunes
+  Fiable: sí
+
+[virtualpadel]
+  Observaciones: 5905 · Productos: 209 · Días cubiertos: 32
+  Bajadas de precio detectadas: 82
+  Hora más frecuente de bajada: 8:00 (hora España)
+  Día más frecuente de bajada: lunes
+  Fiable: sí
+
+[stockpadel]
+  Observaciones: 3201 · Productos: 122 · Días cubiertos: 32
+  Bajadas de precio detectadas: 37
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: lunes
+  Fiable: sí
+
+[originalpadel]
+  Observaciones: 20345 · Productos: 721 · Días cubiertos: 30
+  Bajadas de precio detectadas: 336
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: domingo
+  Fiable: sí
+
+[futurapadelshop]
+  Observaciones: 7302 · Productos: 249 · Días cubiertos: 32
+  Bajadas de precio detectadas: 128
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: domingo
+  Fiable: sí
+
+[padelvice]
+  Observaciones: 3456 · Productos: 129 · Días cubiertos: 32
+  Bajadas de precio detectadas: 23
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[justpadel]
+  Observaciones: 8375 · Productos: 293 · Días cubiertos: 32
+  Bajadas de precio detectadas: 173
+  Hora más frecuente de bajada: 1:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[outletdepadel]
+  Observaciones: 2482 · Productos: 107 · Días cubiertos: 31
+  Bajadas de precio detectadas: 0
+  Fiable: sí
+
+[keepadel]
+  Observaciones: 22696 · Productos: 893 · Días cubiertos: 26
+  Bajadas de precio detectadas: 73
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[starvie]
+  Observaciones: 321 · Productos: 11 · Días cubiertos: 32
+  Bajadas de precio detectadas: 0
+  Fiable: sí
+
+[pelotapadel]
+  Observaciones: 3354 · Productos: 159 · Días cubiertos: 23
+  Bajadas de precio detectadas: 12
+  Hora más frecuente de bajada: 1:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[romasport]
+  Observaciones: 2434 · Productos: 84 · Días cubiertos: 32
+  Bajadas de precio detectadas: 0
+  Fiable: sí
+
+[padelproshop]
+  Observaciones: 12721 · Productos: 409 · Días cubiertos: 32
+  Bajadas de precio detectadas: 230
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[tennispoint]
+  Observaciones: 6740 · Productos: 267 · Días cubiertos: 32
+  Bajadas de precio detectadas: 606
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: sábado
+  Fiable: sí
+
+[padelnuestro]
+  Observaciones: 26681 · Productos: 850 · Días cubiertos: 32
+  Bajadas de precio detectadas: 722
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[padelmarket]
+  Observaciones: 7881 · Productos: 251 · Días cubiertos: 32
+  Bajadas de precio detectadas: 173
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: domingo
+  Fiable: sí
+
+[padelcoronado]
+  Observaciones: 3430 · Productos: 158 · Días cubiertos: 28
+  Bajadas de precio detectadas: 33
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: sábado
+  Fiable: sí
+
+[padelzoom]
+  Observaciones: 23844 · Productos: 749 · Días cubiertos: 32
+  Bajadas de precio detectadas: 2
+  Hora más frecuente de bajada: 6:00 (hora España)
+  Día más frecuente de bajada: jueves
+  Fiable: sí
+
+[padeliberico]
+  Observaciones: 7027 · Productos: 248 · Días cubiertos: 32
+  Bajadas de precio detectadas: 127
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
+[tiendapadelpoint]
+  Observaciones: 21888 · Productos: 753 · Días cubiertos: 32
+  Bajadas de precio detectadas: 330
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: miércoles
+  Fiable: sí
+
+[streetpadel]
+  Observaciones: 15690 · Productos: 879 · Días cubiertos: 27
+  Bajadas de precio detectadas: 750
+  Hora más frecuente de bajada: 0:00 (hora España)
+  Día más frecuente de bajada: martes
+  Fiable: sí
+
+[zonadepadel]
+  Observaciones: 14044 · Productos: 462 · Días cubiertos: 32
+  Bajadas de precio detectadas: 1040
+  Hora más frecuente de bajada: 5:00 (hora España)
+  Día más frecuente de bajada: miércoles
+  Fiable: sí
+
+[tiendapadel5]
+  Observaciones: 8228 · Productos: 310 · Días cubiertos: 32
+  Bajadas de precio detectadas: 21
+  Hora más frecuente de bajada: 1:00 (hora España)
+  Día más frecuente de bajada: jueves
+  Fiable: sí
+
+[allforpadel]
+  Observaciones: 1717 · Productos: 86 · Días cubiertos: 21
+  Bajadas de precio detectadas: 1
+  Hora más frecuente de bajada: 12:00 (hora España)
+  Día más frecuente de bajada: viernes
+  Fiable: sí
+
