@@ -164,62 +164,26 @@ async function scrape() {
   })
   console.log(`[tiendapadelpoint] Total páginas: ${totalPages}`)
 
-  // Detección de cupón: recorrer homepage + listing con innerHTML completo.
-  // Se usa networkidle en homepage para dar tiempo a sliders y banners JS.
-  // Se loguea si se encuentra "sale" o "cupon/código" en el HTML para
-  // diagnosticar si el texto está en el DOM aunque el regex no lo matchee.
+  // IMPORTANTE: NO se hace goto(homepage) aquí — interfiere con la sesión Playwright
+  // y hace que las siguientes páginas devuelvan 0 productos. El check de homepage
+  // se hace DESPUÉS del while loop (ver más abajo).
+  //
+  // Detectar código desde el listing inicial (ya cargado con 2000ms de espera)
   let codigoDescuento = null
   {
-    // Primero homepage (donde suelen estar los banners de promo principales)
-    // domcontentloaded en lugar de networkidle para evitar timeout por scripts de terceros
-    try {
-      await page.goto('https://www.tiendapadelpoint.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
-      await page.waitForTimeout(2000)
-      const homeHtml = await page.evaluate(() => document.documentElement.innerHTML)
-      codigoDescuento = detectarCodigoDescuento(homeHtml)
-      const htmlLow = homeHtml.toLowerCase()
-      const tieneSale  = /\bsale\d{1,2}\b/.test(htmlLow)
-      const tieneCupon = /c[oó]digo|cup[oó]n/.test(htmlLow)
-      console.log(`[tiendapadelpoint] homepage: sale_code_pattern=${tieneSale}, cupon_keyword=${tieneCupon}, detectado=${!!codigoDescuento}`)
-    } catch (e) {
-      console.log(`[tiendapadelpoint] homepage check error: ${e.message}`)
-    }
-    // Siempre volver al listing (independientemente de si homepage tuvo error o no)
-    try {
-      await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await page.waitForTimeout(1500)
-    } catch (e) {
-      console.log(`[tiendapadelpoint] error volviendo al listing: ${e.message}`)
-    }
-
-    // Si la homepage no lo tiene, probar también el listing
-    if (!codigoDescuento) {
-      const listingHtml = await page.evaluate(() => document.documentElement.innerHTML)
-      codigoDescuento = detectarCodigoDescuento(listingHtml)
-      const htmlLow = listingHtml.toLowerCase()
-      const tieneSale  = /\bsale\d{1,2}\b/.test(htmlLow)
-      const tieneCupon = /c[oó]digo|cup[oó]n/.test(htmlLow)
-      console.log(`[tiendapadelpoint] listing: sale_code_pattern=${tieneSale}, cupon_keyword=${tieneCupon}, detectado=${!!codigoDescuento}`)
-    }
-  }
-  if (codigoDescuento) {
-    console.log(`[tiendapadelpoint] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
-  } else {
-    console.log(`[tiendapadelpoint] no se detectó ningún código de descuento`)
+    const listingHtml = await page.evaluate(() => document.documentElement.innerHTML)
+    codigoDescuento = detectarCodigoDescuento(listingHtml)
+    const htmlLow = listingHtml.toLowerCase()
+    const tieneSale  = /\bsale\d{1,2}\b/.test(htmlLow)
+    const tieneCupon = /c[oó]digo|cup[oó]n/.test(htmlLow)
+    console.log(`[tiendapadelpoint] listing: sale_code_pattern=${tieneSale}, cupon_keyword=${tieneCupon}, detectado=${!!codigoDescuento}`)
   }
 
-  // Si el cupón no se detectó en home/listing, intentar con la primera página de producto.
-  // En tiendapadelpoint el banner de cupón aparece en páginas de producto individual
-  // (ej: "REBAJAS DESCUENTO EXTRA -15% APLICANDO CUPÓN SALE15"), no en el listing.
-  // Se detecta ANTES del bucle de paginación para no bloquear el scrape principal.
-  let primerProductUrl = null
-  {
-    // Obtener el primer link de producto del listing actual (ya cargado)
-    primerProductUrl = await page.evaluate(() => {
-      const a = document.querySelector('.product-thumb .name a')
-      return a?.href || null
-    })
-  }
+  // Obtener primerProductUrl y rebajasUrls del listing inicial (sin goto adicional)
+  const primerProductUrl = await page.evaluate(() => {
+    const a = document.querySelector('.product-thumb .name a')
+    return a?.href || null
+  })
 
   const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
   const rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
@@ -249,6 +213,31 @@ async function scrape() {
 
     pageNum++
     await sleep(DELAY_MS)
+  }
+
+  // Check de homepage DESPUÉS del while loop (no antes, para no interferir con la sesión).
+  // Si el listing ya dio código, se salta; si no, se intenta homepage.
+  if (!codigoDescuento) {
+    try {
+      await page.goto('https://www.tiendapadelpoint.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.waitForTimeout(2000)
+      const homeHtml = await page.evaluate(() => document.documentElement.innerHTML)
+      codigoDescuento = detectarCodigoDescuento(homeHtml)
+      const htmlLow = homeHtml.toLowerCase()
+      const tieneSale  = /\bsale\d{1,2}\b/.test(htmlLow)
+      const tieneCupon = /c[oó]digo|cup[oó]n/.test(htmlLow)
+      console.log(`[tiendapadelpoint] homepage: sale_code_pattern=${tieneSale}, cupon_keyword=${tieneCupon}, detectado=${!!codigoDescuento}`)
+      // Volver al listing después del check
+      await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForTimeout(1500)
+    } catch (e) {
+      console.log(`[tiendapadelpoint] homepage check error: ${e.message}`)
+    }
+  }
+  if (codigoDescuento) {
+    console.log(`[tiendapadelpoint] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+  } else {
+    console.log(`[tiendapadelpoint] no se detectó ningún código de descuento`)
   }
 
   // Siempre revisar un producto de la sección de REBAJAS con OCR.
