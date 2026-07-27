@@ -136,14 +136,44 @@ async function scrape() {
   })
   const page = await context.newPage()
 
+  // ── Estrategia 0: acceso directo al endpoint JSON (sin visitar la home) ─────────
+  // Turnstile solo protege páginas HTML. El endpoint de la Store API puede ser
+  // accesible directamente con Playwright+stealth si el browser pasa la detección
+  // básica de Cloudflare (TLS fingerprint, headers). Evita el Turnstile por completo.
+  let firstPageResult = null
+
+  console.log('[padelcoronado] Intentando acceso directo a la Store API (sin home)…')
+  try {
+    let apiTotalPages = 1
+    const captureHeaders = (resp) => {
+      if (resp.url().includes('/wp-json/wc/store/v1/products')) {
+        const hdr = resp.headers()['x-wp-totalpages']
+        if (hdr) apiTotalPages = parseInt(hdr, 10) || 1
+      }
+    }
+    page.on('response', captureHeaders)
+    const apiUrl1 = `${BASE_URL}/wp-json/wc/store/v1/products?category=${CATEGORY}&per_page=${PER_PAGE}&page=1`
+    await page.goto(apiUrl1, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await page.waitForTimeout(1500)
+    page.off('response', captureHeaders)
+
+    const bodyText = await page.evaluate(() => document.body.innerText)
+    const parsed = JSON.parse(bodyText)  // lanza si Cloudflare devuelve HTML de challenge
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      console.log(`[padelcoronado] ✅ API accesible directamente (${parsed.length} productos, ${apiTotalPages} páginas)`)
+      firstPageResult = { data: parsed, totalPages: apiTotalPages, error: null }
+    }
+  } catch (e) {
+    console.log(`[padelcoronado] Acceso directo a API no disponible: ${e.message.substring(0, 80)}`)
+  }
+
   // ── Estrategia 1: cookies cacheadas (IP caliente / reejecutar en local) ───────
   // Si en una ejecución anterior obtuvimos cf_clearance, lo cargamos ahora.
   // Esto permite saltarse el Turnstile de Cloudflare aunque la IP esté "caliente".
-  let firstPageResult = null
-  const cachedCookies  = loadCachedCookies()
+  const cachedCookies  = !firstPageResult ? loadCachedCookies() : []
   const hasCfClearance = cachedCookies.some(c => c.name === 'cf_clearance')
 
-  if (hasCfClearance) {
+  if (!firstPageResult && hasCfClearance) {
     console.log(`[padelcoronado] Cargando ${cachedCookies.length} cookies cacheadas (incluye cf_clearance)…`)
     await context.addCookies(cachedCookies)
 
@@ -163,9 +193,8 @@ async function scrape() {
     }
   }
 
-  // ── Estrategia 2: carga normal de la home (IP fría / GitHub Actions) ──────────
-  // Si las cookies cacheadas no funcionaron (o no existían), cargamos la home
-  // para que Cloudflare nos dé un cf_clearance nuevo.
+  // ── Estrategia 2: carga normal de la home (fallback final) ───────────────────
+  // Solo si tanto la API directa como las cookies cacheadas fallaron.
   if (!firstPageResult) {
     console.log('[padelcoronado] Cargando home para establecer sesión Cloudflare…')
     try {
