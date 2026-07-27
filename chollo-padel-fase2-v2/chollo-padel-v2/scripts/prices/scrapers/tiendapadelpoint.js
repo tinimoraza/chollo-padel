@@ -17,13 +17,16 @@ const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-uti
 // Usa sharp (ya instalado) para upscale 4x → mejor precisión de Tesseract.
 // Falla silenciosamente si tesseract.js o sharp no están disponibles.
 async function detectarCodigoEnBannerImagen(imgUrl) {
+  // Devuelve: objeto {codigo, descuento_pct} si hay código,
+  //           null si el OCR corrió y NO hay código (banner sin cupón),
+  //           undefined si el OCR no pudo correr (fallo de red, tesseract no disponible…)
   try {
     const { createWorker } = require('tesseract.js')
     const sharp = require('sharp')
     const res = await fetch(imgUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
     })
-    if (!res.ok) { console.log(`[tiendapadelpoint] OCR: imagen no accesible (${res.status})`); return null }
+    if (!res.ok) { console.log(`[tiendapadelpoint] OCR: imagen no accesible (${res.status})`); return undefined }
     const buf = Buffer.from(await res.arrayBuffer())
     // Upscale a 200px de alto: la imagen 2x es 1440×60 → queda ~4800×200, legible por Tesseract
     const pngBuf = await sharp(buf).resize({ height: 200 }).png().toBuffer()
@@ -32,10 +35,10 @@ async function detectarCodigoEnBannerImagen(imgUrl) {
     await worker.terminate()
     const ocrText = text.replace(/\n/g, ' ').trim()
     console.log(`[tiendapadelpoint] OCR banner: "${ocrText}"`)
-    return detectarCodigoDescuento(ocrText)
+    return detectarCodigoDescuento(ocrText) // null si no hay código
   } catch (e) {
     console.log(`[tiendapadelpoint] OCR no disponible: ${e.message.substring(0, 100)}`)
-    return null
+    return undefined // indefinido = no pudimos correr el OCR
   }
 }
 
@@ -133,18 +136,34 @@ const path = require('path')
 const CACHE_FILE = path.join(__dirname, '_tiendapadelpoint_cache.json')
 const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000 // 6 horas
 
-function readCache() {
+async function readCache() {
   try {
     if (!fs.existsSync(CACHE_FILE)) return null
-    const { timestamp, products } = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))
+    const { timestamp, products, codigoDescuento: codigoCached, bannerImgUrl } = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))
     if (Date.now() - timestamp > CACHE_MAX_AGE_MS) return null
     console.log(`[tiendapadelpoint] Cache válido (${products.length} palas, ${Math.round((Date.now()-timestamp)/60000)} min)`)
+    // Verificar si el código sigue activo via OCR del banner (fetch directo, sin Playwright)
+    // undefined = OCR no disponible (conservar cache); null = banner sin código; objeto = código activo
+    let codigoFinal = codigoCached ?? null
+    if (bannerImgUrl) {
+      console.log(`[tiendapadelpoint] Verificando código de descuento (OCR banner)…`)
+      const codigoOcr = await detectarCodigoEnBannerImagen(bannerImgUrl)
+      if (codigoOcr !== undefined) {
+        codigoFinal = codigoOcr
+        if (codigoOcr) console.log(`[tiendapadelpoint] Código activo (OCR): ${codigoOcr.codigo} (-${codigoOcr.descuento_pct}%)`)
+        else console.log(`[tiendapadelpoint] Banner sin código activo`)
+      } else {
+        // OCR no pudo correr → conservar lo que había en cache
+        if (codigoCached) console.log(`[tiendapadelpoint] OCR no disponible, usando código del cache: ${codigoCached.codigo} (-${codigoCached.descuento_pct}%)`)
+      }
+    }
+    products.codigoDescuento = codigoFinal
     return products
   } catch { return null }
 }
 
 async function scrape() {
-  const cached = readCache()
+  const cached = await readCache()
   if (cached) return cached
 
   console.log('[tiendapadelpoint] Iniciando scraper (Playwright)…')
@@ -291,6 +310,7 @@ async function scrape() {
   // El banner "CUPÓN SALE15" es una imagen WebP — invisible para el detector de texto.
   // Se ejecuta SIEMPRE (no solo si !codigoDescuento) para que el OCR pueda
   // sobreescribir cualquier falso positivo detectado en el listing de texto.
+  let capturedBannerImgUrl = null
   {
     let urlAComprobar = null
 
@@ -329,10 +349,12 @@ async function scrape() {
           const m2x = srcset.match(/(\S+)\s+2x/)
           return m2x ? m2x[1] : (found.src || null)
         })
+        if (bannerImgUrl) capturedBannerImgUrl = bannerImgUrl
         let codigoOcr = null
         if (bannerImgUrl) {
           console.log(`[tiendapadelpoint] banner imagen detectado, intentando OCR: ${bannerImgUrl}`)
-          codigoOcr = await detectarCodigoEnBannerImagen(bannerImgUrl)
+          const ocrResult = await detectarCodigoEnBannerImagen(bannerImgUrl)
+          if (ocrResult !== undefined) codigoOcr = ocrResult
         }
         // OCR prevalece sobre texto; si ninguno, conservar lo encontrado antes (home/listing)
         if (codigoOcr) {
@@ -377,6 +399,18 @@ async function scrape() {
   }
 
   console.log(`[tiendapadelpoint] Total palas únicas: ${allProducts.length}`)
+  // Guardar cache para próximas ejecuciones (incluye código y URL de banner para OCR sin Playwright)
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify({
+      timestamp:      Date.now(),
+      products:       allProducts,
+      codigoDescuento: codigoDescuento ?? null,
+      bannerImgUrl:   capturedBannerImgUrl,
+    }))
+    console.log(`[tiendapadelpoint] Cache guardado (${allProducts.length} palas)`)
+  } catch (e) {
+    console.log(`[tiendapadelpoint] Error guardando cache: ${e.message}`)
+  }
   const scraped_at = new Date().toISOString()
   const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,
