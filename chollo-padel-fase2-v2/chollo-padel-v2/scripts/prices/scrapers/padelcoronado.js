@@ -74,10 +74,25 @@ async function scrape() {
     return []
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-dev-shm-usage'],
-  })
+  // channel: 'chrome' usa el Google Chrome instalado en el sistema en vez del
+  // Chromium bundled de Playwright. La huella TLS de Chrome real es idéntica a
+  // la de un browser humano, lo que ayuda a pasar el Cloudflare Turnstile.
+  // Si Chrome no está instalado, Playwright cae al Chromium bundled (warning).
+  let browser
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      channel: 'chrome',
+      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    })
+  } catch {
+    // Fallback: Chromium bundled (GitHub Actions u otros entornos sin Chrome)
+    console.log('[padelcoronado] Chrome no disponible, usando Chromium bundled…')
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    })
+  }
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     locale: 'es-ES',
@@ -88,23 +103,38 @@ async function scrape() {
   const page = await context.newPage()
 
   // Paso 1: cargar la home para establecer sesión Cloudflare (cf_clearance, etc.)
-  // Con stealth plugin activo, Cloudflare no debería mostrar Turnstile
+  // Con stealth plugin activo, Cloudflare no debería mostrar Turnstile.
+  // waitUntil: 'networkidle' espera a que los scripts de Cloudflare terminen de
+  // ejecutarse (incluido el JS del challenge), no solo el DOM.
   console.log('[padelcoronado] Cargando home para establecer sesión Cloudflare…')
   try {
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'networkidle', timeout: 60000 })
   } catch (e) {
     console.warn('[padelcoronado] Warning en carga home:', e.message)
   }
 
-  // Esperar a que Cloudflare procese la sesión (los scripts CF tardan unos segundos)
-  await page.waitForTimeout(4000)
+  // Dar tiempo extra a Cloudflare para procesar
+  await page.waitForTimeout(6000)
 
-  // Verificar que no estamos en una página de challenge de Cloudflare
-  const title = await page.title().catch(() => '')
-  if (title.toLowerCase().includes('just a moment') || title.toLowerCase().includes('checking')) {
-    console.warn('[padelcoronado] Cloudflare challenge detectado en home — esperando resolución…')
-    // Dar más tiempo al challenge de Cloudflare
-    await page.waitForTimeout(8000)
+  // Diagnóstico: loguear título y URL para detectar challenge
+  const pageTitle = await page.title().catch(() => '')
+  const pageUrl   = page.url()
+  console.log(`[padelcoronado] Página cargada: "${pageTitle}" — ${pageUrl}`)
+
+  const enChallenge = pageTitle.toLowerCase().includes('just a moment')
+    || pageTitle.toLowerCase().includes('checking')
+    || pageTitle.toLowerCase().includes('attention required')
+    || pageTitle.toLowerCase().includes('bot verification')
+    || pageTitle.toLowerCase().includes('verificación')
+    || pageUrl.includes('/cdn-cgi/')
+
+  if (enChallenge) {
+    console.warn('[padelcoronado] Cloudflare Turnstile activo ("Bot Verification").')
+    console.warn('[padelcoronado] Causa: IP marcada por intentos recientes. Se necesita IP fría.')
+    console.warn('[padelcoronado] En GitHub Actions (IP nueva cada run) funcionará correctamente.')
+    console.warn('[padelcoronado] En local: esperar 2-3h sin acceder a padelcoronado y reintentar.')
+    await browser.close()
+    return []
   }
 
   // Cerrar cookie banner si aparece
