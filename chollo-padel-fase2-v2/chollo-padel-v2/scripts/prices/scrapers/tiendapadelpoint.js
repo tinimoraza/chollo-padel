@@ -171,21 +171,25 @@ async function scrape() {
   let codigoDescuento = null
   {
     // Primero homepage (donde suelen estar los banners de promo principales)
+    // domcontentloaded en lugar de networkidle para evitar timeout por scripts de terceros
     try {
-      await page.goto('https://www.tiendapadelpoint.com', { waitUntil: 'networkidle', timeout: 40000 })
+      await page.goto('https://www.tiendapadelpoint.com', { waitUntil: 'domcontentloaded', timeout: 30000 })
       await page.waitForTimeout(2000)
       const homeHtml = await page.evaluate(() => document.documentElement.innerHTML)
       codigoDescuento = detectarCodigoDescuento(homeHtml)
-      // Log diagnóstico: ¿está "sale" o "cupon/código" en el HTML?
       const htmlLow = homeHtml.toLowerCase()
       const tieneSale  = /\bsale\d{1,2}\b/.test(htmlLow)
       const tieneCupon = /c[oó]digo|cup[oó]n/.test(htmlLow)
       console.log(`[tiendapadelpoint] homepage: sale_code_pattern=${tieneSale}, cupon_keyword=${tieneCupon}, detectado=${!!codigoDescuento}`)
-      // Volver a la página de listado
+    } catch (e) {
+      console.log(`[tiendapadelpoint] homepage check error: ${e.message}`)
+    }
+    // Siempre volver al listing (independientemente de si homepage tuvo error o no)
+    try {
       await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await page.waitForTimeout(1500)
     } catch (e) {
-      console.log(`[tiendapadelpoint] homepage check error: ${e.message}`)
+      console.log(`[tiendapadelpoint] error volviendo al listing: ${e.message}`)
     }
 
     // Si la homepage no lo tiene, probar también el listing
