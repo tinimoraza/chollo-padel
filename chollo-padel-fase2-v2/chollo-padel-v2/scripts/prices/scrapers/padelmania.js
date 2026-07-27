@@ -81,65 +81,58 @@ async function scrape() {
   let rebajasUrls = []
 
   try {
-    while (true) {
-      // PrestaShop: resultsPerPage solo en pág 1, page=N sin resultsPerPage en el resto
-      // (combinar ambos parámetros a veces devuelve resultados vacíos)
-      const url = pageNum === 1
-        ? `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36`
-        : `${BASE_URL}${CATEGORY_PATH}?page=${pageNum}`
+    // ── Página 1: carga inicial ─────────────────────────────────────────────
+    const url1 = `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36`
+    console.log(`[padelmania] Página 1: ${url1}`)
+    await page.goto(url1, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+    await page.waitForTimeout(2000)
 
-      console.log(`[padelmania] Página ${pageNum}: ${url}`)
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-      await page.waitForTimeout(2000)
+    // Cerrar cookie banner si aparece
+    try {
+      await page.click('.cmplz-accept, #cookieMsg a.close, .cookies-accept, [data-cky-tag="accept-button"]', { timeout: 2000 })
+      await page.waitForTimeout(500)
+    } catch { /* sin banner */ }
 
-      // Cerrar cookie banner si aparece
-      try {
-        await page.click('.cmplz-accept, #cookieMsg a.close, .cookies-accept, [data-cky-tag="accept-button"]', { timeout: 2000 })
-        await page.waitForTimeout(500)
-      } catch { /* sin banner */ }
+    // Verificar que hay productos en página 1
+    try {
+      await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 12_000 })
+    } catch {
+      console.error('[padelmania] Sin productos en página 1 — posible bloqueo anti-bot')
+      await browser.close()
+      return []
+    }
 
-      // Verificar que hay productos (no bloqueo / challenge)
-      try {
-        await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 12_000 })
-      } catch {
-        if (pageNum === 1) {
-          console.error('[padelmania] Sin productos en página 1 — posible bloqueo anti-bot')
-        }
-        break
+    // Metadatos de página 1: código descuento, URLs rebajas, total páginas
+    {
+      const bodyText = await page.evaluate(() => document.body.innerText)
+      codigoDescuento = detectarCodigoDescuento(bodyText)
+      if (codigoDescuento) {
+        console.log(`[padelmania] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
       }
-
-      if (pageNum === 1) {
-        const bodyText = await page.evaluate(() => document.body.innerText)
-        codigoDescuento = detectarCodigoDescuento(bodyText)
-        if (codigoDescuento) {
-          console.log(`[padelmania] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
-        }
-        const hrefs = await page.evaluate(() =>
-          Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
-        )
-        // Filtrar URLs de productos individuales de PrestaShop (terminan en .html con ID numérico)
-        // Ej: /es/oferta-especial/24586-wilson-defy.html → es un producto, no una categoría
-        rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
-          .filter(u => !/\/\d{3,}-[a-z].*\.html$/i.test(new URL(u).pathname))
-        if (rebajasUrls.length > 0) {
-          console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
-        }
-        // Detectar última página desde la paginación
-        const paginaLinks = await page.evaluate(() =>
-          Array.from(document.querySelectorAll('.pagination a')).map(a => a.href)
-        )
-        for (const href of paginaLinks) {
-          const m = href.match(/page=(\d+)/)
-          if (m) {
-            const n = parseInt(m[1])
-            if (!isNaN(n) && n > lastPage) lastPage = n
-          }
+      const hrefs = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+      )
+      // Filtrar productos individuales PrestaShop (/ID-slug.html) — no son categorías
+      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+        .filter(u => !/\/\d{3,}-[a-z].*\.html$/i.test(new URL(u).pathname))
+      if (rebajasUrls.length > 0) {
+        console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      }
+      // Total páginas: leer desde links de paginación del DOM
+      const paginaLinks = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('.pagination a')).map(a => a.href)
+      )
+      for (const href of paginaLinks) {
+        const m = href.match(/[?&]p(?:age)?=(\d+)/)
+        if (m) {
+          const n = parseInt(m[1])
+          if (!isNaN(n) && n > lastPage) lastPage = n
         }
       }
+    }
 
-      const products = await extractProducts(page)
-      console.log(`[padelmania]  → ${products.length} productos en página ${pageNum}/${lastPage}`)
-
+    // Procesar productos de página 1
+    const addProducts = (products) => {
       for (const p of products) {
         if (!isPala(p.title) || seen.has(p.url)) continue
         seen.add(p.url)
@@ -152,10 +145,49 @@ async function scrape() {
           image:           p.image,
         })
       }
+    }
 
-      if (pageNum >= lastPage) break
+    let products1 = await extractProducts(page)
+    console.log(`[padelmania]  → ${products1.length} productos en página 1/${lastPage}`)
+    addProducts(products1)
+
+    // ── Páginas 2..N: click en el botón "siguiente" (paginación AJAX) ──────
+    // padelmania carga la siguiente página vía AJAX cuando se hace click en el
+    // botón "siguiente" — navegar directamente con goto() devuelve la página
+    // sin productos. Simular el click es la única forma que funciona.
+    const NEXT_SEL = 'a[rel="next"], .pagination .next a, ul.pagination li.next a, #js-product-list-bottom a[rel="next"]'
+
+    while (pageNum < lastPage) {
+      // Comprobar que existe el botón siguiente antes de hacer click
+      const hasNext = await page.$(NEXT_SEL)
+      if (!hasNext) {
+        console.warn(`[padelmania] No se encontró botón "siguiente" en página ${pageNum}`)
+        break
+      }
+
       pageNum++
+      console.log(`[padelmania] Página ${pageNum}/${lastPage} (click siguiente)…`)
+
+      // Click y esperar a que cargue la nueva lista de productos
+      await Promise.all([
+        page.waitForResponse(
+          r => r.url().includes('338-todas-las-palas') && r.status() < 400,
+          { timeout: 15_000 }
+        ).catch(() => null),  // si no hay request de red (solo AJAX parcial), ignorar
+        page.click(NEXT_SEL),
+      ])
       await page.waitForTimeout(DELAY_MS)
+
+      try {
+        await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 12_000 })
+      } catch {
+        console.warn(`[padelmania] Sin productos en página ${pageNum} — fin de paginación`)
+        break
+      }
+
+      const products = await extractProducts(page)
+      console.log(`[padelmania]  → ${products.length} productos en página ${pageNum}/${lastPage}`)
+      addProducts(products)
     }
   } catch (err) {
     console.error('[padelmania] Error:', err.message)
