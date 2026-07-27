@@ -1,8 +1,8 @@
 name: Scraper Vinted
 
 on:
-  # [PAUSADO] schedule:
-    # [PAUSADO] - cron: "5,35 * * * *"
+  schedule:
+    - cron: "5,35 * * * *"
   workflow_dispatch:
 
 jobs:

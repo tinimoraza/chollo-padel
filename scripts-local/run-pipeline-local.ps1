@@ -2,9 +2,13 @@
 # Emula los 4 jobs paralelos de pipeline-tiendas-temp.yml
 # Lanzar manualmente o via Task Scheduler (cada 2h)
 
-$WORKDIR  = "C:\chollo-padel\chollo-padel-fase2-v2\chollo-padel-v2"
-$SCRIPTS  = "C:\chollo-padel\scripts-local"
-$LOG      = "C:\chollo-padel\pipeline-local.log"
+$WORKDIR   = "C:\chollo-padel\chollo-padel-fase2-v2\chollo-padel-v2"
+$SCRIPTS   = "C:\chollo-padel\scripts-local"
+$LOG       = "C:\chollo-padel\pipeline-local.log"
+$LOG_A     = "C:\chollo-padel\pipeline-local-a.log"
+$LOG_B     = "C:\chollo-padel\pipeline-local-b.log"
+$LOG_C     = "C:\chollo-padel\pipeline-local-c.log"
+$LOG_PW    = "C:\chollo-padel\pipeline-local-pw.log"
 
 function Log {
     param($msg)
@@ -30,10 +34,17 @@ $args_common = @("-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden")
 
 Log "Lanzando grupos A, B, C y Playwright en paralelo..."
 
-$pA = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-a.ps1", "-LogFile", $LOG)) -PassThru -WindowStyle Hidden
-$pB = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-b.ps1", "-LogFile", $LOG)) -PassThru -WindowStyle Hidden
-$pC = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-c.ps1", "-LogFile", $LOG)) -PassThru -WindowStyle Hidden
-$pW = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-playwright.ps1", "-LogFile", $LOG)) -PassThru -WindowStyle Hidden
+# Cada grupo escribe a su propio log (sin colisiones de escritura simultánea).
+# El maestro los fusiona al final.
+"" | Out-File $LOG_A -Encoding utf8   # truncar logs anteriores
+"" | Out-File $LOG_B -Encoding utf8
+"" | Out-File $LOG_C -Encoding utf8
+"" | Out-File $LOG_PW -Encoding utf8
+
+$pA = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-a.ps1")) -PassThru -WindowStyle Hidden
+$pB = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-b.ps1")) -PassThru -WindowStyle Hidden
+$pC = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-c.ps1")) -PassThru -WindowStyle Hidden
+$pW = Start-Process "powershell.exe" -ArgumentList ($args_common + @("-File", "$SCRIPTS\run-grupo-playwright.ps1")) -PassThru -WindowStyle Hidden
 
 # Esperar a que terminen todos (máximo 90 min = 5400 seg)
 $timeout = 5400
@@ -56,6 +67,16 @@ $procs | Where-Object { -not $_.HasExited } | ForEach-Object {
 
 Log "Todos los grupos completados."
 
+# ── Fusionar sub-logs en el log principal ──────────────────────────────────────
+Log "--- GRUPO A ---"
+if (Test-Path $LOG_A) { Get-Content $LOG_A | Out-File $LOG -Append -Encoding utf8 }
+Log "--- GRUPO B ---"
+if (Test-Path $LOG_B) { Get-Content $LOG_B | Out-File $LOG -Append -Encoding utf8 }
+Log "--- GRUPO C ---"
+if (Test-Path $LOG_C) { Get-Content $LOG_C | Out-File $LOG -Append -Encoding utf8 }
+Log "--- GRUPO PLAYWRIGHT ---"
+if (Test-Path $LOG_PW) { Get-Content $LOG_PW | Out-File $LOG -Append -Encoding utf8 }
+
 # ── Post-pipeline ──────────────────────────────────────────────────────────────
 Set-Location $WORKDIR
 
@@ -70,6 +91,9 @@ if (Test-Path $envFile) {
 
 Log ">> post-pipeline (recalcular precios + match)"
 npx tsx scripts/post-pipeline.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
+
+Log ">> match segunda mano (wallapop_cache: wallapop + vinted)"
+npx tsx scripts/match-segunda-mano.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
 
 Log ">> notify-chollos-telegram"
 npx tsx scripts/notify-chollos-telegram.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8

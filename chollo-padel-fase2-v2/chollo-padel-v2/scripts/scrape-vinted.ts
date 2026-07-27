@@ -23,8 +23,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-// const { matchSecondhandCache } = require('./prices/secondhand-matcher')  // PAUSADO — pendiente reactivar ingestión Vinted
 import { detectarMarca } from './detect-marca'
+
+// Match pala_id — activado 2026-07-27
+const { matchSecondhandCache } = require('./prices/secondhand-matcher')
+const { recalculatePriceReference } = require('./prices/pipeline')
 
 const SUPABASE_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!
@@ -655,8 +658,7 @@ async function main() {
   if (!ttlError) console.log(`🗑️  TTL: eliminados ${count ?? 0} items no vistos en 48h`)
 
   // ── Match pala_id automático ─────────────────────────────────────────────
-  // PAUSADO — pendiente reactivar ingestión Vinted. Cuando se reactive, usar:
-  // await matchSecondhandCache(supabase, { recalculatePriceReference })
+  await matchSecondhandCache(supabase, { recalculatePriceReference })
 
   console.log('🏁 Scraper Vinted completado.\n')
 }

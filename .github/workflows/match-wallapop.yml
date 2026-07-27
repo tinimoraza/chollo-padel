@@ -4,8 +4,10 @@ name: Match Segunda Mano
 # Corre cada 30 min a :15 y :45
 
 on:
-  # [PAUSADO] schedule:
-    # [PAUSADO] - cron: '15,45 * * * *'
+  # [DESACTIVADO 2026-07-27] el match ahora corre en local (match-segunda-mano.ts)
+  # y en scrape-vinted.yml. Este workflow llamaba al endpoint Vercel que fallaba.
+  # schedule:
+  #   - cron: '15,45 * * * *'
   workflow_dispatch:
 
 jobs:
