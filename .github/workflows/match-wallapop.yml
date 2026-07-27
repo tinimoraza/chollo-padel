@@ -12,6 +12,7 @@ on:
 
 jobs:
   match-segunda-mano:
+    if: false  # DESACTIVADO 2026-07-27 — el match corre en local y en scrape-vinted.yml
     name: Asignar pala_id a anuncios sin matchear
     runs-on: ubuntu-latest
     timeout-minutes: 10
