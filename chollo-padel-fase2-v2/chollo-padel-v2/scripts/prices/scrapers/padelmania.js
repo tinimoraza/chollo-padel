@@ -82,9 +82,11 @@ async function scrape() {
 
   try {
     while (true) {
+      // PrestaShop: resultsPerPage solo en pág 1, page=N sin resultsPerPage en el resto
+      // (combinar ambos parámetros a veces devuelve resultados vacíos)
       const url = pageNum === 1
         ? `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36`
-        : `${BASE_URL}${CATEGORY_PATH}?resultsPerPage=36&page=${pageNum}`
+        : `${BASE_URL}${CATEGORY_PATH}?page=${pageNum}`
 
       console.log(`[padelmania] Página ${pageNum}: ${url}`)
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
@@ -115,7 +117,10 @@ async function scrape() {
         const hrefs = await page.evaluate(() =>
           Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
         )
+        // Filtrar URLs de productos individuales de PrestaShop (terminan en .html con ID numérico)
+        // Ej: /es/oferta-especial/24586-wilson-defy.html → es un producto, no una categoría
         rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+          .filter(u => !/\/\d{3,}-[a-z].*\.html$/i.test(new URL(u).pathname))
         if (rebajasUrls.length > 0) {
           console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
         }
