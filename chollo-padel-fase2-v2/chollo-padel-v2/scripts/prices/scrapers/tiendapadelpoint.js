@@ -128,18 +128,57 @@ function extractProductsFromPage(page) {
   })
 }
 
+const fs = require('fs')
+const path = require('path')
+const CACHE_FILE = path.join(__dirname, '_tiendapadelpoint_cache.json')
+const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000 // 6 horas
+
+function readCache() {
+  try {
+    if (!fs.existsSync(CACHE_FILE)) return null
+    const { timestamp, products } = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))
+    if (Date.now() - timestamp > CACHE_MAX_AGE_MS) return null
+    console.log(`[tiendapadelpoint] Cache válido (${products.length} palas, ${Math.round((Date.now()-timestamp)/60000)} min)`)
+    return products
+  } catch { return null }
+}
+
 async function scrape() {
+  const cached = readCache()
+  if (cached) return cached
+
   console.log('[tiendapadelpoint] Iniciando scraper (Playwright)…')
 
-  let chromium
-  try { ({ chromium } = require('playwright')) }
-  catch { console.error('[tiendapadelpoint] playwright no instalado'); return [] }
-
-  const browser = await chromium.launch({ headless: true })
-  const page    = await browser.newPage()
-  await page.setExtraHTTPHeaders({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  })
+  // Cloudflare Bot Management bloquea Playwright headless con HTTP 403.
+  // Solución: conectar al Chrome real de la usuaria via CDP (Chrome DevTools Protocol).
+  // Chrome debe estar corriendo con --remote-debugging-port=9222.
+  // El scraper no cierra Chrome al terminar — solo cierra su propia página.
+  let page, browser, context, usandoCDP = false
+  try {
+    const puppeteer = require('puppeteer-core')
+    browser = await puppeteer.connect({ browserURL: 'http://localhost:9222', defaultViewport: null })
+    page = await browser.newPage()
+    usandoCDP = true
+    console.log('[tiendapadelpoint] Conectado al Chrome real via CDP (cf_clearance disponible)')
+  } catch {
+    // Fallback: launchPersistentContext con perfil real (requiere Chrome cerrado)
+    const { chromium } = require('playwright')
+    const CHROME_USER_DATA = process.env.CHROME_USER_DATA ||
+      require('path').join(require('os').homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data')
+    try {
+      context = await chromium.launchPersistentContext(CHROME_USER_DATA, {
+        headless: false,
+        channel: 'chrome',
+        args: ['--profile-directory=Default', '--no-first-run', '--no-default-browser-check'],
+      })
+      page = await context.newPage()
+      console.log('[tiendapadelpoint] Usando Chrome real con perfil de usuario (fallback)')
+    } catch (e2) {
+      console.error('[tiendapadelpoint] No se pudo conectar a Chrome:', e2.message)
+      console.error('[tiendapadelpoint] Para activar CDP: añade --remote-debugging-port=9222 al shortcut de Chrome')
+      return []
+    }
+  }
 
   const allProducts = []
   const seen = new Set()
@@ -156,11 +195,19 @@ async function scrape() {
     await page.waitForTimeout(1000)
   } catch {}
 
-  // Detectar total de páginas
+  // Detectar total de páginas.
+  // Formato antiguo (ya no existe): "(36 Páginas)" → regex \((\d+)\s*P.ginas?\)
+  // Formato nuevo: paginación numérica + link ">|" con href "?page=N" (última página)
   const totalPages = await page.evaluate(() => {
     const pag = document.querySelector('.pagination')?.textContent || ''
-    const m = pag.match(/\((\d+)\s*P.ginas?\)/)
-    return m ? parseInt(m[1]) : 36
+    const mOld = pag.match(/\((\d+)\s*P.ginas?\)/)
+    if (mOld) return parseInt(mOld[1])
+    // Nuevo: el último <a> de la paginación (">|") lleva a la última página
+    const pagAs = Array.from(document.querySelectorAll('.pagination a'))
+    const lastA = pagAs[pagAs.length - 1]
+    const mLast = lastA?.href?.match(/[?&]page=(\d+)/)
+    if (mLast) return parseInt(mLast[1])
+    return 36  // fallback conservador
   })
   console.log(`[tiendapadelpoint] Total páginas: ${totalPages}`)
 
@@ -322,7 +369,12 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
-  await browser.close()
+  if (usandoCDP) {
+    await page.close()      // Solo cierra la pestaña, NO Chrome
+    browser.disconnect()
+  } else if (context) {
+    await context.close()   // Cierra el perfil Playwright
+  }
 
   console.log(`[tiendapadelpoint] Total palas únicas: ${allProducts.length}`)
   const scraped_at = new Date().toISOString()
