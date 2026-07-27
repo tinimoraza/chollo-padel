@@ -47,6 +47,12 @@ const PALABRAS_GENERICAS = new Set([
   'COMPRA', 'PRIMERA', 'BIENVENIDA',
   // Categorías de producto de tiendas de padel (falsos positivos habituales)
   'BOLSA', 'BOLSAS', 'CARRITO', 'PALA', 'PALAS', 'SALE',
+  'PALETERO', 'PALETEROS', 'MOCHILA', 'MOCHILAS', 'ZAPATILLA', 'ZAPATILLAS',
+  'ROPA', 'CAMISETA', 'CAMISETAS', 'POLO', 'POLOS', 'PANTALON', 'PANTALONES',
+  'SUDADERA', 'SUDADERAS', 'CHALECO', 'CHALECOS', 'SHORT', 'SHORTS',
+  'PELOTA', 'PELOTAS', 'GRIP', 'OVERGRIP', 'OUTLET', 'ACCESORIOS', 'ACCESORIO',
+  'COMPLEMENTO', 'COMPLEMENTOS', 'FUNDA', 'FUNDAS', 'TROLLEY', 'TROLLEYS',
+  'CALCETINES', 'MUNEQUERA', 'MUNEQUERAS', 'GORRA', 'GORRAS',
 ])
 // Banners de "suscribete a la newsletter y consigue X% con el codigo ..." son
 // un patron habitual en Shopify/tiendas: el "codigo" mostrado suele ser
