@@ -57,12 +57,24 @@ async function extractProducts(page) {
 async function scrape() {
   console.log('[padelmania] Iniciando scraper (Playwright — anti-bot activo)…')
 
+  // Intentar playwright-extra con stealth para bypassear el WAF de padelmania
+  // que bloquea headless Playwright con HTTP 403 en páginas 2+.
+  // Fallback a playwright estándar si playwright-extra no está disponible.
   let chromium
   try {
-    ({ chromium } = require('playwright'))
+    const { chromium: extra } = require('playwright-extra')
+    const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+    extra.use(StealthPlugin())
+    chromium = extra
+    console.log('[padelmania] Usando playwright-extra + stealth')
   } catch {
-    console.error('[padelmania] playwright no instalado')
-    return []
+    try {
+      ({ chromium } = require('playwright'))
+      console.log('[padelmania] Usando playwright estándar (sin stealth)')
+    } catch {
+      console.error('[padelmania] playwright no instalado')
+      return []
+    }
   }
 
   const browser = await chromium.launch({ headless: true })
@@ -77,6 +89,8 @@ async function scrape() {
   const seen = new Set()
   let pageNum = 1
   let lastPage = 1
+  let pageParam = 'page'   // parámetro real de paginación ('page' o 'p')
+  let pagUrls  = []        // { pg: number, url: string }[] del DOM
   let codigoDescuento = null
   let rebajasUrls = []
 
@@ -119,16 +133,22 @@ async function scrape() {
         console.log(`[padelmania] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
       }
       // Total páginas: leer desde links de paginación del DOM
+      // También guardamos las URLs exactas y el nombre del parámetro real
       const paginaLinks = await page.evaluate(() =>
         Array.from(document.querySelectorAll('.pagination a')).map(a => a.href)
       )
       for (const href of paginaLinks) {
-        const m = href.match(/[?&]p(?:age)?=(\d+)/)
+        const m = href.match(/[?&](p(?:age)?)=(\d+)/)
         if (m) {
-          const n = parseInt(m[1])
-          if (!isNaN(n) && n > lastPage) lastPage = n
+          const param = m[1], n = parseInt(m[2])
+          if (!isNaN(n)) {
+            if (n > lastPage) lastPage = n
+            if (n >= 2 && !pagUrls.find(u => u.pg === n)) pagUrls.push({ pg: n, url: href })
+          }
+          pageParam = param  // detectar si usa 'page' o 'p'
         }
       }
+      pagUrls.sort((a, b) => a.pg - b.pg)
     }
 
     // Procesar productos de página 1
@@ -151,57 +171,31 @@ async function scrape() {
     console.log(`[padelmania]  → ${products1.length} productos en página 1/${lastPage}`)
     addProducts(products1)
 
-    // ── Infinite scroll: padelmania usa #infinity-url-next (oculto para SEO) ──
-    // El link "siguiente" está en el DOM pero no es visible — el contenido real
-    // se carga automáticamente al hacer scroll hasta el fondo de la página.
-    // Estrategia: scroll → esperar carga → contar productos → repetir hasta
-    // que el contador no crezca (= todas las páginas cargadas).
-    let prevCount = products1.length
-    let scrollRound = 0
-    const MAX_SCROLL_ROUNDS = 20  // tope de seguridad
+    // ── Páginas 2+: page.goto con playwright-extra + stealth ──
+    // Sin stealth, el WAF de padelmania devuelve HTTP 403 a cualquier petición
+    // de páginas 2+ (headless Playwright detectado como bot).
+    // Con stealth activo, el browser pasa la detección y el server sirve
+    // los productos normalmente.
+    if (lastPage > 1) {
+      for (let pg = 2; pg <= lastPage; pg++) {
+        pageNum = pg
+        const pgUrl = pagUrls.find(u => u.pg === pg)?.url
+          ?? `${BASE_URL}${CATEGORY_PATH}?${pageParam}=${pg}`
 
-    while (scrollRound < MAX_SCROLL_ROUNDS) {
-      scrollRound++
-
-      // Scroll al fondo para triggear la carga del siguiente lote
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await page.waitForTimeout(DELAY_MS)
-
-      // Esperar a que aparezca algún nuevo producto (hasta 8s)
-      const newCount = await page.evaluate(prevN =>
-        new Promise(resolve => {
-          const check = () => {
-            const n = document.querySelectorAll('article.product-miniature, .js-product-miniature').length
-            if (n > prevN) { resolve(n); return }
-            // Si tras 200ms no cambió, damos por hecho que no hay más
-            setTimeout(() => resolve(
-              document.querySelectorAll('article.product-miniature, .js-product-miniature').length
-            ), 200)
-          }
-          // Espera hasta 8s antes de resolver
-          let tries = 0
-          const poll = setInterval(() => {
-            const n = document.querySelectorAll('article.product-miniature, .js-product-miniature').length
-            if (n > prevN || ++tries > 40) { clearInterval(poll); resolve(n) }
-          }, 200)
-        }), prevCount
-      )
-
-      if (newCount <= prevCount) {
-        // No aparecieron productos nuevos → hemos llegado al final
-        console.log(`[padelmania] Infinite scroll completado (${newCount} productos totales en DOM)`)
-        break
+        console.log(`[padelmania] Cargando página ${pg}/${lastPage}: ${pgUrl}`)
+        try {
+          await page.goto(pgUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+          await page.waitForTimeout(2500)
+          await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
+          const products = await extractProducts(page)
+          console.log(`[padelmania]  → ${products.length} productos en página ${pg}`)
+          addProducts(products)
+        } catch (e) {
+          console.error(`[padelmania] Error página ${pg}: ${e.message}`)
+        }
+        await page.waitForTimeout(DELAY_MS)
       }
-
-      pageNum = Math.ceil(newCount / 36)
-      console.log(`[padelmania]  → scroll ${scrollRound}: ${newCount} productos en DOM (≈ pág ${pageNum}/${lastPage})`)
-      prevCount = newCount
     }
-
-    // Extraer todos los productos visibles en el DOM tras el scroll completo
-    // (los de pág 1 ya están en `seen` y se saltarán automáticamente)
-    const allDomProducts = await extractProducts(page)
-    addProducts(allDomProducts)
 
   } catch (err) {
     console.error('[padelmania] Error:', err.message)
