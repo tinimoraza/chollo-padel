@@ -151,44 +151,58 @@ async function scrape() {
     console.log(`[padelmania]  → ${products1.length} productos en página 1/${lastPage}`)
     addProducts(products1)
 
-    // ── Páginas 2..N: click en el botón "siguiente" (paginación AJAX) ──────
-    // padelmania carga la siguiente página vía AJAX cuando se hace click en el
-    // botón "siguiente" — navegar directamente con goto() devuelve la página
-    // sin productos. Simular el click es la única forma que funciona.
-    const NEXT_SEL = 'a[rel="next"], .pagination .next a, ul.pagination li.next a, #js-product-list-bottom a[rel="next"]'
+    // ── Infinite scroll: padelmania usa #infinity-url-next (oculto para SEO) ──
+    // El link "siguiente" está en el DOM pero no es visible — el contenido real
+    // se carga automáticamente al hacer scroll hasta el fondo de la página.
+    // Estrategia: scroll → esperar carga → contar productos → repetir hasta
+    // que el contador no crezca (= todas las páginas cargadas).
+    let prevCount = products1.length
+    let scrollRound = 0
+    const MAX_SCROLL_ROUNDS = 20  // tope de seguridad
 
-    while (pageNum < lastPage) {
-      // Comprobar que existe el botón siguiente antes de hacer click
-      const hasNext = await page.$(NEXT_SEL)
-      if (!hasNext) {
-        console.warn(`[padelmania] No se encontró botón "siguiente" en página ${pageNum}`)
-        break
-      }
+    while (scrollRound < MAX_SCROLL_ROUNDS) {
+      scrollRound++
 
-      pageNum++
-      console.log(`[padelmania] Página ${pageNum}/${lastPage} (click siguiente)…`)
-
-      // Click y esperar a que cargue la nueva lista de productos
-      await Promise.all([
-        page.waitForResponse(
-          r => r.url().includes('338-todas-las-palas') && r.status() < 400,
-          { timeout: 15_000 }
-        ).catch(() => null),  // si no hay request de red (solo AJAX parcial), ignorar
-        page.click(NEXT_SEL),
-      ])
+      // Scroll al fondo para triggear la carga del siguiente lote
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
       await page.waitForTimeout(DELAY_MS)
 
-      try {
-        await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 12_000 })
-      } catch {
-        console.warn(`[padelmania] Sin productos en página ${pageNum} — fin de paginación`)
+      // Esperar a que aparezca algún nuevo producto (hasta 8s)
+      const newCount = await page.evaluate(prevN =>
+        new Promise(resolve => {
+          const check = () => {
+            const n = document.querySelectorAll('article.product-miniature, .js-product-miniature').length
+            if (n > prevN) { resolve(n); return }
+            // Si tras 200ms no cambió, damos por hecho que no hay más
+            setTimeout(() => resolve(
+              document.querySelectorAll('article.product-miniature, .js-product-miniature').length
+            ), 200)
+          }
+          // Espera hasta 8s antes de resolver
+          let tries = 0
+          const poll = setInterval(() => {
+            const n = document.querySelectorAll('article.product-miniature, .js-product-miniature').length
+            if (n > prevN || ++tries > 40) { clearInterval(poll); resolve(n) }
+          }, 200)
+        }), prevCount
+      )
+
+      if (newCount <= prevCount) {
+        // No aparecieron productos nuevos → hemos llegado al final
+        console.log(`[padelmania] Infinite scroll completado (${newCount} productos totales en DOM)`)
         break
       }
 
-      const products = await extractProducts(page)
-      console.log(`[padelmania]  → ${products.length} productos en página ${pageNum}/${lastPage}`)
-      addProducts(products)
+      pageNum = Math.ceil(newCount / 36)
+      console.log(`[padelmania]  → scroll ${scrollRound}: ${newCount} productos en DOM (≈ pág ${pageNum}/${lastPage})`)
+      prevCount = newCount
     }
+
+    // Extraer todos los productos visibles en el DOM tras el scroll completo
+    // (los de pág 1 ya están en `seen` y se saltarán automáticamente)
+    const allDomProducts = await extractProducts(page)
+    addProducts(allDomProducts)
+
   } catch (err) {
     console.error('[padelmania] Error:', err.message)
   }
