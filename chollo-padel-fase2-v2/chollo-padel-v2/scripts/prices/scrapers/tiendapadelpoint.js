@@ -177,6 +177,19 @@ async function scrape() {
     console.log(`[tiendapadelpoint] no se detectó ningún código de descuento`)
   }
 
+  // Si el cupón no se detectó en home/listing, intentar con la primera página de producto.
+  // En tiendapadelpoint el banner de cupón aparece en páginas de producto individual
+  // (ej: "REBAJAS DESCUENTO EXTRA -15% APLICANDO CUPÓN SALE15"), no en el listing.
+  // Se detecta ANTES del bucle de paginación para no bloquear el scrape principal.
+  let primerProductUrl = null
+  {
+    // Obtener el primer link de producto del listing actual (ya cargado)
+    primerProductUrl = await page.evaluate(() => {
+      const a = document.querySelector('.product-thumb .name a')
+      return a?.href || null
+    })
+  }
+
   const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
   const rebajasUrls = filtrarUrlsRebajas(hrefs, BASE_URL)
   if (rebajasUrls.length > 0) {
@@ -205,6 +218,23 @@ async function scrape() {
 
     pageNum++
     await sleep(DELAY_MS)
+  }
+
+  // Fallback: si el cupón no se detectó aún, revisar la primera página de producto
+  if (!codigoDescuento && primerProductUrl) {
+    try {
+      await page.goto(primerProductUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.waitForTimeout(1500)
+      const prodHtml = await page.evaluate(() => document.documentElement.innerHTML)
+      codigoDescuento = detectarCodigoDescuento(prodHtml)
+      if (codigoDescuento) {
+        console.log(`[tiendapadelpoint] codigo detectado en página producto: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+      } else {
+        console.log(`[tiendapadelpoint] no se detectó ningún código en página producto`)
+      }
+    } catch (e) {
+      console.log(`[tiendapadelpoint] error chequeando página producto: ${e.message}`)
+    }
   }
 
   for (const rebajasUrl of rebajasUrls) {
