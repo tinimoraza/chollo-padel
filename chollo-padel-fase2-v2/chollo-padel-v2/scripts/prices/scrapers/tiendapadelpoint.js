@@ -12,6 +12,33 @@ const DELAY_MS    = 800
 
 const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
+// OCR sobre imagen de banner de rebajas (tiendapadelpoint usa imágenes WebP en lugar de texto
+// para los banners de cupón: "REBAJAS DESCUENTO EXTRA -15% APLICANDO CUPÓN SALE15").
+// Usa sharp (ya instalado) para upscale 4x → mejor precisión de Tesseract.
+// Falla silenciosamente si tesseract.js o sharp no están disponibles.
+async function detectarCodigoEnBannerImagen(imgUrl) {
+  try {
+    const { createWorker } = require('tesseract.js')
+    const sharp = require('sharp')
+    const res = await fetch(imgUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
+    })
+    if (!res.ok) { console.log(`[tiendapadelpoint] OCR: imagen no accesible (${res.status})`); return null }
+    const buf = Buffer.from(await res.arrayBuffer())
+    // Upscale a 200px de alto: la imagen 2x es 1440×60 → queda ~4800×200, legible por Tesseract
+    const pngBuf = await sharp(buf).resize({ height: 200 }).png().toBuffer()
+    const worker = await createWorker('eng')
+    const { data: { text } } = await worker.recognize(pngBuf)
+    await worker.terminate()
+    const ocrText = text.replace(/\n/g, ' ').trim()
+    console.log(`[tiendapadelpoint] OCR banner: "${ocrText}"`)
+    return detectarCodigoDescuento(ocrText)
+  } catch (e) {
+    console.log(`[tiendapadelpoint] OCR no disponible: ${e.message.substring(0, 100)}`)
+    return null
+  }
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 function parsePrice(text) {
@@ -251,6 +278,24 @@ async function scrape() {
         await page.waitForTimeout(1500)
         const prodHtml = await page.evaluate(() => document.documentElement.innerHTML)
         codigoDescuento = detectarCodigoDescuento(prodHtml)
+        // Si el texto no tiene código, intentar OCR sobre imagen de banner de rebajas.
+        // tiendapadelpoint muestra el cupón como imagen WebP (no texto), p.ej.:
+        // "REBAJAS DESCUENTO EXTRA -15% APLICANDO CUPÓN SALE15"
+        if (!codigoDescuento) {
+          const bannerImgUrl = await page.evaluate(() => {
+            const imgs = Array.from(document.querySelectorAll('[class*="module-banners"] img'))
+            const found = imgs.find(i => /rebaj|sale|cupon|descuento|campa/i.test(i.src || ''))
+            if (!found) return null
+            // Preferir versión 2x (más resolución → mejor OCR)
+            const srcset = found.getAttribute('srcset') || ''
+            const m2x = srcset.match(/(\S+)\s+2x/)
+            return m2x ? m2x[1] : (found.src || null)
+          })
+          if (bannerImgUrl) {
+            console.log(`[tiendapadelpoint] banner imagen detectado, intentando OCR: ${bannerImgUrl}`)
+            codigoDescuento = await detectarCodigoEnBannerImagen(bannerImgUrl)
+          }
+        }
         if (codigoDescuento) {
           console.log(`[tiendapadelpoint] codigo detectado en producto: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         } else {
