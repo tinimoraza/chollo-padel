@@ -11,6 +11,8 @@ out/
 
 # misc
 .DS_Store
+# Cookie cache de scrapers (tokens de sesión, no subir al repo)
+scripts/prices/scrapers/.padelcoronado-cookies.json
 *.pem
 npm-debug.log*
 
