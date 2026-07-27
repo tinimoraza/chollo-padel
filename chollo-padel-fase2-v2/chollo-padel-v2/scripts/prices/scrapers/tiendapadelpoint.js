@@ -247,11 +247,11 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
-  // Fallback: si el cupón no se detectó aún, revisar un producto de la sección de REBAJAS.
-  // El banner "CUPÓN SALE15" aparece en las fichas de producto en oferta, no en el listing general.
-  // Estrategia: ir a la primera URL de rebajas, coger el primer producto de esa sección y revisarlo.
-  // Si no hay URLs de rebajas, usar el primer producto del listing general como último recurso.
-  if (!codigoDescuento) {
+  // Siempre revisar un producto de la sección de REBAJAS con OCR.
+  // El banner "CUPÓN SALE15" es una imagen WebP — invisible para el detector de texto.
+  // Se ejecuta SIEMPRE (no solo si !codigoDescuento) para que el OCR pueda
+  // sobreescribir cualquier falso positivo detectado en el listing de texto.
+  {
     let urlAComprobar = null
 
     if (rebajasUrls.length > 0) {
@@ -277,27 +277,30 @@ async function scrape() {
         await page.goto(urlAComprobar, { waitUntil: 'domcontentloaded', timeout: 30000 })
         await page.waitForTimeout(1500)
         const prodHtml = await page.evaluate(() => document.documentElement.innerHTML)
-        codigoDescuento = detectarCodigoDescuento(prodHtml)
-        // Si el texto no tiene código, intentar OCR sobre imagen de banner de rebajas.
-        // tiendapadelpoint muestra el cupón como imagen WebP (no texto), p.ej.:
-        // "REBAJAS DESCUENTO EXTRA -15% APLICANDO CUPÓN SALE15"
-        if (!codigoDescuento) {
-          const bannerImgUrl = await page.evaluate(() => {
-            const imgs = Array.from(document.querySelectorAll('[class*="module-banners"] img'))
-            const found = imgs.find(i => /rebaj|sale|cupon|descuento|campa/i.test(i.src || ''))
-            if (!found) return null
-            // Preferir versión 2x (más resolución → mejor OCR)
-            const srcset = found.getAttribute('srcset') || ''
-            const m2x = srcset.match(/(\S+)\s+2x/)
-            return m2x ? m2x[1] : (found.src || null)
-          })
-          if (bannerImgUrl) {
-            console.log(`[tiendapadelpoint] banner imagen detectado, intentando OCR: ${bannerImgUrl}`)
-            codigoDescuento = await detectarCodigoEnBannerImagen(bannerImgUrl)
-          }
+        const codigoTexto = detectarCodigoDescuento(prodHtml)
+        // OCR sobre imagen de banner: tiene prioridad sobre cualquier código de texto
+        // (el texto del listing es propenso a falsos positivos; el banner imagen es explícito)
+        const bannerImgUrl = await page.evaluate(() => {
+          const imgs = Array.from(document.querySelectorAll('[class*="module-banners"] img'))
+          const found = imgs.find(i => /rebaj|sale|cupon|descuento|campa/i.test(i.src || ''))
+          if (!found) return null
+          // Preferir versión 2x (más resolución → mejor OCR)
+          const srcset = found.getAttribute('srcset') || ''
+          const m2x = srcset.match(/(\S+)\s+2x/)
+          return m2x ? m2x[1] : (found.src || null)
+        })
+        let codigoOcr = null
+        if (bannerImgUrl) {
+          console.log(`[tiendapadelpoint] banner imagen detectado, intentando OCR: ${bannerImgUrl}`)
+          codigoOcr = await detectarCodigoEnBannerImagen(bannerImgUrl)
         }
-        if (codigoDescuento) {
-          console.log(`[tiendapadelpoint] codigo detectado en producto: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+        // OCR prevalece sobre texto; si ninguno, conservar lo encontrado antes (home/listing)
+        if (codigoOcr) {
+          codigoDescuento = codigoOcr
+          console.log(`[tiendapadelpoint] codigo detectado (OCR banner): ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
+        } else if (codigoTexto) {
+          codigoDescuento = codigoTexto
+          console.log(`[tiendapadelpoint] codigo detectado (texto producto): ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         } else {
           console.log(`[tiendapadelpoint] no se detectó ningún código en página producto`)
         }
