@@ -166,21 +166,30 @@ async function scrape() {
   })
 
   // Para productos sin imagen (Elementor lazy-load sin scroll), extraer og:image de la ficha.
+  // Usa fetch en paralelo (lotes de 8) en vez de page.goto en serie — mucho más rápido.
   const sinImagen = unique.filter(p => !p.image)
   if (sinImagen.length > 0) {
     console.log(`[tiendapadel5] Completando imagen de ficha para ${sinImagen.length} productos sin imagen…`)
-    for (const p of sinImagen) {
-      try {
-        await page.goto(p.url, { waitUntil: 'domcontentloaded', timeout: 30000 })
-        const ogImg = await page.evaluate(() => {
-          const meta = document.querySelector('meta[property="og:image"]')
-          return meta ? meta.getAttribute('content') : null
-        })
-        if (ogImg) p.image = ogImg
-      } catch (e) {
-        console.error(`[tiendapadel5] No se pudo obtener imagen de ${p.url}:`, e.message)
-      }
-      await page.waitForTimeout(DELAY_MS)
+    const FETCH_HEADERS = {
+      'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept-Language': 'es-ES,es;q=0.9',
+      'Accept':          'text/html',
+    }
+    const OG_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']|<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i
+    const LOTE  = 8
+    for (let i = 0; i < sinImagen.length; i += LOTE) {
+      await Promise.all(sinImagen.slice(i, i + LOTE).map(async p => {
+        try {
+          const res = await fetch(p.url, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(10000) })
+          if (!res.ok) return
+          const html  = await res.text()
+          const match = html.match(OG_RE)
+          const ogImg = match?.[1] ?? match?.[2] ?? null
+          if (ogImg) p.image = ogImg
+        } catch { /* sin imagen, se continúa */ }
+      }))
+      // Pausa entre lotes para no sobrecargar el servidor
+      if (i + LOTE < sinImagen.length) await new Promise(r => setTimeout(r, 300))
     }
   }
 
