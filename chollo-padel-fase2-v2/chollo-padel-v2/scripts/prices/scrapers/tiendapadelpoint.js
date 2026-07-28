@@ -134,7 +134,7 @@ function extractProductsFromPage(page) {
 const fs = require('fs')
 const path = require('path')
 const CACHE_FILE = path.join(__dirname, '_tiendapadelpoint_cache.json')
-const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000 // 6 horas
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 horas
 
 async function readCache() {
   try {
