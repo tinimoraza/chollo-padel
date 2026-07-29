@@ -362,6 +362,16 @@ async function procesarTienda(tienda, productos) {
     const titleLower = p.title.toLowerCase()
     const pala_id    = aliases.get(titleLower)
 
+    // Título limpio para extraerAtributos(): decodifica HTML entities y quita prefijo
+    // "Pala " / "Pala de " que usan algunas tiendas WooCommerce (padeltienda, etc.)
+    // Se usa SOLO para la extracción de atributos — el alias lookup usa titleLower original.
+    const titleClean = p.title
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+      .replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
+      .replace(/&[a-z]+;/g, ' ')
+      .replace(/^pala(?:\s+de)?\s+/i, '')
+      .trim()
+
     if (pala_id) {
       // ── Match por alias ──────────────────────────────────
       const codigoTienda = codigosCache[tienda.source_id]
@@ -383,7 +393,7 @@ async function procesarTienda(tienda, productos) {
       matched++
     } else {
       // ── Fallback: match por atributos ──────────────────────
-      const attrs = extraerAtributos(p.title)
+      const attrs = extraerAtributos(titleClean)
       const candidatos = buscarEnCatalogo(attrs)
       if (candidatos.length === 1) {
         const pala_id = candidatos[0].id
