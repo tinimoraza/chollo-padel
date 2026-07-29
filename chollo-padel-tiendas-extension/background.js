@@ -797,6 +797,29 @@ async function procesarTienda(tienda, productos) {
   return { matched, sinMatch, filtrados, total: matched + sinMatch, sinMatchResumen, historyError, attrMatched, palaIds: palaIdsActualizados }
 }
 
+// ── Backoff helpers ───────────────────────────────────────────
+// Cuando una tienda CF falla, la ponemos en backoff 24h para que la IP se enfríe.
+// CF escala de challenge pasivo (automático) a Turnstile interactivo cuando detecta
+// muchos reintentos fallidos. Con 24h de pausa, vuelve al challenge pasivo.
+
+const BACKOFF_MS = 24 * 3600 * 1000
+
+async function getBackoffUntil(sourceKey) {
+  const data = await chrome.storage.local.get(`backoff_${sourceKey}`)
+  return data[`backoff_${sourceKey}`] || 0
+}
+
+async function setBackoff(sourceKey) {
+  const until = Date.now() + BACKOFF_MS
+  await chrome.storage.local.set({ [`backoff_${sourceKey}`]: until })
+  console.log(`[${sourceKey}] Backoff activado — próximo intento: ${new Date(until).toLocaleTimeString()}`)
+}
+
+async function clearBackoff(sourceKey) {
+  await chrome.storage.local.remove(`backoff_${sourceKey}`)
+  console.log(`[${sourceKey}] Backoff limpiado (scrape exitoso)`)
+}
+
 // ── Ciclo principal ───────────────────────────────────────────
 
 async function runScraper() {
@@ -830,6 +853,16 @@ async function runScraper() {
     const todosLosPalaIds = new Set()
 
     for (const tienda of TIENDAS) {
+      // Backoff: saltar tienda si falló hace menos de 24h (deja enfriar la IP ante CF)
+      if (tienda.backoffOnFail) {
+        const until = await getBackoffUntil(tienda.source_key)
+        if (until > Date.now()) {
+          const horas = Math.ceil((until - Date.now()) / 3600000)
+          log(`[${tienda.source_key}] ⏸ Backoff activo (${horas}h restantes) — saltando`)
+          continue
+        }
+      }
+
       log(`\n── Scrapeando ${tienda.nombre} ──`)
       try {
         const productos = tienda.type === 'opencart'
@@ -839,6 +872,7 @@ async function runScraper() {
             : await scrapeWooCommerce(tienda, logLines)
         if (productos.length === 0) {
           logE(`[${tienda.source_key}] 0 productos — posible bloqueo o tienda vacía`)
+          if (tienda.backoffOnFail) await setBackoff(tienda.source_key)
           SB.insert('scrape_runs', {
             source_id: tienda.source_id,
             productos: 0, matches: 0, unicos: 0,
@@ -847,6 +881,7 @@ async function runScraper() {
           }).catch(() => {})
           continue
         }
+        if (tienda.backoffOnFail) await clearBackoff(tienda.source_key)
         const res = await procesarTienda(tienda, productos)
         log(`[${tienda.source_key}] ✅ ${res.matched} matches (${res.attrMatched} x attrs) | ⚠️ ${res.sinMatch} sin match | 🚫 ${res.filtrados} filtrados`)
         if (res.sinMatchResumen) {
@@ -872,6 +907,7 @@ async function runScraper() {
         }).catch(e => console.warn(`[${tienda.source_key}] scrape_runs warning:`, e.message))
       } catch (e) {
         logE(`[${tienda.source_key}] Error: ${e.message}`)
+        if (tienda.backoffOnFail) await setBackoff(tienda.source_key)
         // Registrar el error también en scrape_runs
         SB.insert('scrape_runs', {
           source_id: tienda.source_id,

@@ -34,10 +34,11 @@ const TIENDAS = [
     source_id:  10,
     nombre:     'Padel Coronado',
     base_url:   'https://padelcoronado.com',
-    type:       'woocommerce-tab',  // CF Turnstile — scraping via tab injection
-    category:   'palas-padel',
-    per_page:   100,
-    price_min:  30,
+    type:          'woocommerce-tab',  // CF Turnstile — scraping via tab injection
+    category:      'palas-padel',
+    per_page:      100,
+    price_min:     30,
+    backoffOnFail: true,  // Si falla, esperar 24h antes de reintentar (deja enfriar la IP)
   },
   {
     source_key: 'padelstyle',
