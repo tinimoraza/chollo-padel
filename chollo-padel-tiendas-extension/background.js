@@ -61,6 +61,18 @@ const SB = {
       throw new Error(`Supabase insert ${table} → ${r.status}: ${txt}`)
     }
   },
+
+  async patch(tableWithFilter, body) {
+    const r = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${tableWithFilter}`, {
+      method: 'PATCH',
+      headers: { ...this.headers, Prefer: 'return=minimal' },
+      body: JSON.stringify(body),
+    })
+    if (!r.ok) {
+      const txt = await r.text()
+      throw new Error(`Supabase PATCH ${tableWithFilter} → ${r.status}: ${txt}`)
+    }
+  },
 }
 
 // ── Cargar aliases de Supabase ────────────────────────────────
@@ -106,6 +118,85 @@ async function cargarCodigos() {
     console.log(`[tiendas-ext] Códigos activos: ${activos || 'ninguno'}`)
   } catch (e) {
     console.warn('[tiendas-ext] cargarCodigos error (no bloquea):', e.message)
+  }
+}
+
+// ── Recalcular price_reference ────────────────────────────────
+// Puerto de post-pipeline.ts → recalcularPrecios().
+// Misma lógica: media aritmética de precios del día más reciente en
+// price_history_log (excluyendo PadelZoom source_id=2) para cada pala.
+// Se llama al final de cada ciclo con los pala_ids que acaban de actualizarse.
+//
+// Eficiencia: 1 query batch (price_history_log), N upserts a price_reference
+// en lotes de 200, y 1 solo PATCH a palas para actualizar precios_updated_at.
+// precios_updated_at es el timestamp que activa el filtro de frescura de
+// /api/chollos (snapAt <= refUpdatedAt + 3h) — sin actualizarlo, los nuevos
+// snapshots de la extensión quedarían filtrados aunque el price_reference
+// esté actualizado.
+
+async function recalcularPriceReference(palaIds) {
+  if (!palaIds || palaIds.length === 0) return 0
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  try {
+    // Una sola query para todos los pala_ids afectados (últimos 30 días, sin PadelZoom)
+    const rows = await SB.get(
+      `price_history_log?select=pala_id,dia_scraped,precio` +
+      `&pala_id=in.(${palaIds.join(',')})` +
+      `&source_id=neq.2` +
+      `&disponible=eq.true` +
+      `&dia_scraped=gte.${since}` +
+      `&order=dia_scraped.desc` +
+      `&limit=5000`
+    )
+    if (!rows || rows.length === 0) {
+      console.log('[tiendas-ext] recalcularPriceReference: sin filas en price_history_log')
+      return 0
+    }
+
+    // Agrupar por pala_id; rows ya viene ordenado por dia_scraped DESC
+    const porPala = {}
+    for (const row of rows) {
+      if (!porPala[row.pala_id]) porPala[row.pala_id] = []
+      porPala[row.pala_id].push(row)
+    }
+
+    const now = new Date().toISOString()
+    const refRows = []
+
+    for (const [palaId, filas] of Object.entries(porPala)) {
+      // Día más reciente (primer elemento, ya ordenado desc)
+      const ultimoDia = filas[0].dia_scraped
+      const filasHoy  = filas.filter(r => r.dia_scraped === ultimoDia)
+      const precios   = filasHoy.map(r => Number(r.precio))
+
+      const media     = parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2))
+      const minPrecio = Math.min(...precios)
+      const maxPrecio = Math.max(...precios)
+
+      refRows.push({
+        pala_id:           palaId,
+        precio_referencia: media,
+        precio_minimo:     minPrecio,
+        precio_maximo:     maxPrecio,
+        fuentes_count:     precios.length,
+        updated_at:        now,
+      })
+    }
+
+    // Batch upsert price_reference
+    for (let i = 0; i < refRows.length; i += 200) {
+      await SB.upsert('price_reference', refRows.slice(i, i + 200), 'pala_id')
+    }
+
+    // Un solo PATCH actualiza precios_updated_at en palas (filtro de frescura /api/chollos)
+    await SB.patch(`palas?id=in.(${palaIds.join(',')})`, { precios_updated_at: now })
+
+    console.log(`[tiendas-ext] price_reference: ${refRows.length} palas actualizadas`)
+    return refRows.length
+  } catch (e) {
+    console.warn('[tiendas-ext] recalcularPriceReference error (no bloquea):', e.message)
+    return 0
   }
 }
 
@@ -442,6 +533,7 @@ async function procesarTienda(tienda, productos) {
     if (!prev || s.precio < prev.precio) snapsByPalaId.set(s.pala_id, s)
   }
   const snapsDedupados = Array.from(snapsByPalaId.values())
+  const palaIdsActualizados = Array.from(snapsByPalaId.keys())
   if (snapsDedupados.length < snapshotsMatch.length) {
     console.log(`[${tienda.source_key}] Dedup: ${snapshotsMatch.length} → ${snapsDedupados.length} snaps (alias duplicados)`)
   }
@@ -515,7 +607,7 @@ async function procesarTienda(tienda, productos) {
     sinMatchResumen = marcasSorted.map(([m, n]) => `${m}(${n})`).join(', ')
   }
 
-  return { matched, sinMatch, filtrados, total: matched + sinMatch, sinMatchResumen, historyError, attrMatched }
+  return { matched, sinMatch, filtrados, total: matched + sinMatch, sinMatchResumen, historyError, attrMatched, palaIds: palaIdsActualizados }
 }
 
 // ── Ciclo principal ───────────────────────────────────────────
@@ -548,6 +640,7 @@ async function runScraper() {
     }
 
     let totalMatched = 0, totalSinMatch = 0, totalProductos = 0
+    const todosLosPalaIds = new Set()
 
     for (const tienda of TIENDAS) {
       log(`\n── Scrapeando ${tienda.nombre} ──`)
@@ -570,11 +663,21 @@ async function runScraper() {
         totalMatched   += res.matched
         totalSinMatch  += res.sinMatch
         totalProductos += res.total
+        // Acumular pala_ids para recalcular price_reference al final
+        if (res.palaIds) for (const id of res.palaIds) todosLosPalaIds.add(id)
       } catch (e) {
         logE(`[${tienda.source_key}] Error: ${e.message}`)
       }
 
       await sleep(CONFIG.DELAY_BETWEEN_STORES_MS)
+    }
+
+    // Post-pipeline: recalcular price_reference para las palas tocadas en este ciclo
+    // (equivalente a post-pipeline.ts Paso 3 — activa el filtro de frescura de /api/chollos)
+    if (todosLosPalaIds.size > 0) {
+      log(`\n🔄 Recalculando price_reference (${todosLosPalaIds.size} palas)...`)
+      const actualizadas = await recalcularPriceReference(Array.from(todosLosPalaIds))
+      log(`✅ price_reference: ${actualizadas} palas actualizadas`)
     }
 
     const durSeg = Math.round((Date.now() - inicio) / 1000)
