@@ -139,16 +139,24 @@ async function recalcularPriceReference(palaIds) {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   try {
-    // Una sola query para todos los pala_ids afectados (últimos 30 días, sin PadelZoom)
-    const rows = await SB.get(
-      `price_history_log?select=pala_id,dia_scraped,precio` +
-      `&pala_id=in.(${palaIds.join(',')})` +
-      `&source_id=neq.2` +
-      `&disponible=eq.true` +
-      `&dia_scraped=gte.${since}` +
-      `&order=dia_scraped.desc` +
-      `&limit=5000`
-    )
+    // Query en lotes de 100 para no superar el límite de URL de PostgREST (~8KB).
+    // 676 pala_ids × 36 chars ≈ 25.000 chars → 414 si se manda todo de golpe.
+    const CHUNK = 100
+    const allRows = []
+    for (let i = 0; i < palaIds.length; i += CHUNK) {
+      const chunk = palaIds.slice(i, i + CHUNK)
+      const rows = await SB.get(
+        `price_history_log?select=pala_id,dia_scraped,precio` +
+        `&pala_id=in.(${chunk.join(',')})` +
+        `&source_id=neq.2` +
+        `&disponible=eq.true` +
+        `&dia_scraped=gte.${since}` +
+        `&order=dia_scraped.desc` +
+        `&limit=2000`
+      )
+      if (rows && rows.length) allRows.push(...rows)
+    }
+    const rows = allRows
     if (!rows || rows.length === 0) {
       console.log('[tiendas-ext] recalcularPriceReference: sin filas en price_history_log')
       return 0
@@ -650,6 +658,12 @@ async function runScraper() {
           : await scrapeWooCommerce(tienda, logLines)
         if (productos.length === 0) {
           logE(`[${tienda.source_key}] 0 productos — posible bloqueo o tienda vacía`)
+          SB.insert('scrape_runs', {
+            source_id: tienda.source_id,
+            productos: 0, matches: 0, unicos: 0,
+            sin_match: 0, filtrados: 0, attr_match: 0,
+            error: '0 productos — posible bloqueo',
+          }).catch(() => {})
           continue
         }
         const res = await procesarTienda(tienda, productos)
@@ -665,8 +679,25 @@ async function runScraper() {
         totalProductos += res.total
         // Acumular pala_ids para recalcular price_reference al final
         if (res.palaIds) for (const id of res.palaIds) todosLosPalaIds.add(id)
+        // Registrar métricas del ciclo en scrape_runs (visible en GestorCandidatas → Scrapers)
+        SB.insert('scrape_runs', {
+          source_id:  tienda.source_id,
+          productos:  res.total + res.filtrados,
+          matches:    res.matched,
+          unicos:     res.palaIds?.length ?? 0,
+          sin_match:  res.sinMatch,
+          filtrados:  res.filtrados,
+          attr_match: res.attrMatched,
+        }).catch(e => console.warn(`[${tienda.source_key}] scrape_runs warning:`, e.message))
       } catch (e) {
         logE(`[${tienda.source_key}] Error: ${e.message}`)
+        // Registrar el error también en scrape_runs
+        SB.insert('scrape_runs', {
+          source_id: tienda.source_id,
+          productos: 0, matches: 0, unicos: 0,
+          sin_match: 0, filtrados: 0, attr_match: 0,
+          error: e.message.slice(0, 200),
+        }).catch(() => {})
       }
 
       await sleep(CONFIG.DELAY_BETWEEN_STORES_MS)
