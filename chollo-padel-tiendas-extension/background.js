@@ -458,8 +458,12 @@ async function procesarTienda(tienda, productos) {
         body: JSON.stringify(historyRows.slice(i, i + 200)),
       })
       if (!r.ok) {
-        const txt = await r.text()
-        if (!historyError) historyError = `${r.status}: ${txt}`
+        // 409 = unique constraint price_history_log_daily_uniq (pala_id,source_id,dia_scraped)
+        // Significa que ya insertamos este día antes → silenciar, los datos ya están
+        if (r.status !== 409) {
+          const txt = await r.text()
+          if (!historyError) historyError = `${r.status}: ${txt}`
+        }
       }
     } catch (e) {
       if (!historyError) historyError = e.message
