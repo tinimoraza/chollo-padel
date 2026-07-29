@@ -34,7 +34,7 @@ const TIENDAS = [
     source_id:  10,
     nombre:     'Padel Coronado',
     base_url:   'https://padelcoronado.com',
-    type:       'woocommerce',
+    type:       'woocommerce-tab',  // CF Turnstile — scraping via tab injection
     category:   'palas-padel',
     per_page:   100,
     price_min:  30,
@@ -57,6 +57,14 @@ const TIENDAS = [
     type:       'woocommerce',
     category:   'palas-padel',
     per_page:   100,
+    price_min:  30,
+  },
+  {
+    source_key: 'tiendapadelpoint',
+    source_id:  19,
+    nombre:     'Tienda PadelPoint',
+    base_url:   'https://www.tiendapadelpoint.com/palas-de-padel',
+    type:       'opencart',
     price_min:  30,
   },
 ]

@@ -393,6 +393,129 @@ async function warmupCloudflareCookie(baseUrl, timeoutMs = 8000) {
   })
 }
 
+// ── WooCommerce vía tab injection (para sitios con CF Turnstile) ──────────────
+// Abre un tab activo y visible → Chrome real pasa el challenge de CF.
+// Luego inyecta un script en ese tab que hace el fetch same-origin (sin CORS,
+// con todas las cookies CF que Chrome ya tiene).
+// Equivalente a page.evaluate() de Playwright pero usando Chrome nativo.
+
+async function scrapeWooCommerceViaTab(tienda, logLines = []) {
+  const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
+
+  L(`[${tienda.source_key}] Abriendo tab activo para bypass CF Turnstile...`)
+
+  // Tab activo (visible) — CF trata un tab con foco como usuario real
+  const tab = await new Promise(r =>
+    chrome.tabs.create({ url: tienda.base_url + '/', active: true }, r)
+  )
+  const tabId = tab.id
+
+  // Esperar a que la página cargue y CF resuelva su challenge.
+  // Si es challenge pasivo (spinner JS) se resuelve solo en segundos.
+  // Si es Turnstile interactivo, el usuario puede hacer clic en el checkbox.
+  const CHALLENGE_KW = ['bot verification', 'just a moment', 'attention required', 'checking your', 'verificando']
+
+  const pageReady = await new Promise(resolve => {
+    let attempts = 0
+    const MAX = 45
+    const timer = setInterval(() => {
+      attempts++
+      chrome.tabs.get(tabId, t => {
+        if (chrome.runtime.lastError) { clearInterval(timer); resolve(false); return }
+        const title = (t.title || '').toLowerCase()
+        const isChallenge = CHALLENGE_KW.some(k => title.includes(k))
+        if (t.status === 'complete' && !isChallenge) {
+          clearInterval(timer)
+          L(`[${tienda.source_key}] CF resuelto en ~${attempts}s — página: "${t.title}"`)
+          resolve(true)
+        } else if (attempts >= MAX) {
+          clearInterval(timer)
+          L(`[${tienda.source_key}] Timeout ${MAX}s — CF no resolvió (título: "${t.title}")`)
+          resolve(false)
+        }
+      })
+    }, 1000)
+  })
+
+  if (!pageReady) {
+    chrome.tabs.remove(tabId, () => {})
+    return []
+  }
+
+  // Scrapear via executeScript: el fetch ocurre dentro del tab (same-origin, sin CORS)
+  const productos = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const url =
+      `${tienda.base_url}/wp-json/wc/store/v1/products` +
+      `?category=${tienda.category}&per_page=${tienda.per_page}&page=${page}`
+
+    L(`[${tienda.source_key}] Tab API pág ${page}/${totalPages}: ${url}`)
+
+    let result
+    try {
+      const injected = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async (apiUrl) => {
+          try {
+            const r = await fetch(apiUrl, {
+              headers: { Accept: 'application/json' },
+              credentials: 'include',
+            })
+            if (!r.ok) return { error: `HTTP ${r.status}`, data: null, totalPages: 1 }
+            const tp   = parseInt(r.headers.get('x-wp-totalpages') || '1', 10)
+            const data = await r.json()
+            return { data, totalPages: isNaN(tp) ? 1 : tp, error: null }
+          } catch (e) {
+            return { error: e.message, data: null, totalPages: 1 }
+          }
+        },
+        args: [url],
+      })
+      result = injected?.[0]?.result
+    } catch (e) {
+      L(`[${tienda.source_key}] executeScript error pág ${page}: ${e.message}`)
+      break
+    }
+
+    if (!result || result.error) {
+      L(`[${tienda.source_key}] Error pág ${page}: ${result?.error || 'sin resultado'}`)
+      break
+    }
+
+    if (page === 1) totalPages = result.totalPages || 1
+    const data = result.data
+    if (!Array.isArray(data) || data.length === 0) break
+
+    for (const p of data) {
+      const minorUnit    = p.prices?.currency_minor_unit ?? 2
+      const salePrice    = centsToEuros(p.prices?.sale_price,    minorUnit)
+      const regularPrice = centsToEuros(p.prices?.regular_price, minorUnit)
+      const price        = (!isNaN(salePrice) && salePrice > 0) ? salePrice : regularPrice
+      if (isNaN(price) || price < tienda.price_min) continue
+      const precio_original = (!isNaN(regularPrice) && regularPrice > price) ? regularPrice : null
+      productos.push({
+        title:           p.name,
+        price,
+        precio_original,
+        url:             p.permalink,
+        image:           p.images?.[0]?.src || null,
+        sku:             p.sku || null,
+      })
+    }
+
+    L(`[${tienda.source_key}]  → ${data.length} productos pág ${page}/${totalPages} (acum: ${productos.length})`)
+    page++
+    if (page <= totalPages) await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
+  }
+
+  chrome.tabs.remove(tabId, () => {})
+  L(`[${tienda.source_key}] Tab cerrado. ${productos.length} productos obtenidos.`)
+  return productos
+}
+
 async function scrapeWooCommerce(tienda, logLines = []) {
   const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
   const productos = []
@@ -699,7 +822,9 @@ async function runScraper() {
       try {
         const productos = tienda.type === 'opencart'
           ? await scrapeOpenCart(tienda, logLines)
-          : await scrapeWooCommerce(tienda, logLines)
+          : tienda.type === 'woocommerce-tab'
+            ? await scrapeWooCommerceViaTab(tienda, logLines)
+            : await scrapeWooCommerce(tienda, logLines)
         if (productos.length === 0) {
           logE(`[${tienda.source_key}] 0 productos — posible bloqueo o tienda vacía`)
           SB.insert('scrape_runs', {

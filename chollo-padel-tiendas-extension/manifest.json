@@ -5,12 +5,16 @@
   "description": "Scraper de tiendas de pádel (WooCommerce Store API) — bypasa Cloudflare usando Chrome real",
   "permissions": [
     "alarms",
-    "storage"
+    "storage",
+    "cookies",
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://padelcoronado.com/*",
     "https://www.padelstyle.com/*",
     "https://padel.tienda/*",
+    "https://www.tiendapadelpoint.com/*",
     "https://*.supabase.co/*"
   ],
   "background": {
