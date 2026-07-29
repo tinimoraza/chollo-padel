@@ -95,7 +95,8 @@ async function scrape() {
       const url = pageNum === 1 ? CAT_URL : `${CAT_URL}page/${pageNum}/`
       console.log(`[originalpadel] Página ${pageNum}/${lastPage}: ${url}`)
 
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 })
+      await page.waitForTimeout(1500)
 
       // Cerrar banner de cookies (solo página 1)
       if (pageNum === 1) {
@@ -136,10 +137,13 @@ async function scrape() {
       }
 
       // Esperar a que carguen las cards
+      const SELECTOR = 'div.product-layout'
       try {
-        await page.waitForSelector('div.product-layout', { timeout: 15000 })
+        await page.waitForSelector(SELECTOR, { timeout: 15000, state: 'attached' })
       } catch {
-        console.log(`[originalpadel] Sin productos en página ${pageNum} — fin`)
+        // Debug: volcar cuántos divs hay para diagnosticar estructura
+        const divCount = await page.evaluate(() => document.querySelectorAll('div[class]').length)
+        console.log(`[originalpadel] Sin productos en página ${pageNum} (${divCount} divs totales) — fin`)
         break
       }
 
@@ -165,8 +169,9 @@ async function scrape() {
   // Secciones de rebajas
   for (const rebajasUrl of rebajasUrls) {
     try {
-      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
-      await page.waitForSelector('div.product-layout', { timeout: 10000 })
+      await page.goto(rebajasUrl, { waitUntil: 'networkidle', timeout: 30000 })
+      await page.waitForTimeout(1000)
+      await page.waitForSelector('div.product-layout', { timeout: 10000, state: 'attached' })
       const items = await extractProducts(page)
       let added = 0
       for (const item of items) {
