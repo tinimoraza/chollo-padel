@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 300px;
+      padding: 16px;
+      margin: 0;
+      background: #f9fafb;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 7px;
+      color: #4b5563;
+    }
+    .val { font-weight: 600; color: #111827; }
+    .status { font-weight: bold; }
+    .status.ok      { color: #16a34a; }
+    .status.running { color: #d97706; }
+    .status.error   { color: #dc2626; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 12px 0;
+    }
+
+    .tiendas {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+    .tiendas span {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin: 2px 2px 2px 0;
+    }
+
+    .result-box {
+      font-size: 11px;
+      color: #374151;
+      background: #f3f4f6;
+      border-radius: 6px;
+      padding: 7px 10px;
+      margin-bottom: 10px;
+      min-height: 20px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 9px;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .btn-primary:hover    { background: #0284c7; }
+    .btn-primary:disabled { background: #bae6fd; cursor: default; }
+
+    .note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>🏓 Chollo Padel — Tiendas</h2>
+
+  <div class="tiendas" id="tiendas-lista">
+    <!-- Rellena popup.js -->
+  </div>
+
+  <div class="row">
+    <span>Estado:</span>
+    <span class="status" id="status">Cargando…</span>
+  </div>
+  <div class="row">
+    <span>Última ejecución:</span>
+    <span class="val" id="lastRun">—</span>
+  </div>
+
+  <div class="result-box" id="lastResult">—</div>
+
+  <hr class="divider">
+
+  <button class="btn-primary" id="btn-run">▶ Ejecutar ahora</button>
+
+  <div class="note" id="note">Se ejecuta automáticamente cada 2h mientras Chrome esté abierto</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

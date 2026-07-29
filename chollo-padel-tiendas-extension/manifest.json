@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Chollo Padel Tiendas",
+  "version": "1.0",
+  "description": "Scraper de tiendas de pádel (WooCommerce Store API) — bypasa Cloudflare usando Chrome real",
+  "permissions": [
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://padelcoronado.com/*",
+    "https://www.padelstyle.com/*",
+    "https://padel.tienda/*",
+    "https://*.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Chollo Padel Tiendas"
+  }
+}
