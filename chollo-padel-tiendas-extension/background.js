@@ -415,7 +415,20 @@ async function procesarTienda(tienda, productos) {
   console.log(
     `[${tienda.source_key}] ✅ ${matched} matches | ⚠️ ${sinMatch} sin match | 🚫 ${filtrados} filtrados`
   )
-  return { matched, sinMatch, filtrados, total: matched + sinMatch }
+  // Resumen de sin-match por marca para diagnóstico
+  let sinMatchResumen = null
+  if (sinMatch > 0 && candidatasSinMatch.length > 0) {
+    const porMarca = {}
+    for (const c of candidatasSinMatch) {
+      const words = c.titulo.toLowerCase().replace(/^pala\s+/, '').split(/\s+/)
+      const marca = words[0] || '?'
+      porMarca[marca] = (porMarca[marca] || 0) + 1
+    }
+    const marcasSorted = Object.entries(porMarca).sort((a, b) => b[1] - a[1])
+    sinMatchResumen = marcasSorted.map(([m, n]) => `${m}(${n})`).join(', ')
+  }
+
+  return { matched, sinMatch, filtrados, total: matched + sinMatch, sinMatchResumen }
 }
 
 // ── Ciclo principal ───────────────────────────────────────────
@@ -459,6 +472,9 @@ async function runScraper() {
         }
         const res = await procesarTienda(tienda, productos)
         log(`[${tienda.source_key}] ✅ ${res.matched} matches | ⚠️ ${res.sinMatch} sin match | 🚫 ${res.filtrados} filtrados`)
+        if (res.sinMatchResumen) {
+          log(`[${tienda.source_key}] Sin match por marca: ${res.sinMatchResumen}`)
+        }
         totalMatched   += res.matched
         totalSinMatch  += res.sinMatch
         totalProductos += res.total
