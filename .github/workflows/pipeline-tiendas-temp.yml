@@ -145,7 +145,7 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts pelotapadel --no-post
 
   scrape-grupo-c:
-    name: "Scrape C: originalpadel, streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, keepadel"
+    name: "Scrape C: streetpadel, m1padel, justpadel, futurapadelshop, virtualpadel, keepadel"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -158,9 +158,6 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install
-      - name: Scrape originalpadel
-        continue-on-error: true
-        run: npx tsx scripts/pipeline-tiendas.ts originalpadel --no-post
       - name: Scrape streetpadel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts streetpadel --no-post
@@ -181,7 +178,7 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts keepadel --no-post
 
   scrape-grupo-playwright:
-    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint, padelmania"
+    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint, padelmania, originalpadel"
     runs-on: ubuntu-latest
     timeout-minutes: 55
     defaults:
@@ -218,6 +215,9 @@ jobs:
         timeout-minutes: 10
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelmania --no-post
+      - name: Scrape originalpadel
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts originalpadel --no-post
 
   post-pipeline:
     name: "Post-pipeline (match + recalcular precios)"

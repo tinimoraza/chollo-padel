@@ -1,28 +1,18 @@
 // scripts/prices/scrapers/originalpadel.js
-// Original Padel — OpenCart (tema Journal3), fetch + cheerio
-// URL: https://originalpadel.com/es/palas-de-padel/
-// Paginación: /page/N/?sort=p.date_added&order=DESC&limit=100
-// 866 productos en 9 páginas con limit=100
+// Original Padel — OpenCart (tema Journal3), Playwright
+// URL categoría: https://originalpadel.com/es/palas-de-padel/
+// Paginación: /es/palas-de-padel/page/N/
+// Nota: la versión fetch+cheerio con ?sort=...&limit=100 recibe 403.
+//       Se usa Playwright headless para evitar el bloqueo.
 
 const SOURCE_KEY = 'originalpadel'
 const BASE_URL   = 'https://originalpadel.com'
-const CAT_PATH   = '/es/palas-de-padel'
-const LIMIT      = 100
-const DELAY_MS   = 800
-const MAX_PAGES  = 20
+const CAT_URL    = `${BASE_URL}/es/palas-de-padel/`
+const DELAY_MS   = 1200
+const MAX_PAGES  = 80  // sin limit=100 habrá más páginas (~15 prod/página)
 
-const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-  'Accept':          'text/html,application/xhtml+xml',
-  'Accept-Language': 'es-ES,es;q=0.9',
-}
+const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
-// NOTA (fix 2026-06-19): el catálogo de originalpadel mezcla ropa con palas
-// (sudaderas, pantalones, mallas, boxers, polos…) que no estaban en EXCLUIR y
-// caían como "sin match" al pasar por el extractor de atributos de palas.
-// Confirmado en pipeline_run_20260618_230627.json (ej. "Sudadera Bullpadel
-// Baiona Carbon", "Pantalon Bullpadel Beariz Negro", "Mallas Bullpadel Betan
-// Negro", "Boxers Lacoste…"). Se amplía la lista de exclusión.
 const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'paletero', 'funda', 'protector', 'muñequera', 'camiseta', 'zapatilla',
   'gafas', 'libro', 'kit ', ' kit', 'sudadera', 'pantalon', 'pantalón',
@@ -32,153 +22,171 @@ const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
 
 function isPala(title) {
   const t = title.toLowerCase()
-  // Excluir packs que no son palas individuales (pack con x10, gafas, libros…)
-  // pero conservar "pack pala X" que sí es una pala individual con paletero
   if (/pack.+(x\d+|gafas|libro|camiseta)/i.test(t)) return false
   return !EXCLUIR.some(w => t.includes(w))
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+async function extractProducts(page) {
+  return page.evaluate((BASE_URL) => {
+    function parsePrice(text) {
+      if (!text) return NaN
+      const m = text.match(/([\d,.]+)/)
+      if (!m) return NaN
+      return parseFloat(m[1].replace(',', '.'))
+    }
 
-function parsePrice(text) {
-  if (!text) return NaN
-  // Formato: "178.47€" o "178,47€"
-  const m = text.match(/([\d,.]+)/)
-  if (!m) return NaN
-  return parseFloat(m[1].replace(',', '.'))
-}
+    const items = []
+    document.querySelectorAll('div.product-layout').forEach(el => {
+      const linkEl  = el.querySelector('div.name a')
+      const title   = linkEl?.textContent?.trim()
+      let   href    = linkEl?.getAttribute('href') || ''
 
-async function fetchPage(url) {
-  const res = await fetch(url, { headers: HEADERS })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
-}
+      if (!title || !href || href.includes('?product_id=')) return
 
-function pageUrl(page) {
-  if (page === 1) return `${BASE_URL}${CAT_PATH}/?sort=p.date_added&order=DESC&limit=${LIMIT}`
-  return `${BASE_URL}${CAT_PATH}/page/${page}/?sort=p.date_added&order=DESC&limit=${LIMIT}`
-}
-
-async function scrape() {
-  console.log('[originalpadel] Iniciando scraper (OpenCart Journal3, fetch + cheerio)…')
-
-  let cheerio
-  try { cheerio = require('cheerio') } catch {
-    console.error('[originalpadel] cheerio no instalado'); return []
-  }
-
-  const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
-
-  function parseCards($, cards) {
-    const out = []
-    cards.each((_, el) => {
-      const $c = $(el)
-
-      const linkEl = $c.find('div.name a').first()
-      const title  = linkEl.text().trim()
-      let   href   = linkEl.attr('href') || ''
-
-      if (!title || !href || href.includes('?product_id=') || !isPala(title)) return
-
-      try { href = new URL(href).pathname.replace(/\/$/, '') + '/' } catch { /* mantener tal cual */ }
       if (!href.startsWith('http')) href = BASE_URL + href
 
-      const priceNew  = parsePrice($c.find('span.price-new').first().text())
-      const priceNorm = parsePrice($c.find('span.price-normal').first().text())
-      const priceOld  = parsePrice($c.find('span.price-old').first().text())
+      const priceNew  = parsePrice(el.querySelector('span.price-new')?.textContent)
+      const priceNorm = parsePrice(el.querySelector('span.price-normal')?.textContent)
+      const priceOld  = parsePrice(el.querySelector('span.price-old')?.textContent)
 
       const price    = !isNaN(priceNew) ? priceNew : priceNorm
       const original = (!isNaN(priceOld) && priceOld > price) ? priceOld : null
 
       if (isNaN(price) || price < 30) return
 
-      const imgEl  = $c.find('img.img-first').first()
-      const rawImg = imgEl.attr('src') || ''
-      const image  = rawImg || null
+      const imgEl  = el.querySelector('img.img-first')
+      const image  = imgEl?.getAttribute('src') || null
 
-      out.push({ title, price, precio_original: original, url: href, image })
+      items.push({ title, price, precio_original: original,
+                   url: href, image: image?.startsWith('http') ? image : null })
     })
-    return out
+    return items
+  }, BASE_URL)
+}
+
+async function scrape() {
+  console.log('[originalpadel] Iniciando scraper (Playwright, OpenCart Journal3)…')
+
+  let chromium
+  try {
+    ({ chromium } = require('playwright'))
+  } catch {
+    console.error('[originalpadel] playwright no instalado — npm install playwright')
+    return []
   }
+
+  const browser = await chromium.launch({ headless: true })
+  const page    = await browser.newPage()
+
+  await page.setExtraHTTPHeaders({
+    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept-Language': 'es-ES,es;q=0.9',
+  })
 
   const allProducts = []
-  const seen = new Set()
-  let page = 1
-  let lastPage = 1
-  let codigoDescuento = null
-  let rebajasUrls = []
+  const seen        = new Set()
+  let   pageNum     = 1
+  let   lastPage    = 1
+  let   codigoDescuento = null
+  let   rebajasUrls     = []
 
-  while (page <= MAX_PAGES) {
-    const url = pageUrl(page)
-    let html
-    try { html = await fetchPage(url) }
-    catch (e) { console.error(`[originalpadel] Error ${url}:`, e.message); break }
+  try {
+    while (pageNum <= MAX_PAGES) {
+      const url = pageNum === 1 ? CAT_URL : `${CAT_URL}page/${pageNum}/`
+      console.log(`[originalpadel] Página ${pageNum}/${lastPage}: ${url}`)
 
-    const $ = cheerio.load(html)
-    const cards = $('div.product-layout')
-    if (cards.length === 0) break
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-    // Detectar última página desde paginación OpenCart
-    if (page === 1) {
-      codigoDescuento = detectarCodigoDescuento($('body').text())
-      if (codigoDescuento) {
-        console.log(`[originalpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
-      }
-      $('.pagination a').each((_, a) => {
-        const href = $(a).attr('href') || ''
-        const m = href.match(/\/page\/(\d+)\//)
-        if (m) {
-          const n = parseInt(m[1])
-          if (!isNaN(n) && n > lastPage) lastPage = n
+      // Cerrar banner de cookies (solo página 1)
+      if (pageNum === 1) {
+        try {
+          await page.waitForSelector('.btn-cookie, .cmplz-accept, [data-cky-tag="accept-button"], #cookieClose', { timeout: 4000 })
+          await page.click('.btn-cookie, .cmplz-accept, [data-cky-tag="accept-button"], #cookieClose')
+          await page.waitForTimeout(600)
+        } catch { /* sin banner */ }
+
+        // Detectar total de páginas desde paginación
+        lastPage = await page.evaluate(() => {
+          let max = 1
+          document.querySelectorAll('.pagination a').forEach(a => {
+            const m = (a.getAttribute('href') || '').match(/\/page\/(\d+)\//)
+            if (m) { const n = parseInt(m[1]); if (n > max) max = n }
+          })
+          // También desde texto "X Páginas"
+          const txt = document.querySelector('.pagination-results')?.textContent || ''
+          const mp  = txt.match(/\((\d+)\s+P[áa]ginas?\)/)
+          if (mp) { const n = parseInt(mp[1]); if (n > max) max = n }
+          return max
+        })
+        console.log(`[originalpadel] Total páginas detectadas: ${lastPage}`)
+
+        const bodyText = await page.evaluate(() => document.body.innerText)
+        codigoDescuento = detectarCodigoDescuento(bodyText)
+        if (codigoDescuento) {
+          console.log(`[originalpadel] código detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         }
-      })
-      // También desde el texto "Mostrando X a Y de Z (N Páginas)"
-      const paginaText = $('.pagination-results').text()
-      const mPag = paginaText.match(/\((\d+)\s+P[áa]ginas?\)/)
-      if (mPag) {
-        const n = parseInt(mPag[1])
-        if (!isNaN(n) && n > lastPage) lastPage = n
+
+        const hrefs = await page.evaluate(() =>
+          Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+        )
+        rebajasUrls = filtrarUrlsRebajas(hrefs, CAT_URL)
+        if (rebajasUrls.length > 0) {
+          console.log(`[originalpadel] sección(es) de rebajas: ${rebajasUrls.join(', ')}`)
+        }
       }
-      console.log(`[originalpadel] Total páginas: ${lastPage}`)
 
-      const hrefs = $('a[href]').map((_, a) => $(a).attr('href')).get()
-      rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CAT_PATH}`)
-      if (rebajasUrls.length > 0) {
-        console.log(`[originalpadel] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
+      // Esperar a que carguen las cards
+      try {
+        await page.waitForSelector('div.product-layout', { timeout: 15000 })
+      } catch {
+        console.log(`[originalpadel] Sin productos en página ${pageNum} — fin`)
+        break
       }
+
+      const items = await extractProducts(page)
+      let added = 0
+      for (const item of items) {
+        if (!item.url || seen.has(item.url)) continue
+        if (!isPala(item.title)) continue
+        seen.add(item.url)
+        allProducts.push(item)
+        added++
+      }
+      console.log(`[originalpadel]  → ${added} palas nuevas (total: ${allProducts.length})`)
+
+      if (pageNum >= lastPage) break
+      pageNum++
+      await page.waitForTimeout(DELAY_MS)
     }
-
-    for (const item of parseCards($, cards)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-    }
-
-    console.log(`[originalpadel] página ${page}/${lastPage} → ${cards.length} cards, ${allProducts.length} acumuladas`)
-
-    if (page >= lastPage) break
-    page++
-    await sleep(DELAY_MS)
+  } catch (err) {
+    console.error('[originalpadel] Error:', err.message)
   }
 
+  // Secciones de rebajas
   for (const rebajasUrl of rebajasUrls) {
-    let html
-    try { html = await fetchPage(rebajasUrl) }
-    catch (e) { console.error(`[originalpadel] Error sección rebajas ${rebajasUrl}:`, e.message); continue }
-    const $ = cheerio.load(html)
-    const cards = $('div.product-layout')
-    let added = 0
-    for (const item of parseCards($, cards)) {
-      if (seen.has(item.url)) continue
-      seen.add(item.url)
-      allProducts.push(item)
-      added++
+    try {
+      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      await page.waitForSelector('div.product-layout', { timeout: 10000 })
+      const items = await extractProducts(page)
+      let added = 0
+      for (const item of items) {
+        if (!item.url || seen.has(item.url)) continue
+        if (!isPala(item.title)) continue
+        seen.add(item.url)
+        allProducts.push(item)
+        added++
+      }
+      console.log(`[originalpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
+    } catch (e) {
+      console.error(`[originalpadel] Error rebajas ${rebajasUrl}:`, e.message)
     }
-    console.log(`[originalpadel] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
-    await sleep(DELAY_MS)
+    await page.waitForTimeout(DELAY_MS)
   }
+
+  await browser.close()
 
   console.log(`[originalpadel] Total palas: ${allProducts.length}`)
+
   const scraped_at = new Date().toISOString()
   const resultado = allProducts.map(p => ({
     source_key:      SOURCE_KEY,

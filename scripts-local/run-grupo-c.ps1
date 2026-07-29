@@ -1,6 +1,7 @@
 # run-grupo-c.ps1 — Grupo C: originalpadel, streetpadel, m1padel, justpadel,
 #                            futurapadelshop, virtualpadel, padelmania, keepadel
-param([string]$LogFile = "C:\chollo-padel\pipeline-local.log")
+# Cada grupo usa su propio log para evitar colisiones de escritura simultánea.
+$LogFile = "C:\chollo-padel\pipeline-local-c.log"
 
 $WORKDIR = "C:\chollo-padel\chollo-padel-fase2-v2\chollo-padel-v2"
 Set-Location $WORKDIR
@@ -14,7 +15,7 @@ if (Test-Path $envFile) {
     }
 }
 
-$tiendas = @("originalpadel","streetpadel","m1padel","justpadel","futurapadelshop","virtualpadel","padelmania","keepadel")
+$tiendas = @("streetpadel","m1padel","justpadel","futurapadelshop","virtualpadel","padelmania","keepadel")
 
 foreach ($t in $tiendas) {
     $ts = Get-Date -Format "HH:mm:ss"
