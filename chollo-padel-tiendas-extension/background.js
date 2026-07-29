@@ -410,6 +410,18 @@ async function scrapeWooCommerceViaTab(tienda, logLines = []) {
   )
   const tabId = tab.id
 
+  // Traer la ventana de Chrome al frente para que el usuario vea el tab
+  chrome.windows.update(tab.windowId, { focused: true })
+
+  // Notificación para avisar al usuario si hay Turnstile interactivo
+  chrome.notifications.create('cf-turnstile-' + tienda.source_key, {
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: 'Verificación requerida — ' + tienda.nombre,
+    message: 'Cloudflare ha abierto una pestaña. Si ves un checkbox "Verificar que eres humano", haz clic en él. La pestaña se cerrará sola.',
+    priority: 2,
+  })
+
   // Esperar a que la página cargue y CF resuelva su challenge.
   // Si es challenge pasivo (spinner JS) se resuelve solo en segundos.
   // Si es Turnstile interactivo, el usuario puede hacer clic en el checkbox.
