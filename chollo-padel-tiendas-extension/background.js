@@ -357,6 +357,42 @@ async function getCookieHeader(domain) {
   })
 }
 
+// Abre un tab en Chrome para que Cloudflare establezca cf_clearance, luego lo cierra.
+// Espera hasta que el tab haya cargado o pase el timeout.
+async function warmupCloudflareCookie(baseUrl, timeoutMs = 8000) {
+  const domain = new URL(baseUrl).hostname
+  console.log(`[cf-warmup] Abriendo tab para obtener cf_clearance: ${baseUrl}`)
+  return new Promise(resolve => {
+    chrome.tabs.create({ url: baseUrl, active: false }, tab => {
+      const tabId = tab.id
+      let done = false
+      const timer = setTimeout(() => {
+        if (done) return
+        done = true
+        chrome.tabs.remove(tabId, () => {})
+        console.log(`[cf-warmup] Tab cerrado tras timeout (${timeoutMs}ms)`)
+        resolve()
+      }, timeoutMs)
+
+      chrome.tabs.onUpdated.addListener(function listener(id, info) {
+        if (id !== tabId) return
+        if (info.status === 'complete') {
+          if (done) return
+          done = true
+          clearTimeout(timer)
+          chrome.tabs.onUpdated.removeListener(listener)
+          // Pequeña pausa extra para que CF escriba la cookie
+          setTimeout(() => {
+            chrome.tabs.remove(tabId, () => {})
+            console.log(`[cf-warmup] Tab cerrado tras carga completa`)
+            resolve()
+          }, 1500)
+        }
+      })
+    })
+  })
+}
+
 async function scrapeWooCommerce(tienda, logLines = []) {
   const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
   const productos = []
@@ -365,7 +401,15 @@ async function scrapeWooCommerce(tienda, logLines = []) {
 
   // Leer cookies de Chrome para este dominio (necesario para Cloudflare)
   const hostname = new URL(tienda.base_url).hostname
-  const cookieHeader = await getCookieHeader(hostname)
+  let cookieHeader = await getCookieHeader(hostname)
+
+  // Si no hay cf_clearance, abrimos un tab para que Cloudflare la establezca
+  if (!cookieHeader || !cookieHeader.includes('cf_clearance')) {
+    L(`[${tienda.source_key}] Sin cf_clearance — abriendo tab para warmup CF...`)
+    await warmupCloudflareCookie(tienda.base_url)
+    cookieHeader = await getCookieHeader(hostname)
+    L(`[${tienda.source_key}] Tras warmup — cf_clearance=${cookieHeader?.includes('cf_clearance') ?? false}`)
+  }
 
   while (page <= totalPages) {
     const url =
