@@ -16,6 +16,8 @@ const aliasCache = {}
 let aliasCacheLoaded = false
 // Catálogo en memoria para matching por atributos: Array<{id,marca,linea,modelo,variante,año}>
 let catalogoAtributos = []
+// Códigos de descuento activos por source_id: source_id → { codigo, descuento_pct }
+const codigosCache = {}
 
 // ── Supabase helpers ─────────────────────────────────────────
 
@@ -85,6 +87,26 @@ async function cargarAliases() {
     console.log(`[tiendas-ext] Aliases cargados: ${t.source_key} → ${n}`)
   }
   console.log(`[tiendas-ext] Total aliases en memoria: ${total}`)
+}
+
+// Carga códigos de descuento activos desde codigos_descuento_manual
+// para las tiendas de la extensión y los mantiene en codigosCache.
+async function cargarCodigos() {
+  const sourceIds = TIENDAS.map(t => t.source_id).join(',')
+  try {
+    const rows = await SB.get(
+      `codigos_descuento_manual?select=source_id,codigo,descuento_pct&activo=eq.true&source_id=in.(${sourceIds})`
+    )
+    // Limpiar caché anterior
+    for (const t of TIENDAS) delete codigosCache[t.source_id]
+    for (const row of rows) {
+      codigosCache[row.source_id] = { codigo: row.codigo, descuento_pct: row.descuento_pct }
+    }
+    const activos = Object.entries(codigosCache).map(([id, c]) => `source_id=${id}:${c.codigo}(${c.descuento_pct}%)`).join(', ')
+    console.log(`[tiendas-ext] Códigos activos: ${activos || 'ninguno'}`)
+  } catch (e) {
+    console.warn('[tiendas-ext] cargarCodigos error (no bloquea):', e.message)
+  }
 }
 
 // ── OpenCart HTML scraper ─────────────────────────────────────
@@ -342,17 +364,20 @@ async function procesarTienda(tienda, productos) {
 
     if (pala_id) {
       // ── Match por alias ──────────────────────────────────
+      const codigoTienda = codigosCache[tienda.source_id]
       const snap = {
         pala_id,
-        source_id:       tienda.source_id,
-        precio:          p.price,
-        precio_original: p.precio_original,
-        url_producto:    p.url,
-        disponible:      true,
-        sku:             p.sku,
+        source_id:        tienda.source_id,
+        precio:           p.price,
+        precio_original:  p.precio_original,
+        url_producto:     p.url,
+        disponible:       true,
+        sku:              p.sku,
         scraped_at,
         match_confidence: 1,
-        imagen_url:      p.image,
+        imagen_url:       p.image,
+        codigo_descuento: codigoTienda?.codigo    ?? null,
+        descuento_pct:    codigoTienda?.descuento_pct ?? null,
       }
       snapshotsMatch.push(snap)
       matched++
@@ -362,6 +387,7 @@ async function procesarTienda(tienda, productos) {
       const candidatos = buscarEnCatalogo(attrs)
       if (candidatos.length === 1) {
         const pala_id = candidatos[0].id
+        const codigoTiendaAttr = codigosCache[tienda.source_id]
         snapshotsMatch.push({
           pala_id,
           source_id:        tienda.source_id,
@@ -373,6 +399,8 @@ async function procesarTienda(tienda, productos) {
           scraped_at,
           match_confidence: 0.9,
           imagen_url:       p.image,
+          codigo_descuento: codigoTiendaAttr?.codigo    ?? null,
+          descuento_pct:    codigoTiendaAttr?.descuento_pct ?? null,
         })
         // Actualizar alias cache local para dedup en este mismo ciclo
         aliasCache[tienda.source_key]?.set(titleLower, pala_id)
@@ -500,6 +528,7 @@ async function runScraper() {
   try {
     await cargarAliases()
     await cargarCatalogo()
+    await cargarCodigos()
     for (const t of TIENDAS) {
       logLines.push(`\n--- Aliases ${t.source_key}: ${aliasCache[t.source_key]?.size ?? 0} ---`)
     }
