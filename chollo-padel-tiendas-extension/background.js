@@ -418,15 +418,22 @@ async function procesarTienda(tienda, productos) {
   }
 
   // Insert price_history_log — usar snapsDedupados para evitar duplicados
-  // (historyMatch sin dedup causaba fallo silencioso en el batch si dos URLs→mismo pala_id)
   // dia_scraped es columna generada en BD (computed desde scraped_at) — no enviar
+  // resolution=ignore-duplicates → ON CONFLICT DO NOTHING (silencia 409 en 2º ciclo del día)
   const historyRows = snapsDedupados
   let historyError = null
   for (let i = 0; i < historyRows.length; i += 200) {
     try {
-      await SB.insert('price_history_log', historyRows.slice(i, i + 200))
+      const r = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/price_history_log`, {
+        method: 'POST',
+        headers: { ...SB.headers, Prefer: 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify(historyRows.slice(i, i + 200)),
+      })
+      if (!r.ok) {
+        const txt = await r.text()
+        if (!historyError) historyError = `${r.status}: ${txt}`
+      }
     } catch (e) {
-      // Primer error lo capturamos para reportarlo; el resto (duplicados de otro ciclo) lo ignoramos
       if (!historyError) historyError = e.message
     }
   }
