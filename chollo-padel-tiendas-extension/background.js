@@ -393,68 +393,174 @@ async function warmupCloudflareCookie(baseUrl, timeoutMs = 8000) {
   })
 }
 
+// ── Helper: fetch directo a WooCommerce Store API (sin tab) ──────────────────
+// Se usa cuando ya hay cf_clearance válido en Chrome.
+// credentials:'include' + host_permissions en manifest → Chrome envía
+// cf_clearance automáticamente al dominio destino sin CORS.
+
+async function _fetchWooCommerceDirecto(tienda, logLines = []) {
+  const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
+  const hostname = new URL(tienda.base_url).hostname
+  const cookieHeader = await getCookieHeader(hostname)
+  const productos = []
+  let page = 1, totalPages = 1
+
+  while (page <= totalPages) {
+    const url =
+      `${tienda.base_url}/wp-json/wc/store/v1/products` +
+      `?category=${tienda.category}&per_page=${tienda.per_page}&page=${page}`
+    L(`[${tienda.source_key}] Directo pág ${page}/${totalPages}: ${url}`)
+
+    const headers = { Accept: 'application/json' }
+    if (cookieHeader) headers['Cookie'] = cookieHeader
+
+    let r
+    try {
+      r = await fetch(url, { credentials: 'include', headers })
+    } catch (e) {
+      L(`[${tienda.source_key}] Directo error: ${e.message}`)
+      return []   // CF bloqueó — señal para abrir tab
+    }
+    if (!r.ok) {
+      L(`[${tienda.source_key}] Directo HTTP ${r.status} (CF challenge o error)`)
+      return []   // Igual, señal para abrir tab
+    }
+    const tp = parseInt(r.headers.get('x-wp-totalpages') || '1', 10)
+    if (!isNaN(tp) && tp > totalPages) totalPages = tp
+    let data
+    try { data = await r.json() } catch { return [] }
+    // Sanity-check: CF devuelve HTML en vez de JSON cuando bloquea
+    if (!Array.isArray(data)) {
+      L(`[${tienda.source_key}] Directo: respuesta no es JSON (posible challenge CF)`)
+      return []
+    }
+    if (data.length === 0) break
+
+    for (const p of data) {
+      const minorUnit    = p.prices?.currency_minor_unit ?? 2
+      const salePrice    = centsToEuros(p.prices?.sale_price,    minorUnit)
+      const regularPrice = centsToEuros(p.prices?.regular_price, minorUnit)
+      const price        = (!isNaN(salePrice) && salePrice > 0) ? salePrice : regularPrice
+      if (isNaN(price) || price < tienda.price_min) continue
+      const precio_original = (!isNaN(regularPrice) && regularPrice > price) ? regularPrice : null
+      productos.push({
+        title: p.name, price, precio_original,
+        url: p.permalink, image: p.images?.[0]?.src || null, sku: p.sku || null,
+      })
+    }
+    L(`[${tienda.source_key}]  → ${data.length} en pág ${page}/${totalPages} (acum: ${productos.length})`)
+    page++
+    if (page <= totalPages) await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
+  }
+  return productos
+}
+
 // ── WooCommerce vía tab injection (para sitios con CF Turnstile) ──────────────
-// Abre un tab activo y visible → Chrome real pasa el challenge de CF.
-// Luego inyecta un script en ese tab que hace el fetch same-origin (sin CORS,
-// con todas las cookies CF que Chrome ya tiene).
-// Equivalente a page.evaluate() de Playwright pero usando Chrome nativo.
+//
+// Flujo optimizado de 2 fases:
+//
+// FASE 1 — Fetch directo (automático, sin tab):
+//   Si Chrome ya tiene cf_clearance válido para este dominio (de un clic previo
+//   del usuario o de un challenge pasivo resuelto), el service worker lo envía
+//   automáticamente con credentials:'include'. Funciona sin abrir nada.
+//   → Cubre el 90%+ de los casos (cf_clearance dura ~30 días).
+//
+// FASE 2 — Tab activo (requiere clic del usuario la primera vez):
+//   Solo si FASE 1 devuelve 0 productos (no hay cf_clearance o expiró).
+//   Abre un tab visible → CF challenge pasivo se resuelve solo (segundos);
+//   si es Turnstile interactivo, el usuario hace clic UNA vez, cf_clearance
+//   queda en Chrome y la próxima ejecución volverá a FASE 1 (sin tab).
+//   SIN TIMEOUT: espera hasta que CF resuelva o el usuario cierre el tab.
 
 async function scrapeWooCommerceViaTab(tienda, logLines = []) {
   const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
 
-  L(`[${tienda.source_key}] Abriendo tab activo para bypass CF Turnstile...`)
+  // ── FASE 1: Fetch directo ─────────────────────────────────────────────────
+  const hostname = new URL(tienda.base_url).hostname
+  const cookieHeader = await getCookieHeader(hostname)
+  const tieneCf = cookieHeader && cookieHeader.includes('cf_clearance')
 
-  // Tab activo (visible) — CF trata un tab con foco como usuario real
+  if (tieneCf) {
+    L(`[${tienda.source_key}] cf_clearance en Chrome → intentando fetch directo (sin tab)...`)
+    const directos = await _fetchWooCommerceDirecto(tienda, logLines)
+    if (directos.length > 0) {
+      L(`[${tienda.source_key}] ✅ Fetch directo: ${directos.length} productos (sin abrir tab)`)
+      return directos
+    }
+    L(`[${tienda.source_key}] Fetch directo devolvió 0 (cf_clearance posiblemente expirado) → abriendo tab...`)
+  } else {
+    L(`[${tienda.source_key}] Sin cf_clearance → primera vez o expiró. Abriendo tab...`)
+  }
+
+  // ── FASE 2: Tab activo, sin timeout ──────────────────────────────────────
+  L(`[${tienda.source_key}] Abriendo tab activo para Cloudflare...`)
+
   const tab = await new Promise(r =>
     chrome.tabs.create({ url: tienda.base_url + '/', active: true }, r)
   )
   const tabId = tab.id
-
-  // Traer la ventana de Chrome al frente para que el usuario vea el tab
   chrome.windows.update(tab.windowId, { focused: true })
 
-  // Notificación para avisar al usuario si hay Turnstile interactivo
-  chrome.notifications.create('cf-turnstile-' + tienda.source_key, {
-    type: 'basic',
-    iconUrl: 'icon.png',
-    title: 'Verificación requerida — ' + tienda.nombre,
-    message: 'Cloudflare ha abierto una pestaña. Si ves un checkbox "Verificar que eres humano", haz clic en él. La pestaña se cerrará sola.',
+  // Notificación persistente para que Patricia sepa qué hacer
+  chrome.notifications.create('cf-tab-' + tienda.source_key, {
+    type: 'basic', iconUrl: 'icon.png',
+    title: '🔓 Chollo Padel — ' + tienda.nombre,
+    message: 'Se abrió una pestaña de Cloudflare. Si ves un checkbox "Verificar que eres humano", haz clic. La pestaña se cerrará sola cuando esté lista. (Solo necesitas hacerlo una vez al mes.)',
     priority: 2,
   })
 
-  // Esperar a que la página cargue y CF resuelva su challenge.
-  // Si es challenge pasivo (spinner JS) se resuelve solo en segundos.
-  // Si es Turnstile interactivo, el usuario puede hacer clic en el checkbox.
   const CHALLENGE_KW = ['bot verification', 'just a moment', 'attention required', 'checking your', 'verificando']
 
+  // Sin timeout fijo: resuelve cuando CF pasa O cuando el usuario cierra el tab.
+  // chrome.tabs.onUpdated → CF resolvió (página cargada, sin palabras de challenge)
+  // chrome.tabs.onRemoved → usuario cerró el tab manualmente (sin resolver)
   const pageReady = await new Promise(resolve => {
-    let attempts = 0
-    const MAX = 45
-    const timer = setInterval(() => {
-      attempts++
+    let resolved = false
+
+    function cleanup() {
+      if (!resolved) {
+        resolved = true
+        chrome.tabs.onUpdated.removeListener(onUpdated)
+        chrome.tabs.onRemoved.removeListener(onRemoved)
+      }
+    }
+
+    function onUpdated(id, info) {
+      if (id !== tabId) return
       chrome.tabs.get(tabId, t => {
-        if (chrome.runtime.lastError) { clearInterval(timer); resolve(false); return }
+        if (chrome.runtime.lastError) { cleanup(); resolve(false); return }
         const title = (t.title || '').toLowerCase()
         const isChallenge = CHALLENGE_KW.some(k => title.includes(k))
         if (t.status === 'complete' && !isChallenge) {
-          clearInterval(timer)
-          L(`[${tienda.source_key}] CF resuelto en ~${attempts}s — página: "${t.title}"`)
+          cleanup()
+          L(`[${tienda.source_key}] ✅ CF resuelto — página lista: "${t.title}"`)
           resolve(true)
-        } else if (attempts >= MAX) {
-          clearInterval(timer)
-          L(`[${tienda.source_key}] Timeout ${MAX}s — CF no resolvió (título: "${t.title}")`)
-          resolve(false)
         }
+        // Si sigue en challenge: esperar (sin timeout)
       })
-    }, 1000)
+    }
+
+    function onRemoved(id) {
+      if (id !== tabId) return
+      cleanup()
+      L(`[${tienda.source_key}] Tab cerrado por el usuario antes de resolver CF → backoff`)
+      resolve(false)
+    }
+
+    chrome.tabs.onUpdated.addListener(onUpdated)
+    chrome.tabs.onRemoved.addListener(onRemoved)
   })
 
+  try { chrome.notifications.clear('cf-tab-' + tienda.source_key, () => {}) } catch {}
+
   if (!pageReady) {
-    chrome.tabs.remove(tabId, () => {})
+    try { chrome.tabs.remove(tabId, () => {}) } catch {}
     return []
   }
 
-  // Scrapear via executeScript: el fetch ocurre dentro del tab (same-origin, sin CORS)
+  // ── CF resuelto: scrapear via executeScript (same-origin, sin CORS) ──────
+  // El tab ya tiene todas las cookies CF → fetch desde dentro del tab
+  // equivale a lo que hace el usuario en su navegador real.
   const productos = []
   let page = 1
   let totalPages = 1
@@ -509,12 +615,8 @@ async function scrapeWooCommerceViaTab(tienda, logLines = []) {
       if (isNaN(price) || price < tienda.price_min) continue
       const precio_original = (!isNaN(regularPrice) && regularPrice > price) ? regularPrice : null
       productos.push({
-        title:           p.name,
-        price,
-        precio_original,
-        url:             p.permalink,
-        image:           p.images?.[0]?.src || null,
-        sku:             p.sku || null,
+        title: p.name, price, precio_original,
+        url: p.permalink, image: p.images?.[0]?.src || null, sku: p.sku || null,
       })
     }
 
@@ -523,7 +625,7 @@ async function scrapeWooCommerceViaTab(tienda, logLines = []) {
     if (page <= totalPages) await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
   }
 
-  chrome.tabs.remove(tabId, () => {})
+  try { chrome.tabs.remove(tabId, () => {}) } catch {}
   L(`[${tienda.source_key}] Tab cerrado. ${productos.length} productos obtenidos.`)
   return productos
 }
