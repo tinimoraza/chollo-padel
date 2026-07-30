@@ -370,8 +370,8 @@ async function reportarPendientes() {
 
   console.log(`\n  ⚠️  Pendientes que requieren revisión manual (${data.length}):`)
   for (const c of data) {
-    const d = c.datos_extraidos as Record<string, any>
-    const motivo = !d.marca ? 'sin marca' : !d.linea ? 'sin línea' : 'otro'
+    const d = (c.datos_extraidos ?? {}) as Record<string, any>
+    const motivo = !d?.marca ? 'sin marca' : !d?.linea ? 'sin línea' : 'otro'
     console.log(`     • ${c.titulo}  [${motivo}]`)
   }
 }
