@@ -44,6 +44,32 @@ function cargarEstado() {
 
     btnRun.disabled = s === 'running'
     btnRun.textContent = s === 'running' ? '⏳ Ejecutando…' : '▶ Ejecutar ahora'
+
+    // Mostrar backoffs activos con botón para limpiar
+    const backoffs = data?.backoffs || {}
+    let backoffEl = document.getElementById('backoff-section')
+    if (!backoffEl) {
+      backoffEl = document.createElement('div')
+      backoffEl.id = 'backoff-section'
+      backoffEl.style.cssText = 'margin-top:8px; font-size:11px; color:#c0392b'
+      document.body.appendChild(backoffEl)
+    }
+    const entries = Object.entries(backoffs)
+    if (entries.length === 0) {
+      backoffEl.innerHTML = ''
+    } else {
+      backoffEl.innerHTML = entries.map(([key, until]) => {
+        const horas = Math.ceil((until - Date.now()) / 3600000)
+        return `<div>⏸ <b>${key}</b> en backoff (~${horas}h) <button data-key="${key}" style="font-size:10px;cursor:pointer;margin-left:4px">Limpiar</button></div>`
+      }).join('')
+      backoffEl.querySelectorAll('button[data-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          chrome.runtime.sendMessage({ action: 'clear-backoff', source_key: btn.dataset.key }, () => {
+            cargarEstado()
+          })
+        })
+      })
+    }
   })
 }
 

@@ -343,7 +343,10 @@ async function scrapeOpenCart(tienda, logLines = []) {
 // ── OpenCart vía Tab (bypass 403 — la sesión del tab lleva las cookies) ───────
 // Idéntico a scrapeOpenCart pero obtiene el HTML desde dentro de un tab Chrome,
 // heredando las cookies de sesión que el servidor estableció al cargar la página.
-const CHALLENGE_KW_OC = ['bot verification', 'just a moment', 'attention required', 'checking your', 'verificando']
+// CF titles que indican JS challenge auto-resolvible (sin CAPTCHA)
+const CF_AUTO_KW    = ['un momento', 'just a moment']
+// CF titles que requieren interacción humana (CAPTCHA)
+const CF_CAPTCHA_KW = ['attention required', 'bot verification', 'checking your', 'verificando']
 
 async function scrapeOpenCartViaTab(tienda, logLines = []) {
   const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
@@ -361,55 +364,66 @@ async function scrapeOpenCartViaTab(tienda, logLines = []) {
     })
   }
 
+  // Esperar a que el tab cargue y NO sea una página de challenge CF
+  // CF invisible JS challenge: carga "Un momento…" → auto-redirige a la real en ~2-5s
+  async function waitTabReady(tabId, timeoutMs = 45000) {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      const ok = await waitTabComplete(tabId, Math.max(1000, deadline - Date.now()))
+      if (!ok) return false
+      const t = await new Promise(r => chrome.tabs.get(tabId, r)).catch(() => null)
+      if (!t) return false
+      const title = (t.title || '').toLowerCase()
+      if (!CF_AUTO_KW.some(k => title.includes(k)) && !CF_CAPTCHA_KW.some(k => title.includes(k))) {
+        L(`[${tienda.source_key}] Página real: "${t.title}"`)
+        return true
+      }
+      if (CF_CAPTCHA_KW.some(k => title.includes(k))) {
+        // Necesita interacción humana — salir del loop y manejar fuera
+        L(`[${tienda.source_key}] CF CAPTCHA detectado`)
+        return 'captcha'
+      }
+      // CF auto challenge — esperar la siguiente carga (CF redirigirá sola)
+      L(`[${tienda.source_key}] CF invisible ("${t.title}") — esperando resolución automática...`)
+      await new Promise(r => setTimeout(r, 3000)) // pausa antes de volver a escuchar
+    }
+    return false
+  }
+
   // Abrir tab en background (sin robar el foco)
   L(`[${tienda.source_key}] Abriendo tab (bypass 403)...`)
   const tab = await new Promise(r => chrome.tabs.create({ url: tienda.base_url, active: false }, r))
   const tabId = tab.id
 
-  let ready = await waitTabComplete(tabId, 20000)
-  if (!ready) {
+  const readyState = await waitTabReady(tabId, 90000)
+  if (!readyState) {
     L(`[${tienda.source_key}] Tab timeout — abortando`)
     try { chrome.tabs.remove(tabId, () => {}) } catch {}
     return []
   }
 
-  // Comprobar si hay challenge CF
-  const tabInfo = await new Promise(r => chrome.tabs.get(tabId, r))
-  if (CHALLENGE_KW_OC.some(k => (tabInfo.title || '').toLowerCase().includes(k))) {
-    L(`[${tienda.source_key}] CF challenge detectado — activando tab para resolución manual`)
+  if (readyState === 'captcha') {
+    // CF CAPTCHA manual
+    const tabInfo2 = await new Promise(r => chrome.tabs.get(tabId, r))
+    L(`[${tienda.source_key}] Activando tab para resolución manual CF`)
     chrome.tabs.update(tabId, { active: true })
-    chrome.windows.update(tabInfo.windowId, { focused: true })
+    chrome.windows.update(tabInfo2.windowId, { focused: true })
     chrome.notifications.create('cf-tab-' + tienda.source_key, {
       type: 'basic', iconUrl: 'icon.png',
       title: '🔓 Chollo Padel — ' + tienda.nombre,
-      message: 'Cloudflare detectado. Si ves un checkbox "Verificar que eres humano", haz clic. La pestaña se cerrará sola.',
+      message: 'Cloudflare CAPTCHA detectado. Haz clic en el checkbox "Verificar que eres humano". La pestaña se cerrará sola.',
       priority: 2,
     })
-    // Esperar resolución (onUpdated sin challenge) o cierre manual
-    ready = await new Promise(resolve => {
-      let resolved = false
-      function cleanup() { if (!resolved) { resolved = true; chrome.tabs.onUpdated.removeListener(onU); chrome.tabs.onRemoved.removeListener(onR) } }
-      function onU(id, info) {
-        if (id !== tabId) return
-        chrome.tabs.get(tabId, t => {
-          if (chrome.runtime.lastError) { cleanup(); resolve(false); return }
-          if (t.status === 'complete' && !CHALLENGE_KW_OC.some(k => (t.title || '').toLowerCase().includes(k))) {
-            cleanup(); resolve(true)
-          }
-        })
-      }
-      function onR(id) { if (id === tabId) { cleanup(); resolve(false) } }
-      chrome.tabs.onUpdated.addListener(onU)
-      chrome.tabs.onRemoved.addListener(onR)
-    })
+    const captchaReady = await waitTabReady(tabId, 120000)
     try { chrome.notifications.clear('cf-tab-' + tienda.source_key, () => {}) } catch {}
-    if (!ready) {
+    if (!captchaReady || captchaReady === 'captcha') {
       try { chrome.tabs.remove(tabId, () => {}) } catch {}
       return []
     }
   }
 
-  // Scrapear páginas usando fetch desde dentro del tab (misma origin → cookies incluidas)
+  // Scrapear páginas navegando el tab (Sec-Fetch-Mode: navigate, no fetch/XHR)
+  // El servidor bloquea fetch() pero permite navegación real del browser.
   const productos = []
   const urlsVistas = new Set()
   let page = 1
@@ -417,41 +431,102 @@ async function scrapeOpenCartViaTab(tienda, logLines = []) {
 
   while (true) {
     const url = page === 1 ? tienda.base_url : `${tienda.base_url}?page=${page}`
-    L(`[${tienda.source_key}] Tab fetch pág ${page}${totalPages ? '/' + totalPages : ''}: ${url}`)
+    L(`[${tienda.source_key}] Tab nav pág ${page}${totalPages ? '/' + totalPages : ''}: ${url}`)
 
+    // Obtener HTML:
+    // - Pág 1: ya cargada en el tab → outerHTML
+    // - Pág 2+: fetch desde dentro del tab (mismo origen, CF ya resuelto → sin 403)
+    //   mucho más rápido que redirigir el tab entero (evita recargar 4-5 MB de assets)
     let html
-    try {
-      const injected = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: async (fetchUrl) => {
-          try {
-            const r = await fetch(fetchUrl, { credentials: 'include', headers: { Accept: 'text/html,application/xhtml+xml' } })
-            if (!r.ok) return { error: `HTTP ${r.status}`, html: null }
-            return { html: await r.text(), error: null }
-          } catch (e) {
-            return { error: e.message, html: null }
-          }
-        },
-        args: [url],
-      })
-      const res = injected?.[0]?.result
-      if (!res || res.error) { L(`[${tienda.source_key}] Error pág ${page}: ${res?.error || 'sin resultado'}`); break }
-      html = res.html
-    } catch (e) {
-      L(`[${tienda.source_key}] executeScript error pág ${page}: ${e.message}`)
-      break
+    if (page === 1) {
+      await sleep(500)
+      try {
+        L(`[${tienda.source_key}] executeScript pág 1...`)
+        const injected = await chrome.scripting.executeScript({
+          target: { tabId, allFrames: false },
+          func: () => {
+            try { return document.documentElement.outerHTML } catch (e) { return '__ERR__:' + e.message }
+          },
+        })
+        html = injected?.[0]?.result
+        L(`[${tienda.source_key}] HTML resultado: string(${html?.length ?? 0}) prev="${(html||'').slice(0,80).replace(/\n/g,' ')}"`)
+        if (!html || html.startsWith('__ERR__')) { L(`[${tienda.source_key}] outerHTML inválido pág 1`); break }
+      } catch (e) {
+        L(`[${tienda.source_key}] executeScript pág 1 error: ${e?.message ?? String(e)}`)
+        break
+      }
+    } else {
+      // fetch desde dentro del tab — mismo origen con cookie cf_clearance ya resuelta
+      // Si el servidor rate-limita (403), fallback a navegación real del tab
+      let usedFetch = true
+      try {
+        L(`[${tienda.source_key}] fetch interno pág ${page}...`)
+        const injected = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: async (fetchUrl) => {
+            try {
+              const r = await fetch(fetchUrl, {
+                credentials: 'include',
+                headers: { Accept: 'text/html,application/xhtml+xml' },
+              })
+              if (!r.ok) return { error: `HTTP ${r.status}`, html: null }
+              return { html: await r.text(), error: null }
+            } catch (e) { return { error: e.message, html: null } }
+          },
+          args: [url],
+        })
+        const res = injected?.[0]?.result
+        if (!res || res.error) {
+          L(`[${tienda.source_key}] fetch interno pág ${page} error: ${res?.error} — reintentando con nav`)
+          usedFetch = false
+        } else {
+          html = res.html
+          L(`[${tienda.source_key}] fetch interno pág ${page}: string(${html?.length ?? 0})`)
+        }
+      } catch (e) {
+        L(`[${tienda.source_key}] executeScript fetch pág ${page}: ${e?.message} — reintentando con nav`)
+        usedFetch = false
+      }
+
+      // Fallback: navegar el tab si el fetch falló (CF rate-limit o 403)
+      if (!usedFetch) {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (u) => { window.location.href = u },
+            args: [url],
+          })
+        } catch (e) { L(`[${tienda.source_key}] Error nav fallback pág ${page}: ${e.message}`); break }
+        const navReady = await waitTabComplete(tabId, 45000)
+        if (!navReady) { L(`[${tienda.source_key}] Timeout nav fallback pág ${page}`); break }
+        await sleep(500)
+        try {
+          const injected = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            func: () => document.documentElement.outerHTML,
+          })
+          html = injected?.[0]?.result
+          if (!html) { L(`[${tienda.source_key}] outerHTML vacío nav fallback pág ${page}`); break }
+          L(`[${tienda.source_key}] nav fallback pág ${page}: string(${html.length})`)
+        } catch (e) { L(`[${tienda.source_key}] outerHTML nav fallback error pág ${page}: ${e.message}`); break }
+      }
     }
 
     if (totalPages === null) {
-      totalPages = _detectOpenCartTotalPages(html, 1)
+      // Fallback alto: si no se detecta paginación, intentar hasta 36 páginas
+      // (el dedup por URL + ausencia de product-thumb cortarán antes si no hay más)
+      totalPages = _detectOpenCartTotalPages(html, 36)
       L(`[${tienda.source_key}] Total páginas: ${totalPages}`)
     }
 
+    const prevCount = urlsVistas.size
     const found = _parseOpenCartHtml(html, urlsVistas, tienda)
     productos.push(...found)
+    const noNewUrls = urlsVistas.size === prevCount  // todas las URLs ya vistas → fin
+    const noProductThumb = !html.includes('product-thumb')
     L(`[${tienda.source_key}]  → ${found.length} productos en pág ${page}/${totalPages} (acum: ${productos.length})`)
 
-    if (page >= totalPages || found.length === 0) break
+    if (page >= totalPages || noNewUrls || noProductThumb) break
     page++
     await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
   }
@@ -623,6 +698,7 @@ async function scrapeWooCommerceViaTab(tienda, logLines = []) {
   const tab = await new Promise(r =>
     chrome.tabs.create({ url: tienda.base_url + '/', active: true }, r)
   )
+  if (!tab) { L(`[${tienda.source_key}] Error interno: chrome.tabs.create devolvió undefined — saltando sin backoff`); return null }
   const tabId = tab.id
   chrome.windows.update(tab.windowId, { focused: true })
 
@@ -1099,6 +1175,10 @@ async function runScraper() {
             : tienda.type === 'woocommerce-tab'
               ? await scrapeWooCommerceViaTab(tienda, logLines)
               : await scrapeWooCommerce(tienda, logLines)
+        if (productos === null) {
+          logE(`[${tienda.source_key}] Error interno Chrome (tab=null) — saltando sin activar backoff`)
+          continue
+        }
         if (productos.length === 0) {
           logE(`[${tienda.source_key}] 0 productos — posible bloqueo o tienda vacía`)
           if (tienda.backoffOnFail) await setBackoff(tienda.source_key)
@@ -1196,10 +1276,22 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true
   }
   if (msg.action === 'get-status') {
-    chrome.storage.local.get(
-      ['status', 'lastRun', 'lastResult', 'lastMatched', 'lastTotal'],
-      data => sendResponse(data)
-    )
+    // Incluir info de backoff activo en la respuesta
+    const keys = ['status', 'lastRun', 'lastResult', 'lastMatched', 'lastTotal',
+      ...TIENDAS.filter(t => t.backoffOnFail).map(t => `backoff_${t.source_key}`)]
+    chrome.storage.local.get(keys, data => {
+      const backoffs = {}
+      for (const t of TIENDAS.filter(t => t.backoffOnFail)) {
+        const until = data[`backoff_${t.source_key}`] || 0
+        if (until > Date.now()) backoffs[t.source_key] = until
+      }
+      sendResponse({ ...data, backoffs })
+    })
+    return true
+  }
+  if (msg.action === 'clear-backoff') {
+    const key = msg.source_key
+    chrome.storage.local.remove(`backoff_${key}`, () => sendResponse({ ok: true }))
     return true
   }
 })
