@@ -65,7 +65,7 @@ const TIENDAS = [
     source_id:  19,
     nombre:     'Tienda PadelPoint',
     base_url:   'https://www.tiendapadelpoint.com/palas-de-padel',
-    type:       'opencart',
+    type:       'opencart-tab',  // HTTP 403 en fetch directo → usar tab para heredar cookies de sesión
     price_min:  30,
   },
 ]

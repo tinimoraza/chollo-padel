@@ -142,6 +142,8 @@ export async function GET() {
   // la query y nunca llegaban a evaluarse en los guards/ratio -> ningun chollo
   // de esas tiendas podia aparecer aunque el precio fuera el mas barato.
   // Fix: paginar en bloques de 1000 hasta agotar los resultados.
+  // 2026-07-30: límite subido de 6000→21000 (8150 snaps reales en 48h;
+  // scrapers de extensión corren antes del pipeline principal y quedaban fuera).
   const PAGE_SIZE = 1000
   function fetchPage(from: number, to: number) {
     return supabaseAdmin
@@ -167,7 +169,7 @@ export async function GET() {
   }
 
   const snapshots: any[] = []
-  for (let from = 0; from <= 5000; from += PAGE_SIZE) {
+  for (let from = 0; from <= 20000; from += PAGE_SIZE) {
     const { data: page, error } = await fetchPage(from, from + PAGE_SIZE - 1)
     if (error) {
       return NextResponse.json({ error: 'Error cargando chollos', detail: error.message }, { status: 500 })

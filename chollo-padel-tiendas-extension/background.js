@@ -241,10 +241,59 @@ function aplicarIVA(p) {
 
 function stripTags(s) { return (s || '').replace(/<[^>]+>/g, '').trim() }
 
+// ── Helper compartido: parsear un bloque HTML de página OpenCart ──────────────
+// Devuelve los productos encontrados (nuevos, no ya en urlsVistas).
+function _parseOpenCartHtml(html, urlsVistas, tienda) {
+  const found = []
+  const parts = html.split(/class="product-thumb[^"]*"/)
+  for (let i = 1; i < parts.length; i++) {
+    const block = parts[i].split(/class="product-thumb[^"]*"/)[0]
+    const nameBlock = block.match(/class="[^"]*\bname\b[^"]*"[\s\S]{0,500}?<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/)
+    if (!nameBlock) continue
+    const href = nameBlock[1]
+    if (urlsVistas.has(href)) continue
+    urlsVistas.add(href)
+    const title = stripTags(nameBlock[2])
+    if (!title.toLowerCase().startsWith('pala ')) continue
+    if (title.toLowerCase().includes('pickleball')) continue
+    let price = NaN, original = NaN
+    const priceNewM = block.match(/class="[^"]*price-new[^"]*"[^>]*>([\s\S]*?)<\//)
+    const priceOldM = block.match(/class="[^"]*price-old[^"]*"[^>]*>([\s\S]*?)<\//)
+    const priceM    = block.match(/class="[^"]*\bprice\b[^"]*"[^>]*>([\s\S]*?)<\//)
+    if (priceNewM) {
+      price    = parsePriceES(stripTags(priceNewM[1]))
+      original = priceOldM ? parsePriceES(stripTags(priceOldM[1])) : NaN
+    } else if (priceM) {
+      const txt = stripTags(priceM[1])
+      const ms  = [...txt.matchAll(/([\d.,]+)\s*€/g)]
+        .map(m => parsePriceES(m[0])).filter(n => !isNaN(n) && n > 0)
+      if (ms.length >= 2) { price = Math.min(...ms); original = Math.max(...ms) }
+      else if (ms.length === 1) price = ms[0]
+    }
+    if (isNaN(price) || price < tienda.price_min) continue
+    const finalPrice    = aplicarIVA(price)
+    const finalOriginal = (!isNaN(original) && original > price) ? aplicarIVA(original) : null
+    const imgM  = block.match(/data-src="([^"]+)"|<img[^>]+src="([^"]+)"/)
+    const rawImg = imgM ? (imgM[1] || imgM[2] || '') : ''
+    const image  = rawImg && !rawImg.startsWith('data:') ? rawImg.split('?')[0] : null
+    found.push({ title, price: finalPrice, precio_original: finalOriginal, url: href, image, sku: null })
+  }
+  return found
+}
+
+// ── Helper: detectar nº de páginas en HTML paginado de OpenCart ───────────────
+function _detectOpenCartTotalPages(html, fallback = 36) {
+  const pagBlock = html.match(/class="[^"]*pagination[^"]*"[\s\S]{0,3000}/)
+  const nums = pagBlock
+    ? [...pagBlock[0].matchAll(/[?&]page=(\d+)/g)].map(m => parseInt(m[1])).filter(n => n > 0)
+    : []
+  return nums.length ? Math.max(...nums) : fallback
+}
+
 async function scrapeOpenCart(tienda, logLines = []) {
   const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
   const productos = []
-  const urlsVistas = new Set()   // dedup por URL a través de páginas
+  const urlsVistas = new Set()
   let page = 1
   let totalPages = null
   let prevHtmlLength = 0
@@ -268,80 +317,147 @@ async function scrapeOpenCart(tienda, logLines = []) {
       break
     }
 
-    // Parar si el HTML es idéntico al de la página anterior (paginación circular)
     if (html.length === prevHtmlLength) {
       L(`[${tienda.source_key}] HTML idéntico a pág anterior — fin paginación (pág ${page})`)
       break
     }
     prevHtmlLength = html.length
 
-    // Detectar total páginas — busca en el bloque de paginación el mayor ?page=N
     if (totalPages === null) {
-      const pagBlock = html.match(/class="[^"]*pagination[^"]*"[\s\S]{0,3000}/)
-      const nums = pagBlock
-        ? [...pagBlock[0].matchAll(/[?&]page=(\d+)/g)].map(m => parseInt(m[1])).filter(n => n > 0)
-        : []
-      totalPages = nums.length ? Math.max(...nums) : 36
+      totalPages = _detectOpenCartTotalPages(html)
       L(`[${tienda.source_key}] Total páginas: ${totalPages}`)
     }
 
-    // Partir el HTML por bloques product-thumb (regex flexible — admite clases extra)
-    const parts = html.split(/class="product-thumb[^"]*"/)
-    let count = 0
+    const found = _parseOpenCartHtml(html, urlsVistas, tienda)
+    productos.push(...found)
+    L(`[${tienda.source_key}]  → ${found.length} productos en pág ${page}/${totalPages} (acum: ${productos.length})`)
 
-    for (let i = 1; i < parts.length; i++) {
-      // Tomar solo hasta el siguiente product-thumb para no mezclar datos
-      const block = parts[i].split(/class="product-thumb[^"]*"/)[0]
-
-      // Título y URL: buscar dentro de class="name"
-      const nameBlock = block.match(/class="[^"]*\bname\b[^"]*"[\s\S]{0,500}?<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/)
-      if (!nameBlock) continue
-      const href  = nameBlock[1]
-      // Dedup por URL (el HTML es acumulativo: cada página incluye las anteriores)
-      if (urlsVistas.has(href)) continue
-      urlsVistas.add(href)
-      const title = stripTags(nameBlock[2])
-      if (!title.toLowerCase().startsWith('pala ')) continue
-      if (title.toLowerCase().includes('pickleball')) continue
-
-      // Precios
-      let price = NaN, original = NaN
-      const priceNewM = block.match(/class="[^"]*price-new[^"]*"[^>]*>([\s\S]*?)<\//)
-      const priceOldM = block.match(/class="[^"]*price-old[^"]*"[^>]*>([\s\S]*?)<\//)
-      const priceM    = block.match(/class="[^"]*\bprice\b[^"]*"[^>]*>([\s\S]*?)<\//)
-
-      if (priceNewM) {
-        price    = parsePriceES(stripTags(priceNewM[1]))
-        original = priceOldM ? parsePriceES(stripTags(priceOldM[1])) : NaN
-      } else if (priceM) {
-        const txt = stripTags(priceM[1])
-        const ms  = [...txt.matchAll(/([\d.,]+)\s*€/g)]
-          .map(m => parsePriceES(m[0])).filter(n => !isNaN(n) && n > 0)
-        if (ms.length >= 2) { price = Math.min(...ms); original = Math.max(...ms) }
-        else if (ms.length === 1) price = ms[0]
-      }
-
-      if (isNaN(price) || price < tienda.price_min) continue
-
-      const finalPrice    = aplicarIVA(price)
-      const finalOriginal = (!isNaN(original) && original > price) ? aplicarIVA(original) : null
-
-      // Imagen
-      const imgM  = block.match(/data-src="([^"]+)"|<img[^>]+src="([^"]+)"/)
-      const rawImg = imgM ? (imgM[1] || imgM[2] || '') : ''
-      const image  = rawImg && !rawImg.startsWith('data:') ? rawImg.split('?')[0] : null
-
-      productos.push({ title, price: finalPrice, precio_original: finalOriginal, url: href, image, sku: null })
-      count++
-    }
-
-    L(`[${tienda.source_key}]  → ${count} productos en pág ${page}/${totalPages} (acum: ${productos.length})`)
-
-    if (page >= totalPages || parts.length <= 1) break
+    if (page >= totalPages || found.length === 0) break
     page++
     await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
   }
 
+  return productos
+}
+
+// ── OpenCart vía Tab (bypass 403 — la sesión del tab lleva las cookies) ───────
+// Idéntico a scrapeOpenCart pero obtiene el HTML desde dentro de un tab Chrome,
+// heredando las cookies de sesión que el servidor estableció al cargar la página.
+const CHALLENGE_KW_OC = ['bot verification', 'just a moment', 'attention required', 'checking your', 'verificando']
+
+async function scrapeOpenCartViaTab(tienda, logLines = []) {
+  const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
+
+  // Esperar a que un tab esté en status=complete, con timeout
+  function waitTabComplete(tabId, timeoutMs = 20000) {
+    return new Promise(resolve => {
+      let done = false
+      const timer = setTimeout(() => { if (!done) { done = true; chrome.tabs.onUpdated.removeListener(fn); resolve(false) } }, timeoutMs)
+      function fn(id, info) {
+        if (id !== tabId || info.status !== 'complete') return
+        if (!done) { done = true; clearTimeout(timer); chrome.tabs.onUpdated.removeListener(fn); resolve(true) }
+      }
+      chrome.tabs.onUpdated.addListener(fn)
+    })
+  }
+
+  // Abrir tab en background (sin robar el foco)
+  L(`[${tienda.source_key}] Abriendo tab (bypass 403)...`)
+  const tab = await new Promise(r => chrome.tabs.create({ url: tienda.base_url, active: false }, r))
+  const tabId = tab.id
+
+  let ready = await waitTabComplete(tabId, 20000)
+  if (!ready) {
+    L(`[${tienda.source_key}] Tab timeout — abortando`)
+    try { chrome.tabs.remove(tabId, () => {}) } catch {}
+    return []
+  }
+
+  // Comprobar si hay challenge CF
+  const tabInfo = await new Promise(r => chrome.tabs.get(tabId, r))
+  if (CHALLENGE_KW_OC.some(k => (tabInfo.title || '').toLowerCase().includes(k))) {
+    L(`[${tienda.source_key}] CF challenge detectado — activando tab para resolución manual`)
+    chrome.tabs.update(tabId, { active: true })
+    chrome.windows.update(tabInfo.windowId, { focused: true })
+    chrome.notifications.create('cf-tab-' + tienda.source_key, {
+      type: 'basic', iconUrl: 'icon.png',
+      title: '🔓 Chollo Padel — ' + tienda.nombre,
+      message: 'Cloudflare detectado. Si ves un checkbox "Verificar que eres humano", haz clic. La pestaña se cerrará sola.',
+      priority: 2,
+    })
+    // Esperar resolución (onUpdated sin challenge) o cierre manual
+    ready = await new Promise(resolve => {
+      let resolved = false
+      function cleanup() { if (!resolved) { resolved = true; chrome.tabs.onUpdated.removeListener(onU); chrome.tabs.onRemoved.removeListener(onR) } }
+      function onU(id, info) {
+        if (id !== tabId) return
+        chrome.tabs.get(tabId, t => {
+          if (chrome.runtime.lastError) { cleanup(); resolve(false); return }
+          if (t.status === 'complete' && !CHALLENGE_KW_OC.some(k => (t.title || '').toLowerCase().includes(k))) {
+            cleanup(); resolve(true)
+          }
+        })
+      }
+      function onR(id) { if (id === tabId) { cleanup(); resolve(false) } }
+      chrome.tabs.onUpdated.addListener(onU)
+      chrome.tabs.onRemoved.addListener(onR)
+    })
+    try { chrome.notifications.clear('cf-tab-' + tienda.source_key, () => {}) } catch {}
+    if (!ready) {
+      try { chrome.tabs.remove(tabId, () => {}) } catch {}
+      return []
+    }
+  }
+
+  // Scrapear páginas usando fetch desde dentro del tab (misma origin → cookies incluidas)
+  const productos = []
+  const urlsVistas = new Set()
+  let page = 1
+  let totalPages = null
+
+  while (true) {
+    const url = page === 1 ? tienda.base_url : `${tienda.base_url}?page=${page}`
+    L(`[${tienda.source_key}] Tab fetch pág ${page}${totalPages ? '/' + totalPages : ''}: ${url}`)
+
+    let html
+    try {
+      const injected = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async (fetchUrl) => {
+          try {
+            const r = await fetch(fetchUrl, { credentials: 'include', headers: { Accept: 'text/html,application/xhtml+xml' } })
+            if (!r.ok) return { error: `HTTP ${r.status}`, html: null }
+            return { html: await r.text(), error: null }
+          } catch (e) {
+            return { error: e.message, html: null }
+          }
+        },
+        args: [url],
+      })
+      const res = injected?.[0]?.result
+      if (!res || res.error) { L(`[${tienda.source_key}] Error pág ${page}: ${res?.error || 'sin resultado'}`); break }
+      html = res.html
+    } catch (e) {
+      L(`[${tienda.source_key}] executeScript error pág ${page}: ${e.message}`)
+      break
+    }
+
+    if (totalPages === null) {
+      totalPages = _detectOpenCartTotalPages(html, 1)
+      L(`[${tienda.source_key}] Total páginas: ${totalPages}`)
+    }
+
+    const found = _parseOpenCartHtml(html, urlsVistas, tienda)
+    productos.push(...found)
+    L(`[${tienda.source_key}]  → ${found.length} productos en pág ${page}/${totalPages} (acum: ${productos.length})`)
+
+    if (page >= totalPages || found.length === 0) break
+    page++
+    await sleep(CONFIG.DELAY_BETWEEN_PAGES_MS)
+  }
+
+  try { chrome.tabs.remove(tabId, () => {}) } catch {}
+  L(`[${tienda.source_key}] Tab cerrado. ${productos.length} productos obtenidos.`)
   return productos
 }
 
@@ -978,9 +1094,11 @@ async function runScraper() {
       try {
         const productos = tienda.type === 'opencart'
           ? await scrapeOpenCart(tienda, logLines)
-          : tienda.type === 'woocommerce-tab'
-            ? await scrapeWooCommerceViaTab(tienda, logLines)
-            : await scrapeWooCommerce(tienda, logLines)
+          : tienda.type === 'opencart-tab'
+            ? await scrapeOpenCartViaTab(tienda, logLines)
+            : tienda.type === 'woocommerce-tab'
+              ? await scrapeWooCommerceViaTab(tienda, logLines)
+              : await scrapeWooCommerce(tienda, logLines)
         if (productos.length === 0) {
           logE(`[${tienda.source_key}] 0 productos — posible bloqueo o tienda vacía`)
           if (tienda.backoffOnFail) await setBackoff(tienda.source_key)

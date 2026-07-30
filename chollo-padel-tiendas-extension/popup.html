@@ -81,6 +81,20 @@
       color: #9ca3af;
       text-align: center;
     }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 7px;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-secondary:disabled { color: #9ca3af; cursor: default; }
   </style>
 </head>
 <body>
@@ -104,6 +118,7 @@
   <hr class="divider">
 
   <button class="btn-primary" id="btn-run">▶ Ejecutar ahora</button>
+  <button class="btn-secondary" id="btn-log">📋 Copiar último log</button>
 
   <div class="note" id="note">Se ejecuta automáticamente cada 2h mientras Chrome esté abierto</div>
 

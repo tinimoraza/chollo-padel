@@ -56,3 +56,27 @@ document.getElementById('btn-run').addEventListener('click', () => {
   document.getElementById('btn-run').textContent = '⏳ Ejecutando…'
   chrome.runtime.sendMessage({ action: 'run-now' })
 })
+
+// Botón copiar último log
+document.getElementById('btn-log').addEventListener('click', () => {
+  const btn = document.getElementById('btn-log')
+  chrome.storage.local.get(['logs'], result => {
+    const logs = result.logs
+    if (!logs || logs.length === 0) {
+      btn.textContent = '⚠️ Sin logs aún'
+      setTimeout(() => { btn.textContent = '📋 Copiar último log' }, 2000)
+      return
+    }
+    const ultimo = logs[0]
+    const texto = `=== Ciclo ${ultimo.ts} ===\n${ultimo.texto}`
+    navigator.clipboard.writeText(texto).then(() => {
+      btn.textContent = '✅ Copiado al portapapeles'
+      setTimeout(() => { btn.textContent = '📋 Copiar último log' }, 2500)
+    }).catch(() => {
+      // Fallback: mostrar en el result-box para copiar manualmente
+      document.getElementById('lastResult').textContent = texto.substring(0, 200) + '…'
+      btn.textContent = '⚠️ Copia manual (ver abajo)'
+      setTimeout(() => { btn.textContent = '📋 Copiar último log' }, 3000)
+    })
+  })
+})
