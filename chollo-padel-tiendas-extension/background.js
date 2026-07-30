@@ -146,7 +146,7 @@ async function recalcularPriceReference(palaIds) {
     for (let i = 0; i < palaIds.length; i += CHUNK) {
       const chunk = palaIds.slice(i, i + CHUNK)
       const rows = await SB.get(
-        `price_history_log?select=pala_id,dia_scraped,precio` +
+        `price_history_log?select=pala_id,dia_scraped,precio,source_id` +
         `&pala_id=in.(${chunk.join(',')})` +
         `&source_id=neq.2` +
         `&disponible=eq.true` +
@@ -173,10 +173,19 @@ async function recalcularPriceReference(palaIds) {
     const refRows = []
 
     for (const [palaId, filas] of Object.entries(porPala)) {
-      // Día más reciente (primer elemento, ya ordenado desc)
-      const ultimoDia = filas[0].dia_scraped
-      const filasHoy  = filas.filter(r => r.dia_scraped === ultimoDia)
-      const precios   = filasHoy.map(r => Number(r.precio))
+      // Precio más reciente por fuente (ventana 7 días desde la fecha más reciente).
+      // Antes: solo los precios del ultimoDia — excluía fuentes que no corrieran ese día.
+      // Ahora: si tiendapadelpoint corrió ayer (vía extensión) y el pipeline falló hoy,
+      // su precio de ayer sigue contribuyendo a la media mientras esté dentro de 7 días.
+      const ultimoDia = filas[0].dia_scraped // filas ya ordenado desc
+      const cutoff = new Date(new Date(ultimoDia).getTime() - 7 * 24 * 60 * 60 * 1000)
+        .toISOString().slice(0, 10)
+      const porFuente = {}
+      for (const r of filas) {
+        if (r.dia_scraped < cutoff) break
+        if (!porFuente[r.source_id]) porFuente[r.source_id] = Number(r.precio)
+      }
+      const precios = Object.values(porFuente)
 
       const media     = parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2))
       const minPrecio = Math.min(...precios)
