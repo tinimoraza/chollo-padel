@@ -284,7 +284,11 @@ async function autoPromover(): Promise<number> {
 async function recalcularPrecios(): Promise<number> {
   if (DRY_RUN) return 0
 
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const since   = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  // Ventana para precio-por-fuente: 7 días. Evita que fuentes que no corrieron HOY
+  // (ej: tiendapadelpoint vía extensión corrió ayer, pipeline falló hoy) queden excluidas
+  // del cálculo cuando otras fuentes sí tienen datos del día de hoy.
+  const since7d = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   // Palas con actividad reciente en price_history_log
   const { data: rows } = await supabase
@@ -300,33 +304,29 @@ async function recalcularPrecios(): Promise<number> {
   let actualizadas = 0
 
   for (const palaId of palaIds) {
-    // Día más reciente con datos disponibles para esta pala (sin PadelZoom)
-    const { data: diaRow } = await supabase
-      .from('price_history_log')
-      .select('dia_scraped')
-      .eq('pala_id', palaId)
-      .neq('source_id', 2)
-      .eq('disponible', true)
-      .order('dia_scraped', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!diaRow) continue
-    const ultimoDia = diaRow.dia_scraped
-
-    // Todos los precios de ese día (mismos datos que el último punto del gráfico)
+    // Precio más reciente por fuente (últimos 7 días) en vez de "todos los del ultimoDia".
+    // Si tiendapadelpoint (vía extensión) corrió ayer y el pipeline no la procesó hoy,
+    // su precio de ayer sigue contribuyendo mientras esté dentro de la ventana de 7 días.
     const { data: logRows } = await supabase
       .from('price_history_log')
       .select('precio, source_id')
       .eq('pala_id', palaId)
-      .eq('dia_scraped', ultimoDia)
       .neq('source_id', 2)
       .eq('disponible', true)
+      .gte('dia_scraped', since7d)
+      .order('dia_scraped', { ascending: false })
 
     if (!logRows?.length) continue
 
-    const precios = logRows.map((r: any) => Number(r.precio))
-    // Media aritmética — igual que el gráfico: suma / n
+    // DISTINCT ON source_id: precio más reciente de cada fuente (rows ya viene desc)
+    const porFuente = new Map<number, number>()
+    for (const r of logRows as any[]) {
+      if (!porFuente.has(r.source_id)) porFuente.set(r.source_id, Number(r.precio))
+    }
+    const precios = Array.from(porFuente.values())
+    if (!precios.length) continue
+
+    // Media aritmética
     const precio_referencia = parseFloat((precios.reduce((a, b) => a + b, 0) / precios.length).toFixed(2))
     const precio_minimo = Math.min(...precios)
     const precio_maximo = Math.max(...precios)
