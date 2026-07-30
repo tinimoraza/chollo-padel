@@ -310,12 +310,23 @@ export async function GET() {
     ? chollos.reduce((max, c) => c.scraped_at > max ? c.scraped_at : max, chollos[0].scraped_at)
     : null
 
+  // Detectar si el pipeline está en curso: hay snapshots recientes (<1h) pero
+  // ninguno calificó como chollo. Esto puede ocurrir cuando el post-pipeline
+  // aún no ha recalculado price_reference con los nuevos datos.
+  const ahora = Date.now()
+  const tieneSnapsRecientes = snapshots.some(
+    s => ahora - new Date(s.scraped_at).getTime() < 60 * 60 * 1000
+  )
+  const actualizando = chollos.length === 0 && snapshots.length > 0 && tieneSnapsRecientes
+
   return NextResponse.json(
     {
       chollos,
-      total: chollos.length,      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
+      total: chollos.length,
+      chollos_count: chollos.filter(c => c.tag === 'CHOLLO').length,
       ofertas_count: chollos.filter(c => c.tag === 'OFERTA').length,
       updated_at: updatedAt,
+      actualizando,
       _dbg,
       _dbgMeta: { snapshots_raw: snapshots.length, after_dedup: byKey.size },
     },

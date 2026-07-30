@@ -115,6 +115,7 @@ export default function ChollosPage() {
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState<string | null>(null)
   const [filtro, setFiltro]       = useState<Filtro>('todos')
+  const [actualizando, setActualizando] = useState(false)
   const [totalStats, setTotalStats] = useState({ total: 0, chollos: 0, ofertas: 0, updated_at: null as string | null })
   const [selectedPala, setSelectedPala] = useState<Pala | null>(null)
   const [palaLoading, setPalaLoading]   = useState(false)
@@ -136,6 +137,7 @@ export default function ChollosPage() {
       .then(data => {
         if (data.error) throw new Error(data.error)
         setChollos(data.chollos ?? [])
+        setActualizando(data.actualizando ?? false)
         setTotalStats({
           total:      data.total ?? 0,
           chollos:    data.chollos_count ?? 0,
@@ -170,7 +172,7 @@ export default function ChollosPage() {
         </div>
 
         {/* Stats rapidos */}
-        {!loading && !error && (
+        {!loading && !error && !actualizando && (
           <div style={s.statsRow}>
             <div style={s.statBox}>
               <span style={s.statNum}>{totalStats.total}</span>
@@ -221,7 +223,17 @@ export default function ChollosPage() {
           </div>
         )}
 
-        {!loading && !error && totalStats.total === 0 && (
+        {!loading && !error && totalStats.total === 0 && actualizando && (
+          <div style={s.estado}>
+            <div style={s.spinner} />
+            <p style={s.estadoTxt}>Actualizando precios...</p>
+            <p style={{ ...s.estadoTxt, fontSize: 12, marginTop: 8, color: 'var(--faint)' }}>
+              El scraper está procesando las tiendas. Vuelve en unos minutos.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && totalStats.total === 0 && !actualizando && (
           <div style={s.estado}>
             <p style={s.estadoTxt}>No hay bajadas de precio significativas ahora mismo.</p>
             <p style={{ ...s.estadoTxt, fontSize: 12, marginTop: 8, color: 'var(--faint)' }}>
