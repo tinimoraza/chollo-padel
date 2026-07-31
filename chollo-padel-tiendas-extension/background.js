@@ -80,24 +80,26 @@ const SB = {
 // Se llama al arrancar y cada vez que se lance un ciclo.
 
 async function cargarAliases() {
-  const sourceKeys = TIENDAS.map(t => t.source_key).join(',')
-  const rows = await SB.get(
-    `producto_aliases?select=texto_original,pala_id,tienda&tienda=in.(${sourceKeys})&limit=5000`
-  )
-  for (const t of TIENDAS) {
-    aliasCache[t.source_key] = new Map()
-  }
-  for (const row of rows) {
-    const m = aliasCache[row.tienda]
-    if (m) m.set((row.texto_original || '').toLowerCase(), row.pala_id)
-  }
-  aliasCacheLoaded = true
+  // Cargamos por tienda en queries separadas para evitar el límite implícito
+  // de 1000 filas de Supabase (una sola query con IN() se truncaba a 1000).
   let total = 0
   for (const t of TIENDAS) {
-    const n = aliasCache[t.source_key]?.size ?? 0
+    aliasCache[t.source_key] = new Map()
+    try {
+      const rows = await SB.get(
+        `producto_aliases?select=texto_original,pala_id&tienda=eq.${t.source_key}&limit=2000`
+      )
+      for (const row of rows) {
+        aliasCache[t.source_key].set((row.texto_original || '').toLowerCase(), row.pala_id)
+      }
+    } catch (e) {
+      console.error(`[tiendas-ext] Error cargando aliases ${t.source_key}:`, e.message)
+    }
+    const n = aliasCache[t.source_key].size
     total += n
     console.log(`[tiendas-ext] Aliases cargados: ${t.source_key} → ${n}`)
   }
+  aliasCacheLoaded = true
   console.log(`[tiendas-ext] Total aliases en memoria: ${total}`)
 }
 
