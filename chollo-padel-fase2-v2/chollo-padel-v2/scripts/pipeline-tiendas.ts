@@ -300,11 +300,12 @@ async function flushMatches(pendientes: MatchPendiente[], sourceId: string, sour
     // price_history_log guarda 1 fila por (pala, tienda, día) para analizar
     // tendencias. El índice unique price_history_log_daily_uniq (pala_id,
     // source_id, dia_scraped) garantiza que ejecuciones repetidas del mismo
-    // día no dupliquen filas — se usa ignoreDuplicates en vez de insert puro.
+    // día no dupliquen filas. ignoreDuplicates:false → si el precio baja
+    // durante el día, el upsert lo sobreescribe con el valor más reciente.
     // Fallo aquí NO debe tirar el pipeline: solo se loggea.
     const { error: errHist } = await supabase
       .from('price_history_log')
-      .upsert(payloadSnaps, { onConflict: 'pala_id,source_id,dia_scraped', ignoreDuplicates: true })
+      .upsert(payloadSnaps, { onConflict: 'pala_id,source_id,dia_scraped', ignoreDuplicates: false })
     if (errHist) console.error(`  ⚠️  [history batch ${i}-${i + chunk.length}] ${errHist.message}`)
 
     const aliasesNuevos = chunk.filter(m => m.crearAlias).map(m => ({
