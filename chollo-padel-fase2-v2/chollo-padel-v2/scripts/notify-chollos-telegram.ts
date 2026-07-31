@@ -474,7 +474,24 @@ async function sincronizarYNotificar(
     }
 
     const palaInfo   = Array.isArray(p.palas) ? p.palas[0] : p.palas
-    const imagenUrl: string | null = palaInfo?.imagen_url ?? null
+    let   imagenUrl: string | null = palaInfo?.imagen_url ?? null
+
+    // Fallback: si el catálogo no tiene imagen, buscar en price_snapshots de cualquier tienda
+    if (!imagenUrl && p.pala_id) {
+      const { data: snap } = await supabase
+        .from('price_snapshots')
+        .select('imagen_url')
+        .eq('pala_id', p.pala_id)
+        .not('imagen_url', 'is', null)
+        .order('scraped_at', { ascending: false })
+        .limit(1)
+        .single()
+      if (snap?.imagen_url) {
+        imagenUrl = snap.imagen_url
+        console.log(`   🖼️  imagen fallback snapshot: ${imagenUrl}`)
+      }
+    }
+
     const descripcion = generarDescripcion(palaInfo)
 
     // Generar tarjeta-imagen y enviar como foto única con caption de enlace
