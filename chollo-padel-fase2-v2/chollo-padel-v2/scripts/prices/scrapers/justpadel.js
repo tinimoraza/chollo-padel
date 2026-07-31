@@ -18,8 +18,10 @@ const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'bal', 'tas', 'schoen', 'cap', 'kleding']
 
 function isPala(p) {
-  // No filtramos por product_type — la tienda cambia el valor con frecuencia.
-  // Nos apoyamos en el título y el precio mínimo (price_min: 30).
+  // Filtramos por tag "Rackets" — más estable que product_type (que la tienda cambia).
+  // La tienda usa este tag consistentemente en sus palas de pádel.
+  const tags = (p.tags || []).map(t => t.toLowerCase())
+  if (!tags.includes('rackets')) return false
   const t = p.title.toLowerCase()
   return !EXCLUIR.some(w => t.includes(w))
 }
