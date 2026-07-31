@@ -83,10 +83,23 @@ async function sendTelegramPhoto(imageUrl: string, caption?: string): Promise<bo
 
 async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-    if (!res.ok) return null
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': new URL(url).origin + '/',
+      },
+    })
+    if (!res.ok) {
+      console.warn(`   ⚠️  fetchImageBuffer ${res.status}: ${url}`)
+      return null
+    }
     return Buffer.from(await res.arrayBuffer())
-  } catch { return null }
+  } catch (e: any) {
+    console.warn(`   ⚠️  fetchImageBuffer error: ${e?.message} — ${url}`)
+    return null
+  }
 }
 
 function xmlEsc(s: string): string {
