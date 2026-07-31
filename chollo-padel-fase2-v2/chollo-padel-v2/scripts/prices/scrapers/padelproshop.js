@@ -48,7 +48,11 @@ function extractFromHtml(html) {
     let image = imgMatch ? imgMatch[0] : null
     if (image && image.startsWith('//')) image = `https:${image}`
 
-    items.push({ title, price, precio_original: original, url, image })
+    // Stock: detectar "Agotado" / "Sold Out" / "Sin stock" en el card
+    const chunkLower = chunk.toLowerCase()
+    const disponible = !/agotado|sold.?out|sin\s+stock|no\s+disponible/.test(chunkLower)
+
+    items.push({ title, price, precio_original: original, url, image, disponible })
   }
 
   return items
