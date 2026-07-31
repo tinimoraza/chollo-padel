@@ -254,7 +254,13 @@ function _parseOpenCartHtml(html, urlsVistas, tienda) {
     if (urlsVistas.has(href)) continue
     urlsVistas.add(href)
     const title = stripTags(nameBlock[2])
-    if (!title.toLowerCase().startsWith('pala ')) continue
+    // tienda.pala_prefix=true → títulos deben empezar por "Pala " (ej: tiendapadelpoint)
+    // Sin pala_prefix → usar esPala() de config.js (filtra accesorios por EXCLUIR_TITULOS)
+    if (tienda.pala_prefix) {
+      if (!title.toLowerCase().startsWith('pala ')) continue
+    } else {
+      if (!esPala(title)) continue
+    }
     if (title.toLowerCase().includes('pickleball')) continue
     let price = NaN, original = NaN
     const priceNewM = block.match(/class="[^"]*price-new[^"]*"[^>]*>([\s\S]*?)<\//)
@@ -282,10 +288,12 @@ function _parseOpenCartHtml(html, urlsVistas, tienda) {
 }
 
 // ── Helper: detectar nº de páginas en HTML paginado de OpenCart ───────────────
-function _detectOpenCartTotalPages(html, fallback = 36) {
+function _detectOpenCartTotalPages(html, fallback = 36, pageStyle = 'query') {
   const pagBlock = html.match(/class="[^"]*pagination[^"]*"[\s\S]{0,3000}/)
+  // query: ?page=N (tiendapadelpoint) | path: /page/N/ (originalpadel)
+  const pattern = pageStyle === 'path' ? /\/page\/(\d+)\//g : /[?&]page=(\d+)/g
   const nums = pagBlock
-    ? [...pagBlock[0].matchAll(/[?&]page=(\d+)/g)].map(m => parseInt(m[1])).filter(n => n > 0)
+    ? [...pagBlock[0].matchAll(pattern)].map(m => parseInt(m[1])).filter(n => n > 0)
     : []
   return nums.length ? Math.max(...nums) : fallback
 }
@@ -430,7 +438,12 @@ async function scrapeOpenCartViaTab(tienda, logLines = []) {
   let totalPages = null
 
   while (true) {
-    const url = page === 1 ? tienda.base_url : `${tienda.base_url}?page=${page}`
+    // page_style 'path' → /page/N/ (originalpadel); 'query' → ?page=N (tiendapadelpoint)
+    const url = page === 1
+      ? tienda.base_url
+      : tienda.page_style === 'path'
+        ? `${tienda.base_url}page/${page}/`
+        : `${tienda.base_url}?page=${page}`
     L(`[${tienda.source_key}] Tab nav pág ${page}${totalPages ? '/' + totalPages : ''}: ${url}`)
 
     // Obtener HTML:
@@ -515,7 +528,7 @@ async function scrapeOpenCartViaTab(tienda, logLines = []) {
     if (totalPages === null) {
       // Fallback alto: si no se detecta paginación, intentar hasta 36 páginas
       // (el dedup por URL + ausencia de product-thumb cortarán antes si no hay más)
-      totalPages = _detectOpenCartTotalPages(html, 36)
+      totalPages = _detectOpenCartTotalPages(html, 36, tienda.page_style || 'query')
       L(`[${tienda.source_key}] Total páginas: ${totalPages}`)
     }
 

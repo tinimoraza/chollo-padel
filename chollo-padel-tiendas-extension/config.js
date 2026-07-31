@@ -61,12 +61,24 @@ const TIENDAS = [
     price_min:  30,
   },
   {
-    source_key: 'tiendapadelpoint',
-    source_id:  19,
-    nombre:     'Tienda PadelPoint',
-    base_url:   'https://www.tiendapadelpoint.com/palas-de-padel',
-    type:       'opencart-tab',  // HTTP 403 en fetch directo → usar tab para heredar cookies de sesión
+    source_key:  'tiendapadelpoint',
+    source_id:   19,
+    nombre:      'Tienda PadelPoint',
+    base_url:    'https://www.tiendapadelpoint.com/palas-de-padel',
+    type:        'opencart-tab',  // HTTP 403 en fetch directo → usar tab para heredar cookies de sesión
+    price_min:   30,
+    pala_prefix: true,  // Sus títulos empiezan por "Pala " — filtro estricto
+    // page_style no aplica: usa ?page=N (default 'query')
+  },
+  {
+    source_key: 'originalpadel',
+    source_id:  42,
+    nombre:     'Original Padel',
+    base_url:   'https://originalpadel.com/es/palas-de-padel/',
+    type:       'opencart-tab',  // CF bloquea Playwright → scraping via tab Chrome
+    page_style: 'path',         // Paginación: /page/N/ en vez de ?page=N
     price_min:  30,
+    // pala_prefix: false (default) → usa esPala() de EXCLUIR_TITULOS
   },
 ]
 
