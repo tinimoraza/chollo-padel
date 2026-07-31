@@ -1,9 +1,9 @@
 // scripts/prices/scrapers/justpadel.js
 // Just Padel — Shopify JSON API
-// NOTA (fix 2026-06-18): la tienda se ha re-orientado a mercado NL (Marketmix B.V.),
-// la colección "palas-de-padel" ya no existe/está vacía. Usamos /products.json en
-// la raíz (sin colección) y filtramos por product_type === "Rackets", que es el
-// campo que Shopify devuelve para las palas/raquetas en este catálogo.
+// NOTA (fix 2026-07-31): usar colección /es-es/collections/padelrackets en lugar de
+// /products.json raíz. La raíz devuelve todo el catálogo (~249 productos mezclados);
+// la colección devuelve directamente las ~168 palas sin necesidad de filtrar por
+// product_type (inconsistente) ni tags.
 // Paginación: ?limit=250&page=N
 
 const { detectarRebajasYCodigoViaHtml } = require('./_discount-utils.js')
@@ -18,10 +18,8 @@ const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'bal', 'tas', 'schoen', 'cap', 'kleding']
 
 function isPala(p) {
-  // Filtramos por tag "Rackets" — más estable que product_type (que la tienda cambia).
-  // La tienda usa este tag consistentemente en sus palas de pádel.
-  const tags = (p.tags || []).map(t => t.toLowerCase())
-  if (!tags.includes('rackets')) return false
+  // La colección padelrackets ya filtra a palas. Esta función es segunda línea de
+  // defensa contra accesorios que puedan colarse (grips, bolsas...).
   const t = p.title.toLowerCase()
   return !EXCLUIR.some(w => t.includes(w))
 }
@@ -36,7 +34,7 @@ async function scrape() {
   let page = 1
 
   while (true) {
-    const url = `${BASE_URL}/products.json?limit=${LIMIT}&page=${page}`
+    const url = `${BASE_URL}/es-es/collections/padelrackets/products.json?limit=${LIMIT}&page=${page}`
     console.log(`[justpadel] Página ${page}: ${url}`)
 
     const res = await fetch(url, {
@@ -51,7 +49,7 @@ async function scrape() {
     const data = await res.json()
     const products = data.products ?? []
 
-    console.log(`[justpadel]  → ${products.length} productos (todas categorías)`)
+    console.log(`[justpadel]  → ${products.length} productos (colección padelrackets)`)
     if (products.length === 0) break
 
     for (const p of products) {
@@ -85,8 +83,7 @@ async function scrape() {
     await sleep(DELAY_MS)
   }
 
-  // Tienda Shopify JSON-only (sin colección de palas): petición HTML extra
-  // de solo lectura a la home, exclusivamente para código de descuento / rebajas.
+  // Petición HTML extra de solo lectura a la home, exclusivamente para código de descuento / rebajas.
   const { codigoDescuento, rebajasUrls } = await detectarRebajasYCodigoViaHtml(BASE_URL, BASE_URL)
   if (codigoDescuento) {
     console.log(`[justpadel] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
