@@ -18,7 +18,8 @@ const EXCLUIR = ['grip', 'overgrip', 'pelota', 'pelotas', 'bolsa', 'mochila',
   'bal', 'tas', 'schoen', 'cap', 'kleding']
 
 function isPala(p) {
-  if (p.product_type && p.product_type.toLowerCase() !== 'rackets') return false
+  // No filtramos por product_type — la tienda cambia el valor con frecuencia.
+  // Nos apoyamos en el título y el precio mínimo (price_min: 30).
   const t = p.title.toLowerCase()
   return !EXCLUIR.some(w => t.includes(w))
 }
