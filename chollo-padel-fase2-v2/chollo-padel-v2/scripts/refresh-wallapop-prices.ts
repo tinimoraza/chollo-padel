@@ -19,22 +19,35 @@ const THROTTLE_MS  = 150   // ms entre batches
 const STALE_HOURS  = 0.5   // refresh items no vistos en más de 30 min
 const HEADERS      = { 'Accept': 'application/json', 'MPlatform': 'WEB', 'Accept-Language': 'es-ES' }
 
-async function fetchItemPrice(externalId: string): Promise<{ price: number | null; sold: boolean; favorites: number }> {
+// Búsqueda recursiva de 'condition' en la respuesta JSON de la API de detalle
+// (la estructura varía entre versiones de la API de Wallapop)
+function findCondition(obj: any, depth = 0): string | undefined {
+  if (!obj || typeof obj !== 'object' || depth > 5) return undefined
+  if (typeof obj.condition === 'string' && obj.condition.length > 0) return obj.condition
+  for (const key of Object.keys(obj)) {
+    const found = findCondition(obj[key], depth + 1)
+    if (found) return found
+  }
+  return undefined
+}
+
+async function fetchItemPrice(externalId: string): Promise<{ price: number | null; sold: boolean; favorites: number; condition: string | null }> {
   try {
     const res = await fetch(`https://api.wallapop.com/api/v3/items/${externalId}`, { headers: HEADERS })
-    if (res.status === 404 || res.status === 410) return { price: null, sold: true, favorites: 0 }
-    if (!res.ok) return { price: null, sold: false, favorites: 0 }
+    if (res.status === 404 || res.status === 410) return { price: null, sold: true, favorites: 0, condition: null }
+    if (!res.ok) return { price: null, sold: false, favorites: 0, condition: null }
     const d = await res.json()
     // Vendido puede venir como flag en diferentes estructuras de respuesta
     const isSold = d?.flags?.sold === true
                 || d?.sold?.flag   === true
                 || d?.item?.flags?.sold === true
-    if (isSold) return { price: null, sold: true, favorites: 0 }
+    if (isSold) return { price: null, sold: true, favorites: 0, condition: null }
     const price     = d?.price?.cash?.amount ?? d?.item?.price?.cash?.amount ?? null
     const favorites = d?.counters?.favorites ?? 0
-    return { price, sold: false, favorites }
+    const condition = findCondition(d) ?? null
+    return { price, sold: false, favorites, condition }
   } catch {
-    return { price: null, sold: false, favorites: 0 }
+    return { price: null, sold: false, favorites: 0, condition: null }
   }
 }
 
@@ -73,7 +86,7 @@ async function main() {
     const batch = items.slice(i, i + BATCH_SIZE)
 
     await Promise.all(batch.map(async (item) => {
-      const { price, sold, favorites } = await fetchItemPrice(item.external_id)
+      const { price, sold, favorites, condition } = await fetchItemPrice(item.external_id)
 
       if (sold) {
         toDelete.push(item.external_id)
@@ -93,6 +106,11 @@ async function main() {
         console.log(`  💰 ${item.external_id}: ${precioAnterior}€ → ${price}€`)
       } else {
         unchanged++
+      }
+      // Actualizar condición si la API la devuelve — así si el vendedor la cambia
+      // queda reflejado en BD en el próximo refresh (sin esperar al scraper de búsqueda)
+      if (condition !== null) {
+        updates.condition = condition
       }
 
       await supabase

@@ -503,12 +503,19 @@ async function isWallapopActive(externalId: string, supabase: any, phrase?: stri
       const currentCondition: string | undefined = findCondition(data)
       if (currentCondition) console.log(`  [debug] condition encontrada: "${currentCondition}"`)
       if (currentCondition && !CONDICIONES_TOP.includes(currentCondition)) {
-        console.log(`  Condicion cambio a "${currentCondition}" (no aceptable) - descartado`)
-        // Actualizar BD para que futuras queries lo filtren desde el .in('condition', CONDICIONES_TOP)
+        console.log(`  Condicion cambio a "${currentCondition}" (no aceptable) - excluido permanentemente`)
+        // Actualizar condition en wallapop_cache (puede ser revertido por el scraper si la API de búsqueda tiene lag)
         supabase
           .from('wallapop_cache')
           .update({ condition: currentCondition })
           .eq('external_id', externalId)
+          .then(() => {})
+          .catch(() => {})
+        // Insertar en lista negra permanente — el scraper no toca esta tabla,
+        // así que el anuncio queda excluido del top aunque el scraper restaure la condición.
+        supabase
+          .from('wallapop_top_excludes')
+          .upsert({ external_id: externalId, reason: `condition: ${currentCondition}`, excluded_at: new Date().toISOString() }, { onConflict: 'external_id' })
           .then(() => {})
           .catch(() => {})
         return false
@@ -537,7 +544,7 @@ async function isWallapopActive(externalId: string, supabase: any, phrase?: stri
   }
 }
 
-async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
+async function buscarModelo(supabase: any, modelo: Modelo, excludedIds: Set<string>): Promise<any[]> {
   console.log(`\nBuscando "${modelo.nombre}" - frase: "${modelo.phrase}"`)
 
   // Solo anuncios vistos por el scraper en los últimos 7 días → precio fresco.
@@ -567,6 +574,8 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
 
   const antes = data.length
   const items: any[] = (data as any[]).filter(item => {
+    // Excluir anuncios en lista negra permanente
+    if (excludedIds.has(item.external_id)) return false
     if (EXCLUIR_SIEMPRE_RE.some(re => re.test(item.title))) return false
     // Descartar si el título menciona explícitamente un año ≤ 2023
     const mAño = item.title.match(/\b(20\d{2})\b/)
@@ -655,11 +664,18 @@ async function main() {
   }
   console.log(`  ${posicionesAnteriores.size} entradas en el top actual`)
 
+  // Cargar lista negra de anuncios excluidos permanentemente del top
+  const { data: excludesData } = await supabase
+    .from('wallapop_top_excludes')
+    .select('external_id')
+  const excludedIds = new Set<string>((excludesData ?? []).map((r: any) => r.external_id))
+  console.log(`  ${excludedIds.size} anuncios en lista negra permanente`)
+
   console.log(`\nProcesando ${MODELOS.length} modelos curados...`)
 
   const todasOportunidades: any[] = []
   for (const modelo of MODELOS) {
-    const ops = await buscarModelo(supabase, modelo)
+    const ops = await buscarModelo(supabase, modelo, excludedIds)
     todasOportunidades.push(...ops)
   }
 
