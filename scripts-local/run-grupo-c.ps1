@@ -21,7 +21,7 @@ foreach ($t in $tiendas) {
     $ts = Get-Date -Format "HH:mm:ss"
     "[C] $ts >> $t" | Out-File -FilePath $LogFile -Append -Encoding utf8
     try {
-        npx tsx scripts/pipeline-tiendas.ts $t --no-post 2>&1 | Out-File -FilePath $LogFile -Append -Encoding utf8
+        npx --yes tsx scripts/pipeline-tiendas.ts $t --no-post 2>&1 | Out-File -FilePath $LogFile -Append -Encoding utf8
     } catch {
         "[C] ERROR $t : $_" | Out-File -FilePath $LogFile -Append -Encoding utf8
     }

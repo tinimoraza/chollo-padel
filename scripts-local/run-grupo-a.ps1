@@ -1,6 +1,7 @@
 # run-grupo-a.ps1 — Grupo A: padelnuestro, time2padel, padelproshop, padelspain,
 #                            padeltienda, tennispoint, padelvice, stockpadel, starvie
-param([string]$LogFile = "C:\chollo-padel\pipeline-local.log")
+# Cada grupo usa su propio log para evitar colisiones de escritura simultánea.
+$LogFile = "C:\chollo-padel\pipeline-local-a.log"
 
 $WORKDIR = "C:\chollo-padel\chollo-padel-fase2-v2\chollo-padel-v2"
 Set-Location $WORKDIR
@@ -21,7 +22,7 @@ foreach ($t in $tiendas) {
     $ts = Get-Date -Format "HH:mm:ss"
     "[A] $ts >> $t" | Out-File -FilePath $LogFile -Append -Encoding utf8
     try {
-        npx tsx scripts/pipeline-tiendas.ts $t --no-post 2>&1 | Out-File -FilePath $LogFile -Append -Encoding utf8
+        npx --yes tsx scripts/pipeline-tiendas.ts $t --no-post 2>&1 | Out-File -FilePath $LogFile -Append -Encoding utf8
     } catch {
         "[A] ERROR $t : $_" | Out-File -FilePath $LogFile -Append -Encoding utf8
     }

@@ -34,6 +34,18 @@ $args_common = @("-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden")
 
 Log "Lanzando grupos A, B, C y Playwright en paralelo..."
 
+# ── Matar procesos zombie del run anterior ─────────────────────────────────────
+# Matar todos los PowerShell excepto el proceso actual (maestro anterior + subgrupos)
+Get-Process -Name "powershell" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Id -ne $PID } |
+    ForEach-Object {
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+# Matar node/npx que puedan tener logs bloqueados
+Get-Process -Name "node","npx" -ErrorAction SilentlyContinue |
+    ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Seconds 2
+
 # Cada grupo escribe a su propio log (sin colisiones de escritura simultánea).
 # El maestro los fusiona al final.
 "" | Out-File $LOG_A -Encoding utf8   # truncar logs anteriores
@@ -90,13 +102,13 @@ if (Test-Path $envFile) {
 }
 
 Log ">> post-pipeline (recalcular precios + match)"
-npx tsx scripts/post-pipeline.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
+npx --yes tsx scripts/post-pipeline.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
 
 Log ">> match segunda mano (wallapop_cache: wallapop + vinted)"
-npx tsx scripts/match-segunda-mano.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
+npx --yes tsx scripts/match-segunda-mano.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
 
 Log ">> notify-chollos-telegram"
-npx tsx scripts/notify-chollos-telegram.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
+npx --yes tsx scripts/notify-chollos-telegram.ts 2>&1 | Out-File -FilePath $LOG -Append -Encoding utf8
 
 Log "======================================================"
 Log "PIPELINE LOCAL END"
