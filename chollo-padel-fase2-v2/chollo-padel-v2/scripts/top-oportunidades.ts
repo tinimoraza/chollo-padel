@@ -490,11 +490,18 @@ async function isWallapopActive(externalId: string, supabase: any, phrase?: stri
       if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false
 
       // Comprobar si el vendedor cambió la condición del anuncio
-      const currentCondition: string | undefined =
-        data?.content?.condition ??
-        data?.item?.condition ??
-        data?.condition ??
-        undefined
+      // Búsqueda recursiva de 'condition' en la respuesta (estructura cambia entre versiones de la API)
+      function findCondition(obj: any, depth = 0): string | undefined {
+        if (!obj || typeof obj !== 'object' || depth > 5) return undefined
+        if (typeof obj.condition === 'string' && obj.condition.length > 0) return obj.condition
+        for (const key of Object.keys(obj)) {
+          const found = findCondition(obj[key], depth + 1)
+          if (found) return found
+        }
+        return undefined
+      }
+      const currentCondition: string | undefined = findCondition(data)
+      if (currentCondition) console.log(`  [debug] condition encontrada: "${currentCondition}"`)
       if (currentCondition && !CONDICIONES_TOP.includes(currentCondition)) {
         console.log(`  Condicion cambio a "${currentCondition}" (no aceptable) - descartado`)
         // Actualizar BD para que futuras queries lo filtren desde el .in('condition', CONDICIONES_TOP)
