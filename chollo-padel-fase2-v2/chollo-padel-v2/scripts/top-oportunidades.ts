@@ -471,7 +471,7 @@ function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
 }
 
-async function isWallapopActive(externalId: string, phrase?: string): Promise<boolean> {
+async function isWallapopActive(externalId: string, supabase: any, phrase?: string): Promise<boolean> {
   try {
     const res = await fetch(`https://api.wallapop.com/api/v3/items/${externalId}`, {
       headers: {
@@ -488,6 +488,24 @@ async function isWallapopActive(externalId: string, phrase?: string): Promise<bo
       if (data?.reserved?.flag === true) return false
       if (data?.sold?.flag === true) return false
       if (data?.item?.flags?.sold || data?.item?.flags?.reserved) return false
+
+      // Comprobar si el vendedor cambió la condición del anuncio
+      const currentCondition: string | undefined =
+        data?.content?.condition ??
+        data?.item?.condition ??
+        data?.condition ??
+        undefined
+      if (currentCondition && !CONDICIONES_TOP.includes(currentCondition)) {
+        console.log(`  Condicion cambio a "${currentCondition}" (no aceptable) - descartado`)
+        // Actualizar BD para que futuras queries lo filtren desde el .in('condition', CONDICIONES_TOP)
+        supabase
+          .from('wallapop_cache')
+          .update({ condition: currentCondition })
+          .eq('external_id', externalId)
+          .then(() => {})
+          .catch(() => {})
+        return false
+      }
 
       if (phrase) {
         const currentTitle = (
@@ -673,7 +691,7 @@ async function main() {
       `  [${i + 1}/${maxVerificar}] ${candidato.external_id}` +
       ` (-${candidato.descuento_pct}% vs ${Math.round(candidato.precio_medio)}EUR, [${candidato.keyword}])... `
     )
-    const activo = await isWallapopActive(candidato.external_id, candidato.phrase)
+    const activo = await isWallapopActive(candidato.external_id, supabase, candidato.phrase)
 
     if (activo) {
       console.log('activo')
