@@ -541,7 +541,7 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
 
   const { data, error } = await supabase
     .from('wallapop_cache')
-    .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at, date, favorites')
+    .select('external_id, title, price, condition, platform, img, url, city, pala_id, scraped_at, date, favorites, palas(nombre)')
     .in('condition', CONDICIONES_TOP)
     .gte('price', MIN_PRICE)
     .gte('last_seen_at', hace7Dias)
@@ -593,10 +593,13 @@ async function buscarModelo(supabase: any, modelo: Modelo): Promise<any[]> {
     if (item.price >= umbral) continue
     const descuento_pct  = Math.round(((mediana - item.price) / mediana) * 100)
     const ahorro_euros   = mediana - item.price
+    // Si el anuncio tiene pala asignada en BD, usar su nombre (año real) para el bonus de año.
+    // Permite corregir vendedores que ponen año incorrecto en el título.
+    const nombreParaAño = (item.palas as any)?.nombre ?? modelo.nombre
     const score = Math.round(
       descuento_pct
       + ahorro_euros   * PESO_AHORRO_EUROS
-      + calcularBonusAño(modelo.nombre)
+      + calcularBonusAño(nombreParaAño)
       + (item.condition === 'new' ? BONUS_NEW : 0)
       + calcularPenAntiguedad(item.date ?? null)
       + BONUS_LIKES * Math.log1p(item.favorites ?? 0)
