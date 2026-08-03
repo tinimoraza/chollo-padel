@@ -1,105 +1,79 @@
-# 🏓 CHOLLO PADEL — Guía de despliegue
+# HuntPadel — Guía de despliegue
+*Actualizado: 2026-08-03*
 
-## Lo que tienes aquí
+---
+
+## Variables de entorno
+
+En `chollo-padel-fase2-v2/chollo-padel-v2/.env.local`:
 
 ```
-chollo-padel/
-├── app/
-│   ├── page.tsx              ← Página principal
-│   ├── layout.tsx            ← Layout raíz
-│   └── api/
-│       ├── search/route.ts   ← Búsqueda (sin CORS)
-│       ├── alerts/route.ts   ← CRUD de alertas
-│       └── cron/route.ts     ← Cron cada hora
-├── components/
-│   ├── SearchPanel.tsx       ← Buscador + resultados
-│   ├── Sidebar.tsx           ← Alertas + populares
-│   └── AlertModal.tsx        ← Modal nueva alerta
-├── lib/
-│   ├── supabase.ts           ← Cliente Supabase
-│   └── wallapop.ts           ← API de búsqueda
-├── supabase-setup.sql        ← ← ← EJECUTA ESTO PRIMERO
-├── vercel.json               ← Cron cada hora
-└── .env.local.example        ← Variables que necesitas
+NEXT_PUBLIC_SUPABASE_URL=https://vgbyhdnhsngaehruirwb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=...
 ```
 
----
-
-## PASO 1 — Crear cuenta en Supabase (5 min)
-
-1. Ve a **supabase.com** → Sign Up (gratis)
-2. Click **"New project"**
-   - Nombre: `chollo-padel`
-   - Contraseña: una buena (guárdala)
-   - Región: **West EU (Ireland)** (más cercana a España)
-3. Espera 2 minutos mientras se crea
+Las mismas variables tienen que estar configuradas en Vercel (Settings → Environment Variables).
 
 ---
 
-## PASO 2 — Crear las tablas
+## Despliegue web (Vercel)
 
-1. En tu proyecto Supabase → **SQL Editor** → **New query**
-2. Copia todo el contenido de `supabase-setup.sql`
-3. Pégalo y pulsa **RUN**
-4. Deberías ver "Success. No rows returned"
+La web se despliega automáticamente en Vercel al hacer `git push` a `main`.
 
----
+- Proyecto Vercel: **huntpadel**
+- Dominio: **huntpadel.com**
+- Root directory: `chollo-padel-fase2-v2/chollo-padel-v2`
 
-## PASO 3 — Copiar las credenciales
-
-En Supabase → **Settings** → **API**:
-
-- `Project URL` → es tu `NEXT_PUBLIC_SUPABASE_URL`
-- `anon public` → es tu `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `service_role` → es tu `SUPABASE_SERVICE_ROLE_KEY` ⚠️ NO compartas esto
+Para forzar un redeploy sin cambios de código: Vercel dashboard → Deployments → Redeploy.
 
 ---
 
-## PASO 4 — Crear cuenta en Resend (emails gratis)
+## Pipeline de tiendas en producción
 
-1. Ve a **resend.com** → Sign Up (gratis, 3000 emails/mes)
-2. **API Keys** → **Create API Key**
-3. Guarda la clave: empieza por `re_...`
+### GitHub Actions (principal)
 
-> ⚠️ Para mandar emails necesitas verificar un dominio en Resend.
-> Si no tienes dominio, puedes usar el dominio de Resend para pruebas.
+Workflow: `.github/workflows/pipeline-tiendas-temp.yml`
+Corre 2x/día vía cron. Grupos A, B, C y Playwright en jobs paralelos.
 
----
+### Task Scheduler Windows (redundancia)
 
-## PASO 5 — Subir a Vercel
-
-1. Sube la carpeta a GitHub (nuevo repositorio)
-2. Ve a **vercel.com** → **New Project** → importa tu repo
-3. En **Environment Variables** añade:
-
-| Variable | Valor |
-|----------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | tu URL de Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | tu anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | tu service role key |
-| `RESEND_API_KEY` | tu clave de Resend |
-| `CRON_SECRET` | una cadena aleatoria larga |
-
-4. Click **Deploy** → en 2 minutos estará online
+Script: `C:\chollo-padel\scripts-local\run-pipeline-local.ps1`
+Configurado en el Programador de Tareas de Windows a las **08:00** diario.
 
 ---
 
-## PASO 6 — Verificar el cron
+## Supabase
 
-El archivo `vercel.json` ya configura el cron para que corra cada hora.
-Puedes verlo en Vercel → tu proyecto → **Cron Jobs**.
+- **Proyecto:** `vgbyhdnhsngaehruirwb`
+- **Dashboard:** https://supabase.com/dashboard/project/vgbyhdnhsngaehruirwb
+- Migraciones: aplicar manualmente vía SQL Editor o MCP de Supabase
 
-Para probarlo manualmente:
-```
-GET https://tu-app.vercel.app/api/cron
-Authorization: Bearer TU_CRON_SECRET
+---
+
+## Extensión Chrome
+
+1. Abrir `chrome://extensions`
+2. Activar "Modo desarrollador"
+3. "Cargar sin empaquetar" → seleccionar `chollo-padel-tiendas-extension/`
+4. Para actualizar tras cambios: botón "Recargar" en la extensión
+
+---
+
+## Compilar herramientas Python
+
+Desde `C:\chollo-padel-extension\`:
+
+```powershell
+# Verificar sintaxis primero
+python -c "import py_compile; py_compile.compile('gestor_candidatas.py', doraise=True)"
+
+# Compilar (usar specs ya existentes)
+C:\Users\adominguez\AppData\Local\Python\pythoncore-3.14-64\Scripts\pyinstaller.exe --onefile --windowed --name GestorCandidatas gestor_candidatas.py
+C:\Users\adominguez\AppData\Local\Python\pythoncore-3.14-64\Scripts\pyinstaller.exe --onefile --windowed --name GestorClub gestor_club.py
+C:\Users\adominguez\AppData\Local\Python\pythoncore-3.14-64\Scripts\pyinstaller.exe --onefile --windowed --name PipelineLauncher pipeline_launcher.py
 ```
 
----
-
-## ¿Problemas?
-
-- **CORS en local**: Normal. La búsqueda usa `/api/search` que corre en el servidor.
-  Usa `npm run dev` en lugar de abrir el HTML directamente.
-- **Emails no llegan**: Verifica el dominio en Resend.
-- **Alertas no se guardan**: Comprueba las variables de entorno en Vercel.
+Los `.exe` quedan en `dist\`.
