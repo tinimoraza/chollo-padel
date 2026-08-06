@@ -315,6 +315,7 @@ async function recalcularPrecios(): Promise<number> {
       .eq('disponible', true)
       .gte('dia_scraped', since7d)
       .order('dia_scraped', { ascending: false })
+      .limit(300)  // max ~30 fuentes × 7 días; evita egress ilimitado
 
     if (!logRows?.length) continue
 
@@ -424,6 +425,17 @@ export async function main() {
 
   // Paso 4
   await reportarPendientes()
+
+  // Paso 5: Limpieza automática de histórico >30 días (reducir egress)
+  if (!DRY_RUN) {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { error: cleanErr } = await supabase
+      .from('price_history_log')
+      .delete()
+      .lt('scraped_at', cutoff)
+    if (cleanErr) console.warn('⚠️ Limpieza histórico:', cleanErr.message)
+    else console.log('🧹 Histórico >30 días eliminado\n')
+  }
 
   // Resumen
   console.log(`\n${'─'.repeat(60)}`)
