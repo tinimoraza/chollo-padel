@@ -19,6 +19,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { extraerAtributos, normalizar, cargarLineasDesdeBD } from './extract-atributos'
 import { main as postPipeline } from './post-pipeline.ts'
+import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
 // Fix 2026-06-22: este archivo tenía su PROPIA copia duplicada de toda la lógica
 // de matching (normalizarLinea, modeloCompatible, buscarPorAtributos...) en vez
 // de importarla de scripts/lib/modelo-matching.ts, a pesar de que el docstring
@@ -81,6 +84,35 @@ function buscarPorAlias(tienda: string, textoNorm: string): string | null {
   return aliasMap.get(claveAlias(tienda, textoNorm)) ?? null
 }
 
+// ─── Caché de catálogo+aliases en disco ──────────────────────────────────────
+// Cada ejecución de pipeline-tiendas.ts es un proceso separado. Sin caché,
+// cada tienda descarga el catálogo completo (2.4 MB) y los aliases (6 MB) de
+// Supabase — con 30 tiendas × 2 runs/día = ~10 GB/mes solo en este concepto.
+// Fix: guardar en un fichero JSON en /tmp la primera vez (TTL 2h). Los scrapers
+// del mismo pipeline run leen del fichero; Supabase solo recibe 1 petición.
+
+const CACHE_FILE = path.join(os.tmpdir(), 'pipeline-catalog-cache.json')
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
+
+interface CacheData {
+  ts: number
+  catalogo: PalaCandidata[]
+  aliases: Array<{ tienda: string; texto_normalizado: string; pala_id: string }>
+}
+
+function leerCache(): CacheData | null {
+  try {
+    if (!fs.existsSync(CACHE_FILE)) return null
+    const stat = fs.statSync(CACHE_FILE)
+    if (Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null
+    return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')) as CacheData
+  } catch { return null }
+}
+
+function escribirCache(data: CacheData): void {
+  try { fs.writeFileSync(CACHE_FILE, JSON.stringify(data)) } catch { /* no fatal */ }
+}
+
 async function cargarCatalogoCompleto(): Promise<PalaCandidata[]> {
   const out: PalaCandidata[] = []
   let from = 0
@@ -115,8 +147,8 @@ function claveAlias(tienda: string, textoNorm: string): string {
   return `${tienda}::${textoNorm}`
 }
 
-async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
-  const map = new Map<string, string>()
+async function cargarAliasesRaw(): Promise<CacheData['aliases']> {
+  const out: CacheData['aliases'] = []
   let from = 0
   const PAGE = 1000
   while (true) {
@@ -126,13 +158,40 @@ async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
       .range(from, from + PAGE - 1)
     if (error) throw new Error(`cargarAliasMapDesdeBD: ${error.message}`)
     if (!data || data.length === 0) break
-    for (const row of data as { pala_id: string; texto_normalizado: string; tienda: string }[]) {
-      map.set(claveAlias(row.tienda, row.texto_normalizado), row.pala_id)
-    }
+    out.push(...(data as CacheData['aliases']))
     if (data.length < PAGE) break
     from += PAGE
   }
+  return out
+}
+
+function aliasesRawAMap(aliases: CacheData['aliases']): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const row of aliases) map.set(claveAlias(row.tienda, row.texto_normalizado), row.pala_id)
   return map
+}
+
+async function cargarAliasMapDesdeBD(): Promise<Map<string, string>> {
+  return aliasesRawAMap(await cargarAliasesRaw())
+}
+
+// Carga catálogo+aliases con caché en disco (TTL 2h). Primera tienda del pipeline
+// descarga de Supabase y escribe el fichero; el resto lo lee del fichero local.
+// Reducción de egress: de 30 descargas/run a 1 descarga/run (~97% menos).
+async function cargarDatosConCache(): Promise<void> {
+  const cached = leerCache()
+  if (cached) {
+    console.log(`  📦 Desde caché local (${new Date(cached.ts).toLocaleTimeString()})`)
+    catalogoCompleto = cached.catalogo
+    aliasMap = aliasesRawAMap(cached.aliases)
+    return
+  }
+  console.log('  ⬇️ Descargando desde Supabase (primera tienda del ciclo)...')
+  const catalogo = await cargarCatalogoCompleto()
+  const aliases  = await cargarAliasesRaw()
+  escribirCache({ ts: Date.now(), catalogo, aliases })
+  catalogoCompleto = catalogo
+  aliasMap = aliasesRawAMap(aliases)
 }
 
 // ─── Helpers BD ──────────────────────────────────────────────────────────────
@@ -441,8 +500,7 @@ async function main() {
   // Se hace también en --dry-run porque el matching (no la escritura) sigue
   // necesitando catálogo y aliases para decidir alias/atribs/ambiguo/sin-match.
   console.log('\n📚 Precargando catálogo y aliases…')
-  catalogoCompleto = await cargarCatalogoCompleto()
-  aliasMap = await cargarAliasMapDesdeBD()
+  await cargarDatosConCache()
   console.log(`  → ${catalogoCompleto.length} palas, ${aliasMap.size} aliases en memoria`)
 
   // 2. Scrape
