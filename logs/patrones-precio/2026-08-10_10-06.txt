@@ -1,0 +1,5 @@
+npm warn exec The following package was not found and will be installed: tsx@4.23.12
+◇ injected env (0) from .env.local // tip: ⌘ override existing { override: true }
+❌ Error: price_sources: Service for this project is restricted due to the following violations: exceed_egress_quota. The project owner must upgrade their plan or remove spend caps to restore service.
+    at main (/home/runner/work/chollo-padel/chollo-padel/chollo-padel-fase2-v2/chollo-padel-v2/scripts/analizar-patrones-precio.ts:132:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
