@@ -107,10 +107,26 @@ async function scrape() {
         await page.waitForTimeout(500)
       } catch { /* sin banner */ }
 
-      try {
-        await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
-      } catch {
-        console.log(`[padelspain] Sin productos en página ${pageNum} — fin`)
+      // Fix 2026-08-12: la página 2 falló una vez con timeout aunque el sitio
+      // funcionaba con normalidad (verificado en vivo justo después, misma
+      // URL → 32 productos) — parece un hipo puntual de carga, no un bloqueo
+      // real. Se añade un reintento (recarga + segunda espera) antes de dar
+      // la página por vacía, para no cortar el scraping por un fallo transitorio.
+      let cardsFound = false
+      for (let intento = 1; intento <= 2 && !cardsFound; intento++) {
+        try {
+          await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
+          cardsFound = true
+        } catch {
+          if (intento === 1) {
+            console.log(`[padelspain] Timeout esperando productos en página ${pageNum}, reintentando…`)
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 40_000 }).catch(() => {})
+            await page.waitForTimeout(1500)
+          }
+        }
+      }
+      if (!cardsFound) {
+        console.log(`[padelspain] Sin productos en página ${pageNum} tras reintento — fin`)
         break
       }
 
@@ -160,7 +176,20 @@ async function scrape() {
     try {
       await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
       await page.waitForTimeout(1500)
-      await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
+      // Mismo reintento que en la paginación principal (ver fix 2026-08-12).
+      let cardsFound = false
+      for (let intento = 1; intento <= 2 && !cardsFound; intento++) {
+        try {
+          await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
+          cardsFound = true
+        } catch {
+          if (intento === 1) {
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 40_000 }).catch(() => {})
+            await page.waitForTimeout(1500)
+          }
+        }
+      }
+      if (!cardsFound) throw new Error('sin productos tras reintento')
       const products = (await extractProducts(page)).filter(p => isPala(p.title))
       let added = 0
       for (const item of products) {
