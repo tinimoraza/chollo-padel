@@ -1,5 +1,8 @@
 # run-grupo-playwright.ps1 — Grupo Playwright: allforpadel, padeliberico, romasport,
-#                                               tiendapadel5, padelcoronado, tiendapadelpoint
+#                                               tiendapadel5, padelcoronado, tiendapadelpoint,
+#                                               originalpadel, padelspain
+# Fix 2026-08-12: padelspain añadido aquí (venía del grupo A, bloqueaba HTTP 403
+# con fetch plano — migrado a Playwright, ver scrapers/padelspain.js)
 # Cada grupo usa su propio log para evitar colisiones de escritura simultánea.
 $LogFile = "C:\chollo-padel\pipeline-local-pw.log"
 
@@ -15,7 +18,7 @@ if (Test-Path $envFile) {
     }
 }
 
-$tiendas = @("allforpadel","padeliberico","romasport","tiendapadel5","padelcoronado","tiendapadelpoint","originalpadel")
+$tiendas = @("allforpadel","padeliberico","romasport","tiendapadel5","padelcoronado","tiendapadelpoint","originalpadel","padelspain")
 
 foreach ($t in $tiendas) {
     $ts = Get-Date -Format "HH:mm:ss"

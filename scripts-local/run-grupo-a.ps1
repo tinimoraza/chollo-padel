@@ -1,5 +1,7 @@
-# run-grupo-a.ps1 — Grupo A: padelnuestro, time2padel, padelproshop, padelspain,
+# run-grupo-a.ps1 — Grupo A: padelnuestro, time2padel, padelproshop,
 #                            padeltienda, tennispoint, padelvice, stockpadel, starvie
+# Fix 2026-08-12: padelspain movido al grupo Playwright (bloqueaba con HTTP 403
+# vía fetch plano — ver run-grupo-playwright.ps1)
 # Cada grupo usa su propio log para evitar colisiones de escritura simultánea.
 $LogFile = "C:\chollo-padel\pipeline-local-a.log"
 
@@ -16,7 +18,7 @@ if (Test-Path $envFile) {
     }
 }
 
-$tiendas = @("padelnuestro","time2padel","padelproshop","padelspain","padeltienda","tennispoint","padelvice","stockpadel","starvie")
+$tiendas = @("padelnuestro","time2padel","padelproshop","padeltienda","tennispoint","padelvice","stockpadel","starvie")
 
 foreach ($t in $tiendas) {
     $ts = Get-Date -Format "HH:mm:ss"

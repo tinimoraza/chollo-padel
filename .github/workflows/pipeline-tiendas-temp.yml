@@ -39,7 +39,7 @@ env:
 
 jobs:
   scrape-grupo-a:
-    name: "Scrape A: padelnuestro, time2padel, padelproshop, padelspain, padeltienda, tennispoint, padelvice, stockpadel"
+    name: "Scrape A: padelnuestro, time2padel, padelproshop, padeltienda, tennispoint, padelvice, stockpadel"
     runs-on: ubuntu-latest
     timeout-minutes: 50
     defaults:
@@ -66,10 +66,6 @@ jobs:
         timeout-minutes: 5
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts padelproshop --no-post
-      - name: Scrape padelspain
-        timeout-minutes: 5
-        continue-on-error: true
-        run: npx tsx scripts/pipeline-tiendas.ts padelspain --no-post
       - name: Scrape padeltienda
         timeout-minutes: 5
         continue-on-error: true
@@ -178,7 +174,7 @@ jobs:
         run: npx tsx scripts/pipeline-tiendas.ts keepadel --no-post
 
   scrape-grupo-playwright:
-    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint, padelmania, originalpadel"
+    name: "Scrape Playwright: allforpadel, padeliberico, romasport, tiendapadel5, padelcoronado, tiendapadelpoint, padelmania, originalpadel, padelspain"
     runs-on: ubuntu-latest
     timeout-minutes: 55
     defaults:
@@ -218,6 +214,10 @@ jobs:
       - name: Scrape originalpadel
         continue-on-error: true
         run: npx tsx scripts/pipeline-tiendas.ts originalpadel --no-post
+      - name: Scrape padelspain
+        timeout-minutes: 8
+        continue-on-error: true
+        run: npx tsx scripts/pipeline-tiendas.ts padelspain --no-post
 
   post-pipeline:
     name: "Post-pipeline (match + recalcular precios)"
