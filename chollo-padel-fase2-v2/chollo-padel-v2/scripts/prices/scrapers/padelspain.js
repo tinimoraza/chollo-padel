@@ -79,12 +79,33 @@ async function scrape() {
     return []
   }
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled'],
+  })
   const page    = await browser.newPage()
 
   await page.setExtraHTTPHeaders({
     'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept-Language': 'es-ES,es;q=0.9',
+  })
+
+  // Fix 2026-08-12: el sitio deja pasar la primera petición de la sesión
+  // (página 1) pero bloquea con timeout TODAS las siguientes (página 2 y
+  // las 7 secciones de rebajas), tanto la primera vez como reintentando —
+  // 2/2 ejecuciones reales. Verificado que NO es la URL ni rapidez de
+  // navegación: la misma secuencia (carga página 1 → inmediatamente página 2)
+  // funciona sin problema en un Chrome real. La diferencia es que Playwright
+  // Chromium headless expone navigator.webdriver=true y otras señales que
+  // un WAF puede usar para servir solo la primera petición con normalidad y
+  // frenar el resto de la sesión automatizada. Se enmascaran esas señales
+  // (patrón "stealth" estándar) antes de cualquier navegación.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+    // @ts-ignore
+    window.chrome = window.chrome || { runtime: {} }
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+    Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] })
   })
 
   const allProducts = []
@@ -94,12 +115,23 @@ async function scrape() {
   let rebajasUrls = []
 
   try {
+    let yaNavegado = false // true cuando la página actual se alcanzó con clic (no con goto)
+
     while (true) {
-      const url = pageNum === 1 ? `${BASE_URL}${CATEGORY_PATH}` : `${BASE_URL}${CATEGORY_PATH}?page=${pageNum}`
       console.log(`[padelspain] Página ${pageNum}…`)
 
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-      await page.waitForTimeout(1500)
+      if (!yaNavegado) {
+        // Fix 2026-08-12 (2ª contramedida): saltar directo con page.goto() a
+        // ?page=N es indistinguible de "teletransportarse" — ningún usuario
+        // real llega así a la página 2. Solo la página 1 se navega con goto
+        // (es la entrada natural desde fuera). De la 2 en adelante se navega
+        // haciendo clic real en el enlace "Siguiente" (ver más abajo), que
+        // deja el mismo rastro que un usuario navegando con el ratón.
+        const url = `${BASE_URL}${CATEGORY_PATH}`
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+        await page.waitForTimeout(1500)
+      }
+      yaNavegado = false
 
       // Cerrar cookies si aparece
       try {
@@ -155,18 +187,28 @@ async function scrape() {
       }
       if (products.length === 0) break
 
-      // Comprobar si hay página siguiente
-      const hasNext = await page.evaluate((currentPage) => {
-        return !!document.querySelector(`a[href*="page=${currentPage + 1}"]`)
-      }, pageNum)
+      // Comprobar si hay página siguiente y, si la hay, hacer clic real en
+      // el enlace en vez de navegar con goto() (ver comentario más arriba).
+      const nextSelector = `a[href*="page=${pageNum + 1}"]`
+      const hasNext = await page.evaluate((sel) => !!document.querySelector(sel), nextSelector)
 
       if (!hasNext) {
         console.log(`[padelspain] Última página (${pageNum}). Total: ${allProducts.length}`)
         break
       }
 
-      pageNum++
       await page.waitForTimeout(DELAY_MS)
+      try {
+        await Promise.all([
+          page.waitForLoadState('domcontentloaded', { timeout: 40_000 }),
+          page.click(nextSelector, { timeout: 5_000 }),
+        ])
+        yaNavegado = true
+      } catch (e) {
+        console.log(`[padelspain] No se pudo hacer clic en "Siguiente" (${e.message}), fin de paginación`)
+        break
+      }
+      pageNum++
     }
   } catch (err) {
     console.error('[padelspain] Error:', err.message)
