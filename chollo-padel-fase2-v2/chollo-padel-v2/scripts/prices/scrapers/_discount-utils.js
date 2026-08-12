@@ -99,17 +99,30 @@ function detectarCodigoDescuento(textoPagina) {
     if (codigo !== codigo.toUpperCase() || !/[A-Z]/.test(codigo)) continue
     if (PALABRAS_GENERICAS.has(codigo)) continue
 
-    // Buscar % mas cercano al token: primero DESPUES (es el del codigo),
-    // si no hay, el ULTIMO antes (mas cercano al codigo que el primero).
-    // Ej: "-16%15% EXTRA COD: SUM15" -> toma 15%, no 16%.
+    // Buscar el % mas CERCANO al token, mirando tanto ANTES como DESPUES y
+    // quedandonos con el que este a menos distancia (en caracteres) del
+    // codigo. Antes se miraba primero DESPUES incondicionalmente, lo que
+    // fallaba en banners tipo "10% EXTRA CUPÓN: ADIDAS26 ... ¡Oferta -31%!"
+    // (virtualpadel.es, validado 2026-08-12 con HTML real): el "10%" del
+    // cupon esta pegado justo ANTES del codigo, pero como tambien habia un
+    // "-31%" (el badge de oferta individual del PRODUCTO, sin relacion con
+    // el cupon) dentro de la ventana de 80 caracteres DESPUES, el algoritmo
+    // se quedaba siempre con ese numero equivocado.
+    // Ej: "-16%15% EXTRA COD: SUM15" -> toma 15% (antes, mas cercano), no 16%.
     const posFin = m.index + m[0].length
     const despues = texto.slice(posFin, Math.min(texto.length, posFin + VENTANA))
     const mDespues = despues.match(/(\d{1,2})\s*%/)
-    let mPct = mDespues
-    if (!mPct) {
-      const antes = texto.slice(Math.max(0, m.index - VENTANA), m.index)
-      const todosAntes = [...antes.matchAll(/(\d{1,2})\s*%/g)]
-      if (todosAntes.length > 0) mPct = todosAntes[todosAntes.length - 1]
+    const antes = texto.slice(Math.max(0, m.index - VENTANA), m.index)
+    const todosAntes = [...antes.matchAll(/(\d{1,2})\s*%/g)]
+    const mAntes = todosAntes.length > 0 ? todosAntes[todosAntes.length - 1] : null
+
+    let mPct = null
+    if (mAntes && mDespues) {
+      const distAntes = antes.length - (mAntes.index + mAntes[0].length) // chars hasta el codigo
+      const distDespues = mDespues.index // chars desde el codigo
+      mPct = distAntes <= distDespues ? mAntes : mDespues
+    } else {
+      mPct = mDespues || mAntes
     }
     if (mPct) {
       const pct = parseInt(mPct[1], 10)

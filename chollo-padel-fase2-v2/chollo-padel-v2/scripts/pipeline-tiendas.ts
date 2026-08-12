@@ -17,7 +17,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { extraerAtributos, normalizar, cargarLineasDesdeBD } from './extract-atributos'
+import { extraerAtributos, normalizar, cargarLineasDesdeBD, MARCAS } from './extract-atributos'
 import { main as postPipeline } from './post-pipeline.ts'
 import * as fs from 'fs'
 import * as os from 'os'
@@ -261,6 +261,27 @@ interface MatchPendiente {
   // codigoDescuentoTienda en el bucle principal.
   codigoDescuento?: string | null
   descuentoPct?: number | null
+}
+
+// Fix 2026-08-12: bug real detectado en producción — el código ADIDAS26 de
+// virtualpadel.es (banner "10% EXTRA CUPÓN: ADIDAS26" que la propia tienda
+// solo muestra en tarjetas de producto Adidas) se estaba aplicando a TODO
+// el catálogo de la tienda sin distinción de marca (confirmado con datos
+// reales: 180+ snapshots con codigo_descuento='ADIDAS26' de marcas Siux,
+// Bullpadel, Black Crown, etc.), porque codigoDescuentoTienda se propagaba
+// sin condición a cada producto del bucle principal. Heurística: si el
+// código empieza por el nombre de una marca conocida (patrón habitual en
+// cupones de tienda: ADIDAS26, NOX10, etc.), el código queda restringido a
+// esa marca; si no matchea ninguna marca conocida, se sigue aplicando a
+// toda la tienda como antes (comportamiento previo intacto).
+function marcaDelCodigo(codigo: string | null | undefined): string | null {
+  if (!codigo) return null
+  const codigoLow = codigo.toLowerCase()
+  for (const [clave, marcaCanon] of Object.entries(MARCAS)) {
+    const claveSinEspacios = clave.replace(/[\s-]/g, '')
+    if (codigoLow.startsWith(claveSinEspacios)) return marcaCanon
+  }
+  return null
 }
 
 // Vuelca los matches pendientes en bloques de CHUNK. Devuelve cuántos
@@ -576,7 +597,7 @@ async function main() {
   // codigoRaw preserva la distinción: undefined=scraper sin detector, null=inspeccionó sin resultado, {...}=encontrado.
   // codigoDescuentoTienda es la versión colapsada (null cuando no hay código) usada en el resto del pipeline.
   const codigoRaw = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null | undefined
-  let codigoDescuentoTienda: { codigo: string; descuento_pct: number } | null = codigoRaw ?? null
+  let codigoDescuentoTienda: { codigo: string; descuento_pct: number; marca_restringida?: string | null } | null = codigoRaw ?? null
 
   // Sistema autosuficiente de códigos (2026-07-14):
   //
@@ -592,16 +613,22 @@ async function main() {
   if (!DRY_RUN) {
     if (codigoRaw !== undefined) {
       if (codigoRaw !== null) {
+        // Fix 2026-08-12: inferir si el código está restringido a una marca
+        // concreta (ver marcaDelCodigo arriba) y guardarlo junto al resto —
+        // así el bucle principal solo lo aplica a productos de esa marca.
+        const marcaCodigo = marcaDelCodigo(codigoRaw.codigo)
         // Código detectado automáticamente → guardarlo en manual (si cambia, lo actualiza)
         await supabase.from('codigos_descuento_manual').upsert({
           source_id: sourceId,
           codigo: codigoRaw.codigo,
           descuento_pct: codigoRaw.descuento_pct,
+          marca_restringida: marcaCodigo,
           activo: true,
           nota: 'Auto-detectado por scraper',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'source_id' })
-        console.log(`  💾 Código auto-guardado en BD: ${codigoRaw.codigo} (-${codigoRaw.descuento_pct}%)`)
+        codigoDescuentoTienda = { ...codigoRaw, marca_restringida: marcaCodigo }
+        console.log(`  💾 Código auto-guardado en BD: ${codigoRaw.codigo} (-${codigoRaw.descuento_pct}%)${marcaCodigo ? ` [solo ${marcaCodigo}]` : ''}`)
       } else {
         // Inspeccionó pero no encontró → el código auto-detectado caducó.
         // SOLO desactivar los marcados como 'Auto-detectado por scraper'.
@@ -618,26 +645,26 @@ async function main() {
         // Aunque el detector no lo encontró, respetar cualquier código manual activo
         const { data: manual } = await supabase
           .from('codigos_descuento_manual')
-          .select('codigo, descuento_pct')
+          .select('codigo, descuento_pct, marca_restringida')
           .eq('source_id', sourceId)
           .eq('activo', true)
           .maybeSingle()
         if (manual) {
-          codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
-          console.log(`  💸 Código manual aplicado (override): ${manual.codigo} (-${manual.descuento_pct}%)`)
+          codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct, marca_restringida: manual.marca_restringida ?? null }
+          console.log(`  💸 Código manual aplicado (override): ${manual.codigo} (-${manual.descuento_pct}%)${manual.marca_restringida ? ` [solo ${manual.marca_restringida}]` : ''}`)
         }
       }
     } else {
       // Scraper sin detector → fallback manual (Patricia lo introduce a mano desde Gestor)
       const { data: manual } = await supabase
         .from('codigos_descuento_manual')
-        .select('codigo, descuento_pct')
+        .select('codigo, descuento_pct, marca_restringida')
         .eq('source_id', sourceId)
         .eq('activo', true)
         .maybeSingle()
       if (manual) {
-        codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct }
-        console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)`)
+        codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct, marca_restringida: manual.marca_restringida ?? null }
+        console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)${manual.marca_restringida ? ` [solo ${manual.marca_restringida}]` : ''}`)
       }
     }
   }
@@ -693,6 +720,14 @@ async function main() {
     const textoNorm = normalizar(p.title)
     titulosProcessed.add(textoNorm)
 
+    // Fix 2026-08-12: si el código de la tienda está restringido a una marca
+    // (ver marcaDelCodigo), solo se aplica a productos de esa marca — antes
+    // se propagaba a todo el catálogo de la tienda sin distinción.
+    const marcaRestringida = codigoDescuentoTienda?.marca_restringida
+    const aplicaCodigo = !marcaRestringida || tituloLow.includes(marcaRestringida.toLowerCase())
+    const codigoParaProducto = aplicaCodigo ? (codigoDescuentoTienda?.codigo ?? null) : null
+    const descuentoPctParaProducto = aplicaCodigo ? (codigoDescuentoTienda?.descuento_pct ?? null) : null
+
     // ── Vía 1: alias (cache) ─────────────────────────────────────────────────
     const palaIdAlias = buscarPorAlias(TIENDA, textoNorm)
     if (palaIdAlias) {
@@ -703,8 +738,8 @@ async function main() {
           palaId: palaIdAlias, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: false,
           disponible: p.disponible,
-          codigoDescuento: codigoDescuentoTienda?.codigo ?? null,
-          descuentoPct: codigoDescuentoTienda?.descuento_pct ?? null,
+          codigoDescuento: codigoParaProducto,
+          descuentoPct: descuentoPctParaProducto,
         })
       }
       porAlias++
@@ -725,8 +760,8 @@ async function main() {
           palaId, precio: p.price, precioOriginal: p.precio_original,
           url: p.url, titulo: p.title, image: p.image, sku: p.sku ?? null, crearAlias: true,
           disponible: p.disponible,
-          codigoDescuento: codigoDescuentoTienda?.codigo ?? null,
-          descuentoPct: codigoDescuentoTienda?.descuento_pct ?? null,
+          codigoDescuento: codigoParaProducto,
+          descuentoPct: descuentoPctParaProducto,
         })
       }
       porAtributos++
