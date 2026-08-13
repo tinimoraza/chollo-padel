@@ -4,31 +4,57 @@
 //
 // Fix 2026-08-12: migrado de fetch()+cheerio a Playwright. El fetch plano
 // (User-Agent fijo, sin cookies, sin headers de navegador) recibía HTTP 403
-// de forma persistente (confirmado en varias ejecuciones del pipeline local
-// de los días previos), mientras que la misma URL carga con normalidad en
-// un navegador real (verificado en vivo el 2026-08-12: 32 productos/página,
-// sin ningún challenge/captcha visible) — consistente con un bloqueo
-// anti-bot que distingue clientes HTTP simples de navegadores reales.
-// Selectores confirmados en vivo el 2026-08-12:
+// de forma persistente, mientras que la misma URL carga con normalidad en
+// un navegador real.
+//
+// Fix 2026-08-13 (varias iteraciones, dato real en cada una):
+//   1ª hipótesis: bloqueo anti-bot por navigator.webdriver — descartada.
+//   2ª hipótesis: popup fancybox bloqueando el clic en "Siguiente" — cierto
+//      que el popup existe, pero no era la causa real del corte.
+//   3ª hipótesis: paginación AJAX mal esperada (waitForURL/waitForFunction)
+//      — el clic no se podía verificar de forma fiable en headless.
+//   4º intento: goto() con 'networkidle' — EMPEORÓ: ni siquiera cargaba
+//      (timeout total de 45s), confirmando que no es un problema de espera.
+// El patrón real, confirmado con datos de las 6 ejecuciones: LA PRIMERA
+// petición de cada sesión de Playwright siempre funciona (página 1, con
+// cualquier estrategia), y TODAS las peticiones siguientes de esa MISMA
+// sesión/contexto fallan — sea página 2 por goto, por clic, o cualquier URL
+// de rebajas. Esto es consistente con un bloqueo por sesión/fingerprint que
+// distingue la primera petición de las siguientes dentro del mismo contexto
+// de navegador. Contramedida: usar un contexto de navegador (BrowserContext)
+// NUEVO Y LIMPIO para cada página, en vez de reutilizar el mismo — así cada
+// petición se ve, de cara al sitio, como una "primera visita".
+// Selectores confirmados en vivo el 2026-08-12/13:
 //   - Contenedor: article.product-miniature (32 por página)
-//   - Título+URL: h3.s_title_block a[href] (texto = título completo)
-//   - Precio actual: span[itemprop="price"][content] (valor numérico limpio)
+//   - Título+URL: h3 a / h2 a / .product-title a
+//   - Precio actual: span[itemprop="price"][content]
 //   - Precio original: .regular-price / .old-price (solo si hay descuento)
-//   - Paginación: ?page=N ("1/12" ≈ 12 páginas en el momento de la verificación)
+//   - Paginación: ?page=N (12 páginas confirmadas en vivo el 2026-08-13)
 
 const SOURCE_KEY     = 'padelspain'
 const BASE_URL        = 'https://padel-spain.es'
 const CATEGORY_PATH   = '/es/257-palas-de-padel'
-const DELAY_MS         = 1500
+const DELAY_MS         = 2500
 
 const { detectarCodigoDescuento, filtrarUrlsRebajas } = require('./_discount-utils.js')
 
 const EXCLUIR = ['zapatilla', 'mochila', 'paletero', 'bolsa', 'grip', 'overgrip',
   'pelota', 'pelotas', 'camiseta', 'funda', 'muñequera', 'protector', 'pack ']
 
+const HEADERS = {
+  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept-Language': 'es-ES,es;q=0.9',
+}
+
 function isPala(title) {
   const t = title.toLowerCase()
   return !EXCLUIR.some(w => t.includes(w))
+}
+
+async function cerrarPopups(page) {
+  try {
+    await page.click('.fancybox-close, .fancybox-close-small, .fancybox-item.fancybox-close', { timeout: 1500 })
+  } catch { /* sin popup */ }
 }
 
 async function extractProducts(page) {
@@ -40,19 +66,16 @@ async function extractProducts(page) {
       const url     = titleEl?.getAttribute('href')
       if (!title || !url) return null
 
-      // Precio actual — PrestaShop lo pone limpio en el atributo content
       const priceEl = card.querySelector('span[itemprop="price"]')
       const price   = priceEl ? parseFloat(priceEl.getAttribute('content')) : NaN
       if (isNaN(price) || price <= 0) return null
 
-      // Precio original tachado (solo existe cuando hay descuento)
       const regularEl = card.querySelector('.regular-price, .old-price')
       const originalText = regularEl?.textContent?.trim() ?? ''
       const original = originalText
         ? parseFloat(originalText.replace(/[^0-9,]/g, '').replace(',', '.'))
         : NaN
 
-      // Imagen — lazy-load habitual en PrestaShop (data-src con la url real)
       const imgEl  = card.querySelector('img')
       const rawImg = imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
       const image  = rawImg.startsWith('data:') ? null : (rawImg.split('?')[0] || null)
@@ -68,8 +91,57 @@ async function extractProducts(page) {
   })
 }
 
+// Abre un contexto de navegador NUEVO (no reutilizado) para esta URL,
+// extrae los productos y lo cierra. extraerNav=true además devuelve el
+// código de descuento detectado y las URLs de rebajas (solo hace falta en
+// la página 1).
+async function scrapePagina(browser, url, { extraerNav = false } = {}) {
+  const context = await browser.newContext({
+    userAgent: HEADERS['User-Agent'],
+    locale: 'es-ES',
+    extraHTTPHeaders: { 'Accept-Language': HEADERS['Accept-Language'] },
+  })
+  const page = await context.newPage()
+
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
+    await page.waitForTimeout(1200)
+    await cerrarPopups(page)
+
+    let cardsFound = false
+    try {
+      await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 20_000 })
+      cardsFound = true
+    } catch { /* sin productos */ }
+
+    if (!cardsFound) return { ok: false, products: [] }
+
+    const products = (await extractProducts(page)).filter(p => isPala(p.title))
+    const resultado = { ok: true, products }
+
+    if (extraerNav) {
+      const bodyText = await page.evaluate(() => document.body.innerText)
+      resultado.codigoDescuento = detectarCodigoDescuento(bodyText)
+      const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
+      resultado.rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
+      const hasNext = await page.evaluate(() => !!document.querySelector('a[rel="next"], a[href*="page=2"]'))
+      resultado.hasNext = hasNext
+    } else {
+      const nextMatch = url.match(/page=(\d+)/)
+      const currentPage = nextMatch ? parseInt(nextMatch[1], 10) : 1
+      resultado.hasNext = await page.evaluate((cp) => !!document.querySelector(`a[href*="page=${cp + 1}"]`), currentPage)
+    }
+
+    return resultado
+  } catch (err) {
+    return { ok: false, products: [], error: err.message }
+  } finally {
+    await context.close().catch(() => {})
+  }
+}
+
 async function scrape() {
-  console.log('[padelspain] Iniciando scraper (Playwright + PrestaShop)…')
+  console.log('[padelspain] Iniciando scraper (Playwright + PrestaShop, contexto nuevo por página)…')
 
   let chromium
   try {
@@ -79,34 +151,7 @@ async function scrape() {
     return []
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled'],
-  })
-  const page    = await browser.newPage()
-
-  await page.setExtraHTTPHeaders({
-    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept-Language': 'es-ES,es;q=0.9',
-  })
-
-  // Fix 2026-08-12: el sitio deja pasar la primera petición de la sesión
-  // (página 1) pero bloquea con timeout TODAS las siguientes (página 2 y
-  // las 7 secciones de rebajas), tanto la primera vez como reintentando —
-  // 2/2 ejecuciones reales. Verificado que NO es la URL ni rapidez de
-  // navegación: la misma secuencia (carga página 1 → inmediatamente página 2)
-  // funciona sin problema en un Chrome real. La diferencia es que Playwright
-  // Chromium headless expone navigator.webdriver=true y otras señales que
-  // un WAF puede usar para servir solo la primera petición con normalidad y
-  // frenar el resto de la sesión automatizada. Se enmascaran esas señales
-  // (patrón "stealth" estándar) antes de cualquier navegación.
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
-    // @ts-ignore
-    window.chrome = window.chrome || { runtime: {} }
-    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
-    Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] })
-  })
+  const browser = await chromium.launch({ headless: true })
 
   const allProducts = []
   const seen = new Set()
@@ -115,136 +160,62 @@ async function scrape() {
   let rebajasUrls = []
 
   try {
-    let yaNavegado = false // true cuando la página actual se alcanzó con clic (no con goto)
-
     while (true) {
+      const url = pageNum === 1 ? `${BASE_URL}${CATEGORY_PATH}` : `${BASE_URL}${CATEGORY_PATH}?page=${pageNum}`
       console.log(`[padelspain] Página ${pageNum}…`)
 
-      if (!yaNavegado) {
-        // Fix 2026-08-12 (2ª contramedida): saltar directo con page.goto() a
-        // ?page=N es indistinguible de "teletransportarse" — ningún usuario
-        // real llega así a la página 2. Solo la página 1 se navega con goto
-        // (es la entrada natural desde fuera). De la 2 en adelante se navega
-        // haciendo clic real en el enlace "Siguiente" (ver más abajo), que
-        // deja el mismo rastro que un usuario navegando con el ratón.
-        const url = `${BASE_URL}${CATEGORY_PATH}`
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-        await page.waitForTimeout(1500)
-      }
-      yaNavegado = false
-
-      // Cerrar cookies si aparece
-      try {
-        await page.click('.cmplz-accept, [data-cky-tag="accept-button"], #onetrust-accept-btn-handler', { timeout: 2000 })
-        await page.waitForTimeout(500)
-      } catch { /* sin banner */ }
-
-      // Fix 2026-08-12: la página 2 falló una vez con timeout aunque el sitio
-      // funcionaba con normalidad (verificado en vivo justo después, misma
-      // URL → 32 productos) — parece un hipo puntual de carga, no un bloqueo
-      // real. Se añade un reintento (recarga + segunda espera) antes de dar
-      // la página por vacía, para no cortar el scraping por un fallo transitorio.
-      let cardsFound = false
-      for (let intento = 1; intento <= 2 && !cardsFound; intento++) {
-        try {
-          await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
-          cardsFound = true
-        } catch {
-          if (intento === 1) {
-            console.log(`[padelspain] Timeout esperando productos en página ${pageNum}, reintentando…`)
-            await page.reload({ waitUntil: 'domcontentloaded', timeout: 40_000 }).catch(() => {})
-            await page.waitForTimeout(1500)
-          }
-        }
-      }
-      if (!cardsFound) {
-        console.log(`[padelspain] Sin productos en página ${pageNum} tras reintento — fin`)
+      const r = await scrapePagina(browser, url, { extraerNav: pageNum === 1 })
+      if (!r.ok) {
+        console.log(`[padelspain] Sin productos en página ${pageNum}${r.error ? ` (${r.error})` : ''} — fin`)
         break
       }
 
       if (pageNum === 1) {
-        const bodyText = await page.evaluate(() => document.body.innerText)
-        codigoDescuento = detectarCodigoDescuento(bodyText)
+        codigoDescuento = r.codigoDescuento
+        rebajasUrls = r.rebajasUrls || []
         if (codigoDescuento) {
           console.log(`[padelspain] codigo detectado: ${codigoDescuento.codigo} (-${codigoDescuento.descuento_pct}%)`)
         }
-        const hrefs = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href))
-        rebajasUrls = filtrarUrlsRebajas(hrefs, `${BASE_URL}${CATEGORY_PATH}`)
         if (rebajasUrls.length > 0) {
           console.log(`[padelspain] sección(es) de rebajas detectada(s): ${rebajasUrls.join(', ')}`)
         }
       }
 
-      const products = (await extractProducts(page)).filter(p => isPala(p.title))
-      console.log(`[padelspain]  → ${products.length} palas`)
-
-      let nuevos = 0
-      for (const item of products) {
+      console.log(`[padelspain]  → ${r.products.length} palas`)
+      for (const item of r.products) {
         if (seen.has(item.url)) continue
         seen.add(item.url)
         allProducts.push(item)
-        nuevos++
       }
-      if (products.length === 0) break
+      if (r.products.length === 0) break
 
-      // Comprobar si hay página siguiente y, si la hay, hacer clic real en
-      // el enlace en vez de navegar con goto() (ver comentario más arriba).
-      const nextSelector = `a[href*="page=${pageNum + 1}"]`
-      const hasNext = await page.evaluate((sel) => !!document.querySelector(sel), nextSelector)
-
-      if (!hasNext) {
+      if (!r.hasNext) {
         console.log(`[padelspain] Última página (${pageNum}). Total: ${allProducts.length}`)
         break
       }
 
-      await page.waitForTimeout(DELAY_MS)
-      try {
-        await Promise.all([
-          page.waitForLoadState('domcontentloaded', { timeout: 40_000 }),
-          page.click(nextSelector, { timeout: 5_000 }),
-        ])
-        yaNavegado = true
-      } catch (e) {
-        console.log(`[padelspain] No se pudo hacer clic en "Siguiente" (${e.message}), fin de paginación`)
-        break
-      }
       pageNum++
+      await new Promise(res => setTimeout(res, DELAY_MS))
     }
   } catch (err) {
     console.error('[padelspain] Error:', err.message)
   }
 
   for (const rebajasUrl of rebajasUrls) {
-    try {
-      await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
-      await page.waitForTimeout(1500)
-      // Mismo reintento que en la paginación principal (ver fix 2026-08-12).
-      let cardsFound = false
-      for (let intento = 1; intento <= 2 && !cardsFound; intento++) {
-        try {
-          await page.waitForSelector('article.product-miniature, .js-product-miniature', { timeout: 15_000 })
-          cardsFound = true
-        } catch {
-          if (intento === 1) {
-            await page.reload({ waitUntil: 'domcontentloaded', timeout: 40_000 }).catch(() => {})
-            await page.waitForTimeout(1500)
-          }
-        }
-      }
-      if (!cardsFound) throw new Error('sin productos tras reintento')
-      const products = (await extractProducts(page)).filter(p => isPala(p.title))
+    const r = await scrapePagina(browser, rebajasUrl)
+    if (!r.ok) {
+      console.error(`[padelspain] Error sección rebajas ${rebajasUrl}: ${r.error || 'sin productos'}`)
+    } else {
       let added = 0
-      for (const item of products) {
+      for (const item of r.products) {
         if (seen.has(item.url)) continue
         seen.add(item.url)
         allProducts.push(item)
         added++
       }
       console.log(`[padelspain] sección rebajas ${rebajasUrl} → ${added} productos nuevos`)
-    } catch (e) {
-      console.error(`[padelspain] Error sección rebajas ${rebajasUrl}:`, e.message)
     }
-    await page.waitForTimeout(DELAY_MS)
+    await new Promise(res => setTimeout(res, DELAY_MS))
   }
 
   await browser.close()
