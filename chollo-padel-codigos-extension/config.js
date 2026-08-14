@@ -42,7 +42,7 @@ const CODIGOS_TIENDAS = [
   { source_id: 2,  source_key: 'padelzoom',         url: 'https://padelzoom.es/palas/' },
   { source_id: 3,  source_key: 'tennispoint',       url: 'https://www.tennis-point.es' },
   { source_id: 6,  source_key: 'padelproshop',      url: 'https://www.padelproshop.com' },
-  { source_id: 8,  source_key: 'padeliberico',      url: 'https://www.padeliberico.es' },
+  // padeliberico (source_id 8) fuera a propósito — ver nota mas abajo.
   { source_id: 9,  source_key: 'romasport',         url: 'https://romasport.es' },
   { source_id: 10, source_key: 'padelcoronado',     url: 'https://padelcoronado.com', needsTab: true },
   { source_id: 18, source_key: 'padelmarket',       url: 'https://padelmarket.com' },
@@ -77,3 +77,17 @@ const CODIGOS_TIENDAS = [
 // HTML). Este escáner solo mira texto/HTML — si aquí nunca detecta nada para
 // esta tienda, es señal de que sigue siendo un banner-imagen y haría falta
 // OCR aparte o dejarlo en manual.
+
+// Nota (padeliberico, 2026-08-14): sacada a propósito de este escáner.
+// Confirmado por Patricia — sus códigos son POR PRODUCTO (ej. "HOT20" solo
+// vale para los "productos seleccionados" de la sección /rebajas-verano,
+// no para todo el catálogo). Este escáner solo comprueba la home y, si
+// detectara un código ahí, lo guardaría en codigos_descuento_manual como
+// código DE TIENDA — se aplicaría a TODOS los productos de padeliberico, lo
+// cual sería incorrecto. El scraper Node (pipeline-tiendas.ts →
+// padeliberico.js) ya hace esto bien: entra en la sección de rebajas,
+// detecta el código ahí y lo graba solo en los productos de esa sección
+// (price_snapshots.codigo_descuento por producto), que además ya se aplica
+// en /api/chollos y en GestorCandidatas (fallback al código del propio
+// snapshot cuando no hay código de tienda en vivo). No hace falta que este
+// escáner de home la cubra también.
