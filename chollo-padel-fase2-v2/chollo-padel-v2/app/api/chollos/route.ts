@@ -118,12 +118,31 @@ interface CodigoActivo {
 // vuelto a scrapear, y uno nuevo se aplica sin esperar al proximo scrape.
 function codigoAplicable(snap: any, codigosMap: Map<number, CodigoActivo>): CodigoActivo | null {
   const cod = codigosMap.get(snap.source_id)
-  if (!cod || !cod.descuento_pct || cod.descuento_pct <= 0) return null
-  if (cod.marca_restringida) {
-    const marcaPala = ((snap.palas as any)?.marca ?? '').toLowerCase()
-    if (marcaPala !== cod.marca_restringida.toLowerCase()) return null
+  if (cod && cod.descuento_pct > 0) {
+    if (cod.marca_restringida) {
+      const marcaPala = ((snap.palas as any)?.marca ?? '').toLowerCase()
+      if (marcaPala !== cod.marca_restringida.toLowerCase()) return null
+    }
+    return cod
   }
-  return cod
+
+  // Fix 2026-08-14 (segunda vuelta): el paso a "codigo en vivo" (arriba) solo
+  // cubre codigos DE TIENDA que mantiene codigos_descuento_manual (la
+  // extension de codigos). Pero ~20 scrapers (misterpadel, tennispoint,
+  // padeliberico, padelkiwi, pelotapadel, time2padel, padelproshop...)
+  // detectan un codigo POR PRODUCTO directamente en la ficha en cada scrape y
+  // lo graban en price_snapshots.codigo_descuento/descuento_pct — ese valor
+  // se queda fresco solo mientras el producto se siga scrapeando (no es un
+  // valor viejo y olvidado, se re-detecta cada pasada del scraper). Al
+  // limitar la funcion solo a codigosMap se dejo de aplicar ese descuento por
+  // producto y varios chollos reales (ej. Nox Ea10 en misterpadel) dejaron de
+  // salir. Fallback: si no hay codigo de tienda en vivo, usar el que trajo el
+  // propio snapshot.
+  if (snap.codigo_descuento && snap.descuento_pct && Number(snap.descuento_pct) > 0) {
+    return { codigo: snap.codigo_descuento, descuento_pct: Number(snap.descuento_pct), marca_restringida: null }
+  }
+
+  return null
 }
 
 // Precio real que pagaria el usuario si hay un codigo de descuento aplicable
