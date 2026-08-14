@@ -589,83 +589,24 @@ async function main() {
     return MARCAS_NO_CATALOGADAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(tituloLow))
   }
 
-  // Piloto 2026-06-28: codigo de descuento detectado a nivel de pagina (no
-  // por producto) — se aplica igual a todos los productos de este scrape de
-  // esta tienda. Validado en vivo solo contra padelmania.com de momento (ver
-  // _discount-utils.js); el resto de scrapers no llaman al detector aun, así
-  // que aquí valdrá null para ellos y no cambia nada de su comportamiento.
-  // codigoRaw preserva la distinción: undefined=scraper sin detector, null=inspeccionó sin resultado, {...}=encontrado.
-  // codigoDescuentoTienda es la versión colapsada (null cuando no hay código) usada en el resto del pipeline.
-  const codigoRaw = (productos as any).codigoDescuento as { codigo: string; descuento_pct: number } | null | undefined
-  let codigoDescuentoTienda: { codigo: string; descuento_pct: number; marca_restringida?: string | null } | null = codigoRaw ?? null
-
-  // Sistema autosuficiente de códigos (2026-07-14):
-  //
-  // Si el scraper inspeccionó el HTML (codigoRaw !== undefined), se sincroniza
-  // con la tabla codigos_descuento_manual:
-  //   - Encontró código → upsert en manual (auto-aprendizaje: queda guardado
-  //     para que futuras ejecuciones sin red no pierdan el código)
-  //   - No encontró   → desactivar manual si había uno activo (el código caducó)
-  //
-  // Si el scraper NO inspecciona HTML (codigoRaw === undefined, scrapers
-  // sin detector wired) → fallback: usar el manual activo si existe
-  // (comportamiento anterior, para Patricia pueda poner el código a mano).
+  // Códigos de descuento (2026-08-14): la detección se centralizó en el
+  // escáner independiente de la extensión Chrome (codigos-scanner.js),
+  // que visita home/rebajas de cada tienda varias veces al día y mantiene
+  // codigos_descuento_manual siempre fresco — sustituye a la detección que
+  // antes hacía cada scraper (piloto 2026-06-28 / sistema autosuficiente
+  // 2026-07-14). Este pipeline ya no detecta ni escribe códigos, solo lee
+  // el que esté activo ahora mismo en la tabla.
+  let codigoDescuentoTienda: { codigo: string; descuento_pct: number; marca_restringida?: string | null } | null = null
   if (!DRY_RUN) {
-    if (codigoRaw !== undefined) {
-      if (codigoRaw !== null) {
-        // Fix 2026-08-12: inferir si el código está restringido a una marca
-        // concreta (ver marcaDelCodigo arriba) y guardarlo junto al resto —
-        // así el bucle principal solo lo aplica a productos de esa marca.
-        const marcaCodigo = marcaDelCodigo(codigoRaw.codigo)
-        // Código detectado automáticamente → guardarlo en manual (si cambia, lo actualiza)
-        await supabase.from('codigos_descuento_manual').upsert({
-          source_id: sourceId,
-          codigo: codigoRaw.codigo,
-          descuento_pct: codigoRaw.descuento_pct,
-          marca_restringida: marcaCodigo,
-          activo: true,
-          nota: 'Auto-detectado por scraper',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'source_id' })
-        codigoDescuentoTienda = { ...codigoRaw, marca_restringida: marcaCodigo }
-        console.log(`  💾 Código auto-guardado en BD: ${codigoRaw.codigo} (-${codigoRaw.descuento_pct}%)${marcaCodigo ? ` [solo ${marcaCodigo}]` : ''}`)
-      } else {
-        // Inspeccionó pero no encontró → el código auto-detectado caducó.
-        // SOLO desactivar los marcados como 'Auto-detectado por scraper'.
-        // Los códigos introducidos manualmente por Patricia NO se tocan aquí.
-        const { data: desactivados } = await supabase.from('codigos_descuento_manual')
-          .update({ activo: false, updated_at: new Date().toISOString() })
-          .eq('source_id', sourceId)
-          .eq('activo', true)
-          .eq('nota', 'Auto-detectado por scraper')
-          .select('codigo')
-        if (desactivados && desactivados.length > 0) {
-          console.log(`  🗑️  Código auto-detectado desactivado (ya no visible en web): ${desactivados[0].codigo}`)
-        }
-        // Aunque el detector no lo encontró, respetar cualquier código manual activo
-        const { data: manual } = await supabase
-          .from('codigos_descuento_manual')
-          .select('codigo, descuento_pct, marca_restringida')
-          .eq('source_id', sourceId)
-          .eq('activo', true)
-          .maybeSingle()
-        if (manual) {
-          codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct, marca_restringida: manual.marca_restringida ?? null }
-          console.log(`  💸 Código manual aplicado (override): ${manual.codigo} (-${manual.descuento_pct}%)${manual.marca_restringida ? ` [solo ${manual.marca_restringida}]` : ''}`)
-        }
-      }
-    } else {
-      // Scraper sin detector → fallback manual (Patricia lo introduce a mano desde Gestor)
-      const { data: manual } = await supabase
-        .from('codigos_descuento_manual')
-        .select('codigo, descuento_pct, marca_restringida')
-        .eq('source_id', sourceId)
-        .eq('activo', true)
-        .maybeSingle()
-      if (manual) {
-        codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct, marca_restringida: manual.marca_restringida ?? null }
-        console.log(`  💸 Código manual aplicado: ${manual.codigo} (-${manual.descuento_pct}%)${manual.marca_restringida ? ` [solo ${manual.marca_restringida}]` : ''}`)
-      }
+    const { data: manual } = await supabase
+      .from('codigos_descuento_manual')
+      .select('codigo, descuento_pct, marca_restringida')
+      .eq('source_id', sourceId)
+      .eq('activo', true)
+      .maybeSingle()
+    if (manual) {
+      codigoDescuentoTienda = { codigo: manual.codigo, descuento_pct: manual.descuento_pct, marca_restringida: manual.marca_restringida ?? null }
+      console.log(`  💸 Código activo aplicado: ${manual.codigo} (-${manual.descuento_pct}%)${manual.marca_restringida ? ` [solo ${manual.marca_restringida}]` : ''}`)
     }
   }
 

@@ -101,20 +101,54 @@ function esDescartadoPorGuardias(
   return null
 }
 
-// Precio real que pagaria el usuario si existe un codigo_descuento detectado
-// (o introducido a mano) en este snapshot. Se usa tanto para decidir que
-// snapshot es "el mas barato" por pala (dedup) como para el ratio CHOLLO/
-// OFERTA - asi una tienda con codigo activo puede ganar a otra mas cara sin
-// codigo, que es justo el caso real que motivo la tarea #175.
-function precioEfectivo(snap: { precio: number; codigo_descuento?: string | null; descuento_pct?: number | null }): number {
-  if (snap.codigo_descuento && snap.descuento_pct && snap.descuento_pct > 0) {
-    return snap.precio * (1 - snap.descuento_pct / 100)
+interface CodigoActivo {
+  codigo: string
+  descuento_pct: number
+  marca_restringida: string | null
+}
+
+// Codigo activo (si lo hay, y si aplica a la marca de esta pala) para un
+// snapshot. Fix 2026-08-14: antes se leia snap.codigo_descuento/descuento_pct,
+// que quedaban "congelados" en el momento del scrape de esa tienda. Ahora se
+// consulta codigos_descuento_manual EN VIVO en el momento de calcular
+// /api/chollos, porque el escaneo de codigos (extension, codigos-scanner.js)
+// corre desacoplado del scrape de catalogo y con mas frecuencia — asi un
+// codigo que caduca a mediodia deja de aplicarse aunque el precio no se haya
+// vuelto a scrapear, y uno nuevo se aplica sin esperar al proximo scrape.
+function codigoAplicable(snap: any, codigosMap: Map<number, CodigoActivo>): CodigoActivo | null {
+  const cod = codigosMap.get(snap.source_id)
+  if (!cod || !cod.descuento_pct || cod.descuento_pct <= 0) return null
+  if (cod.marca_restringida) {
+    const marcaPala = ((snap.palas as any)?.marca ?? '').toLowerCase()
+    if (marcaPala !== cod.marca_restringida.toLowerCase()) return null
   }
+  return cod
+}
+
+// Precio real que pagaria el usuario si hay un codigo de descuento aplicable
+// a este snapshot ahora mismo. Se usa tanto para decidir que snapshot es "el
+// mas barato" por pala (dedup) como para el ratio CHOLLO/OFERTA - asi una
+// tienda con codigo activo puede ganar a otra mas cara sin codigo, que es
+// justo el caso real que motivo la tarea #175.
+function precioEfectivo(snap: { precio: number }, cod: CodigoActivo | null): number {
+  if (cod) return snap.precio * (1 - cod.descuento_pct / 100)
   return snap.precio
 }
 
 export async function GET() {
   const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+
+  // Códigos de descuento activos AHORA MISMO (ver codigoAplicable arriba) —
+  // se cargan una vez por request, en vivo, en vez de fiarse de lo que quedó
+  // congelado en cada price_snapshot en el momento del scrape.
+  const { data: codigosRows } = await supabaseAdmin
+    .from('codigos_descuento_manual')
+    .select('source_id, codigo, descuento_pct, marca_restringida')
+    .eq('activo', true)
+  const codigosMap = new Map<number, CodigoActivo>()
+  for (const c of (codigosRows ?? [])) {
+    codigosMap.set(c.source_id, { codigo: c.codigo, descuento_pct: c.descuento_pct, marca_restringida: c.marca_restringida ?? null })
+  }
 
   // Cargar mapa de primera_vez_at desde chollos_notificados
   const { data: notificados } = await supabaseAdmin
@@ -211,7 +245,9 @@ export async function GET() {
   const byKey = new Map<string, typeof snapshots[0]>()
   for (const snap of Array.from(byTienda.values())) {
     const existing = byKey.get(snap.pala_id)
-    if (!existing || precioEfectivo(snap) < precioEfectivo(existing)) byKey.set(snap.pala_id, snap)
+    if (!existing || precioEfectivo(snap, codigoAplicable(snap, codigosMap)) < precioEfectivo(existing, codigoAplicable(existing, codigosMap))) {
+      byKey.set(snap.pala_id, snap)
+    }
   }
 
   const urlToPalaIds = new Map<string, Set<string>>()
@@ -266,12 +302,13 @@ export async function GET() {
     const motivo = esDescartadoPorGuardias(snap.url_producto, palaAno, pala.modelo, palaIdsEnEstaUrl)
     if (motivo) { _dbg.push(`guardia:${motivo}|${pala.modelo}`); continue }
 
-    // Tarea #175: si el snapshot tiene un codigo de descuento extra (detectado
-    // por el scraper o introducido a mano via la tool), el precio real que
-    // paga el usuario es precioFinal - y es ESE el que decide ratio/tag/orden,
-    // no el precio bruto scrapeado.
-    const tieneCodigo = !!(snap.codigo_descuento && snap.descuento_pct && snap.descuento_pct > 0)
-    const precioFinal = precioEfectivo(snap)
+    // Tarea #175 (y fix 2026-08-14, código en vivo): si hay un codigo de
+    // descuento activo AHORA MISMO para esta tienda (y aplicable a la marca
+    // de esta pala), el precio real que paga el usuario es precioFinal - y
+    // es ESE el que decide ratio/tag/orden, no el precio bruto scrapeado.
+    const codigoActivo = codigoAplicable(snap, codigosMap)
+    const tieneCodigo = !!codigoActivo
+    const precioFinal = precioEfectivo(snap, codigoActivo)
 
     const ratio = precioFinal / ref
     if (ratio > UMBRAL_OFERTA) { _dbg.push(`ratio=${ratio.toFixed(3)}>${UMBRAL_OFERTA}|${pala.modelo}`); continue }
@@ -296,9 +333,9 @@ export async function GET() {
       tienda_slug:       fuente.slug,
       scraped_at:        snap.scraped_at,
       tag,
-      codigo_descuento:     tieneCodigo ? snap.codigo_descuento : null,
+      codigo_descuento:     tieneCodigo ? codigoActivo!.codigo : null,
       precio_sin_codigo:    tieneCodigo ? snap.precio : null,
-      descuento_codigo_pct: tieneCodigo ? snap.descuento_pct : null,
+      descuento_codigo_pct: tieneCodigo ? codigoActivo!.descuento_pct : null,
       primera_vez_at:       notificadosMap.get(`${snap.pala_id}__${snap.source_id}`) ?? null,
     })
   }

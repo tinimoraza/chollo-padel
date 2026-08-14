@@ -7,7 +7,7 @@
 // Resultados → price_snapshots + price_history_log.
 // Sin match → palas_candidatas.
 
-importScripts('config.js', 'discount-utils.js')
+importScripts('config.js', 'discount-utils.js', 'codigos-scanner.js')
 
 // ── Estado en memoria ────────────────────────────────────────
 let isRunning = false
@@ -1299,15 +1299,14 @@ async function runScraper() {
               ? await scrapeWooCommerceViaTab(tienda, logLines)
               : await scrapeWooCommerce(tienda, logLines)
 
-        // Detección autosuficiente de código de descuento — se ejecuta
-        // siempre que haya HTML capturado, incluso si el scrape de productos
-        // dio 0 (ej. bloqueo temporal), para que un código caducado se pueda
-        // desactivar igualmente. Nunca debe tumbar el resto del ciclo.
-        try {
-          await sincronizarCodigoDescuento(tienda, logLines)
-        } catch (e) {
-          logE(`[${tienda.source_key}] sincronizarCodigoDescuento error: ${e.message}`)
-        }
+        // Nota (2026-08-14): la detección de código de descuento ya NO se
+        // hace aquí — se sustituyó por el escáner independiente
+        // (codigos-scanner.js, alarma 'scan-codigos') que visita solo
+        // home/rebajas de cada tienda varias veces al día, desacoplado del
+        // ritmo del scrape de catálogo completo. codigosCache se sigue
+        // usando tal cual para estampar codigo_descuento/descuento_pct en
+        // cada price_snapshot (ver procesarTienda), solo que ahora se
+        // mantiene fresco por el escáner en vez de por este ciclo.
 
         if (productos === null) {
           logE(`[${tienda.source_key}] Error interno Chrome (tab=null) — saltando sin activar backoff`)
@@ -1398,8 +1397,17 @@ chrome.alarms.create('scrape-tiendas', {
   periodInMinutes: CONFIG.INTERVAL_HOURS * 60,
 })
 
+// Escáner de códigos de descuento (2026-08-14) — independiente del ciclo de
+// catálogo, corre cada 6h (4 veces/día, cumple el mínimo de 2/día pedido)
+// visitando solo home/rebajas de cada tienda. Ver codigos-scanner.js.
+chrome.alarms.create('scan-codigos', {
+  delayInMinutes:  3,   // Poco después de instalar, sin pisar el primer scrape-tiendas
+  periodInMinutes: 360,
+})
+
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'scrape-tiendas') runScraper()
+  if (alarm.name === 'scan-codigos') escanearCodigosTiendas()
 })
 
 // ── Mensajes desde popup ──────────────────────────────────────
@@ -1407,6 +1415,10 @@ chrome.alarms.onAlarm.addListener(alarm => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === 'run-now') {
     runScraper().then(() => sendResponse({ ok: true }))
+    return true
+  }
+  if (msg.action === 'run-codigos-now') {
+    escanearCodigosTiendas().then(() => sendResponse({ ok: true }))
     return true
   }
   if (msg.action === 'get-status') {

@@ -83,6 +83,18 @@ document.getElementById('btn-run').addEventListener('click', () => {
   chrome.runtime.sendMessage({ action: 'run-now' })
 })
 
+// Botón escanear códigos ahora (independiente del scrape de catálogo)
+document.getElementById('btn-codigos').addEventListener('click', () => {
+  const btn = document.getElementById('btn-codigos')
+  btn.disabled = true
+  btn.textContent = '⏳ Escaneando códigos…'
+  chrome.runtime.sendMessage({ action: 'run-codigos-now' }, () => {
+    btn.disabled = false
+    btn.textContent = '✅ Códigos actualizados'
+    setTimeout(() => { btn.textContent = '🏷 Escanear códigos ahora' }, 2500)
+  })
+})
+
 // Botón copiar último log
 document.getElementById('btn-log').addEventListener('click', () => {
   const btn = document.getElementById('btn-log')
