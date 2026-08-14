@@ -21,6 +21,7 @@ const PALABRAS_GENERICAS = new Set([
   'PELOTA', 'PELOTAS', 'GRIP', 'OVERGRIP', 'OUTLET', 'ACCESORIOS', 'ACCESORIO',
   'COMPLEMENTO', 'COMPLEMENTOS', 'FUNDA', 'FUNDAS', 'TROLLEY', 'TROLLEYS',
   'CALCETINES', 'MUNEQUERA', 'MUNEQUERAS', 'GORRA', 'GORRAS',
+  'CAPUCHA', 'CAPUCHAS', 'SUDADERAS',
 ])
 const RE_CONTEXTO_NEWSLETTER = /newsletter|suscr[ií]bete|suscripci[oó]n|bolet[ií]n/i
 
@@ -105,11 +106,18 @@ function detectarCodigoDescuento(textoPagina) {
   }
 
   // --- PASO 3: N% ... con CODIGO (sin keyword explicito) --------------------
-  const rePctCon = /\b(\d{1,2})\s*%[^.!?\n]{0,30}\bcon\s+([A-Z][A-Z0-9]{2,14})\b/gi
+  // Fix 2026-08-14: la bandera 'i' de este regex se aplicaba a TODO el
+  // patron, incluida la clase [A-Z][A-Z0-9]{2,14} del codigo — con 'i' esa
+  // clase tambien acepta minusculas, asi que capturaba palabras normales
+  // como "tres" u "otras" (ej. "no acumulable con otras ofertas: 33%") como
+  // si fueran codigos. Se anade el mismo guard que ya tiene el PASO 1:
+  // descartar si el texto capturado no es un codigo realmente en mayusculas.
+  const rePctCon = /\b(\d{1,2})\s*%[^.!?\n]{0,30}\bcon\s+([A-Za-z][A-Za-z0-9]{2,14})\b/gi
   while ((m = rePctCon.exec(texto)) !== null) {
     const pct = parseInt(m[1], 10)
     const codigo = m[2]
     if (pct <= 0 || pct > 50) continue
+    if (codigo !== codigo.toUpperCase() || !/[A-Z]/.test(codigo)) continue
     if (PALABRAS_GENERICAS.has(codigo)) continue
 
     const inicioExcl = Math.max(0, m.index - VENTANA_EXCLUSION)

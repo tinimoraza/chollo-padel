@@ -42,7 +42,7 @@ const CODIGOS_TIENDAS = [
   { source_id: 2,  source_key: 'padelzoom',         url: 'https://padelzoom.es/palas/' },
   { source_id: 3,  source_key: 'tennispoint',       url: 'https://www.tennis-point.es' },
   { source_id: 6,  source_key: 'padelproshop',      url: 'https://www.padelproshop.com' },
-  { source_id: 8,  source_key: 'padeliberico',      url: 'https://www.padeliberico.com' },
+  { source_id: 8,  source_key: 'padeliberico',      url: 'https://www.padeliberico.es' },
   { source_id: 9,  source_key: 'romasport',         url: 'https://romasport.es' },
   { source_id: 10, source_key: 'padelcoronado',     url: 'https://padelcoronado.com', needsTab: true },
   { source_id: 18, source_key: 'padelmarket',       url: 'https://padelmarket.com' },
