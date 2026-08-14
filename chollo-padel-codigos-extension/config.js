@@ -16,6 +16,13 @@ const CONFIG = {
   SUPABASE_URL: 'https://vgbyhdnhsngaehruirwb.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnYnloZG5oc25nYWVocnVpcndiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODExMTY4NSwiZXhwIjoyMDkzNjg3Njg1fQ.UR7pY7dpHasy7gtHHbsSh6p6keY4fxRB9ZBJe0sFfwg',
 
+  // Modo prueba (2026-08-14, activado por falsos positivos detectados por
+  // Patricia): con esto en true, la extensión NO escribe nada en
+  // codigos_descuento_manual — solo registra en el log, pasada a pasada, qué
+  // habría hecho (guardar/desactivar código). Revisar el log varios días
+  // seguidos antes de poner esto en false y dejarla escribir de verdad.
+  DRY_RUN: true,
+
   // Cada cuántas horas escanea todas las tiendas (mínimo pedido: 2/día)
   INTERVAL_HOURS: 6,
 

@@ -142,7 +142,7 @@ async function sincronizarCodigo(store, html, logLines) {
 
   if (!html) {
     L(`[${store.source_key}] Sin HTML este ciclo — código sin verificar`)
-    return
+    return false
   }
 
   let detectado
@@ -150,11 +150,36 @@ async function sincronizarCodigo(store, html, logLines) {
     detectado = detectarCodigoDescuento(html)
   } catch (e) {
     L(`[${store.source_key}] Error en detectarCodigoDescuento: ${e.message}`)
-    return
+    return false
   }
 
   const actual = codigosCache[store.source_id]
+  const actualTxt    = actual    ? `${actual.codigo} (-${actual.descuento_pct}%)`       : 'ninguno'
+  const detectadoTxt = detectado ? `${detectado.codigo} (-${detectado.descuento_pct}%)` : 'ninguno'
 
+  // ── Modo prueba: no escribe nada en BD, solo deja constancia en el log de
+  // qué habría hecho. Ver CONFIG.DRY_RUN. Devuelve true si habría habido
+  // cambio, para que el resumen del ciclo cuente detecciones reales (en modo
+  // prueba codigosCache nunca cambia, así que no sirve para contar).
+  if (CONFIG.DRY_RUN) {
+    if (detectado) {
+      if (actual && actual.codigo === detectado.codigo && actual.descuento_pct === detectado.descuento_pct) {
+        L(`[${store.source_key}] ✓ detectado=${detectadoTxt} · BD=${actualTxt} · sin cambios`)
+        return false
+      } else {
+        L(`[${store.source_key}] 🔍 DRY-RUN — detectado=${detectadoTxt} · BD=${actualTxt} · habría guardado/actualizado`)
+        return true
+      }
+    } else if (actual) {
+      L(`[${store.source_key}] 🔍 DRY-RUN — detectado=ninguno · BD=${actualTxt} · habría desactivado (si era auto-detectado)`)
+      return true
+    } else {
+      L(`[${store.source_key}] ✓ detectado=ninguno · BD=ninguno · sin cambios`)
+      return false
+    }
+  }
+
+  // ── Modo real (CONFIG.DRY_RUN = false) ──────────────────────────────────
   if (detectado) {
     if (actual && actual.codigo === detectado.codigo && actual.descuento_pct === detectado.descuento_pct) {
       return // sin cambios
@@ -230,9 +255,9 @@ async function escanearCodigos() {
       try {
         const html = await obtenerHtml(store, logLines)
         const antes = codigosCache[store.source_id]
-        await sincronizarCodigo(store, html, logLines)
+        const habriaCambio = await sincronizarCodigo(store, html, logLines)
         const despues = codigosCache[store.source_id]
-        if (JSON.stringify(antes) !== JSON.stringify(despues)) cambios++
+        if (habriaCambio || JSON.stringify(antes) !== JSON.stringify(despues)) cambios++
       } catch (e) {
         logLines.push(`[ERR]  [${store.source_key}] ${e.message}`)
       }
