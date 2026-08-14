@@ -84,29 +84,56 @@ function parseFechaEs(texto) {
   return new Date(parseInt(m[3], 10), mes, parseInt(m[1], 10), 23, 59, 59)
 }
 
+// Fix 2026-08-14 (segunda vuelta): Patricia detectó que palas que antes SÍ
+// llevaban cupón (ej. Babolat Technical Viper Juan Lebrón 2025 — la propia
+// web muestra "Cupón Extra 15% / Compra al precio de € 129,12 / El código
+// SALE26 se aplica automáticamente en el carrito") se estaban quedando sin
+// descuento tras el fix anterior. Root cause: el sitio tiene DOS mecanismos
+// de cupón por producto, mutuamente excluyentes, y solo se estaba mirando
+// uno:
+//   1. <div class="coupon_flag cart">  → cupón AUTOMÁTICO (se aplica solo,
+//      sin acción del cliente), con código fijo compartido (ej. SALE26) y
+//      el precio final ya calculado en un <script> inline
+//      (var prezzoScontato = 129.12). Verificado en vivo: Clerk price
+//      (151.90) × (1 - 15%) = 129.115 ≈ 129.12 — cuadra exacto.
+//   2. <div class="coupon_flag product"> → cupón OPCIONAL, el cliente debe
+//      marcar un checkbox en la ficha ("Aplicar 10% cupón de descuento"),
+//      con fecha de caducidad ("Válido hasta el 24 agosto, 2026").
+// Verificado con varios productos que cada ficha solo lleva UNO de los dos
+// (nunca ambos a la vez). Se comprueba primero el automático (más relevante,
+// el cliente lo recibe sin hacer nada) y si no existe, el opcional.
 async function obtenerCuponProducto(url) {
   try {
     const res = await fetch(url, { headers: HEADERS })
     if (!res.ok) return null
     const html = await res.text()
-    const m = html.match(/Aplicar\s+(\d{1,2})\s*%\s*cup(?:&oacute;n|ón)\s+de\s+descuento[\s\S]{0,300}?V(?:&aacute;lido|álido)\s+hasta\s+el\s+([^<]+)</i)
-    if (!m) return null
 
-    const pct = parseInt(m[1], 10)
-    const fechaValidez = parseFechaEs(m[2])
-    if (fechaValidez && fechaValidez.getTime() < Date.now()) {
-      console.log(`[misterpadel] Cupón de ${url} caducado (válido hasta ${m[2].trim()}) — se descarta`)
-      return null
+    // 1) Cupón automático de carrito (prioritario)
+    const mCart = html.match(/coupon_flag\s+cart[\s\S]{0,400}?ttl">Cup(?:&oacute;n|ón)\s+Extra\s+(\d{1,2})\s*%/i)
+    if (mCart) {
+      const codigoMatch = html.match(/code_coupon_text"[^>]*>([^<]+)</i)
+      return { pct: parseInt(mCart[1], 10), codigo: codigoMatch ? codigoMatch[1].trim() : 'CUPON_CARRITO' }
     }
 
-    return pct
+    // 2) Cupón opcional (checkbox), con caducidad
+    const mOptIn = html.match(/Aplicar\s+(\d{1,2})\s*%\s*cup(?:&oacute;n|ón)\s+de\s+descuento[\s\S]{0,300}?V(?:&aacute;lido|álido)\s+hasta\s+el\s+([^<]+)</i)
+    if (mOptIn) {
+      const fechaValidez = parseFechaEs(mOptIn[2])
+      if (fechaValidez && fechaValidez.getTime() < Date.now()) {
+        console.log(`[misterpadel] Cupón opcional de ${url} caducado (válido hasta ${mOptIn[2].trim()}) — se descarta`)
+        return null
+      }
+      return { pct: parseInt(mOptIn[1], 10), codigo: 'CUPON_PRODUCTO' }
+    }
+
+    return null
   } catch {
     return null
   }
 }
 
 async function scrapearDescuentosCarrito(urls) {
-  const mapa = new Map() // url → descuento_pct
+  const mapa = new Map() // url → { pct, codigo }
   let hechos = 0
   let cola = [...urls]
 
@@ -114,8 +141,8 @@ async function scrapearDescuentosCarrito(urls) {
     while (cola.length > 0) {
       const url = cola.shift()
       if (!url) continue
-      const pct = await obtenerCuponProducto(url)
-      if (pct) mapa.set(url, pct)
+      const resultado = await obtenerCuponProducto(url)
+      if (resultado) mapa.set(url, resultado)
       hechos++
       if (hechos % 25 === 0) console.log(`[misterpadel] cupón por producto: ${hechos}/${urls.length} comprobados, ${mapa.size} con cupón`)
     }
@@ -209,9 +236,9 @@ async function scrape() {
   const scraped_at = new Date().toISOString()
   let conCupon = 0
   const resultado = unique.map(p => {
-    const pctCarrito = mapaCupones.get(p.url)
+    const cupon = mapaCupones.get(p.url)
 
-    if (pctCarrito) conCupon++
+    if (cupon) conCupon++
 
     return {
       source_key:      SOURCE_KEY,
@@ -221,11 +248,12 @@ async function scrape() {
       url:             p.url,
       image:           p.image ?? null,
       scraped_at,
-      // Fix 2026-08-13: cupón automático de carrito, por producto (ver
-      // scrapearDescuentosCarrito). Se aplica por producto y no como código
-      // de tienda, porque el % varía por pala y no todas lo llevan.
-      codigoDescuento: pctCarrito ? 'CUPON_CARRITO' : undefined,
-      descuentoPct:    pctCarrito ?? undefined,
+      // Fix 2026-08-13/14: cupón por producto (automático de carrito u
+      // opcional por checkbox — ver obtenerCuponProducto). Se aplica por
+      // producto y no como código de tienda, porque el % varía por pala y
+      // no todas lo llevan.
+      codigoDescuento: cupon ? cupon.codigo : undefined,
+      descuentoPct:    cupon ? cupon.pct : undefined,
     }
   })
   console.log(`[misterpadel] ${conCupon}/${resultado.length} productos con cupón de carrito aplicado`)
