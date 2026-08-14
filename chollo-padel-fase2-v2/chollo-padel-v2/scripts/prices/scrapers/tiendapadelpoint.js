@@ -134,7 +134,21 @@ function extractProductsFromPage(page) {
 const fs = require('fs')
 const path = require('path')
 const CACHE_FILE = path.join(__dirname, '_tiendapadelpoint_cache.json')
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 horas
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 horas — vida del caché de PRODUCTOS/precios
+// Fix 2026-08-14: bug real detectado por Patricia — un código SALE15 detectado
+// SOLO por texto (sin banner de imagen que hacer OCR) se quedó cacheado y se
+// siguió aplicando aunque el cupón ya había caducado en la tienda real. Causa
+// raíz: la revalidación por OCR de readCache() solo se ejecuta "if
+// (bannerImgUrl)" — si no hubo banner (que es lo normal cuando no hay
+// promoción activa), el código de texto cacheado se reutilizaba sin ninguna
+// comprobación durante las 24h completas, y ese patrón se podía repetir
+// indefinidamente run tras run. Un código detectado solo por texto es más
+// propenso a estar desactualizado que uno confirmado por banner (que si se
+// revalida por OCR en cada lectura de caché), así que se le da una vida
+// mucho más corta: pasado este tiempo se descarta (no se aplica ningún
+// código) en vez de seguir confiando en él ciegamente. Los productos/precios
+// cacheados SÍ se siguen devolviendo con normalidad (no dependen de esto).
+const CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS = 3 * 60 * 60 * 1000 // 3 horas
 
 async function readCache() {
   try {
@@ -155,6 +169,15 @@ async function readCache() {
       } else {
         // OCR no pudo correr → conservar lo que había en cache
         if (codigoCached) console.log(`[tiendapadelpoint] OCR no disponible, usando código del cache: ${codigoCached.codigo} (-${codigoCached.descuento_pct}%)`)
+      }
+    } else if (codigoFinal) {
+      // Fix 2026-08-14: código detectado solo por texto (sin banner que
+      // revalidar por OCR) — no confiar en él más de CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS,
+      // aunque el resto del caché (productos/precios) siga vivo hasta las 24h.
+      const edadCodigoMs = Date.now() - timestamp
+      if (edadCodigoMs > CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS) {
+        console.log(`[tiendapadelpoint] Código "${codigoFinal.codigo}" detectado solo por texto tiene ${Math.round(edadCodigoMs / 60000)} min — se descarta (sin banner que revalidar, no se aplica a ciegas)`)
+        codigoFinal = null
       }
     }
     products.codigoDescuento = codigoFinal

@@ -36,70 +36,64 @@ const CLERK_KEY   = 'oViLXCkVp3oqPERmIdkGDadmGGSm9FA8'
 const CAT_PALAS   = 1
 const LIMIT       = 100
 const MAX_ITEMS   = 2000
-const MAX_PAGINAS_CATEGORIA = 15
+const CONCURRENCIA_CUPONES = 8 // fichas de producto en paralelo al comprobar el cupón
 
 const HEADERS = {
   'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Accept-Language': 'es-ES,es;q=0.9',
 }
 
-// Fix 2026-08-13: detectado por Patricia — la ficha de producto muestra un
+// Fix 2026-08-13/14: detectado por Patricia — la ficha de producto muestra un
 // cupón automático "aplicado en la cesta" (ej. "10% cupón aplicado en la
 // cesta / Compra al precio de € 134,90") que NO viene en la API de Clerk.io
 // (esta solo trae price/list_price, el precio ANTES del cupón de carrito).
-// El % varía por producto (10/15/20%, verificado en vivo) y no todos los
-// productos lo llevan — no es un código fijo de tienda, sino un descuento
-// automático por producto. Verificado en vivo el 2026-08-13 que SÍ está en
-// el HTML servidor (no requiere JS): cada tarjeta del listado de categoría
-// (https://www.misterpadel.com/es/palas-de-padel/?p=N) lleva un span
-// class="extra discount" con texto "- 10% Extra en el Carrito" cuando aplica.
-// Se scrapea ese listado (paginado por ?p=N) solo para sacar el mapa
-// url→% y se cruza con los productos ya obtenidos de la API de Clerk.
-async function scrapearDescuentosCarrito() {
-  let cheerio
-  try { cheerio = require('cheerio') } catch {
-    console.log('[misterpadel] cheerio no instalado, se omite detección de cupón por producto')
-    return new Map()
+// El % varía por producto y no todos los productos lo llevan.
+//
+// Primer intento (2026-08-13): leer el badge "- X% Extra en el Carrito" del
+// LISTADO de categoría (una tarjeta por producto) y cruzarlo por URL — rápido
+// (~6 peticiones) pero incompleto: verificado en vivo el 2026-08-14 que hay
+// productos con el cupón activo en su propia ficha cuyo badge NO aparece en
+// la tarjeta del listado (el sitio no lo pinta ahí de forma consistente),
+// así que ese cruce se los perdía. Ejemplo real: Nox Ea10 Ventus Hybrid 12K
+// Xtreme Red/Black — 10% cupón activo en ficha, sin badge en el listado.
+//
+// Fix definitivo: comprobar la ficha de CADA producto directamente (el texto
+// "X% cupón aplicado en la cesta" siempre está ahí cuando el cupón existe,
+// confirmado en HTML servidor sin JS). Es más lento (~185 peticiones en vez
+// de ~6) pero cubre el 100% de los casos. Se limita la concurrencia para no
+// saturar ni la tienda ni la ejecución del pipeline.
+async function obtenerCuponProducto(url) {
+  try {
+    const res = await fetch(url, { headers: HEADERS })
+    if (!res.ok) return null
+    const html = await res.text()
+    const m = html.match(/(\d{1,2})\s*%\s*cup[oó]n\s+aplicado\s+en\s+la\s+cesta/i)
+    return m ? parseInt(m[1], 10) : null
+  } catch {
+    return null
   }
+}
 
-  const mapa = new Map() // pathname → descuento_pct
-  for (let pagina = 1; pagina <= MAX_PAGINAS_CATEGORIA; pagina++) {
-    const url = pagina === 1 ? CATEGORIA_URL : `${CATEGORIA_URL}?p=${pagina}`
-    let html
-    try {
-      const res = await fetch(url, { headers: HEADERS })
-      if (!res.ok) break
-      html = await res.text()
-    } catch (err) {
-      console.log(`[misterpadel] Error listado categoría página ${pagina}: ${err.message}`)
-      break
+async function scrapearDescuentosCarrito(urls) {
+  const mapa = new Map() // url → descuento_pct
+  let hechos = 0
+  let cola = [...urls]
+
+  async function worker() {
+    while (cola.length > 0) {
+      const url = cola.shift()
+      if (!url) continue
+      const pct = await obtenerCuponProducto(url)
+      if (pct) mapa.set(url, pct)
+      hechos++
+      if (hechos % 25 === 0) console.log(`[misterpadel] cupón por producto: ${hechos}/${urls.length} comprobados, ${mapa.size} con cupón`)
     }
-
-    const $ = cheerio.load(html)
-    const items = $('.display.product-list .item')
-    if (items.length === 0) break
-
-    let encontradosPagina = 0
-    items.each((_, el) => {
-      const $it = $(el)
-      const href = $it.find('a[href]').first().attr('href')
-      if (!href) return
-      let pathname
-      try { pathname = new URL(href, CATEGORIA_URL).pathname } catch { return }
-
-      const badgeText = $it.find('.extra.discount').first().text().trim()
-      if (!badgeText) return
-      const m = badgeText.match(/(\d{1,2})\s*%/)
-      if (!m) return
-
-      mapa.set(pathname, parseInt(m[1], 10))
-      encontradosPagina++
-    })
-
-    console.log(`[misterpadel] listado categoría página ${pagina}: ${items.length} tarjetas, ${encontradosPagina} con cupón de carrito`)
   }
 
-  console.log(`[misterpadel] cupón de carrito detectado en ${mapa.size} productos`)
+  const workers = Array.from({ length: CONCURRENCIA_CUPONES }, () => worker())
+  await Promise.all(workers)
+
+  console.log(`[misterpadel] cupón de carrito detectado en ${mapa.size}/${urls.length} productos`)
   return mapa
 }
 
@@ -165,8 +159,9 @@ async function scrape() {
 
   console.log(`[misterpadel] Total palas únicas: ${unique.length}`)
 
-  // Cruzar con el cupón de carrito por producto (ver scrapearDescuentosCarrito).
-  const mapaCupones = await scrapearDescuentosCarrito()
+  // Comprobar el cupón de carrito en la propia ficha de cada producto (ver
+  // obtenerCuponProducto/scrapearDescuentosCarrito) — cobertura 100%.
+  const mapaCupones = await scrapearDescuentosCarrito(unique.map(p => p.url))
 
   // Tienda Clerk.io API-only: petición HTML extra de solo lectura a la home,
   // exclusivamente para detección (código + enlaces a rebajas). No se intenta
@@ -183,9 +178,7 @@ async function scrape() {
   const scraped_at = new Date().toISOString()
   let conCupon = 0
   const resultado = unique.map(p => {
-    let pathname = null
-    try { pathname = new URL(p.url).pathname } catch { /* url ya venía rara */ }
-    const pctCarrito = pathname ? mapaCupones.get(pathname) : undefined
+    const pctCarrito = mapaCupones.get(p.url)
 
     if (pctCarrito) conCupon++
 
