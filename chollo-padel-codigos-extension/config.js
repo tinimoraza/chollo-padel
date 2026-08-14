@@ -52,7 +52,7 @@ const CODIGOS_TIENDAS = [
   { source_id: 23, source_key: 'ofertasdepadel',    url: 'https://www.ofertasdepadel.com' },
   { source_id: 24, source_key: 'starvie',           url: 'https://starvie.com' },
   { source_id: 25, source_key: 'padelvice',         url: 'https://www.padelvice.com' },
-  { source_id: 27, source_key: 'misterpadel',       url: 'https://www.misterpadel.com' },
+  // misterpadel (source_id 27) fuera a propósito — ver nota mas abajo.
   { source_id: 29, source_key: 'time2padel',        url: 'https://www.time2padel.com' },
   { source_id: 31, source_key: 'padelkiwi',         url: 'https://www.padelkiwi.com' },
   { source_id: 32, source_key: 'padelspain',        url: 'https://www.padel-spain.es' },
@@ -91,3 +91,13 @@ const CODIGOS_TIENDAS = [
 // en /api/chollos y en GestorCandidatas (fallback al código del propio
 // snapshot cuando no hay código de tienda en vivo). No hace falta que este
 // escáner de home la cubra también.
+
+// Nota (misterpadel, 2026-08-14): sacada a propósito, mismo motivo que
+// padeliberico. El scraper Node (misterpadel.js) comprueba el cupón FICHA A
+// FICHA — cada producto puede llevar un cupón distinto (automático de
+// carrito o checkbox opcional), no hay "un código de tienda" único. Auditoría
+// completa (2026-08-14) de los 31 scrapers restantes confirmó que
+// misterpadel es el ÚNICO caso además de padeliberico con código
+// per-producto — el resto (30/31) detecta el código una sola vez a nivel de
+// catálogo completo, así que sí es correcto tratarlos como código de tienda
+// en este escáner.
