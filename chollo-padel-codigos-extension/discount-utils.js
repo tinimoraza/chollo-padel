@@ -1,22 +1,11 @@
-// chollo-padel-tiendas-extension/discount-utils.js
+// chollo-padel-codigos-extension/discount-utils.js
 //
 // Puerto para el Service Worker (Chrome MV3) de
 // chollo-padel-fase2-v2/chollo-padel-v2/scripts/prices/scrapers/_discount-utils.js
-// (el detector de códigos de descuento que ya usan todos los scrapers Node).
-// Misma lógica exacta, sin cambios — solo sin `module.exports`/`require`
-// porque este fichero se carga con `importScripts()` dentro del Service
-// Worker de la extensión, que comparte el scope global igual que config.js.
-//
-// Motivo (2026-08-14, pedido explícito de Patricia): la extensión scrapea
-// tiendapadelpoint (y padelcoronado/padelstyle/padeltienda/originalpadel)
-// cada 2h de forma autónoma, pero hasta ahora NUNCA detectaba el código de
-// descuento por sí misma — se limitaba a leer lo que hubiera guardado en la
-// tabla codigos_descuento_manual, confiando en que los scripts Node/Playwright
-// la mantuvieran actualizada. Esos scripts llevaban semanas fallando al
-// conectar con Chrome (ver tiendapadelpoint.js, CDP roto), así que un código
-// caducado (SALE15) se quedó pegado desde el 28 de julio sin que nadie lo
-// corrigiera. La extensión debe ser autosuficiente, igual que el resto de
-// scrapers del pipeline.
+// (el detector de códigos de descuento). Misma lógica exacta, sin cambios —
+// solo sin `module.exports`/`require` porque este fichero se carga con
+// `importScripts()` dentro del Service Worker de la extensión, que comparte
+// el scope global igual que config.js.
 
 const VENTANA = 80 // caracteres de margen para buscar el % cerca del codigo
 const VENTANA_EXCLUSION = 150 // margen mas amplio para detectar contexto de newsletter

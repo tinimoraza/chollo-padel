@@ -589,9 +589,10 @@ async function main() {
     return MARCAS_NO_CATALOGADAS.some(m => new RegExp(`\\b${m}\\b`, 'i').test(tituloLow))
   }
 
-  // Códigos de descuento (2026-08-14): la detección se centralizó en el
-  // escáner independiente de la extensión Chrome (codigos-scanner.js),
-  // que visita home/rebajas de cada tienda varias veces al día y mantiene
+  // Códigos de descuento (2026-08-14): la detección se centralizó en
+  // chollo-padel-codigos-extension, una extensión Chrome independiente
+  // (separada a propósito de chollo-padel-tiendas-extension) dedicada solo
+  // a esto, que visita home/rebajas de cada tienda varias veces al día y mantiene
   // codigos_descuento_manual siempre fresco — sustituye a la detección que
   // antes hacía cada scraper (piloto 2026-06-28 / sistema autosuficiente
   // 2026-07-14). Este pipeline ya no detecta ni escribe códigos, solo lee

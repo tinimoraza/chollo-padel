@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Chollo Padel Códigos",
+  "version": "1.0",
+  "description": "Escáner independiente de códigos de descuento — visita solo home/rebajas de cada tienda (sin catálogo) varias veces al día. Separado de Chollo Padel Tiendas a propósito (2026-08-14).",
+  "permissions": [
+    "alarms",
+    "storage",
+    "cookies",
+    "tabs",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.padelnuestro.com/*",
+    "https://padelzoom.es/*",
+    "https://www.tennis-point.es/*",
+    "https://www.padelproshop.com/*",
+    "https://www.padeliberico.com/*",
+    "https://romasport.es/*",
+    "https://padelcoronado.com/*",
+    "https://padelmarket.com/*",
+    "https://www.tiendapadelpoint.com/*",
+    "https://www.streetpadel.com/*",
+    "https://www.zonadepadel.es/*",
+    "https://www.ofertasdepadel.com/*",
+    "https://starvie.com/*",
+    "https://www.padelvice.com/*",
+    "https://www.misterpadel.com/*",
+    "https://www.time2padel.com/*",
+    "https://www.padelkiwi.com/*",
+    "https://www.padel-spain.es/*",
+    "https://tiendapadel5.com/*",
+    "https://allforpadel.com/*",
+    "https://www.padelstyle.com/*",
+    "https://www.m1padel.com/*",
+    "https://padel.tienda/*",
+    "https://www.stockpadel.com/*",
+    "https://originalpadel.com/*",
+    "https://futurapadelshop.com/*",
+    "https://justpadel.com/*",
+    "https://virtualpadel.es/*",
+    "https://outletdepadel.com/*",
+    "https://padelmania.com/*",
+    "https://keepadel.com/*",
+    "https://pelotapadel.com/*",
+    "https://*.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Chollo Padel Códigos",
+    "default_icon": "icon.png"
+  }
+}

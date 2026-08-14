@@ -7,7 +7,7 @@
 // Resultados → price_snapshots + price_history_log.
 // Sin match → palas_candidatas.
 
-importScripts('config.js', 'discount-utils.js', 'codigos-scanner.js')
+importScripts('config.js')
 
 // ── Estado en memoria ────────────────────────────────────────
 let isRunning = false
@@ -120,84 +120,6 @@ async function cargarCodigos() {
     console.log(`[tiendas-ext] Códigos activos: ${activos || 'ninguno'}`)
   } catch (e) {
     console.warn('[tiendas-ext] cargarCodigos error (no bloquea):', e.message)
-  }
-}
-
-// ── Detección autosuficiente de código de descuento ────────────
-// Mismo sistema que ya usa pipeline-tiendas.ts (Node) para los scrapers
-// del pipeline, portado a la extensión (2026-08-14, pedido explícito de
-// Patricia: "el script de la tienda en la extension, asi como todos,
-// deberia ser capaz de detectar codigos").
-//
-// Usa el HTML capturado durante el scrape (tienda._html1, ver
-// scrapeOpenCart/scrapeOpenCartViaTab/scrapeWooCommerceViaTab/
-// _fetchWooCommerceDirecto) y detectarCodigoDescuento() de discount-utils.js.
-//
-//   - Detecta código  → upsert en codigos_descuento_manual (auto-aprendizaje,
-//     nota='Auto-detectado por extensión') y actualiza codigosCache al vuelo.
-//   - No detecta nada → desactiva SOLO las entradas auto-detectadas
-//     (por esta extensión o por el scraper Node) — nunca toca las que
-//     Patricia haya introducido a mano.
-//   - Si no hay HTML capturado este ciclo (fallo de red, etc.) → no toca
-//     nada, se queda con lo que hubiera en codigosCache.
-async function sincronizarCodigoDescuento(tienda, logLines = []) {
-  const L = msg => { console.log(msg); logLines.push(`[LOG]  ${msg}`) }
-
-  const html = tienda._html1
-  if (!html) {
-    L(`[${tienda.source_key}] Sin HTML capturado este ciclo — código de descuento sin verificar`)
-    return
-  }
-
-  let detectado
-  try {
-    detectado = detectarCodigoDescuento(html)
-  } catch (e) {
-    L(`[${tienda.source_key}] Error en detectarCodigoDescuento: ${e.message}`)
-    return
-  }
-
-  const actual = codigosCache[tienda.source_id]
-
-  if (detectado) {
-    if (actual && actual.codigo === detectado.codigo && actual.descuento_pct === detectado.descuento_pct) {
-      return // sin cambios, nada que hacer
-    }
-    try {
-      await SB.upsert('codigos_descuento_manual', [{
-        source_id: tienda.source_id,
-        codigo: detectado.codigo,
-        descuento_pct: detectado.descuento_pct,
-        activo: true,
-        nota: 'Auto-detectado por extensión',
-        updated_at: new Date().toISOString(),
-      }], 'source_id')
-      codigosCache[tienda.source_id] = { codigo: detectado.codigo, descuento_pct: detectado.descuento_pct }
-      L(`[${tienda.source_key}] 🏷️ Código detectado y guardado: ${detectado.codigo} (-${detectado.descuento_pct}%)`)
-    } catch (e) {
-      L(`[${tienda.source_key}] Error guardando código detectado: ${e.message}`)
-    }
-    return
-  }
-
-  // No se detectó ningún código en la página actual.
-  if (!actual) return // no había nada activo, nada que desactivar
-
-  try {
-    const rows = await SB.get(
-      `codigos_descuento_manual?select=id,codigo,nota&source_id=eq.${tienda.source_id}&activo=eq.true&nota=ilike.Auto-detectado*`
-    )
-    if (rows.length === 0) return // el activo actual es manual (Patricia) → no tocar
-    for (const row of rows) {
-      await SB.patch(`codigos_descuento_manual?id=eq.${row.id}`, {
-        activo: false,
-        updated_at: new Date().toISOString(),
-      })
-    }
-    delete codigosCache[tienda.source_id]
-    L(`[${tienda.source_key}] 🗑️ Código auto-detectado desactivado (ya no visible en la web): ${rows[0].codigo}`)
-  } catch (e) {
-    L(`[${tienda.source_key}] Error desactivando código caducado: ${e.message}`)
   }
 }
 
@@ -404,11 +326,6 @@ async function scrapeOpenCart(tienda, logLines = []) {
       console.error(`[${tienda.source_key}] Fetch error p${page}: ${e.message}`)
       break
     }
-    // Página 1 ya tiene el HTML real de la tienda — reutilizarlo para detectar
-    // el código de descuento en vez de hacer una petición aparte (ver
-    // sincronizarCodigoDescuento más abajo).
-    if (page === 1) tienda._html1 = html
-
     if (html.length === prevHtmlLength) {
       L(`[${tienda.source_key}] HTML idéntico a pág anterior — fin paginación (pág ${page})`)
       break
@@ -548,7 +465,6 @@ async function scrapeOpenCartViaTab(tienda, logLines = []) {
         html = injected?.[0]?.result
         L(`[${tienda.source_key}] HTML resultado: string(${html?.length ?? 0}) prev="${(html||'').slice(0,80).replace(/\n/g,' ')}"`)
         if (!html || html.startsWith('__ERR__')) { L(`[${tienda.source_key}] outerHTML inválido pág 1`); break }
-        tienda._html1 = html
       } catch (e) {
         L(`[${tienda.source_key}] executeScript pág 1 error: ${e?.message ?? String(e)}`)
         break
@@ -703,17 +619,6 @@ async function _fetchWooCommerceDirecto(tienda, logLines = []) {
   const productos = []
   let page = 1, totalPages = 1
 
-  // HTML de la home para detección de código de descuento (best-effort, no
-  // debe tumbar el scraping de productos si falla)
-  try {
-    const headersHtml = { Accept: 'text/html,application/xhtml+xml' }
-    if (cookieHeader) headersHtml['Cookie'] = cookieHeader
-    const rHtml = await fetch(tienda.base_url + '/', { credentials: 'include', headers: headersHtml })
-    if (rHtml.ok) tienda._html1 = await rHtml.text()
-  } catch (e) {
-    L(`[${tienda.source_key}] No se pudo obtener HTML para detección de código: ${e.message}`)
-  }
-
   while (page <= totalPages) {
     const url =
       `${tienda.base_url}/wp-json/wc/store/v1/products` +
@@ -866,19 +771,6 @@ async function scrapeWooCommerceViaTab(tienda, logLines = []) {
   if (!pageReady) {
     try { chrome.tabs.remove(tabId, () => {}) } catch {}
     return []
-  }
-
-  // HTML de la página ya cargada en el tab (CF resuelto) — para detección de
-  // código de descuento (best-effort, no debe tumbar el resto si falla)
-  try {
-    const injectedHtml = await chrome.scripting.executeScript({
-      target: { tabId, allFrames: false },
-      func: () => { try { return document.documentElement.outerHTML } catch (e) { return null } },
-    })
-    const h = injectedHtml?.[0]?.result
-    if (h) tienda._html1 = h
-  } catch (e) {
-    L(`[${tienda.source_key}] No se pudo obtener HTML para detección de código: ${e.message}`)
   }
 
   // ── CF resuelto: scrapear via executeScript (same-origin, sin CORS) ──────
@@ -1289,7 +1181,6 @@ async function runScraper() {
       }
 
       log(`\n── Scrapeando ${tienda.nombre} ──`)
-      tienda._html1 = null // reset: se rellena durante el scrape si hay HTML disponible
       try {
         const productos = tienda.type === 'opencart'
           ? await scrapeOpenCart(tienda, logLines)
@@ -1298,16 +1189,6 @@ async function runScraper() {
             : tienda.type === 'woocommerce-tab'
               ? await scrapeWooCommerceViaTab(tienda, logLines)
               : await scrapeWooCommerce(tienda, logLines)
-
-        // Nota (2026-08-14): la detección de código de descuento ya NO se
-        // hace aquí — se sustituyó por el escáner independiente
-        // (codigos-scanner.js, alarma 'scan-codigos') que visita solo
-        // home/rebajas de cada tienda varias veces al día, desacoplado del
-        // ritmo del scrape de catálogo completo. codigosCache se sigue
-        // usando tal cual para estampar codigo_descuento/descuento_pct en
-        // cada price_snapshot (ver procesarTienda), solo que ahora se
-        // mantiene fresco por el escáner en vez de por este ciclo.
-
         if (productos === null) {
           logE(`[${tienda.source_key}] Error interno Chrome (tab=null) — saltando sin activar backoff`)
           continue
@@ -1397,17 +1278,8 @@ chrome.alarms.create('scrape-tiendas', {
   periodInMinutes: CONFIG.INTERVAL_HOURS * 60,
 })
 
-// Escáner de códigos de descuento (2026-08-14) — independiente del ciclo de
-// catálogo, corre cada 6h (4 veces/día, cumple el mínimo de 2/día pedido)
-// visitando solo home/rebajas de cada tienda. Ver codigos-scanner.js.
-chrome.alarms.create('scan-codigos', {
-  delayInMinutes:  3,   // Poco después de instalar, sin pisar el primer scrape-tiendas
-  periodInMinutes: 360,
-})
-
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'scrape-tiendas') runScraper()
-  if (alarm.name === 'scan-codigos') escanearCodigosTiendas()
 })
 
 // ── Mensajes desde popup ──────────────────────────────────────
@@ -1415,10 +1287,6 @@ chrome.alarms.onAlarm.addListener(alarm => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === 'run-now') {
     runScraper().then(() => sendResponse({ ok: true }))
-    return true
-  }
-  if (msg.action === 'run-codigos-now') {
-    escanearCodigosTiendas().then(() => sendResponse({ ok: true }))
     return true
   }
   if (msg.action === 'get-status') {

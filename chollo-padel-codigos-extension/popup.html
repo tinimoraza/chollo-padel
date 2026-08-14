@@ -5,7 +5,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      width: 300px;
+      width: 280px;
       padding: 16px;
       margin: 0;
       background: #f9fafb;
@@ -37,20 +37,6 @@
       margin: 12px 0;
     }
 
-    .tiendas {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 10px;
-    }
-    .tiendas span {
-      display: inline-block;
-      background: #e0f2fe;
-      color: #0369a1;
-      border-radius: 4px;
-      padding: 1px 6px;
-      margin: 2px 2px 2px 0;
-    }
-
     .result-box {
       font-size: 11px;
       color: #374151;
@@ -64,16 +50,16 @@
     .btn-primary {
       width: 100%;
       padding: 9px;
-      background: #0ea5e9;
-      color: white;
+      background: #a3e635;
+      color: #14532d;
       border: none;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
     }
-    .btn-primary:hover    { background: #0284c7; }
-    .btn-primary:disabled { background: #bae6fd; cursor: default; }
+    .btn-primary:hover    { background: #84cc16; }
+    .btn-primary:disabled { background: #d9f99d; cursor: default; }
 
     .note {
       margin-top: 10px;
@@ -94,22 +80,17 @@
       margin-top: 8px;
     }
     .btn-secondary:hover { background: #e5e7eb; }
-    .btn-secondary:disabled { color: #9ca3af; cursor: default; }
   </style>
 </head>
 <body>
-  <h2>🏓 Chollo Padel — Tiendas</h2>
-
-  <div class="tiendas" id="tiendas-lista">
-    <!-- Rellena popup.js -->
-  </div>
+  <h2>🏷 Chollo Padel — Códigos</h2>
 
   <div class="row">
     <span>Estado:</span>
     <span class="status" id="status">Cargando…</span>
   </div>
   <div class="row">
-    <span>Última ejecución:</span>
+    <span>Último escaneo:</span>
     <span class="val" id="lastRun">—</span>
   </div>
 
@@ -117,10 +98,10 @@
 
   <hr class="divider">
 
-  <button class="btn-primary" id="btn-run">▶ Ejecutar ahora</button>
+  <button class="btn-primary" id="btn-run">▶ Escanear ahora</button>
   <button class="btn-secondary" id="btn-log">📋 Copiar último log</button>
 
-  <div class="note" id="note">Se ejecuta automáticamente cada 2h mientras Chrome esté abierto</div>
+  <div class="note">Escanea home/rebajas de ~32 tiendas cada 6h (sin tocar catálogo)</div>
 
   <script src="popup.js"></script>
 </body>

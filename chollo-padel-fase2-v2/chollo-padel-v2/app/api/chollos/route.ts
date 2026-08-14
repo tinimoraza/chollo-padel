@@ -111,8 +111,9 @@ interface CodigoActivo {
 // snapshot. Fix 2026-08-14: antes se leia snap.codigo_descuento/descuento_pct,
 // que quedaban "congelados" en el momento del scrape de esa tienda. Ahora se
 // consulta codigos_descuento_manual EN VIVO en el momento de calcular
-// /api/chollos, porque el escaneo de codigos (extension, codigos-scanner.js)
-// corre desacoplado del scrape de catalogo y con mas frecuencia — asi un
+// /api/chollos, porque el escaneo de codigos (chollo-padel-codigos-extension,
+// extension Chrome independiente) corre desacoplado del scrape de catalogo
+// y con mas frecuencia — asi un
 // codigo que caduca a mediodia deja de aplicarse aunque el precio no se haya
 // vuelto a scrapear, y uno nuevo se aplica sin esperar al proximo scrape.
 function codigoAplicable(snap: any, codigosMap: Map<number, CodigoActivo>): CodigoActivo | null {
