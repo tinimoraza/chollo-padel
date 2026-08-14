@@ -143,9 +143,32 @@ async function scrape() {
       await page.goto(rebajasUrl, { waitUntil: 'domcontentloaded', timeout: 40_000 })
       await page.waitForTimeout(1500)
       await page.waitForSelector('article.product-miniature', { timeout: 15_000 })
+
+      // Fix 2026-08-14: detectado por Patricia — la sección de rebajas
+      // (ej. /rebajas-verano-2026, "CUPÓN 20% EXTRA HOT20 PRODUCTOS
+      // SELECCIONADOS") tiene su PROPIO código de descuento, visible en el
+      // texto de ESA página, no en la página 1 del catálogo principal
+      // (/palas-de-padel) — ahí el enlace a la sección solo existe en un
+      // menú oculto (presente en el HTML pero no en el texto visible), así
+      // que detectarCodigoDescuento(bodyText) de la página 1 nunca lo
+      // encontraba. Se detecta aquí, en el texto de la propia sección de
+      // rebajas, y se aplica SOLO a los productos de esa sección (no al
+      // catálogo general, ya que el código es "productos seleccionados").
+      const bodyTextRebajas = await page.evaluate(() => document.body.innerText)
+      const codigoRebajas = detectarCodigoDescuento(bodyTextRebajas)
+      if (codigoRebajas) {
+        console.log(`[padeliberico] código de sección rebajas detectado: ${codigoRebajas.codigo} (-${codigoRebajas.descuento_pct}%) en ${rebajasUrl}`)
+      }
+
       const products = await extractProducts(page)
       console.log(`[padeliberico] sección rebajas ${rebajasUrl} → ${products.length} productos`)
-      allProducts.push(...products)
+      for (const p of products) {
+        if (codigoRebajas) {
+          p.codigoDescuento = codigoRebajas.codigo
+          p.descuentoPct = codigoRebajas.descuento_pct
+        }
+        allProducts.push(p)
+      }
     } catch (e) {
       console.error(`[padeliberico] Error sección rebajas ${rebajasUrl}:`, e.message)
     }
@@ -154,13 +177,19 @@ async function scrape() {
 
   await browser.close()
 
-  // Deduplicar por URL
-  const seen   = new Set()
-  const unique = allProducts.filter(p => {
-    if (seen.has(p.url)) return false
-    seen.add(p.url)
-    return true
-  })
+  // Deduplicar por URL — si la misma pala aparece tanto en el catálogo
+  // general como en una sección de rebajas (con cupón detectado), se queda
+  // con la versión CON cupón en vez de la primera vista (fix 2026-08-14:
+  // antes el catálogo general se scrapea primero y "ganaba" siempre,
+  // perdiendo el codigoDescuento/descuentoPct de la sección de rebajas).
+  const porUrl = new Map()
+  for (const p of allProducts) {
+    const previo = porUrl.get(p.url)
+    if (!previo || (!previo.codigoDescuento && p.codigoDescuento)) {
+      porUrl.set(p.url, p)
+    }
+  }
+  const unique = [...porUrl.values()]
 
   console.log(`[padeliberico] Total palas únicas: ${unique.length}`)
   const scraped_at = new Date().toISOString()
@@ -172,6 +201,8 @@ async function scrape() {
     url:             p.url,
     image:           p.image ?? null,
     scraped_at,
+    codigoDescuento: p.codigoDescuento ?? undefined,
+    descuentoPct:    p.descuentoPct ?? undefined,
   }))
   resultado.codigoDescuento = codigoDescuento
   return resultado
