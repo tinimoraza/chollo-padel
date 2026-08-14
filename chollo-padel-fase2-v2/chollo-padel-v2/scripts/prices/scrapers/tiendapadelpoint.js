@@ -135,19 +135,28 @@ const fs = require('fs')
 const path = require('path')
 const CACHE_FILE = path.join(__dirname, '_tiendapadelpoint_cache.json')
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 horas — vida del caché de PRODUCTOS/precios
-// Fix 2026-08-14: bug real detectado por Patricia — un código SALE15 detectado
-// SOLO por texto (sin banner de imagen que hacer OCR) se quedó cacheado y se
-// siguió aplicando aunque el cupón ya había caducado en la tienda real. Causa
-// raíz: la revalidación por OCR de readCache() solo se ejecuta "if
-// (bannerImgUrl)" — si no hubo banner (que es lo normal cuando no hay
-// promoción activa), el código de texto cacheado se reutilizaba sin ninguna
-// comprobación durante las 24h completas, y ese patrón se podía repetir
-// indefinidamente run tras run. Un código detectado solo por texto es más
-// propenso a estar desactualizado que uno confirmado por banner (que si se
-// revalida por OCR en cada lectura de caché), así que se le da una vida
-// mucho más corta: pasado este tiempo se descarta (no se aplica ningún
-// código) en vez de seguir confiando en él ciegamente. Los productos/precios
-// cacheados SÍ se siguen devolviendo con normalidad (no dependen de esto).
+// Fix 2026-08-14 (v1): bug real detectado por Patricia — un código SALE15
+// detectado SOLO por texto (sin banner de imagen que hacer OCR) se quedó
+// cacheado y se siguió aplicando aunque el cupón ya había caducado en la
+// tienda real. Causa raíz: la revalidación por OCR de readCache() solo se
+// ejecuta "if (bannerImgUrl)" — si no hubo banner, el código de texto
+// cacheado se reutilizaba sin ninguna comprobación durante las 24h
+// completas. Se le da una vida mucho más corta a un código sin banner: pasado
+// este tiempo se descarta en vez de confiar en él ciegamente.
+//
+// Fix 2026-08-14 (v2): el v1 dejaba un segundo agujero IDÉNTICO en el otro
+// lado del if — cuando SÍ había bannerImgUrl pero el OCR fallaba (undefined:
+// red caída, tesseract/sharp no disponibles, imagen ya no existe…), el código
+// bajo "else" se quedaba con el codigoCached SIN NINGÚN límite de edad,
+// exactamente el mismo bug que el v1 arregló para el caso sin banner. Si el
+// OCR falla de forma persistente en el entorno de ejecución (ej. dependencia
+// rota), ese código queda cacheado para siempre. Confirmado en vivo 2026-08-14
+// que esto es lo que pasó con la Babolat Veron Juan Lebrón 3.0 2026: BD
+// mostraba codigo_descuento=SALE15 con scraped_at fresco, pero SALE15 no
+// aparece en ningún sitio del HTML real de tiendapadelpoint.com (ni home, ni
+// listado, ni ficha de producto) verificado con fetch en vivo. Se unifica: CUALQUIER
+// código no revalidado con éxito en esta lectura (con o sin banner) caduca a
+// las CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS horas desde que se cacheó.
 const CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS = 3 * 60 * 60 * 1000 // 3 horas
 
 async function readCache() {
@@ -156,29 +165,34 @@ async function readCache() {
     const { timestamp, products, codigoDescuento: codigoCached, bannerImgUrl } = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))
     if (Date.now() - timestamp > CACHE_MAX_AGE_MS) return null
     console.log(`[tiendapadelpoint] Cache válido (${products.length} palas, ${Math.round((Date.now()-timestamp)/60000)} min)`)
+
+    const descartarPorEdad = (motivo) => {
+      const edadCodigoMs = Date.now() - timestamp
+      if (edadCodigoMs > CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS) {
+        console.log(`[tiendapadelpoint] Código "${codigoCached.codigo}" (${motivo}) tiene ${Math.round(edadCodigoMs / 60000)} min sin revalidar — se descarta, no se aplica a ciegas`)
+        return null
+      }
+      return codigoCached
+    }
+
     // Verificar si el código sigue activo via OCR del banner (fetch directo, sin Playwright)
-    // undefined = OCR no disponible (conservar cache); null = banner sin código; objeto = código activo
+    // undefined = OCR no disponible; null = banner sin código; objeto = código activo
     let codigoFinal = codigoCached ?? null
     if (bannerImgUrl) {
       console.log(`[tiendapadelpoint] Verificando código de descuento (OCR banner)…`)
       const codigoOcr = await detectarCodigoEnBannerImagen(bannerImgUrl)
       if (codigoOcr !== undefined) {
+        // OCR corrió con éxito: es la fuente de verdad, se use lo que diga.
         codigoFinal = codigoOcr
         if (codigoOcr) console.log(`[tiendapadelpoint] Código activo (OCR): ${codigoOcr.codigo} (-${codigoOcr.descuento_pct}%)`)
         else console.log(`[tiendapadelpoint] Banner sin código activo`)
-      } else {
-        // OCR no pudo correr → conservar lo que había en cache
-        if (codigoCached) console.log(`[tiendapadelpoint] OCR no disponible, usando código del cache: ${codigoCached.codigo} (-${codigoCached.descuento_pct}%)`)
+      } else if (codigoCached) {
+        // OCR no pudo correr esta vez → no se puede confirmar, mismo trato
+        // que un código sin banner: caduca pasadas unas horas sin confirmar.
+        codigoFinal = descartarPorEdad('OCR no disponible en esta lectura')
       }
     } else if (codigoFinal) {
-      // Fix 2026-08-14: código detectado solo por texto (sin banner que
-      // revalidar por OCR) — no confiar en él más de CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS,
-      // aunque el resto del caché (productos/precios) siga vivo hasta las 24h.
-      const edadCodigoMs = Date.now() - timestamp
-      if (edadCodigoMs > CACHE_MAX_AGE_CODIGO_SIN_BANNER_MS) {
-        console.log(`[tiendapadelpoint] Código "${codigoFinal.codigo}" detectado solo por texto tiene ${Math.round(edadCodigoMs / 60000)} min — se descarta (sin banner que revalidar, no se aplica a ciegas)`)
-        codigoFinal = null
-      }
+      codigoFinal = descartarPorEdad('sin banner que revalidar')
     }
     products.codigoDescuento = codigoFinal
     return products
