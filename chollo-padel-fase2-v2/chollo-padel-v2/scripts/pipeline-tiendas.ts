@@ -725,8 +725,13 @@ async function main() {
     // se propagaba a todo el catálogo de la tienda sin distinción.
     const marcaRestringida = codigoDescuentoTienda?.marca_restringida
     const aplicaCodigo = !marcaRestringida || tituloLow.includes(marcaRestringida.toLowerCase())
-    const codigoParaProducto = aplicaCodigo ? (codigoDescuentoTienda?.codigo ?? null) : null
-    const descuentoPctParaProducto = aplicaCodigo ? (codigoDescuentoTienda?.descuento_pct ?? null) : null
+    // Fix 2026-08-13: algunos scrapers (ver misterpadel.js) detectan un
+    // descuento POR PRODUCTO (ej. cupón automático de carrito que varía por
+    // pala, no un código único de tienda) y lo devuelven ya en el propio
+    // producto (p.codigoDescuento/p.descuentoPct). Ese valor por-producto
+    // tiene prioridad sobre el código de tienda detectado a nivel de página.
+    const codigoParaProducto = p.codigoDescuento ?? (aplicaCodigo ? (codigoDescuentoTienda?.codigo ?? null) : null)
+    const descuentoPctParaProducto = p.descuentoPct ?? (aplicaCodigo ? (codigoDescuentoTienda?.descuento_pct ?? null) : null)
 
     // ── Vía 1: alias (cache) ─────────────────────────────────────────────────
     const palaIdAlias = buscarPorAlias(TIENDA, textoNorm)
