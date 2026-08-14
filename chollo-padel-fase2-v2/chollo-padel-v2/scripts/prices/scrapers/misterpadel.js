@@ -43,32 +43,63 @@ const HEADERS = {
   'Accept-Language': 'es-ES,es;q=0.9',
 }
 
-// Fix 2026-08-13/14: detectado por Patricia — la ficha de producto muestra un
-// cupón automático "aplicado en la cesta" (ej. "10% cupón aplicado en la
-// cesta / Compra al precio de € 134,90") que NO viene en la API de Clerk.io
-// (esta solo trae price/list_price, el precio ANTES del cupón de carrito).
-// El % varía por producto y no todos los productos lo llevan.
+// Fix 2026-08-13/14: detectado por Patricia — la ficha de producto puede
+// ofrecer un cupón de descuento específico de ese producto, que NO viene en
+// la API de Clerk.io (esta solo trae price/list_price). El % varía por
+// producto y no todos los productos lo llevan.
 //
-// Primer intento (2026-08-13): leer el badge "- X% Extra en el Carrito" del
-// LISTADO de categoría (una tarjeta por producto) y cruzarlo por URL — rápido
-// (~6 peticiones) pero incompleto: verificado en vivo el 2026-08-14 que hay
-// productos con el cupón activo en su propia ficha cuyo badge NO aparece en
-// la tarjeta del listado (el sitio no lo pinta ahí de forma consistente),
-// así que ese cruce se los perdía. Ejemplo real: Nox Ea10 Ventus Hybrid 12K
-// Xtreme Red/Black — 10% cupón activo en ficha, sin badge en el listado.
+// Intento 1 (2026-08-13): leer el badge "- X% Extra en el Carrito" del
+// LISTADO de categoría y cruzarlo por URL — incompleto, el sitio no pinta el
+// badge en el listado para todos los productos que sí lo tienen en su ficha.
 //
-// Fix definitivo: comprobar la ficha de CADA producto directamente (el texto
-// "X% cupón aplicado en la cesta" siempre está ahí cuando el cupón existe,
-// confirmado en HTML servidor sin JS). Es más lento (~185 peticiones en vez
-// de ~6) pero cubre el 100% de los casos. Se limita la concurrencia para no
-// saturar ni la tienda ni la ejecución del pipeline.
+// Intento 2 (2026-08-14, root-cause real, verificado en vivo con
+// Claude-in-Chrome contra la ficha real de Nox Ea10 Ventus Hybrid 12K Xtreme
+// Red/Black): el texto "X% cupón aplicado en la cesta" que se usó como patrón
+// NO existe en el HTML servidor — ese texto solo aparece tras marcar
+// manualmente un checkbox en la página (AJAX a
+// /load_ajax/load_coupon_products.php), es decir, es un cupón OPCIONAL que
+// el comprador debe activar, no un descuento automático. El fetch() devolvía
+// 0/198 porque el patrón buscado nunca estuvo en el HTML crudo.
+//
+// El texto que SÍ está en el HTML servidor (confirmado con fetch() real,
+// sin JS) es distinto y con dos particularidades más:
+//   1. El sitio usa entidades HTML con nombre en vez de tildes unicode:
+//      "cup&oacute;n" (no "cupón"), "V&aacute;lido" (no "Válido").
+//   2. El label es "Aplicar 10% cup&oacute;n de descuento ... V&aacute;lido
+//      hasta el 24 agosto, 2026" — lleva fecha de caducidad explícita.
+// Se comprueba la ficha de CADA producto directamente (cobertura 100%, ya
+// que no todos los productos llevan este cupón) y se descarta si la fecha
+// de "Válido hasta" ya pasó, por si el HTML quedase cacheado en algún CDN.
+const MESES_ES = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+  julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+}
+
+function parseFechaEs(texto) {
+  // "24 agosto, 2026" → Date
+  const m = texto.match(/(\d{1,2})\s+([a-zñáéíóú]+),?\s+(\d{4})/i)
+  if (!m) return null
+  const mes = MESES_ES[m[2].toLowerCase()]
+  if (mes === undefined) return null
+  return new Date(parseInt(m[3], 10), mes, parseInt(m[1], 10), 23, 59, 59)
+}
+
 async function obtenerCuponProducto(url) {
   try {
     const res = await fetch(url, { headers: HEADERS })
     if (!res.ok) return null
     const html = await res.text()
-    const m = html.match(/(\d{1,2})\s*%\s*cup[oó]n\s+aplicado\s+en\s+la\s+cesta/i)
-    return m ? parseInt(m[1], 10) : null
+    const m = html.match(/Aplicar\s+(\d{1,2})\s*%\s*cup(?:&oacute;n|ón)\s+de\s+descuento[\s\S]{0,300}?V(?:&aacute;lido|álido)\s+hasta\s+el\s+([^<]+)</i)
+    if (!m) return null
+
+    const pct = parseInt(m[1], 10)
+    const fechaValidez = parseFechaEs(m[2])
+    if (fechaValidez && fechaValidez.getTime() < Date.now()) {
+      console.log(`[misterpadel] Cupón de ${url} caducado (válido hasta ${m[2].trim()}) — se descarta`)
+      return null
+    }
+
+    return pct
   } catch {
     return null
   }
