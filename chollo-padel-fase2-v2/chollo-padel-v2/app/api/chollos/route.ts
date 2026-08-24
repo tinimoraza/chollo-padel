@@ -6,8 +6,20 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-export const dynamic = 'force-dynamic'
-export const fetchCache = 'force-no-store'
+// Fix 2026-08-14 (CRÍTICO — Supabase egress agotado, proyecto bloqueado):
+// esta ruta era 'force-dynamic' + 'force-no-store', es decir, CERO caché —
+// cada visita a /chollos (incluidos bots/crawlers de Google/Bing, ya que la
+// página está en el sitemap público) disparaba de nuevo TODA la query de
+// abajo, que trae hasta 21000 price_snapshots con un join anidado
+// `palas(*, ...)` — todas las columnas de palas, para cada fila, sin
+// deduplicar en el propio Supabase. Verificado con datos reales: ~7600
+// snapshots en 48h × fila de palas completa = varios MB por cada petición,
+// multiplicado por cada visita/crawl → agotó los 5GB/mes del plan Free en
+// ~10 días. El resto de páginas del sitio (palas/[slug], marcas/[marca]) ya
+// usaban `revalidate` de Next.js (funciona bien, comprobado) — esta ruta se
+// había quedado fuera de ese patrón. Con revalidate=300 (5 min), Vercel sirve
+// la respuesta cacheada sin volver a tocar Supabase durante esa ventana.
+export const revalidate = 300
 
 export interface CholloTienda {
   pala_id:           string
@@ -212,7 +224,7 @@ export async function GET() {
         codigo_descuento,
         descuento_pct,
         price_sources ( nombre, slug ),
-        palas ( *, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
+        palas ( id, modelo, nombre, marca, "año", slug, imagen_url, precios_updated_at, price_reference ( precio_referencia, fuentes_count, precio_minimo, precio_maximo ) )
       `)
       .eq('disponible', true)
       .gte('scraped_at', since)
@@ -234,7 +246,7 @@ export async function GET() {
   }
 
   if (!snapshots || snapshots.length === 0) {
-    return NextResponse.json({ chollos: [], updated_at: null }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ chollos: [], updated_at: null }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' } })
   }
 
   // Filtrar ref-stale ANTES de deduplicar: si el snapshot más reciente de una
@@ -389,6 +401,11 @@ export async function GET() {
       _dbg,
       _dbgMeta: { snapshots_raw: snapshots.length, after_dedup: byKey.size },
     },
-    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    // Fix 2026-08-14: antes 'no-store, no-cache, must-revalidate' — impedía
+    // cualquier caché (CDN de Vercel incluido) y forzaba recalcular + volver
+    // a pedir todo a Supabase en cada visita/crawl. Con s-maxage=300 el CDN
+    // de Vercel puede servir la misma respuesta durante 5 min sin ejecutar
+    // la función ni tocar Supabase — mismo intervalo que 'revalidate' arriba.
+    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }
   )
 }

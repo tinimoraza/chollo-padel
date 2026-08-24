@@ -6,8 +6,9 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-export const dynamic = 'force-dynamic'
-export const fetchCache = 'force-no-store'
+// Fix 2026-08-14 (mismo motivo que /api/chollos — ver comentario allí):
+// sin caché, cada visita volvía a pedir la tabla entera a Supabase.
+export const revalidate = 300
 
 export async function GET() {
   const { data, error } = await supabaseAdmin
@@ -22,6 +23,6 @@ export async function GET() {
 
   return NextResponse.json(
     { items: data ?? [], updated_at: data?.[0]?.updated_at ?? null },
-    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }
   )
 }
